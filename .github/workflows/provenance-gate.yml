@@ -1,0 +1,49 @@
+name: Provenance Gate
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  provenance:
+    name: provenance-attestation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require provenance attestation
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            "- [x] Origin documented"
+            "- [x] License compatibility checked"
+            "- [x] Third-party notices preserved or not applicable"
+            "- [x] AI assistance disclosed or not applicable"
+          )
+
+          missing=0
+          for marker in "${required[@]}"; do
+            if ! grep -Fqi -- "$marker" <<< "${PR_BODY:-}"; then
+              echo "::error::Missing required provenance attestation: $marker"
+              missing=1
+            fi
+          done
+
+          if [[ "$missing" -ne 0 ]]; then
+            cat <<'EOF'
+          Add the following completed checklist to the pull request body:
+
+          - [x] Origin documented
+          - [x] License compatibility checked
+          - [x] Third-party notices preserved or not applicable
+          - [x] AI assistance disclosed or not applicable
+          EOF
+            exit 1
+          fi
+
+          echo "Provenance attestation present."
