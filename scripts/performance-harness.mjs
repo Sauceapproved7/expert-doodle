@@ -89,7 +89,7 @@ function summarize(profile,url,results,startedAt,durationMs){
   const errors=results.length-passed;
   const errorRate=results.length?errors/results.length:1;
   const thresholds={errorRateMax:0.01,p95LatencyMsMax:500,p99LatencyMsMax:1000};
-  const metrics={requests:results.length,passed,errors,errorRate,throughputRps:durationMs?results.length/(durationMs/1000):0,bytes:results.reduce((n,x)=>n+x.bytes,0),latencyMs:{min:Math.min(...latencies),mean:latencies.reduce((a,b)=>a+b,0)/latencies.length,p50:percentile(latencies,50),p95:percentile(latencies,95),p99:percentile(latencies,99),max:Math.max(...latencies)}};
+  const metrics={requests:results.length,passed,errors,errorRate,throughputRps:durationMs?results.length/(durationMs/1000):0,bytes:results.reduce((n,x)=>n+x.bytes,0),latencyMs:{min:latencies.reduce((a,b)=>Math.min(a,b),Infinity),mean:latencies.reduce((a,b)=>a+b,0)/latencies.length,p50:percentile(latencies,50),p95:percentile(latencies,95),p99:percentile(latencies,99),max:latencies.reduce((a,b)=>Math.max(a,b),0)}};
   const assertions={errorRate:metrics.errorRate<=thresholds.errorRateMax,p95:metrics.latencyMs.p95<=thresholds.p95LatencyMsMax,p99:metrics.latencyMs.p99<=thresholds.p99LatencyMsMax};
   return {schemaVersion:1,benchmark:"Hercules Fixture Performance Harness",profile,target:{origin:url.origin,path:url.pathname,method:"GET"},guardrails:{fixtureOnly:true,loopbackOnly:true,allowedPaths:[...allowedPaths],mutations:false},startedAt,completedAt:new Date().toISOString(),durationMs,thresholds,metrics,assertions,passed:Object.values(assertions).every(Boolean)};
 }
