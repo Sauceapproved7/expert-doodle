@@ -1,0 +1,33 @@
+name: Hercules Staging Recovery Drill
+on:
+  pull_request:
+    paths:
+      - "scripts/staging-recovery-drill.mjs"
+      - ".github/workflows/hercules-staging-recovery-drill.yml"
+permissions:
+  contents: read
+concurrency:
+  group: hercules-staging-recovery-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: node scripts/validate-staging-plane.mjs
+      - name: Start isolated staging and verify recovery baseline
+        run: node scripts/staging-plane.mjs all
+      - name: Simulate dependency outage and verify service recovery
+        run: node scripts/staging-recovery-drill.mjs --confirm-isolated-staging
+      - name: Save recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: benchmarks/performance/staging-recovery-drill.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Remove isolated synthetic staging
+        if: always()
+        run: node scripts/staging-plane.mjs down

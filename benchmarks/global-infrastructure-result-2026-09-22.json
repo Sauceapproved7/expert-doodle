@@ -1,0 +1,61 @@
+{
+  "benchmark": "Hercules Global Infrastructure Benchmark",
+  "asOf": "2026-09-22T10:30:18.046Z",
+  "score": 78,
+  "exactScore": 77.54,
+  "classification": "strong production-engineering foundation with verified self-hosted staging",
+  "method": {
+    "scale": "0-100 per domain",
+    "overall": "weighted arithmetic mean rounded to the nearest integer",
+    "scope": "verified infrastructure maturity, excluding market position and launch readiness"
+  },
+  "domains": [
+    {"name":"Software supply chain and release integrity","weight":15,"score":92},
+    {"name":"Platform control plane and deployment","weight":15,"score":87},
+    {"name":"Recovery and continuity","weight":12,"score":83},
+    {"name":"Observability and SRE","weight":12,"score":68},
+    {"name":"Scalability and performance","weight":12,"score":55},
+    {"name":"AI, browser, and sandbox execution","weight":10,"score":82},
+    {"name":"Identity, tenant, and data security","weight":8,"score":80},
+    {"name":"Operational automation","weight":6,"score":82},
+    {"name":"Compliance and independent assurance","weight":5,"score":45},
+    {"name":"Developer delivery experience","weight":5,"score":84}
+  ],
+  "stagingEvidence": {
+    "workflowRunId": 35714874182,
+    "workflowConclusion": "success",
+    "headSha": "8ed5dc7a13ee57ac55ddd060f0e130b5d80877c8",
+    "load": {
+      "requests": 200,
+      "errors": 0,
+      "errorRate": 0,
+      "throughputRps": 552.5523094295364,
+      "p50LatencyMs": 7.983110000000011,
+      "p95LatencyMs": 20.495800000000003,
+      "p99LatencyMs": 151.11906900000002
+    },
+    "soak": {
+      "durationMs": 900001.007548,
+      "requests": 2010084,
+      "errors": 0,
+      "errorRate": 0,
+      "throughputRps": 2233.4241663532757,
+      "p50LatencyMs": 2.3811969999806024,
+      "p95LatencyMs": 4.278825000001234,
+      "p99LatencyMs": 6.929586999991443,
+      "maxLatencyMs": 49.73201400000835
+    },
+    "artifact": {
+      "name": "staging-performance-35714874182-1",
+      "sha256": "981e781ac14b31d3af1b044c06066f3c3a365f31fac0f90fdf90a2eec1b77711"
+    },
+    "postSoakDatabaseVerification": true
+  },
+  "agenticCapabilityCoverage": {
+    "score": 92.5,
+    "raw": 37,
+    "max": 40,
+    "warning": "Capability coverage is not infrastructure maturity."
+  },
+  "warning": "Staging evidence improves infrastructure confidence but is not production-scale or multi-region operational history."
+}

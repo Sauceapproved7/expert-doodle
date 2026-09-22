@@ -1,0 +1,55 @@
+name: Hercules Global Staging Benchmark
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "staging-plane/**"
+      - "scripts/performance-harness.mjs"
+      - "scripts/staging-plane.mjs"
+      - "scripts/recalculate-global-infrastructure.mjs"
+      - ".github/workflows/hercules-global-staging-benchmark.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hercules-global-staging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Docker runtime
+        run: docker compose version
+      - name: Validate staging boundaries
+        run: node scripts/validate-staging-plane.mjs
+      - name: Start, verify, benchmark, backup, and restore
+        run: node scripts/staging-plane.mjs all
+      - name: Run 15-minute isolated soak
+        timeout-minutes: 18
+        run: node scripts/performance-harness.mjs --profile soak --base-url http://127.0.0.1:38080 --confirm-fixture --output benchmarks/performance/staging-soak.json
+      - name: Verify database after sustained load
+        run: node scripts/staging-plane.mjs verify
+      - name: Save benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-performance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: benchmarks/performance/staging-*.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Capture staging diagnostics
+        if: failure()
+        run: docker compose --env-file staging-plane/.env -f staging-plane/compose.yml logs --no-color migrate postgres postgrest api
+      - name: Recalculate global benchmark
+        run: node scripts/recalculate-global-infrastructure.mjs
+      - name: Publish job summary
+        run: |
+          node -e 'const fs=require("fs");const x=require("./benchmarks/global-infrastructure-result-current.json");fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`# Hercules global benchmark\n\nInfrastructure: **${x.score}/100**\n\nAgentic capability: **${x.agenticCapabilityCoverage}%**\n\nStaging requests: **${x.stagingEvidence.requests}** with **${x.stagingEvidence.errorRate*100}%** errors.\n`)'
+      - name: Teardown
+        if: always()
+        run: node scripts/staging-plane.mjs down || true
