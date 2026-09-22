@@ -40,6 +40,6 @@ create policy health_read on staging_api.health for select to staging_anon,stagi
 create policy identity_self_read on staging_api.test_identities for select to staging_user using (id=(select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid));
 create policy fixture_owner_read on staging_api.fixture_records for select to staging_user using (owner_id=(select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid));
 create policy fixture_owner_insert on staging_api.fixture_records for insert to staging_user with check (owner_id=(select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid) and synthetic);
-create policy fixture_owner_update on staging_api.fixture_records for update to staging_user using (owner_id=(select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid) with check (owner_id=(select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid) and synthetic);
+create policy fixture_owner_update on staging_api.fixture_records for update to staging_user using (owner_id=(select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid)) with check (owner_id=(select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid) and synthetic);
 create policy fixture_owner_delete on staging_api.fixture_records for delete to staging_user using (owner_id=(select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid));
 commit;
