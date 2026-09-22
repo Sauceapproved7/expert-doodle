@@ -1,0 +1,39 @@
+name: Hercules Global Staging Benchmark
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "staging-plane/**"
+      - "scripts/performance-harness.mjs"
+      - "scripts/staging-plane.mjs"
+      - "scripts/recalculate-global-infrastructure.mjs"
+      - ".github/workflows/hercules-global-staging-benchmark.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hercules-global-staging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Docker runtime
+        run: docker compose version
+      - name: Validate staging boundaries
+        run: node scripts/validate-staging-plane.mjs
+      - name: Start, verify, benchmark, backup, and restore
+        run: node scripts/staging-plane.mjs all
+      - name: Recalculate global benchmark
+        run: node scripts/recalculate-global-infrastructure.mjs
+      - name: Publish job summary
+        run: |
+          node -e 'const fs=require("fs");const x=require("./benchmarks/global-infrastructure-result-current.json");fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`# Hercules global benchmark\n\nInfrastructure: **${x.score}/100**\n\nAgentic capability: **${x.agenticCapabilityCoverage}%**\n\nStaging requests: **${x.stagingEvidence.requests}** with **${x.stagingEvidence.errorRate*100}%** errors.\n`)'
+      - name: Teardown
+        if: always()
+        run: node scripts/staging-plane.mjs down || true
