@@ -1,0 +1,72 @@
+name: hercules-staging
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: hercules_staging
+      POSTGRES_USER: hercules_admin
+      POSTGRES_PASSWORD: ${HERCULES_STAGING_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - hercules_staging_pg:/var/lib/postgresql/data
+      - ./migrations:/migrations:ro
+      - ./bin:/staging-bin:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hercules_admin -d hercules_staging"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    networks: [staging]
+
+  migrate:
+    image: postgres:16.4-alpine
+    depends_on:
+      postgres: {condition: service_healthy}
+    environment:
+      PGPASSWORD: ${HERCULES_STAGING_DB_PASSWORD}
+      HERCULES_STAGING_API_PASSWORD: ${HERCULES_STAGING_API_PASSWORD}
+    volumes:
+      - ./migrations:/migrations:ro
+      - ./bin:/staging-bin:ro
+    entrypoint: ["/bin/sh", "/staging-bin/migrate.sh"]
+    networks: [staging]
+
+  postgrest:
+    image: postgrest/postgrest:v12.2.3
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    environment:
+      PGRST_DB_URI: postgres://hercules_api:${HERCULES_STAGING_API_PASSWORD}@postgres:5432/hercules_staging
+      PGRST_DB_SCHEMAS: staging_api
+      PGRST_DB_ANON_ROLE: staging_anon
+      PGRST_JWT_SECRET: ${HERCULES_STAGING_JWT_SECRET}
+      PGRST_DB_CHANNEL_ENABLED: "false"
+    networks: [staging]
+
+  api:
+    image: node:22.12.0-alpine
+    depends_on:
+      postgrest: {condition: service_started}
+    environment:
+      PORT: "8080"
+      POSTGREST_URL: http://postgrest:3000
+      HERCULES_ENVIRONMENT: staging
+    command: ["node", "/app/server.mjs"]
+    volumes:
+      - ./api:/app:ro
+    ports:
+      - "127.0.0.1:38080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/api/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [staging]
+
+networks:
+  staging:
+    internal: true
+
+volumes:
+  hercules_staging_pg:
