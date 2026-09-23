@@ -22,3 +22,7 @@ export {
   HERCULES_GUARD_CHECKPOINT_SHA256,
   HerculesEmbeddedGuard,
 } from "./embedded-guard.mjs";
+export {
+  HERCULES_FAMILY_CLASSIFIER_CHECKPOINTS,
+  HerculesEmbeddedFamilyClassifier,
+} from "./embedded-family-classifier.mjs";
