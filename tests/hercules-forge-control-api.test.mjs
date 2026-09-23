@@ -61,6 +61,8 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     const consoleHtml = await consoleResponse.text();
     assert.match(consoleHtml, /HERCULES FORGE/);
     assert.match(consoleHtml, /Sign in/);
+    assert.match(consoleHtml, /Runtime data/);
+    assert.match(consoleHtml, /Create snapshot/);
     assert.equal(consoleHtml.includes("Control token"), false);
     assert.equal(consoleHtml.includes(token), false);
 
