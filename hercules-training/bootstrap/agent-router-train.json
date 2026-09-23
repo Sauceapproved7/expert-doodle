@@ -1,0 +1,194 @@
+[
+  {
+    "text": "build a javascript api for my app",
+    "label": "code"
+  },
+  {
+    "text": "fix this failing unit test",
+    "label": "code"
+  },
+  {
+    "text": "refactor the repository module",
+    "label": "code"
+  },
+  {
+    "text": "write a database migration",
+    "label": "code"
+  },
+  {
+    "text": "debug the deployment script",
+    "label": "code"
+  },
+  {
+    "text": "implement an authentication middleware",
+    "label": "code"
+  },
+  {
+    "text": "research the latest model serving methods",
+    "label": "research"
+  },
+  {
+    "text": "compare these technical approaches with sources",
+    "label": "research"
+  },
+  {
+    "text": "find evidence for this architecture decision",
+    "label": "research"
+  },
+  {
+    "text": "summarize the documentation and cite it",
+    "label": "research"
+  },
+  {
+    "text": "investigate current inference engines",
+    "label": "research"
+  },
+  {
+    "text": "do a deep dive on training methods",
+    "label": "research"
+  },
+  {
+    "text": "analyze this screenshot and explain the interface",
+    "label": "vision"
+  },
+  {
+    "text": "read the diagram in this image",
+    "label": "vision"
+  },
+  {
+    "text": "inspect this photo for visible details",
+    "label": "vision"
+  },
+  {
+    "text": "understand the ui from this screenshot",
+    "label": "vision"
+  },
+  {
+    "text": "extract the layout from this image",
+    "label": "vision"
+  },
+  {
+    "text": "compare these two visual designs",
+    "label": "vision"
+  },
+  {
+    "text": "transcribe this audio recording",
+    "label": "voice"
+  },
+  {
+    "text": "turn this text into spoken audio",
+    "label": "voice"
+  },
+  {
+    "text": "recognize the words in this voice note",
+    "label": "voice"
+  },
+  {
+    "text": "generate speech from this paragraph",
+    "label": "voice"
+  },
+  {
+    "text": "process this spoken command",
+    "label": "voice"
+  },
+  {
+    "text": "make a voice response",
+    "label": "voice"
+  },
+  {
+    "text": "choose which tool should handle this job",
+    "label": "agent"
+  },
+  {
+    "text": "plan and execute this multi step workflow",
+    "label": "agent"
+  },
+  {
+    "text": "route this request to the correct subsystem",
+    "label": "agent"
+  },
+  {
+    "text": "coordinate tools to finish the task",
+    "label": "agent"
+  },
+  {
+    "text": "decide the next action in this workflow",
+    "label": "agent"
+  },
+  {
+    "text": "orchestrate these services together",
+    "label": "agent"
+  },
+  {
+    "text": "embed these documents for semantic search",
+    "label": "retrieval"
+  },
+  {
+    "text": "rerank these search results",
+    "label": "retrieval"
+  },
+  {
+    "text": "find the closest matching memory",
+    "label": "retrieval"
+  },
+  {
+    "text": "create vector representations of this text",
+    "label": "retrieval"
+  },
+  {
+    "text": "retrieve the most relevant document",
+    "label": "retrieval"
+  },
+  {
+    "text": "rank these passages by relevance",
+    "label": "retrieval"
+  },
+  {
+    "text": "check whether this action has permission",
+    "label": "safety"
+  },
+  {
+    "text": "validate this request against policy",
+    "label": "safety"
+  },
+  {
+    "text": "protect the secret before executing",
+    "label": "safety"
+  },
+  {
+    "text": "block an unauthorized deployment action",
+    "label": "safety"
+  },
+  {
+    "text": "verify this operation is allowed",
+    "label": "safety"
+  },
+  {
+    "text": "inspect this command for unsafe behavior",
+    "label": "safety"
+  },
+  {
+    "text": "answer this general question",
+    "label": "general"
+  },
+  {
+    "text": "explain this concept simply",
+    "label": "general"
+  },
+  {
+    "text": "help me think through this idea",
+    "label": "general"
+  },
+  {
+    "text": "summarize this paragraph",
+    "label": "general"
+  },
+  {
+    "text": "give me a straightforward explanation",
+    "label": "general"
+  },
+  {
+    "text": "respond to this ordinary request",
+    "label": "general"
+  }
+]
