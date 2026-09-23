@@ -16,3 +16,5 @@ export {TrainingEvidenceStore} from "./store.mjs";
 export {assertTrainableDatasets, createTrainingJob} from "./planner.mjs";
 export {scoreEvaluation} from "./evaluation.mjs";
 export {decideActivation} from "./activation.mjs";
+export {HerculesTrainingRunner, HttpTrainingRunner} from "./runner.mjs";
+export {createTrainingControlService, listenTrainingControlService} from "./service.mjs";
