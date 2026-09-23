@@ -6,6 +6,7 @@ import {buildForgeArtifact} from "./artifact.mjs";
 import {ForgeLocalReleaseAdapter} from "./releases.mjs";
 import {ForgePreviewManager} from "./preview.mjs";
 import {builderConsoleAsset} from "./builder-console.mjs";
+import {customerConsoleAsset} from "./customer-console.mjs";
 import {ForgeIdentityStore} from "./identity.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -145,7 +146,7 @@ export function createForgeControlService({
       const parts = routeParts(url);
 
       if (req.method === "GET") {
-        const asset = builderConsoleAsset(url.pathname);
+        const asset = customerConsoleAsset(url.pathname) ?? builderConsoleAsset(url.pathname);
         if (asset) {
           res.writeHead(200, {
             "content-type": asset.type,
@@ -161,7 +162,7 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "0.8",
+          version: "0.9",
           promptIngress: Boolean(interpreter),
           preview: true,
         });
@@ -181,6 +182,18 @@ export function createForgeControlService({
           },
           csrfToken: result.csrfToken,
         }, {"set-cookie": sessionCookie(result.token, secureSessionCookies)});
+      }
+
+      if (req.method === "GET" && url.pathname === "/v1/session/csrf") {
+        const sessionToken = parseCookies(req).forge_session;
+        const rotated = await identities.rotateCsrf(sessionToken);
+        return send(res, 200, {
+          csrfToken: rotated.csrfToken,
+          session: {
+            sessionId: rotated.session.sessionId,
+            expiresAt: rotated.session.expiresAt,
+          },
+        });
       }
 
       if (url.pathname === "/v1/me") {
