@@ -9,8 +9,10 @@ export {
 export {HerculesModelRegistry} from "./registry.mjs";
 export {HerculesModelRouter} from "./router.mjs";
 export {HERCULES_MODEL_SLOTS} from "./catalog.mjs";
+export {HERCULES_BOOTSTRAP_CANDIDATES} from "./bootstrap-catalog.mjs";
 export {createModelPlaneService, listenModelPlaneService} from "./service.mjs";
 export {
   HERCULES_AGENT_ROUTER_CHECKPOINT_SHA256,
   HerculesEmbeddedAgentRouter,
 } from "./embedded-agent-router.mjs";
+export {HerculesEmbeddedFamilyBootstrap} from "./embedded-family-bootstrap.mjs";
