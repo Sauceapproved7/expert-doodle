@@ -113,6 +113,7 @@ export class ForgeWorkspaceStore {
       message: options.message ?? null,
       engine: compiled.engine,
       engineVersion: compiled.engineVersion,
+      ownership: compiled.ownership,
       fingerprint: compiled.fingerprint,
       spec: compiled.spec,
       files: fileIndex,
