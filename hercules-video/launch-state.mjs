@@ -120,6 +120,12 @@ export async function verifyLaunchRunStateArtifacts(state) {
     const shotId=String(evaluation?.shotId || "");
     if (!shotId || seen.has(shotId)) throw new Error("launch_state_evaluation_duplicate_or_missing_shot");
     seen.add(shotId);
+    const evaluationFingerprint=String(evaluation?.fingerprint || "");
+    const evaluationUnsigned={...evaluation};
+    delete evaluationUnsigned.fingerprint;
+    if (!evaluationFingerprint || fingerprint(evaluationUnsigned)!==evaluationFingerprint) {
+      throw new Error("launch_state_evaluation_fingerprint_mismatch:" + shotId);
+    }
     const artifactSha256=requireSha256(
       evaluation?.artifactSha256,
       "launch_state_evaluation_artifact_sha256_invalid:" + shotId
