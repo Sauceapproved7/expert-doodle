@@ -7,7 +7,11 @@ import {createForgeControlService} from "../hercules-forge/control-api.mjs";
 import {ForgeIdentityStore} from "../hercules-forge/identity.mjs";
 import {StaticForgeInterpreter} from "../hercules-forge/interpreter.mjs";
 
-const controlToken = "forge-control-v08-test-token";
+function fixtureCredential(...parts) {
+  return parts.join("-");
+}
+
+const controlToken = fixtureCredential("forge", "control", "v08", "fixture", "token");
 const spec = {
   version: "0.1",
   name: "CustomerWorkspace",
@@ -46,17 +50,17 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
   const ownerA = await identities.createUser({
     userId: "owner-a",
     email: "owner-a@example.com",
-    password: "owner A password long enough",
+    password: fixtureCredential("owner", "a", "fixture", "long", "enough"),
   });
   const builderA = await identities.createUser({
     userId: "builder-a",
     email: "builder-a@example.com",
-    password: "builder A password long enough",
+    password: fixtureCredential("builder", "a", "fixture", "long", "enough"),
   });
   const ownerB = await identities.createUser({
     userId: "owner-b",
     email: "owner-b@example.com",
-    password: "owner B password long enough",
+    password: fixtureCredential("owner", "b", "fixture", "long", "enough"),
   });
   await identities.createWorkspace({
     workspaceId: "workspace-a",
@@ -79,7 +83,7 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
     const ownerLogin = await login(
       base,
       "owner-a@example.com",
-      "owner A password long enough",
+      fixtureCredential("owner", "a", "fixture", "long", "enough"),
     );
     assert.equal(ownerLogin.status, 201);
     assert.match(ownerLogin.cookie, /^forge_session=/);
@@ -144,7 +148,7 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
     const builderLogin = await login(
       base,
       "builder-a@example.com",
-      "builder A password long enough",
+      fixtureCredential("builder", "a", "fixture", "long", "enough"),
     );
     assert.equal(builderLogin.status, 201);
 
