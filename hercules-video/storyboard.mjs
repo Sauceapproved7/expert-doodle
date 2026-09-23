@@ -24,6 +24,7 @@ export function compileStoryboard(brief) {
       durationSeconds: Number(scene.durationSeconds || brief.defaultDurationSeconds || 4),
       aspectRatio: scene.aspectRatio || brief.aspectRatio || "9:16",
       requiresAudio: Boolean(scene.audio || brief.requireAudio),
+      audioStrategy: scene.audioStrategy || brief.audioStrategy || (scene.audio || brief.requireAudio ? "native" : "none"),
       requiresReferences: Boolean(scene.requiresReferences),
       requiresEditing: Boolean(scene.requiresEditing),
       continuityGroup: scene.continuityGroup || null,
