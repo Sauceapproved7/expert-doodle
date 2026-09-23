@@ -5,6 +5,7 @@ import {compileStoryboard, continuityGroups, buildTournamentPlan, resolveTournam
 const brief = {
   title: "Test Campaign",
   aspectRatio: "9:16",
+  audioStrategy: "post",
   brand: {visualLanguage:"dark premium", avoid:["robots"]},
   scenes: [
     {id:"a",durationSeconds:3,visual:"Control room",action:"System verifies",text:"VERIFY",audio:"pulse",continuityGroup:"hero"},
@@ -18,6 +19,8 @@ test("compiles a deterministic Hercules storyboard", () => {
   assert.equal(a.fingerprint, b.fingerprint);
   assert.equal(a.totalDurationSeconds, 7);
   assert.equal(a.shots[0].aspectRatio, "9:16");
+  assert.equal(a.shots[0].requiresAudio, true);
+  assert.equal(a.shots[0].audioStrategy, "post");
   assert.match(a.shots[0].prompt, /dark premium/);
 });
 

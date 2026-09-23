@@ -75,3 +75,15 @@ test("adapter boundary is ours and provider implementations stay replaceable", (
 test("weighted quality stays normalized", () => {
   assert.equal(weightedQualityScore({promptAdherence: 5}), 0.24);
 });
+
+
+test("post-production audio does not require native-audio generation", () => {
+  const silent = {
+    ...provider("visual-only", {promptAdherence:.9,temporalConsistency:.9,visualQuality:.9,brandConsistency:.9,audioQuality:.1,artifactFreedom:.9,reliability:.9}, 1),
+    capabilities: {...provider("visual-only", {}, 1).capabilities, nativeAudio:false},
+  };
+  const stagedShot = {...shot, audioStrategy:"post"};
+  const result = routeShot(stagedShot, [silent], {maxCredits:100});
+  assert.equal(result.status, "routed");
+  assert.equal(result.selected.providerId, "visual-only");
+});

@@ -67,7 +67,11 @@ export function validateShot(shot) {
   const durationSeconds = Number(shot.durationSeconds);
   if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) throw new Error("shot_duration_required");
   if (!String(shot.aspectRatio || "").trim()) throw new Error("shot_aspect_ratio_required");
-  return {...shot, durationSeconds};
+  const requiresAudio = shot.requiresAudio === true;
+  const audioStrategy = String(shot.audioStrategy || (requiresAudio ? "native" : "none"));
+  if (!["none", "native", "post"].includes(audioStrategy)) throw new Error("shot_audio_strategy_invalid");
+  if (!requiresAudio && audioStrategy !== "none") throw new Error("shot_audio_strategy_without_audio");
+  return {...shot, durationSeconds, requiresAudio, audioStrategy};
 }
 
 export function validateProvider(provider) {
@@ -100,7 +104,7 @@ export function providerSupportsShot(providerInput, shotInput) {
   const caps = provider.capabilities;
   if (!caps.aspectRatios.includes(shot.aspectRatio)) return false;
   if (shot.durationSeconds > caps.maxDurationSeconds) return false;
-  if (shot.requiresAudio && caps.nativeAudio !== true) return false;
+  if (shot.requiresAudio && shot.audioStrategy === "native" && caps.nativeAudio !== true) return false;
   if (shot.requiresReferences && caps.references !== true) return false;
   if (shot.requiresEditing && caps.editing !== true) return false;
   return true;

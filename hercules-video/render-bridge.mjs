@@ -84,6 +84,7 @@ export function createRenderRequest({
       durationSeconds: normalizedShot.durationSeconds,
       aspectRatio: normalizedShot.aspectRatio,
       requiresAudio: normalizedShot.requiresAudio === true,
+      audioStrategy: normalizedShot.audioStrategy,
       continuityGroup: normalizedShot.continuityGroup || null,
     },
     output: {

@@ -18,12 +18,14 @@ export function compileStoryboard(brief) {
       brief.brand?.avoid?.length ? `Avoid: ${brief.brand.avoid.join(", ")}` : "",
     ].filter(Boolean);
 
+    const requiresAudio = Boolean(scene.audio || brief.requireAudio);
     return validateShot({
       id,
       prompt: promptParts.join(". "),
       durationSeconds: Number(scene.durationSeconds || brief.defaultDurationSeconds || 4),
       aspectRatio: scene.aspectRatio || brief.aspectRatio || "9:16",
-      requiresAudio: Boolean(scene.audio || brief.requireAudio),
+      requiresAudio,
+      audioStrategy: requiresAudio ? (scene.audioStrategy || brief.audioStrategy || "native") : "none",
       requiresReferences: Boolean(scene.requiresReferences),
       requiresEditing: Boolean(scene.requiresEditing),
       continuityGroup: scene.continuityGroup || null,

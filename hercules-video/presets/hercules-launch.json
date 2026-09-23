@@ -75,5 +75,6 @@
       "text": "DON'T TRUST THE AI. TRUST THE EVIDENCE.\nHERCULES — Build it. Ship it. Prove it.",
       "audio": "cinematic resolve and final low-frequency logo hit"
     }
-  ]
+  ],
+  "audioStrategy": "post"
 }
