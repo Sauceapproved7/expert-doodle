@@ -15,7 +15,7 @@ test("hardware probe accepts a 24GB-class NVIDIA GPU", async () => {
     if (cmd === "nvcc") return {stdout:"Cuda compilation tools, release 12.4, V12.4.99\n"};
     throw new Error("unexpected");
   };
-  const probe = await probeCudaHost({exec:fakeExec,minVramGiB:24});
+  const probe = await probeCudaHost({exec:fakeExec,minVramGb:24});
   assert.equal(probe.eligible,true);
   assert.equal(probe.cudaToolkitVersion,"12.4");
   assert.equal(assertWan22Hardware(probe).selectedGpu.name,"NVIDIA RTX 4090");
