@@ -2,7 +2,7 @@ export function builderConsoleHtml() {
   return `<!doctype html>
 <html><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hercules Forge Builder</title><link rel="stylesheet" href="/console.css">
+<title>Hercules Forge Builder</title><link rel="stylesheet" href="/operator.css">
 </head><body>
 <header><strong>HERCULES FORGE</strong><span id="health">checking...</span></header>
 <main>
@@ -22,7 +22,7 @@ export function builderConsoleHtml() {
 <div><button id="revise">Create revision</button><button id="preview">Preview latest</button><button id="publish">Publish latest</button><button id="stopPreview">Stop preview</button></div>
 <div id="previewBox"></div><h3>Revisions</h3><div id="revisions"></div>
 </div><pre id="status">Ready.</pre>
-</section></main><script src="/console.js" defer></script></body></html>`;
+</section></main><script src="/operator.js" defer></script></body></html>`;
 }
 
 export function builderConsoleCss() {
@@ -52,8 +52,8 @@ fetch("/health").then(r=>r.json()).then(d=>$("health").textContent=d.ok?"Forge o
 }
 
 export function builderConsoleAsset(pathname) {
-  if (pathname === "/" || pathname === "/console") return {type:"text/html; charset=utf-8", body:builderConsoleHtml()};
-  if (pathname === "/console.css") return {type:"text/css; charset=utf-8", body:builderConsoleCss()};
-  if (pathname === "/console.js") return {type:"text/javascript; charset=utf-8", body:builderConsoleJs()};
+  if (pathname === "/operator") return {type:"text/html; charset=utf-8", body:builderConsoleHtml()};
+  if (pathname === "/operator.css") return {type:"text/css; charset=utf-8", body:builderConsoleCss()};
+  if (pathname === "/operator.js") return {type:"text/javascript; charset=utf-8", body:builderConsoleJs()};
   return null;
 }
