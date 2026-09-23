@@ -6,13 +6,56 @@ import {buildForgeArtifact} from "./artifact.mjs";
 import {ForgeLocalReleaseAdapter} from "./releases.mjs";
 import {ForgePreviewManager} from "./preview.mjs";
 import {builderConsoleAsset} from "./builder-console.mjs";
+import {ForgeIdentityStore} from "./identity.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const promptHash = (prompt) => createHash("sha256").update(prompt).digest("hex");
 
-function send(res, status, body) {
-  res.writeHead(status, {"content-type": "application/json; charset=utf-8"});
+function send(res, status, body, headers = {}) {
+  res.writeHead(status, {"content-type": "application/json; charset=utf-8", ...headers});
   res.end(JSON.stringify(body));
+}
+
+function parseCookies(req) {
+  const header = req.headers.cookie ?? "";
+  const result = {};
+  for (const part of header.split(";")) {
+    const index = part.indexOf("=");
+    if (index < 0) continue;
+    const key = part.slice(0, index).trim();
+    const value = part.slice(index + 1).trim();
+    if (key) result[key] = decodeURIComponent(value);
+  }
+  return result;
+}
+
+function sessionCookie(token, secure = false) {
+  return [
+    "forge_session=" + encodeURIComponent(token),
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Strict",
+    secure ? "Secure" : null,
+  ].filter(Boolean).join("; ");
+}
+
+function clearSessionCookie(secure = false) {
+  return [
+    "forge_session=",
+    "Path=/",
+    "HttpOnly",
+    "SameSite=Strict",
+    secure ? "Secure" : null,
+    "Max-Age=0",
+  ].filter(Boolean).join("; ");
+}
+
+function requireCsrfHeader(req) {
+  const token = req.headers["x-forge-csrf"];
+  if (typeof token !== "string" || !token) {
+    throw Object.assign(new Error("csrf token required"), {statusCode: 403});
+  }
+  return token;
 }
 
 async function readBody(req) {
@@ -61,6 +104,14 @@ function routeParts(url) {
   return url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
 }
 
+async function requireProjectWorkspace(store, projectId, workspaceId) {
+  const project = await store.getProject(projectId);
+  if (project.metadata?.workspaceId !== workspaceId) {
+    throw Object.assign(new Error("project access denied"), {statusCode: 403});
+  }
+  return project;
+}
+
 function errorStatus(error) {
   if (Number.isInteger(error?.statusCode)) return error.statusCode;
   if (error?.code === "ENOENT") return 404;
@@ -71,7 +122,12 @@ function errorStatus(error) {
   return 500;
 }
 
-export function createForgeControlService({root, token, interpreter = null}) {
+export function createForgeControlService({
+  root,
+  token,
+  interpreter = null,
+  secureSessionCookies = false,
+}) {
   if (!root) throw new TypeError("root is required");
   if (typeof token !== "string" || token.length < 16) {
     throw new TypeError("control token must be at least 16 characters");
@@ -80,6 +136,7 @@ export function createForgeControlService({root, token, interpreter = null}) {
   const store = new ForgeWorkspaceStore(root);
   const releases = new ForgeLocalReleaseAdapter(root);
   const previews = new ForgePreviewManager(root);
+  const identities = new ForgeIdentityStore(root);
   const artifactRoot = join(root, "artifacts");
 
   const server = http.createServer(async (req, res) => {
@@ -104,13 +161,202 @@ export function createForgeControlService({root, token, interpreter = null}) {
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "0.7",
+          version: "0.8",
           promptIngress: Boolean(interpreter),
           preview: true,
         });
       }
 
+      if (req.method === "POST" && url.pathname === "/v1/session") {
+        const body = await readBody(req);
+        const result = await identities.createSession({
+          email: body.email,
+          password: body.password,
+        });
+        return send(res, 201, {
+          user: result.user,
+          session: {
+            sessionId: result.session.sessionId,
+            expiresAt: result.session.expiresAt,
+          },
+          csrfToken: result.csrfToken,
+        }, {"set-cookie": sessionCookie(result.token, secureSessionCookies)});
+      }
+
+      if (url.pathname === "/v1/me") {
+        const sessionToken = parseCookies(req).forge_session;
+        const auth = await identities.getSession(sessionToken);
+        if (req.method === "GET") {
+          return send(res, 200, {
+            user: auth.user,
+            workspaces: await identities.listUserWorkspaces(auth.user.userId),
+          });
+        }
+      }
+
+      if (req.method === "DELETE" && url.pathname === "/v1/session") {
+        const sessionToken = parseCookies(req).forge_session;
+        await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+        await identities.revokeSession(sessionToken);
+        return send(res, 200, {revoked: true}, {
+          "set-cookie": clearSessionCookie(secureSessionCookies),
+        });
+      }
+
+      if (parts[0] === "v1" && parts[1] === "workspaces" && parts[2]) {
+        const workspaceId = parts[2];
+        const sessionToken = parseCookies(req).forge_session;
+
+        if (req.method === "GET" && parts.length === 3) {
+          const auth = await identities.requireWorkspace(sessionToken, workspaceId);
+          return send(res, 200, {
+            workspace: auth.workspace,
+            membership: auth.membership,
+          });
+        }
+
+        if (req.method === "GET" && parts[3] === "projects" && parts.length === 4) {
+          const auth = await identities.requireWorkspace(sessionToken, workspaceId);
+          return send(res, 200, {
+            workspace: auth.workspace,
+            membership: auth.membership,
+            projects: await store.listProjects({workspaceId}),
+          });
+        }
+
+        if (req.method === "POST" && parts[3] === "projects" && parts[4] === "from-prompt" && parts.length === 5) {
+          requireInterpreter(interpreter);
+          await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+          const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+          const body = await readBody(req);
+          const prompt = requirePrompt(body);
+          const spec = await interpreter.interpret(prompt);
+          const result = await store.createProject(spec, {
+            ...(body.metadata ?? {}),
+            workspaceId,
+            createdByUserId: auth.user.userId,
+            source: "prompt",
+            promptSha256: promptHash(prompt),
+          });
+          return send(res, 201, result);
+        }
+
+        if (parts[3] === "projects" && parts[4]) {
+          const projectId = parts[4];
+
+          if (req.method === "GET" && parts.length === 5) {
+            await identities.requireWorkspace(sessionToken, workspaceId);
+            return send(res, 200, await requireProjectWorkspace(store, projectId, workspaceId));
+          }
+
+          if (req.method === "GET" && parts[5] === "revisions" && parts.length === 6) {
+            await identities.requireWorkspace(sessionToken, workspaceId);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            return send(res, 200, {revisions: await store.listRevisions(projectId)});
+          }
+
+          if (req.method === "POST" && parts[5] === "revisions" && parts[6] === "from-prompt" && parts.length === 7) {
+            requireInterpreter(interpreter);
+            await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            const body = await readBody(req);
+            const prompt = requirePrompt(body);
+            const spec = await interpreter.interpret(prompt);
+            const revision = await store.saveRevision(projectId, spec, {
+              message: body.message ?? "Prompt revision " + promptHash(prompt).slice(0, 12),
+            });
+            return send(res, 201, revision);
+          }
+
+          if (req.method === "POST" && parts[5] === "revisions" && parts[6] && parts[7] === "preview" && parts.length === 8) {
+            await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            await store.getRevision(projectId, parts[6]);
+            return send(res, 201, {preview: await previews.start(projectId, parts[6])});
+          }
+
+          if (req.method === "GET" && parts[5] === "preview" && parts.length === 6) {
+            await identities.requireWorkspace(sessionToken, workspaceId);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            const preview = previews.get(projectId);
+            return preview ? send(res, 200, {preview}) : send(res, 404, {error: "preview_not_running"});
+          }
+
+          if (req.method === "DELETE" && parts[5] === "preview" && parts.length === 6) {
+            await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            const stopped = await previews.stop(projectId);
+            return send(res, stopped ? 200 : 404, {stopped});
+          }
+
+          if (req.method === "POST" && parts[5] === "publish" && parts.length === 6) {
+            await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            const body = await readBody(req);
+            const revision = body.revisionId
+              ? await store.getRevision(projectId, body.revisionId)
+              : await store.getLatestRevision(projectId);
+            const artifact = await buildForgeArtifact({
+              workspaceRoot: root,
+              artifactRoot,
+              projectId,
+              revisionId: revision.revisionId,
+            });
+            const release = await releases.publish({
+              projectId,
+              revision,
+              artifactDir: artifact.artifactDir,
+            });
+            return send(res, 201, {release, artifact: artifact.manifest});
+          }
+
+          if (req.method === "POST" && parts[5] === "rollback" && parts.length === 6) {
+            await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            const body = await readBody(req);
+            if (!body.revisionId) {
+              throw Object.assign(new Error("revisionId is required"), {statusCode: 400});
+            }
+            return send(res, 200, await releases.rollback({projectId, revisionId: body.revisionId}));
+          }
+        }
+      }
+
       requireToken(req, token);
+
+      if (req.method === "POST" && url.pathname === "/v1/admin/users") {
+        const body = await readBody(req);
+        return send(res, 201, {user: await identities.createUser(body)});
+      }
+
+      if (req.method === "POST" && url.pathname === "/v1/admin/workspaces") {
+        const body = await readBody(req);
+        return send(res, 201, {workspace: await identities.createWorkspace(body)});
+      }
+
+      if (
+        req.method === "POST" &&
+        parts[0] === "v1" &&
+        parts[1] === "admin" &&
+        parts[2] === "workspaces" &&
+        parts[3] &&
+        parts[4] === "members" &&
+        parts.length === 5
+      ) {
+        const body = await readBody(req);
+        return send(res, 201, {
+          membership: await identities.addMember({
+            workspaceId: parts[3],
+            userId: body.userId,
+            role: body.role,
+          }),
+        });
+      }
 
       if (req.method === "GET" && url.pathname === "/v1/projects") {
         return send(res, 200, {projects: await store.listProjects()});
@@ -284,10 +530,16 @@ export function listenForgeControlService({
   root,
   token,
   interpreter = null,
+  secureSessionCookies = false,
   host = "127.0.0.1",
   port = 38700,
 }) {
-  const server = createForgeControlService({root, token, interpreter});
+  const server = createForgeControlService({
+    root,
+    token,
+    interpreter,
+    secureSessionCookies,
+  });
   server.listen(port, host);
   return server;
 }
