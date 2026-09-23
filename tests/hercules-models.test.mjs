@@ -30,15 +30,20 @@ async function listen(server) {
   return "http://127.0.0.1:" + server.address().port;
 }
 
-test("canonical catalog defines eight planned Hercules-native model families", () => {
+test("canonical catalog defines seven planned families and one evidence-backed active native model", () => {
   assert.equal(HERCULES_MODEL_SLOTS.length, 8);
   const registry = new HerculesModelRegistry(HERCULES_MODEL_SLOTS);
   assert.equal(registry.list().length, 8);
   for (const model of registry.list()) {
     assert.equal(model.origin, "hercules-native");
-    assert.equal(model.state, "planned");
-    assert.equal(model.runtime, null);
   }
+  const active = registry.list({state: "active"});
+  const planned = registry.list({state: "planned"});
+  assert.equal(active.length, 1);
+  assert.equal(planned.length, 7);
+  assert.equal(active[0].id, "hercules-agent");
+  assert.equal(active[0].runtime.kind, "embedded");
+  assert.match(active[0].checkpoint, /^sha256:[a-f0-9]{64}$/);
 });
 
 test("active models require an actual runtime", () => {
@@ -103,7 +108,7 @@ test("model plane service exposes health and authenticated routing", async () =>
   }
 });
 
-test("planned catalog fails closed instead of pretending a checkpoint exists", async () => {
+test("untrained catalog families still fail closed instead of pretending a checkpoint exists", async () => {
   const server = createModelPlaneService({
     models: HERCULES_MODEL_SLOTS,
     token,
