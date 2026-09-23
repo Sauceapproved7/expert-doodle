@@ -7,6 +7,7 @@ import {
   validateCampaignExecutionSession,
 } from "../hercules-video/campaign-execution-service.mjs";
 import {createAssemblyEvidence} from "../hercules-video/assembly-core.mjs";
+import {fingerprint} from "../hercules-video/core.mjs";
 
 const sha=label=>createHash("sha256").update(label).digest("hex");
 
@@ -202,4 +203,82 @@ test("finalization links evaluated renders, post-audio assembly, and final evide
   assert.equal(result.campaignEvidence.finalOutput.sha256,sha("final"));
   assert.equal(result.session.campaignEvidenceFingerprint,result.campaignEvidence.fingerprint);
   assert.equal(result.session.finalOutput.sha256,sha("final"));
+});
+
+
+function resealSession(session){
+  const unsigned={...session};
+  delete unsigned.fingerprint;
+  return {...unsigned,fingerprint:fingerprint(unsigned)};
+}
+
+test("resume preserves verified completed jobs and resubmits only incomplete jobs",async()=>{
+  const executionPlan=plan();
+  const adapter=new FakeAdapter();
+  const service=new HerculesCampaignExecutionService({adapter,clock:clock(),sleep:async()=>{}});
+  const started=await service.start(executionPlan);
+
+  const resumable=structuredClone(started);
+  resumable.jobs[0].status="completed";
+  resumable.jobs[0].artifact=artifact("a",4);
+  resumable.jobs[0].remoteJobId="old-a";
+  resumable.jobs[1].status="running";
+  resumable.jobs[1].artifact=null;
+  resumable.jobs[1].remoteJobId="old-b";
+  resumable.phase="rendering";
+  const sealed=resealSession(resumable);
+
+  adapter.requests.clear();
+  const resumed=await service.resume(executionPlan,sealed);
+
+  assert.equal(resumed.jobs[0].status,"completed");
+  assert.equal(resumed.jobs[0].remoteJobId,"old-a");
+  assert.equal(resumed.jobs[0].artifact.sha256,sha("a"));
+  assert.equal(resumed.jobs[1].status,"queued");
+  assert.equal(adapter.requests.size,1);
+  assert.ok(adapter.requests.has("job-b"));
+  assert.equal(
+    resumed.events.some(event=>event.type==="render_reused_after_resume" && event.shotId==="a"),
+    true
+  );
+  assert.equal(
+    resumed.events.some(event=>event.type==="render_resubmitted_after_resume" && event.shotId==="b"),
+    true
+  );
+});
+
+test("resume rejects request identity drift before submission",async()=>{
+  const executionPlan=plan();
+  const adapter=new FakeAdapter();
+  const service=new HerculesCampaignExecutionService({adapter,clock:clock(),sleep:async()=>{}});
+  const started=await service.start(executionPlan);
+  const changed=structuredClone(started);
+  changed.jobs[0].requestFingerprint="0".repeat(64);
+  const sealed=resealSession(changed);
+  adapter.requests.clear();
+
+  await assert.rejects(
+    ()=>service.resume(executionPlan,sealed),
+    /campaign_execution_resume_request_mismatch:a/
+  );
+  assert.equal(adapter.requests.size,0);
+});
+
+test("resume returns a completed execution session without new submissions",async()=>{
+  const executionPlan=plan();
+  const adapter=new FakeAdapter();
+  const service=new HerculesCampaignExecutionService({adapter,clock:clock(),sleep:async()=>{}});
+  const started=await service.start(executionPlan);
+  const completed=structuredClone(started);
+  completed.phase="completed";
+  completed.jobs[0].status="completed";
+  completed.jobs[0].artifact=artifact("a",4);
+  completed.jobs[1].status="completed";
+  completed.jobs[1].artifact=artifact("b",5);
+  const sealed=resealSession(completed);
+  adapter.requests.clear();
+
+  const result=await service.resume(executionPlan,sealed);
+  assert.equal(result.fingerprint,sealed.fingerprint);
+  assert.equal(adapter.requests.size,0);
 });
