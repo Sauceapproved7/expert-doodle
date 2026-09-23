@@ -1,0 +1,76 @@
+{
+  "version": "0.1",
+  "name": "hercules-family-bootstrap-v0.1",
+  "sourceCommit": "71293860f8bdbf0304eaadbf1ac6be516c01ad76",
+  "workflowRunId": 35922479308,
+  "workflowArtifactId": 10777647124,
+  "workflowArtifactDigest": "sha256:2a7abff60643ca05513a2b1f94af5d2c8357b8100bc80804c42f07219aa83d41",
+  "trainingSource": "hercules-training/bootstrap/family-bootstrap.json",
+  "framework": "hercules-native-js",
+  "provenance": "Original Hercules-authored bootstrap training/evaluation material; no third-party model weights or ML SDK dependency.",
+  "models": [
+    {
+      "modelId": "hercules-coder-bootstrap",
+      "family": "hercules-coder",
+      "capability": "software-work-intent-routing",
+      "algorithm": "multinomial-naive-bayes",
+      "checkpointSha256": "9f0fbb75e4b1db7391bbb2c4206a61310165758a700a497ee825f85fccb4c39e",
+      "evaluation": {"accuracy": 1, "errorRate": 0, "passed": true},
+      "state": "candidate"
+    },
+    {
+      "modelId": "hercules-core-bootstrap",
+      "family": "hercules-core",
+      "capability": "instruction-mode-routing",
+      "algorithm": "multinomial-naive-bayes",
+      "checkpointSha256": "37538135e172d5893a0f3b9feef17d3c57c407d0e6aab56d8e2634b5b66621ed",
+      "evaluation": {"accuracy": 1, "errorRate": 0, "passed": true},
+      "state": "candidate"
+    },
+    {
+      "modelId": "hercules-guard-bootstrap",
+      "family": "hercules-guard",
+      "capability": "action-risk-routing",
+      "algorithm": "multinomial-naive-bayes",
+      "checkpointSha256": "98b3f0b10a0ac79b813aed3f44b74f5353edf49bcb9d6356a37787260c2bc77e",
+      "evaluation": {"accuracy": 1, "errorRate": 0, "passed": true},
+      "state": "candidate"
+    },
+    {
+      "modelId": "hercules-research-bootstrap",
+      "family": "hercules-research",
+      "capability": "research-strategy-routing",
+      "algorithm": "multinomial-naive-bayes",
+      "checkpointSha256": "89f8b5f8dbc9a39423b2a3c75be7a0419cdc2664bf0fc5dff622cb34e327c936",
+      "evaluation": {"accuracy": 1, "errorRate": 0, "passed": true},
+      "state": "candidate"
+    },
+    {
+      "modelId": "hercules-retrieval-bootstrap",
+      "family": "hercules-retrieval",
+      "capability": "lexical-document-ranking",
+      "algorithm": "tf-idf-cosine",
+      "checkpointSha256": "83f2010b8c039470cca6414e63adfe6eb3d14b7665c7cadcb7317ddf9ebed2ce",
+      "evaluation": {"accuracy": 1, "errorRate": 0, "passed": true},
+      "state": "candidate"
+    },
+    {
+      "modelId": "hercules-vision-bootstrap",
+      "family": "hercules-vision",
+      "capability": "visual-request-intent-routing",
+      "algorithm": "multinomial-naive-bayes",
+      "checkpointSha256": "288d955b8b5fce2e52b198e6275269aa2e7c606e27dcc365f8c86fd57aa53fd7",
+      "evaluation": {"accuracy": 1, "errorRate": 0, "passed": true},
+      "state": "candidate"
+    },
+    {
+      "modelId": "hercules-voice-bootstrap",
+      "family": "hercules-voice",
+      "capability": "voice-request-intent-routing",
+      "algorithm": "multinomial-naive-bayes",
+      "checkpointSha256": "d0d5aff155bd65317bbe7dccdb9d046582e21f7777c75bfdd6ba2e253574d13a",
+      "evaluation": {"accuracy": 1, "errorRate": 0, "passed": true},
+      "state": "candidate"
+    }
+  ]
+}
