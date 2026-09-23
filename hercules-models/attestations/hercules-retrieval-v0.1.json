@@ -1,0 +1,33 @@
+{
+  "version": "0.1",
+  "modelId": "hercules-retrieval",
+  "capability": "sparse-embedding-and-reranking",
+  "algorithm": "tfidf-word-char3-cosine",
+  "framework": "hercules-native-js",
+  "checkpointSha256": "6904b2617443a36377cfe20eb1010579d50df479041bece6bc7d8ce032543fa4",
+  "checkpointBytes": 30585,
+  "sourceCommit": "ea00e587613c6e228f5d15d97337deeea4ae2e94",
+  "workflowRunId": 35922647950,
+  "workflowArtifactId": 10777283872,
+  "workflowArtifactDigest": "sha256:c2e718bc58eec16e82f5b98fbf9bc8e30ce83a47cf925cf5a27ec05404b514c9",
+  "trainingDataset": {
+    "path": "hercules-training/bootstrap/retrieval-documents.jsonl",
+    "records": 32,
+    "contentSha256": "445639ab5e133ca7d6ea058684b72c22e996d053780b6ed4f3ed8771d403e25a"
+  },
+  "evaluationDataset": {
+    "path": "hercules-training/bootstrap/retrieval-eval.jsonl",
+    "records": 15,
+    "contentSha256": "3094a46b8e257175b8415e343929f9ecabcd7e476253c9ab51c5ae03163a9ca4"
+  },
+  "evaluation": {
+    "top1": 0.9333333333333333,
+    "mrr": 0.9666666666666667,
+    "passed": true,
+    "gate": {
+      "minimumTop1": 0.8,
+      "minimumMrr": 0.9
+    }
+  },
+  "provenance": "Original Hercules-authored training/evaluation material; no third-party model weights, embeddings, datasets, or ML SDK dependency."
+}

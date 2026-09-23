@@ -10,6 +10,7 @@ Complete every item before merge.
 - [ ] License compatibility checked
 - [ ] Third-party notices preserved or not applicable
 - [ ] AI assistance disclosed or not applicable
+- [ ] Owner-code-only build scope confirmed; no third-party code is packaged
 
 ## Canonical-source note
 

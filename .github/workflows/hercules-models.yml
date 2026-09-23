@@ -2,6 +2,14 @@ name: Hercules Model Plane
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "hercules-models/**"
+      - "tests/hercules-models*.test.mjs"
+      - "docs/HERCULES-MODEL-*.md"
+      - ".github/workflows/hercules-models.yml"
   pull_request:
     paths:
       - "hercules-models/**"
@@ -18,22 +26,64 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
       - name: Run Hercules model-plane tests
         run: node --test tests/hercules-models*.test.mjs
-      - name: Verify native catalog target
+
+      - name: Verify native catalog evidence
         shell: bash
         run: |
           set -euo pipefail
           node --input-type=module <<'NODE'
+          import {readFile} from "node:fs/promises";
           import {HERCULES_MODEL_SLOTS} from "./hercules-models/catalog.mjs";
+
+          const attestations = {
+            "hercules-agent": "hercules-models/attestations/hercules-agent-router-v0.1.json",
+            "hercules-retrieval": "hercules-models/attestations/hercules-retrieval-v0.1.json",
+          };
+
           if (!HERCULES_MODEL_SLOTS.length) throw new Error("catalog is empty");
+
           for (const model of HERCULES_MODEL_SLOTS) {
             if (model.origin !== "hercules-native") {
               throw new Error("canonical slot is not Hercules-native: " + model.id);
             }
-            if (model.state !== "planned" || model.runtime !== null || model.checkpoint !== null) {
-              throw new Error("untrained canonical slot claims executable state: " + model.id);
+
+            if (model.state === "planned") {
+              if (model.runtime !== null || model.checkpoint !== null) {
+                throw new Error("planned model claims executable state: " + model.id);
+              }
+              continue;
+            }
+
+            if (model.state !== "active") {
+              throw new Error("canonical catalog may contain only planned or evidence-backed active models: " + model.id);
+            }
+            if (!model.runtime || !["embedded", "http"].includes(model.runtime.kind)) {
+              throw new Error("active model lacks routeable runtime: " + model.id);
+            }
+            if (!/^sha256:[a-f0-9]{64}$/.test(model.checkpoint ?? "")) {
+              throw new Error("active model lacks immutable checkpoint hash: " + model.id);
+            }
+
+            const attestationPath = attestations[model.id];
+            if (!attestationPath) {
+              throw new Error("active model has no CI attestation verifier: " + model.id);
+            }
+
+            const attestation = JSON.parse(await readFile(attestationPath, "utf8"));
+            const expected = model.checkpoint.slice("sha256:".length);
+            if (attestation.modelId !== model.id) {
+              throw new Error("attestation model mismatch: " + model.id);
+            }
+            if (attestation.checkpointSha256 !== expected) {
+              throw new Error("attestation checkpoint mismatch: " + model.id);
+            }
+            if (attestation.evaluation?.passed !== true) {
+              throw new Error("attestation did not pass evaluation: " + model.id);
             }
           }
-          console.log("Hercules model catalog is native-targeted and fails closed.");
+
+          console.log("Hercules catalog is native, fail-closed, and evidence-backed.");
           NODE
