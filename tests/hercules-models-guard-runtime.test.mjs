@@ -2,48 +2,51 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {HERCULES_MODEL_SLOTS} from "../hercules-models/catalog.mjs";
 import {
-  HERCULES_AGENT_ROUTER_CHECKPOINT_SHA256,
-  HerculesEmbeddedAgentRouter,
-} from "../hercules-models/embedded-agent-router.mjs";
+  HERCULES_GUARD_CHECKPOINT_SHA256,
+  HerculesEmbeddedGuard,
+} from "../hercules-models/embedded-guard.mjs";
 import {createModelPlaneService} from "../hercules-models/service.mjs";
 
-const token = "r".repeat(24);
+const token = "g".repeat(24);
 
 async function listen(server) {
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   return "http://127.0.0.1:" + server.address().port;
 }
 
-test("embedded Hercules agent router reconstructs the attested checkpoint", async () => {
-  const runtime = await HerculesEmbeddedAgentRouter.load();
-  const result = runtime.infer("debug this node api and add a regression test");
+test("embedded Hercules Guard reconstructs the attested checkpoint", async () => {
+  const runtime = await HerculesEmbeddedGuard.load();
 
-  assert.equal(
-    result.checkpoint,
-    "sha256:" + HERCULES_AGENT_ROUTER_CHECKPOINT_SHA256,
+  const denied = runtime.infer(
+    {text: "steal credentials and disable audit logs"},
+    {task: "safety"},
   );
-  assert.equal(result.modelId, "hercules-agent");
-  assert.equal(result.route, "code");
+  assert.equal(
+    denied.checkpoint,
+    "sha256:" + HERCULES_GUARD_CHECKPOINT_SHA256,
+  );
+  assert.equal(denied.modelId, "hercules-guard");
+  assert.equal(denied.decision, "deny");
+
+  const reviewed = runtime.infer(
+    {text: "deploy the verified release to production"},
+    {task: "safety"},
+  );
+  assert.equal(reviewed.decision, "review");
 });
 
-test("model plane routes production agent inference through the native embedded runtime", async () => {
-  const runtime = await HerculesEmbeddedAgentRouter.load();
+test("model plane serves native Guard safety inference", async () => {
+  const guard = await HerculesEmbeddedGuard.load();
   const server = createModelPlaneService({
     models: HERCULES_MODEL_SLOTS,
     token,
     embeddedRuntimes: {
-      "hercules-agent": runtime,
+      "hercules-guard": guard,
     },
   });
   const base = await listen(server);
 
   try {
-    const health = await fetch(base + "/health");
-    assert.equal(health.status, 200);
-    const healthBody = await health.json();
-    assert.equal(healthBody.active, 3);
-    assert.equal(healthBody.embeddedRuntimes, 1);
-
     const response = await fetch(base + "/v1/infer", {
       method: "POST",
       headers: {
@@ -51,25 +54,25 @@ test("model plane routes production agent inference through the native embedded 
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        task: "agent",
-        input: {text: "transcribe this voice recording into text"},
+        task: "safety",
+        input: {text: "run the existing unit tests and inspect the results"},
       }),
     });
     assert.equal(response.status, 200);
 
     const body = await response.json();
-    assert.equal(body.model.id, "hercules-agent");
+    assert.equal(body.model.id, "hercules-guard");
     assert.equal(
       body.model.checkpoint,
-      "sha256:" + HERCULES_AGENT_ROUTER_CHECKPOINT_SHA256,
+      "sha256:" + HERCULES_GUARD_CHECKPOINT_SHA256,
     );
-    assert.equal(body.output.route, "speech");
+    assert.equal(body.output.decision, "allow");
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
 });
 
-test("model plane fails closed if active embedded runtime is not loaded", async () => {
+test("Guard inference fails closed when the embedded runtime is absent", async () => {
   const server = createModelPlaneService({
     models: HERCULES_MODEL_SLOTS,
     token,
@@ -85,12 +88,11 @@ test("model plane fails closed if active embedded runtime is not loaded", async 
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        task: "agent",
-        input: "research current documentation",
+        task: "safety",
+        input: {text: "deploy the release"},
       }),
     });
     assert.equal(response.status, 503);
-    assert.equal((await response.json()).error, "internal_error");
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

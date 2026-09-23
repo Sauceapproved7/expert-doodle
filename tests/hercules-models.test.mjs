@@ -30,7 +30,7 @@ async function listen(server) {
   return "http://127.0.0.1:" + server.address().port;
 }
 
-test("canonical catalog defines six planned families and two evidence-backed active native models", () => {
+test("canonical catalog defines five planned families and three evidence-backed active native models", () => {
   assert.equal(HERCULES_MODEL_SLOTS.length, 8);
   const registry = new HerculesModelRegistry(HERCULES_MODEL_SLOTS);
   assert.equal(registry.list().length, 8);
@@ -39,10 +39,11 @@ test("canonical catalog defines six planned families and two evidence-backed act
   }
   const active = registry.list({state: "active"});
   const planned = registry.list({state: "planned"});
-  assert.equal(active.length, 2);
-  assert.equal(planned.length, 6);
+  assert.equal(active.length, 3);
+  assert.equal(planned.length, 5);
   assert.deepEqual(active.map((model) => model.id).sort(), [
     "hercules-agent",
+    "hercules-guard",
     "hercules-retrieval",
   ]);
   for (const model of active) {

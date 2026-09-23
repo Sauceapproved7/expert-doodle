@@ -27,6 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check model-plane executable syntax
+        run: node --check hercules-models/control-cli.mjs
+
       - name: Run Hercules model-plane tests
         run: node --test tests/hercules-models*.test.mjs
 
@@ -41,6 +44,7 @@ jobs:
           const attestations = {
             "hercules-agent": "hercules-models/attestations/hercules-agent-router-v0.1.json",
             "hercules-retrieval": "hercules-models/attestations/hercules-retrieval-v0.1.json",
+            "hercules-guard": "hercules-models/attestations/hercules-guard-v0.1.json",
           };
 
           if (!HERCULES_MODEL_SLOTS.length) throw new Error("catalog is empty");
