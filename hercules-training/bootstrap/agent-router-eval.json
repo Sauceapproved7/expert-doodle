@@ -1,0 +1,66 @@
+[
+  {
+    "text": "write code to add a new endpoint",
+    "label": "code"
+  },
+  {
+    "text": "repair a bug in the build logic",
+    "label": "code"
+  },
+  {
+    "text": "research current approaches and provide evidence",
+    "label": "research"
+  },
+  {
+    "text": "compare the available technical options with citations",
+    "label": "research"
+  },
+  {
+    "text": "tell me what is visible in this screenshot",
+    "label": "vision"
+  },
+  {
+    "text": "inspect the attached image interface",
+    "label": "vision"
+  },
+  {
+    "text": "convert this recording to text",
+    "label": "voice"
+  },
+  {
+    "text": "speak this response aloud",
+    "label": "voice"
+  },
+  {
+    "text": "decide which tool to call next",
+    "label": "agent"
+  },
+  {
+    "text": "coordinate the workflow across tools",
+    "label": "agent"
+  },
+  {
+    "text": "rank these documents for relevance",
+    "label": "retrieval"
+  },
+  {
+    "text": "create embeddings for these notes",
+    "label": "retrieval"
+  },
+  {
+    "text": "verify whether this action is permitted",
+    "label": "safety"
+  },
+  {
+    "text": "check this command against security rules",
+    "label": "safety"
+  },
+  {
+    "text": "explain what this means",
+    "label": "general"
+  },
+  {
+    "text": "answer my normal question",
+    "label": "general"
+  }
+]
