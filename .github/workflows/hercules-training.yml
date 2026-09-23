@@ -2,6 +2,17 @@ name: Hercules Training Foundation
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "hercules-training/**"
+      - "hercules-models/**"
+      - "tests/hercules-training*.test.mjs"
+      - "tests/hercules-native-agent-router.test.mjs"
+      - "docs/HERCULES-TRAINING-*.md"
+      - ".github/workflows/hercules-training.yml"
+      - ".gitignore"
   pull_request:
     paths:
       - "hercules-training/**"
