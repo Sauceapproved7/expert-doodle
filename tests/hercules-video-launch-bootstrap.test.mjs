@@ -5,6 +5,7 @@ import os from "node:os";
 import {createHash} from "node:crypto";
 import {mkdtemp,mkdir,readFile,writeFile} from "node:fs/promises";
 import {pathToFileURL} from "node:url";
+import {fingerprint} from "../hercules-video/core.mjs";
 import {
   normalizeWan22LaunchConfig,
   prepareWan22LaunchHost,
@@ -13,6 +14,11 @@ import {
   writeLaunchEvidenceBundle,
   resolveLaunchQualityEvaluator,
 } from "../hercules-video/launch-bootstrap.mjs";
+import {
+  createLaunchRunState,
+  readLaunchRunState,
+  writeLaunchRunStateAtomic,
+} from "../hercules-video/launch-state.mjs";
 
 const sha=value=>createHash("sha256").update(value).digest("hex");
 const commit="0123456789abcdef0123456789abcdef01234567";
@@ -34,6 +40,36 @@ const semanticResult={
   reliability:.9,
 };
 
+function resealSession(session) {
+  const unsigned={...session};
+  delete unsigned.fingerprint;
+  return {...unsigned,fingerprint:fingerprint(unsigned)};
+}
+
+function executionSession(plan,{phase="rendering",artifact=null,remoteJobId="job-a"}={}) {
+  const jobs=plan.renderRequests.map(request=>({
+    shotId:request.shot.id,
+    requestFingerprint:request.requestFingerprint,
+    remoteJobId,
+    status:artifact ? "completed" : "queued",
+    artifact,
+    error:null,
+  }));
+  const unsigned={
+    schema:"sauceapproved.hercules.video-campaign-execution-session",
+    version:1,
+    executionPlanFingerprint:plan.fingerprint,
+    phase,
+    createdAt:"2026-09-23T20:00:00.000Z",
+    updatedAt:"2026-09-23T20:00:01.000Z",
+    runtime:{healthy:true,runtimeId:"runtime-1",runnerId:"wan"},
+    jobs,
+    events:[],
+    error:null,
+  };
+  return {...unsigned,fingerprint:fingerprint(unsigned)};
+}
+
 async function fixture() {
   const root=await mkdtemp(path.join(os.tmpdir(),"hercules-bootstrap-"));
   const wanRepoDir=path.join(root,"wan");
@@ -50,10 +86,14 @@ async function fixture() {
   await writeFile(audioPath,"approved-audio");
   const finalOutputPath=path.join(finalDir,"final.mp4");
   const evidenceOutputPath=path.join(finalDir,"evidence.json");
+  const statePath=path.join(finalDir,"launch-state.json");
   return {
     root,
+    audioPath,
+    renderOutputDir,
     finalOutputPath,
     evidenceOutputPath,
+    statePath,
     config:{
       projectId:"launch",
       runtimeId:"runtime-1",
@@ -62,8 +102,11 @@ async function fixture() {
       renderOutputDir,
       finalOutputPath,
       evidenceOutputPath,
+      statePath,
       upstreamCommit:commit,
       checkpointSha256:sha("checkpoint"),
+      maxPolls:3,
+      pollIntervalMs:0,
       audioTracks:[{
         id:"music",
         kind:"soundtrack",
@@ -90,15 +133,18 @@ function baseDeps() {
     runnerFactory:()=>({descriptor:{id:"wan"},async health(){return {ok:true};}}),
     runtimeFactory:()=>({}),
     adapterFactory:()=>({descriptor:{id:"local"},async health(){return {ok:true};}}),
+    sleep:async()=>{},
   };
 }
 
-test("launch config requires pinned paths, model evidence, and local audio evidence",async()=>{
-  const {config}=await fixture();
+test("launch config requires pinned paths, model evidence, local audio, and state identity",async()=>{
+  const {config,statePath}=await fixture();
   const normalized=normalizeWan22LaunchConfig(config);
   assert.equal(normalized.upstreamCommit,commit);
   assert.equal(normalized.checkpointSha256,sha("checkpoint"));
   assert.equal(normalized.audioTracks[0].sha256,sha("approved-audio"));
+  assert.equal(normalized.statePath,statePath);
+  assert.equal(normalized.resume,false);
   assert.throws(()=>normalizeWan22LaunchConfig({...config,wanRepoDir:"./Wan2.2"}),/launch_wan_repo_dir_required/);
   assert.throws(()=>normalizeWan22LaunchConfig({...config,checkpointSha256:"bad"}),/launch_checkpoint_sha256_required/);
   assert.throws(
@@ -121,7 +167,7 @@ test("host preparation verifies audio checksum before hardware probing",async()=
   assert.equal(probed,false);
 });
 
-test("host preparation refuses overwrite of final output and evidence",async()=>{
+test("fresh host preparation refuses existing final, evidence, or state files",async()=>{
   const first=await fixture();
   await writeFile(first.finalOutputPath,"existing");
   await assert.rejects(
@@ -134,6 +180,13 @@ test("host preparation refuses overwrite of final output and evidence",async()=>
   await assert.rejects(
     ()=>prepareWan22LaunchHost(second.config,{...baseDeps(),serviceFactory:()=>({})}),
     /launch_evidence_output_exists/
+  );
+
+  const third=await fixture();
+  await writeFile(third.statePath,"{}");
+  await assert.rejects(
+    ()=>prepareWan22LaunchHost(third.config,{...baseDeps(),serviceFactory:()=>({})}),
+    /launch_state_exists_resume_required/
   );
 });
 
@@ -158,15 +211,28 @@ test("host preparation keeps the canonical self-hosted execution plan",async()=>
   assert.ok(calls.includes("adapter-health"));
 });
 
-test("launch records the enforced quality-gate result against exact render hash",async()=>{
-  const {config}=await fixture();
+test("fresh launch persists render progress, evaluation evidence, and completed state",async()=>{
+  const {config,statePath}=await fixture();
   const artifactSha=sha("render-a");
   const finalBytes="final-video";
   const finalSha=sha(finalBytes);
+  let refreshCalls=0;
 
   const fakeService={
-    async start(plan){return {phase:"rendering",fingerprint:sha("s1"),executionPlanFingerprint:plan.fingerprint};},
-    async awaitRenders(_plan,session){return {...session,phase:"renders_completed",fingerprint:sha("s2")};},
+    async start(plan){return executionSession(plan);},
+    async refresh(plan,session){
+      refreshCalls++;
+      const completed=structuredClone(session);
+      completed.phase="renders_completed";
+      completed.jobs[0].status="completed";
+      completed.jobs[0].artifact={
+        uri:"file:///tmp/a.mp4",
+        sha256:artifactSha,
+        sizeBytes:123,
+        durationSeconds:2,
+      };
+      return resealSession(completed);
+    },
     async finalize({executionPlan,session,evaluate,audioTracks,assemblyRunner,outputPath}){
       assert.equal(session.phase,"renders_completed");
       assert.equal(audioTracks.length,1);
@@ -175,18 +241,16 @@ test("launch records the enforced quality-gate result against exact render hash"
         shot,
         request:executionPlan.renderRequests[0],
         route:executionPlan.routes[0],
-        artifact:{
-          uri:pathToFileURL(path.join(path.dirname(outputPath),"a.mp4")).href,
-          sha256:artifactSha,
-          sizeBytes:123,
-          durationSeconds:2,
-        },
+        artifact:session.jobs[0].artifact,
       });
       assert.equal(result.technicalPassed,true);
       const assemblyPlan={fingerprint:sha("assembly-plan")};
       const assemblyResult=await assemblyRunner(assemblyPlan,{outputPath});
+      const completed=structuredClone(session);
+      completed.phase="completed";
+      const completedSession=resealSession(completed);
       return {
-        session:{phase:"completed",fingerprint:sha("session-final")},
+        session:completedSession,
         winners:{fingerprint:sha("winners")},
         assemblyPlan,
         assemblyResult,
@@ -211,31 +275,178 @@ test("launch records the enforced quality-gate result against exact render hash"
     },
   });
 
+  assert.equal(refreshCalls,1);
   assert.equal(result.status,"completed");
-  assert.equal(result.evidenceBundle.finalOutputSha256,finalSha);
+  assert.equal(result.launchState.stage,"completed");
+  assert.equal(result.launchState.finalOutputSha256,finalSha);
   assert.equal(result.evidenceBundle.evaluations.length,1);
-  assert.equal(result.evidenceBundle.evaluations[0].shotId,"a");
-  assert.equal(result.evidenceBundle.evaluations[0].artifactSha256,artifactSha);
-  assert.equal(result.evidenceBundle.evaluations[0].result.technicalPassed,true);
-  assert.match(result.evidenceBundle.evaluations[0].fingerprint,/^[a-f0-9]{64}$/);
+
+  const saved=await readLaunchRunState(statePath);
+  assert.equal(saved.stage,"completed");
+  assert.equal(saved.campaignEvidenceFingerprint,sha("campaign"));
+  assert.equal(saved.evaluations[0].artifactSha256,artifactSha);
 });
 
-test("launch rejects a final file whose disk hash differs from campaign evidence",async()=>{
+test("resume reuses a verified completed render and stored quality result",async()=>{
+  const fx=await fixture();
+  const config={...fx.config,resume:true};
+  let semanticCalls=0;
+  let resumeCalls=0;
+  const artifactPath=path.join(fx.renderOutputDir,"a.mp4");
+  await writeFile(artifactPath,"render-a");
+  const artifactSha=sha("render-a");
+  const finalBytes="final-video";
+  const finalSha=sha(finalBytes);
+
+  const host=await prepareWan22LaunchHost(config,{
+    ...baseDeps(),
+    semanticEvaluator:async()=>{semanticCalls++;return semanticResult;},
+    serviceFactory:()=>({}),
+  });
+  const session=executionSession(host.executionPlan,{
+    phase:"renders_completed",
+    artifact:{
+      uri:pathToFileURL(artifactPath).href,
+      sha256:artifactSha,
+      sizeBytes:8,
+      durationSeconds:2,
+    },
+  });
+  const acceptedResult={
+    promptAdherence:.9,
+    temporalConsistency:.9,
+    visualQuality:.9,
+    brandConsistency:.9,
+    audioQuality:1,
+    artifactFreedom:.9,
+    reliability:.9,
+    technicalPassed:true,
+    technicalEvidence:{passed:true},
+  };
+  const evaluationUnsigned={shotId:"a",artifactSha256:artifactSha,result:acceptedResult};
+  const evaluation={...evaluationUnsigned,fingerprint:fingerprint(evaluationUnsigned)};
+  const state=createLaunchRunState({
+    executionPlan:host.executionPlan,
+    config:host.config,
+    session,
+    stage:"finalizing",
+    evaluations:[evaluation],
+  });
+  await writeLaunchRunStateAtomic(state,fx.statePath);
+
+  const fakeService={
+    async resume(plan,input){
+      resumeCalls++;
+      assert.equal(plan.fingerprint,host.executionPlan.fingerprint);
+      return input;
+    },
+    async refresh(){throw new Error("refresh_should_not_run");},
+    async finalize({executionPlan,session:input,evaluate,assemblyRunner,outputPath}){
+      const result=await evaluate({
+        shot:executionPlan.storyboard.shots[0],
+        request:executionPlan.renderRequests[0],
+        route:executionPlan.routes[0],
+        artifact:input.jobs[0].artifact,
+      });
+      assert.deepEqual(result,acceptedResult);
+      const assemblyPlan={fingerprint:sha("assembly-plan")};
+      const assemblyResult=await assemblyRunner(assemblyPlan,{outputPath});
+      const completed=structuredClone(input);
+      completed.phase="completed";
+      return {
+        session:resealSession(completed),
+        winners:{fingerprint:sha("winners")},
+        assemblyPlan,
+        assemblyResult,
+        campaignEvidence:{
+          fingerprint:sha("campaign"),
+          finalOutput:{uri:pathToFileURL(outputPath).href,sha256:finalSha,sizeBytes:finalBytes.length},
+        },
+      };
+    },
+  };
+
+  const result=await executeWan22Launch(config,{
+    ...baseDeps(),
+    semanticEvaluator:async()=>{semanticCalls++;return semanticResult;},
+    serviceFactory:()=>fakeService,
+    assemblyRunner:async(plan,{outputPath})=>{
+      await writeFile(outputPath,finalBytes);
+      return {evidence:{
+        fingerprint:sha("assembly-evidence"),
+        planFingerprint:plan.fingerprint,
+        output:{uri:pathToFileURL(outputPath).href,sha256:finalSha,sizeBytes:finalBytes.length},
+      }};
+    },
+  });
+
+  assert.equal(resumeCalls,1);
+  assert.equal(semanticCalls,0);
+  assert.equal(result.evidenceBundle.evaluations.length,1);
+  assert.equal(result.evidenceBundle.evaluations[0].artifactSha256,artifactSha);
+});
+
+test("resume refuses a completed launch state instead of finalizing twice",async()=>{
+  const fx=await fixture();
+  const config={...fx.config,resume:true};
+  const artifactPath=path.join(fx.renderOutputDir,"a.mp4");
+  await writeFile(artifactPath,"render-a");
+
+  const host=await prepareWan22LaunchHost(config,{
+    ...baseDeps(),
+    serviceFactory:()=>({}),
+  });
+  const completedSession=executionSession(host.executionPlan,{
+    phase:"completed",
+    artifact:{
+      uri:pathToFileURL(artifactPath).href,
+      sha256:sha("render-a"),
+      sizeBytes:8,
+      durationSeconds:2,
+    },
+  });
+  const state=createLaunchRunState({
+    executionPlan:host.executionPlan,
+    config:host.config,
+    session:completedSession,
+    stage:"completed",
+    finalOutputSha256:sha("final"),
+    campaignEvidenceFingerprint:sha("campaign"),
+  });
+  await writeLaunchRunStateAtomic(state,fx.statePath);
+
+  await assert.rejects(()=>executeWan22Launch(config,{
+    ...baseDeps(),
+    serviceFactory:()=>({
+      async resume(){throw new Error("resume_should_not_run");},
+    }),
+  }),/launch_resume_already_completed/);
+});
+
+test("launch rejects final file whose disk hash differs from campaign evidence",async()=>{
   const {config}=await fixture();
   const fakeService={
-    async start(){return {phase:"rendering",fingerprint:sha("s1")};},
-    async awaitRenders(_plan,session){return {...session,phase:"renders_completed",fingerprint:sha("s2")};},
-    async finalize({executionPlan,evaluate,outputPath}){
+    async start(plan){return executionSession(plan);},
+    async refresh(plan,session){
+      const completed=structuredClone(session);
+      completed.phase="renders_completed";
+      completed.jobs[0].status="completed";
+      completed.jobs[0].artifact={uri:"file:///tmp/a.mp4",sha256:sha("render"),sizeBytes:10,durationSeconds:2};
+      return resealSession(completed);
+    },
+    async finalize({executionPlan,session,evaluate,outputPath}){
       const shot=executionPlan.storyboard.shots[0];
       await evaluate({
         shot,
         request:executionPlan.renderRequests[0],
         route:executionPlan.routes[0],
-        artifact:{uri:"file:///tmp/a.mp4",sha256:sha("render"),sizeBytes:10,durationSeconds:2},
+        artifact:session.jobs[0].artifact,
       });
       await writeFile(outputPath,"actual-final");
+      const completed=structuredClone(session);
+      completed.phase="completed";
       return {
-        session:{fingerprint:sha("session")},
+        session:resealSession(completed),
         winners:{fingerprint:sha("winners")},
         assemblyPlan:{fingerprint:sha("assembly-plan")},
         assemblyResult:{evidence:{fingerprint:sha("assembly-evidence")}},
