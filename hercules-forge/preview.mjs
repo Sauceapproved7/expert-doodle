@@ -1,13 +1,13 @@
 import http from "node:http";
 import {fork} from "node:child_process";
-import {readFile} from "node:fs/promises";
-import {join} from "node:path";
+import {mkdir, readFile} from "node:fs/promises";
+import {join, resolve} from "node:path";
 import {verifyForgeArtifact, buildForgeArtifact} from "./artifact.mjs";
 
 const MAX_PROXY_BODY_BYTES = 1024 * 1024;
 const START_TIMEOUT_MS = 10000;
 
-export function buildPreviewChildEnv(source = process.env) {
+export function buildPreviewChildEnv(source = process.env, {dataDir = null} = {}) {
   const allowed = [
     "PATH",
     "SystemRoot",
@@ -27,6 +27,7 @@ export function buildPreviewChildEnv(source = process.env) {
   env.NODE_ENV = "preview";
   env.HOST = "127.0.0.1";
   env.PORT = "0";
+  if (dataDir !== null) env.FORGE_DATA_DIR = resolve(dataDir);
   return env;
 }
 
@@ -95,7 +96,10 @@ async function stopChild(child) {
   }
 }
 
-export async function startForgePreview({artifactDir}) {
+export async function startForgePreview({
+  artifactDir,
+  runtimeDataDir = join(artifactDir, "runtime-data"),
+}) {
   const artifact = await verifyForgeArtifact(artifactDir);
   const bundleRoot = join(artifactDir, "bundle");
   const serverPath = join(bundleRoot, "server.mjs");
@@ -118,9 +122,11 @@ export async function startForgePreview({artifactDir}) {
     }
   }
 
+  await mkdir(runtimeDataDir, {recursive: true});
+
   const child = fork(serverPath, [], {
     cwd: bundleRoot,
-    env: buildPreviewChildEnv(),
+    env: buildPreviewChildEnv(process.env, {dataDir: runtimeDataDir}),
     silent: true,
   });
 
@@ -233,7 +239,10 @@ export class ForgePreviewManager {
       projectId,
       revisionId,
     });
-    const session = await startForgePreview({artifactDir: built.artifactDir});
+    const session = await startForgePreview({
+      artifactDir: built.artifactDir,
+      runtimeDataDir: join(this.root, "runtime-data", projectId),
+    });
     this.sessions.set(projectId, session);
     return this.get(projectId);
   }
