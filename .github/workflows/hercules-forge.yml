@@ -26,6 +26,7 @@ jobs:
           set -euo pipefail
           if grep -RniE 'base44|lovable|appdeploy' \
             hercules-forge/schema.mjs \
+            hercules-forge/ownership.mjs \
             hercules-forge/compiler.mjs \
             hercules-forge/interpreter.mjs \
             hercules-forge/workspace.mjs \
@@ -42,3 +43,16 @@ jobs:
             exit 1
           fi
           echo "Hercules Forge owned runtime is hosted-builder neutral."
+
+      - name: Reject external runtime package imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          matches="$(grep -RnhE '(^|[[:space:]])(import|export).*from[[:space:]]+["'"'"'][^./]|require\(["'"'"'][^./]|import\(["'"'"'][^./]' hercules-forge --include='*.mjs' || true)"
+          filtered="$(printf '%s\n' "$matches" | grep -vE '["'"'"']node:' || true)"
+          if [[ -n "$filtered" ]]; then
+            printf '%s\n' "$filtered"
+            echo "External runtime package import detected in Hercules Forge owned core."
+            exit 1
+          fi
+          echo "Hercules Forge runtime imports only owned local modules and Node built-ins."
