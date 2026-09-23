@@ -1,6 +1,15 @@
 import {createHash} from "node:crypto";
 import {validateForgeSpec} from "./schema.mjs";
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
 function sqlType(type) {
   return {
     string: "text",
@@ -57,6 +66,8 @@ function renderServer(spec) {
     'import {randomUUID} from "node:crypto";',
     '',
     'const port = Number(process.env.PORT ?? 3000);',
+    'const host = process.env.HOST ?? "127.0.0.1";',
+    'const MAX_BODY_BYTES = 1048576;',
     'const entities = ' + entities + ';',
     'const records = new Map(entities.map((name) => [name, new Map()]));',
     '',
@@ -67,8 +78,18 @@ function renderServer(spec) {
     '',
     'async function readJson(req) {',
     '  let body = "";',
-    '  for await (const chunk of req) body += chunk;',
-    '  return body ? JSON.parse(body) : {};',
+    '  for await (const chunk of req) {',
+    '    body += chunk;',
+    '    if (Buffer.byteLength(body) > MAX_BODY_BYTES) {',
+    '      throw Object.assign(new Error("request body too large"), {statusCode: 413});',
+    '    }',
+    '  }',
+    '  if (!body) return {};',
+    '  try {',
+    '    return JSON.parse(body);',
+    '  } catch {',
+    '    throw Object.assign(new Error("invalid JSON body"), {statusCode: 400});',
+    '  }',
     '}',
     '',
     'export const server = http.createServer(async (req, res) => {',
@@ -88,8 +109,9 @@ function renderServer(spec) {
     '      return item ? json(res, 200, item) : json(res, 404, {error: "not_found"});',
     '    }',
     '    if (req.method === "POST" && !id) {',
+    '      const input = await readJson(req);',
     '      const now = new Date().toISOString();',
-    '      const item = {id: randomUUID(), ...(await readJson(req)), created_at: now, updated_at: now};',
+    '      const item = {...input, id: randomUUID(), created_at: now, updated_at: now};',
     '      store.set(item.id, item);',
     '      return json(res, 201, item);',
     '    }',
@@ -103,19 +125,26 @@ function renderServer(spec) {
     '    if (req.method === "DELETE" && id) return json(res, store.delete(id) ? 204 : 404, null);',
     '    return json(res, 405, {error: "method_not_allowed"});',
     '  } catch (error) {',
-    '    return json(res, 500, {error: "internal_error", message: error.message});',
+    '    const status = Number.isInteger(error?.statusCode) ? error.statusCode : 500;',
+    '    return json(res, status, {error: status >= 500 ? "internal_error" : error.message});',
     '  }',
     '});',
     '',
-    'if (process.env.NODE_ENV !== "test") server.listen(port);',
+    'if (process.env.NODE_ENV !== "test") {',
+    '  server.listen(port, host, () => {',
+    '    if (typeof process.send === "function") {',
+    '      process.send({type: "forge-ready", address: server.address()});',
+    '    }',
+    '  });',
+    '}',
     '',
   ].join("\n");
 }
 
 function renderIndex(spec) {
   const cards = spec.pages.map((page) =>
-    "<section><h2>" + page.name + "</h2><p>" + page.kind +
-    (page.entity ? " · " + page.entity : "") + "</p></section>"
+    "<section><h2>" + escapeHtml(page.name) + "</h2><p>" + escapeHtml(page.kind) +
+    (page.entity ? " · " + escapeHtml(page.entity) : "") + "</p></section>"
   ).join("\n");
 
   return [
@@ -124,15 +153,15 @@ function renderIndex(spec) {
     "<head>",
     '  <meta charset="utf-8" />',
     '  <meta name="viewport" content="width=device-width,initial-scale=1" />',
-    "  <title>" + spec.name + "</title>",
+    "  <title>" + escapeHtml(spec.name) + "</title>",
     "  <style>",
     "    body{font-family:system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 20px}",
     "    section{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0}",
     "  </style>",
     "</head>",
     "<body>",
-    "  <h1>" + spec.name + "</h1>",
-    "  <p>" + spec.description + "</p>",
+    "  <h1>" + escapeHtml(spec.name) + "</h1>",
+    "  <p>" + escapeHtml(spec.description) + "</p>",
     "  " + (cards || "<p>No pages defined.</p>"),
     "</body>",
     "</html>",
