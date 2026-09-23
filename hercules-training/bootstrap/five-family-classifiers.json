@@ -1,0 +1,150 @@
+{
+  "version": "0.1",
+  "families": {
+    "hercules-core": {
+      "task": "general",
+      "capability": "general-response-mode-routing",
+      "description": "Native v0.1 classifier for choosing Hercules general-response modes.",
+      "train": [
+        {"label":"explain","text":"explain this concept clearly"},
+        {"label":"explain","text":"teach me what this means"},
+        {"label":"explain","text":"break down the idea"},
+        {"label":"plan","text":"make a step by step plan"},
+        {"label":"plan","text":"create a roadmap and milestones"},
+        {"label":"plan","text":"give me an execution strategy"},
+        {"label":"transform","text":"rewrite this message professionally"},
+        {"label":"transform","text":"summarize and polish this draft"},
+        {"label":"transform","text":"shorten this paragraph"},
+        {"label":"compare","text":"compare these two options"},
+        {"label":"compare","text":"show the differences and tradeoffs"},
+        {"label":"compare","text":"contrast both alternatives"}
+      ],
+      "eval": [
+        {"label":"explain","text":"explain what this term means"},
+        {"label":"explain","text":"break this concept down"},
+        {"label":"plan","text":"build a roadmap with next steps"},
+        {"label":"plan","text":"make an execution plan"},
+        {"label":"transform","text":"rewrite and shorten this note"},
+        {"label":"transform","text":"polish this draft"},
+        {"label":"compare","text":"compare both choices and tradeoffs"},
+        {"label":"compare","text":"contrast these alternatives"}
+      ]
+    },
+    "hercules-coder": {
+      "task": "code",
+      "capability": "software-work-routing",
+      "description": "Native v0.1 classifier for Hercules software-engineering work modes.",
+      "train": [
+        {"label":"build","text":"implement a new api endpoint"},
+        {"label":"build","text":"create this feature and wire it up"},
+        {"label":"build","text":"add a new cli command"},
+        {"label":"debug","text":"fix this bug and exception"},
+        {"label":"debug","text":"debug the crashing function"},
+        {"label":"debug","text":"repair the failing code"},
+        {"label":"test","text":"write unit tests for this module"},
+        {"label":"test","text":"add regression coverage"},
+        {"label":"test","text":"create integration tests"},
+        {"label":"review","text":"review this pull request"},
+        {"label":"review","text":"audit the implementation"},
+        {"label":"review","text":"inspect this code for security issues"}
+      ],
+      "eval": [
+        {"label":"build","text":"implement this new feature"},
+        {"label":"build","text":"add a command to the cli"},
+        {"label":"debug","text":"fix the exception causing the crash"},
+        {"label":"debug","text":"debug this broken function"},
+        {"label":"test","text":"write regression tests"},
+        {"label":"test","text":"add unit test coverage"},
+        {"label":"review","text":"review this implementation"},
+        {"label":"review","text":"audit this pull request for issues"}
+      ]
+    },
+    "hercules-vision": {
+      "task": "vision",
+      "capability": "visual-request-routing",
+      "description": "Native v0.1 control classifier for routing visual-analysis requests; it does not itself inspect pixels.",
+      "train": [
+        {"label":"inspect","text":"inspect this screenshot and describe it"},
+        {"label":"inspect","text":"analyze what this image shows"},
+        {"label":"inspect","text":"look at the picture contents"},
+        {"label":"ocr","text":"read the text in this image"},
+        {"label":"ocr","text":"extract words from this document scan"},
+        {"label":"ocr","text":"ocr this screenshot"},
+        {"label":"compare","text":"compare these two screenshots"},
+        {"label":"compare","text":"find visual differences between images"},
+        {"label":"compare","text":"what changed between the pictures"},
+        {"label":"ui","text":"find the button in this interface"},
+        {"label":"ui","text":"identify the menu and form fields"},
+        {"label":"ui","text":"locate the control on this screen"}
+      ],
+      "eval": [
+        {"label":"inspect","text":"describe what is visible in this screenshot"},
+        {"label":"inspect","text":"analyze this picture"},
+        {"label":"ocr","text":"extract all text from this scan"},
+        {"label":"ocr","text":"read the words in the screenshot"},
+        {"label":"compare","text":"compare both images and find changes"},
+        {"label":"compare","text":"show differences between these screenshots"},
+        {"label":"ui","text":"locate the submit button on screen"},
+        {"label":"ui","text":"identify the interface control"}
+      ]
+    },
+    "hercules-voice": {
+      "task": "speech-to-text",
+      "capability": "voice-request-routing",
+      "description": "Native v0.1 control classifier for routing voice requests; it does not itself decode or synthesize audio.",
+      "train": [
+        {"label":"transcribe","text":"transcribe this audio recording"},
+        {"label":"transcribe","text":"turn this speech into text"},
+        {"label":"transcribe","text":"write down the spoken words"},
+        {"label":"synthesize","text":"read this text out loud"},
+        {"label":"synthesize","text":"generate speech from this script"},
+        {"label":"synthesize","text":"turn this text into spoken audio"},
+        {"label":"translate","text":"translate this spoken audio to english"},
+        {"label":"translate","text":"convert this speech into spanish"},
+        {"label":"translate","text":"translate what the speaker says"},
+        {"label":"summarize","text":"summarize this podcast audio"},
+        {"label":"summarize","text":"give me key points from this recording"},
+        {"label":"summarize","text":"summarize this voice note"}
+      ],
+      "eval": [
+        {"label":"transcribe","text":"convert this recording into written text"},
+        {"label":"transcribe","text":"transcribe the spoken words"},
+        {"label":"synthesize","text":"generate spoken audio from this text"},
+        {"label":"synthesize","text":"read this script aloud"},
+        {"label":"translate","text":"translate the speaker into english"},
+        {"label":"translate","text":"make a spanish version of this speech"},
+        {"label":"summarize","text":"summarize key points from this audio"},
+        {"label":"summarize","text":"main ideas from this voice note"}
+      ]
+    },
+    "hercules-research": {
+      "task": "research",
+      "capability": "research-strategy-routing",
+      "description": "Native v0.1 classifier for choosing Hercules research and evidence strategies.",
+      "train": [
+        {"label":"current","text":"find the latest information today"},
+        {"label":"current","text":"research recent changes this week"},
+        {"label":"current","text":"check the newest update"},
+        {"label":"primary","text":"use the official documentation"},
+        {"label":"primary","text":"find the original research paper"},
+        {"label":"primary","text":"check the primary source specification"},
+        {"label":"compare","text":"compare multiple sources on this topic"},
+        {"label":"compare","text":"show where sources agree and disagree"},
+        {"label":"compare","text":"contrast evidence from several references"},
+        {"label":"verify","text":"verify whether this claim is true"},
+        {"label":"verify","text":"fact check this statement"},
+        {"label":"verify","text":"corroborate this claim with evidence"}
+      ],
+      "eval": [
+        {"label":"current","text":"find the most recent update"},
+        {"label":"current","text":"research what changed this week"},
+        {"label":"primary","text":"use the official specification"},
+        {"label":"primary","text":"find the original paper"},
+        {"label":"compare","text":"compare evidence across several sources"},
+        {"label":"compare","text":"show how the sources differ"},
+        {"label":"verify","text":"fact check and corroborate this statement"},
+        {"label":"verify","text":"verify this claim with independent evidence"}
+      ]
+    }
+  }
+}
