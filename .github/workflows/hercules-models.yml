@@ -42,6 +42,11 @@ jobs:
           import {HERCULES_MODEL_SLOTS} from "./hercules-models/catalog.mjs";
 
           const attestations = {
+            "hercules-core": "hercules-models/attestations/hercules-core-v0.1.json",
+            "hercules-coder": "hercules-models/attestations/hercules-coder-v0.1.json",
+            "hercules-vision": "hercules-models/attestations/hercules-vision-v0.1.json",
+            "hercules-voice": "hercules-models/attestations/hercules-voice-v0.1.json",
+            "hercules-research": "hercules-models/attestations/hercules-research-v0.1.json",
             "hercules-agent": "hercules-models/attestations/hercules-agent-router-v0.1.json",
             "hercules-retrieval": "hercules-models/attestations/hercules-retrieval-v0.1.json",
             "hercules-guard": "hercules-models/attestations/hercules-guard-v0.1.json",
