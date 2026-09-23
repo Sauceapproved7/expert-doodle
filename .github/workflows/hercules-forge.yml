@@ -32,6 +32,7 @@ jobs:
             hercules-forge/artifact.mjs \
             hercules-forge/releases.mjs \
             hercules-forge/preview.mjs \
+            hercules-forge/builder-console.mjs \
             hercules-forge/control-api.mjs \
             hercules-forge/control-cli.mjs \
             hercules-forge/index.mjs \
