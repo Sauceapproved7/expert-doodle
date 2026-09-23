@@ -1,0 +1,11 @@
+{
+  "schema": "sauceapproved.hercules.video-provider-registry",
+  "version": 1,
+  "policy": {
+    "canonicalBrain": "hercules-video/core.mjs",
+    "providerLockInAllowed": false,
+    "providerSdkAllowedInCore": false,
+    "requireAdapterBoundary": true
+  },
+  "providers": []
+}
