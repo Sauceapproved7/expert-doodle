@@ -103,7 +103,7 @@ export function createModelPlaneService({
           throw Object.assign(new Error("embedded runtime is not loaded: " + model.id), {statusCode: 503});
         }
 
-        const output = await runtime.infer(body.input);
+        const output = await runtime.infer(body.input, {task: body.task, model});
         return send(res, 200, {
           model: {
             id: model.id,

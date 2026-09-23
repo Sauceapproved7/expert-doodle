@@ -41,7 +41,7 @@ test("model plane routes production agent inference through the native embedded 
     const health = await fetch(base + "/health");
     assert.equal(health.status, 200);
     const healthBody = await health.json();
-    assert.equal(healthBody.active, 1);
+    assert.equal(healthBody.active, 2);
     assert.equal(healthBody.embeddedRuntimes, 1);
 
     const response = await fetch(base + "/v1/infer", {
