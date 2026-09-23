@@ -152,7 +152,7 @@ function renderRuntimeStore() {
     '  }',
     '}',
     '',
-  ].join("\\n");
+  ].join("\n");
 }
 
 function renderServer(spec) {
