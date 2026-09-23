@@ -2,32 +2,47 @@
 
 ## Purpose
 
-Hercules Model Plane is the SauceApproved-owned control layer for the models Hercules will train, evaluate, activate, route, and eventually serve.
+Hercules Model Plane is the SauceApproved-owned control layer for native Hercules model identity, lifecycle state, routing, runtime binding, checkpoint evidence, and inference.
 
-It is deliberately separate from Hercules Forge. Forge owns application specifications, compilation, artifacts, releases, and deployment policy. The Model Plane owns model identity, lifecycle state, task capability, routing policy, runtime binding, and checkpoint/provenance references.
+It remains separate from Hercules Forge. Forge owns application specifications, compilation, artifacts, releases, and deployment policy. The Model Plane owns model selection and execution but cannot bypass Forge validation or release controls.
 
-## What v0.1 implements
+## Eight active native model families
 
-The canonical repository now defines eight Hercules model families:
+The canonical v0.1 catalog contains eight Hercules-native active models:
 
-- hercules-core — general reasoning and instruction following
-- hercules-coder — software engineering and code work
-- hercules-vision — images, screenshots, documents, and UI understanding
-- hercules-voice — speech recognition and synthesis
-- hercules-research — retrieval-aware research and evidence synthesis
-- hercules-agent — tool selection and workflow control
-- hercules-retrieval — embeddings and reranking
-- hercules-guard — policy, permissions, secret handling, and action validation
+- **hercules-core** — general-response mode routing
+- **hercules-coder** — software-work routing
+- **hercules-vision** — visual-request routing
+- **hercules-voice** — voice-request routing
+- **hercules-research** — research-strategy routing
+- **hercules-agent** — agent intent routing
+- **hercules-retrieval** — sparse embeddings and reranking
+- **hercules-guard** — action-policy classification
 
-All eight are currently marked **planned**, with no checkpoint and no runtime. That is intentional. Repository state must not claim a model exists until a real checkpoint has passed the applicable training, provenance, evaluation, and activation gates.
+Every active entry has:
 
-## Native-first policy
+- a deterministic native checkpoint
+- an immutable SHA-256 identity
+- original Hercules-authored training/evaluation material
+- a held-out evaluation gate
+- a permanent repository attestation
+- an embedded runtime that reconstructs the checkpoint and refuses startup on hash mismatch
 
-Production routing is native-only by default.
+Production routing remains native-only by default.
 
-The schema can represent migration or evaluation sources, but the default router refuses any model whose origin does not begin with `hercules-`.
+## v0.1 capability boundary
 
-Even when that restriction is explicitly disabled for migration testing, the deterministic router ranks Hercules-controlled origins ahead of open-weight or external alternatives.
+The word **active** means the declared v0.1 capability is trained, attested, routeable, and executable. It does not mean each family is already a frontier-scale foundation model.
+
+Core, Coder, and Research v0.1 are compact control classifiers.
+
+Vision v0.1 routes visual-analysis requests but does not itself inspect image pixels.
+
+Voice v0.1 routes speech/audio requests but does not itself perform speech recognition or audio synthesis.
+
+Agent, Retrieval, and Guard provide the specialized native capabilities documented by their individual training and activation artifacts.
+
+Later versions can replace these v0.1 checkpoints with broader native models without changing the Model Plane contract.
 
 ## Model lifecycle
 
@@ -37,7 +52,7 @@ A model moves through:
 
 Only `active` models are eligible for production routing.
 
-An active model must have a routeable runtime. This prevents an inventory entry from being treated as an executable model.
+An active model must have a routeable runtime and matching attestation evidence. Model-plane CI fails closed if an active model lacks an approved checkpoint, runtime, or attestation.
 
 ## Owned service
 
@@ -56,35 +71,25 @@ Routes:
 - GET /health
 - GET /v1/models
 - POST /v1/route
+- POST /v1/infer
 
-Inventory and routing routes require a bearer control token. Health is intentionally non-secret and reports only service state and counts.
+Inventory, routing, and inference require the bearer control token. Health intentionally exposes only non-secret service state.
 
-## Forge integration boundary
+## Training and provenance
 
-The Forge prompt-ingress layer remains provider-neutral. Once a Hercules model runtime becomes active, an interpreter service can use Model Plane routing to select the correct native model and return a Forge specification through the existing owned interpreter protocol.
+Training control records:
 
-The model never receives authority to bypass Forge validation, artifact verification, release control, or deployment policy.
+1. dataset source and training rights
+2. dataset content hashes
+3. exact source commit
+4. deterministic training job configuration
+5. checkpoint SHA-256 and size
+6. held-out evaluation suite and metrics
+7. activation decision
+8. permanent repository attestation
 
-## Training ownership path
+Hercules v0.1 native checkpoints use repository-owned JavaScript and Hercules-authored bootstrap corpora. Third-party operating systems, runtimes, CI infrastructure, or other underlying tools retain their own rights and do not become Hercules-owned components.
 
-v0.1 establishes the model-control contract before training begins.
+## Long-term direction
 
-The next training increments should add, in order:
-
-1. dataset/provenance registry with license and source evidence
-2. tokenizer and corpus build pipeline
-3. reproducible training-job specification and compute runner
-4. checkpoint registry with immutable hashes and lineage
-5. task-specific evaluation suites and activation thresholds
-6. inference runtime adapter and resource admission controls
-7. distillation and specialist-model pipeline
-
-Each checkpoint must remain traceable to the exact data declaration, training configuration, code commit, evaluation evidence, and runtime version that produced it.
-
-## Ownership boundary
-
-SauceApproved controls the Hercules-specific registry, lifecycle schema, routing policy, service code, training orchestration added later, evaluation policy, and activation rules committed to this repository.
-
-Underlying operating systems, language runtimes, hardware, frameworks, libraries, datasets, or third-party weights retain their own licenses and rights. No third-party component becomes Hercules-owned merely because it is used during development.
-
-The long-term target is that the eight production model families are backed by Hercules-native checkpoints and that external model services are optional rather than foundational.
+The Model Plane contract is intentionally stable while model capability grows. Future versions can add larger generative Core/Coder/Research models, pixel-native Vision, and real ASR/TTS Voice checkpoints while preserving the same provenance, evaluation, activation, routing, and runtime boundaries.

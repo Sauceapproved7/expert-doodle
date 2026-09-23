@@ -30,23 +30,25 @@ async function listen(server) {
   return "http://127.0.0.1:" + server.address().port;
 }
 
-test("canonical catalog defines five planned families and three evidence-backed active native models", () => {
+test("canonical catalog defines eight evidence-backed active Hercules-native models", () => {
   assert.equal(HERCULES_MODEL_SLOTS.length, 8);
   const registry = new HerculesModelRegistry(HERCULES_MODEL_SLOTS);
   assert.equal(registry.list().length, 8);
-  for (const model of registry.list()) {
-    assert.equal(model.origin, "hercules-native");
-  }
   const active = registry.list({state: "active"});
-  const planned = registry.list({state: "planned"});
-  assert.equal(active.length, 3);
-  assert.equal(planned.length, 5);
+  assert.equal(active.length, 8);
+  assert.equal(registry.list({state: "planned"}).length, 0);
   assert.deepEqual(active.map((model) => model.id).sort(), [
     "hercules-agent",
+    "hercules-coder",
+    "hercules-core",
     "hercules-guard",
+    "hercules-research",
     "hercules-retrieval",
+    "hercules-vision",
+    "hercules-voice",
   ]);
   for (const model of active) {
+    assert.equal(model.origin, "hercules-native");
     assert.equal(model.runtime.kind, "embedded");
     assert.match(model.checkpoint, /^sha256:[a-f0-9]{64}$/);
   }
@@ -114,24 +116,23 @@ test("model plane service exposes health and authenticated routing", async () =>
   }
 });
 
-test("untrained catalog families still fail closed instead of pretending a checkpoint exists", async () => {
-  const server = createModelPlaneService({
-    models: HERCULES_MODEL_SLOTS,
-    token,
-  });
-  const base = await listen(server);
-  try {
-    const response = await fetch(base + "/v1/route", {
-      method: "POST",
-      headers: {
-        authorization: "Bearer " + token,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({task: "code"}),
-    });
-    assert.equal(response.status, 409);
-    assert.match((await response.json()).error, /no eligible Hercules model/);
-  } finally {
-    await new Promise((resolve) => server.close(resolve));
+test("all canonical Hercules tasks now resolve to active native models", () => {
+  const registry = new HerculesModelRegistry(HERCULES_MODEL_SLOTS);
+  const router = new HerculesModelRouter(registry);
+  for (const task of [
+    "general",
+    "code",
+    "vision",
+    "speech-to-text",
+    "text-to-speech",
+    "research",
+    "agent",
+    "embedding",
+    "rerank",
+    "safety",
+  ]) {
+    const model = router.route({task});
+    assert.equal(model.state, "active");
+    assert.equal(model.origin, "hercules-native");
   }
 });
