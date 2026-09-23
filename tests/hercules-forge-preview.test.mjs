@@ -35,6 +35,8 @@ test("preview child environment strips Forge and credential variables", () => {
   assert.equal(env.OPENAI_API_KEY, undefined);
   assert.equal(env.HOST, "127.0.0.1");
   assert.equal(env.PORT, "0");
+  const withData = buildPreviewChildEnv({PATH: "/bin"}, {dataDir: "/tmp/forge-data"});
+  assert.equal(withData.FORGE_DATA_DIR, "/tmp/forge-data");
 });
 
 test("verified artifact starts a loopback preview with proxied CRUD API", async () => {
@@ -50,7 +52,11 @@ test("verified artifact starts a loopback preview with proxied CRUD API", async 
       revisionId: revision.revisionId,
     });
 
-    preview = await startForgePreview({artifactDir: artifact.artifactDir});
+    const runtimeDataDir = join(root, "runtime-data", "preview-app");
+    preview = await startForgePreview({
+      artifactDir: artifact.artifactDir,
+      runtimeDataDir,
+    });
     assert.match(preview.url, /^http:\/\/127\.0\.0\.1:/);
     assert.match(preview.backendUrl, /^http:\/\/127\.0\.0\.1:/);
     assert.equal(preview.isolation, "loopback-controlled-process");
@@ -85,6 +91,17 @@ test("verified artifact starts a loopback preview with proxied CRUD API", async 
     const listed = await fetch(preview.url + "/api/Item");
     assert.equal(listed.status, 200);
     assert.equal((await listed.json()).items.length, 1);
+
+    await preview.stop();
+    preview = await startForgePreview({
+      artifactDir: artifact.artifactDir,
+      runtimeDataDir,
+    });
+    const persisted = await fetch(preview.url + "/api/Item");
+    assert.equal(persisted.status, 200);
+    const persistedBody = await persisted.json();
+    assert.equal(persistedBody.items.length, 1);
+    assert.equal(persistedBody.items[0].name, "first");
   } finally {
     if (preview) await preview.stop();
     await rm(root, {recursive: true, force: true});
