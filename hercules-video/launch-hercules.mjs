@@ -379,6 +379,22 @@ export async function runHerculesLaunch(config, dependencies={}) {
     minimumScore:normalized.minimumScore,
   });
 
+  if (evaluation.records.length !== executionPlan.storyboard.shots.length) {
+    throw new Error("launch_evaluation_incomplete");
+  }
+  const evaluatedShots = new Set(evaluation.records.map(record=>record.shotId));
+  for (const shot of executionPlan.storyboard.shots) {
+    if (!evaluatedShots.has(shot.id)) throw new Error("launch_evaluation_missing:" + shot.id);
+  }
+
+  await assertFile(normalized.finalOutputPath, "launch_final_output_missing");
+  const finalOutputSha256 = await sha256File(normalized.finalOutputPath);
+  const claimedOutputSha256 = sha256(
+    finalized?.campaignEvidence?.finalOutput?.sha256,
+    "launch_campaign_output_sha256_required"
+  );
+  if (finalOutputSha256 !== claimedOutputSha256) throw new Error("launch_final_output_checksum_mismatch");
+
   const launchEvidenceBase = {
     schema:"sauceapproved.hercules.video-launch-evidence",
     version:1,
@@ -393,6 +409,7 @@ export async function runHerculesLaunch(config, dependencies={}) {
       upstreamCommit:normalized.upstreamCommit,
       checkpointSha256:normalized.checkpointSha256,
     },
+    finalOutputSha256,
     inputs:{
       presetPath:normalized.presetPath,
       presetSha256,
