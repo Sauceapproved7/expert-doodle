@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {mkdtemp, rm} from "node:fs/promises";
+import {mkdir, mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {createForgeControlService} from "../hercules-forge/control-api.mjs";
@@ -51,7 +51,9 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
     assert.equal(health.body.persistentRuntime, true);
-    assert.equal(health.body.version, "1.0");
+    assert.equal(health.body.version, "1.1");
+    assert.equal(health.body.runtimeDataControl, true);
+    assert.ok(health.body.runtimeDataMaxBytes > 0);
 
     const consoleResponse = await fetch(base + "/");
     assert.equal(consoleResponse.status, 200);
@@ -100,6 +102,46 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(listed.body.projects.length, 1);
     assert.equal(listed.body.projects[0].projectId, "control-app");
     assert.equal(listed.body.projects[0].latestRevisionId, firstRevisionId);
+
+    const runtimeDir = join(root, "runtime-data", "control-app");
+    await mkdir(runtimeDir, {recursive: true});
+    const runtimeOriginal = JSON.stringify({
+      note1: {id: "note1", body: "original"},
+    }, null, 2) + "\n";
+    await writeFile(join(runtimeDir, "Note.json"), runtimeOriginal, "utf8");
+
+    const usage = await request(base, "/v1/projects/control-app/data/usage");
+    assert.equal(usage.status, 200);
+    assert.equal(usage.body.usage.files, 1);
+    assert.equal(usage.body.usage.totalBytes, Buffer.byteLength(runtimeOriginal));
+
+    const snap = await request(base, "/v1/projects/control-app/data/snapshots", {
+      method: "POST",
+    });
+    assert.equal(snap.status, 201);
+    assert.equal(snap.body.snapshot.verified, true);
+    const snapshotId = snap.body.snapshot.snapshotId;
+
+    const verified = await request(
+      base,
+      "/v1/projects/control-app/data/snapshots/" + snapshotId,
+    );
+    assert.equal(verified.status, 200);
+    assert.equal(verified.body.snapshot.verified, true);
+
+    await writeFile(
+      join(runtimeDir, "Note.json"),
+      JSON.stringify({note2: {id: "note2", body: "changed"}}, null, 2) + "\n",
+      "utf8",
+    );
+    const restoredData = await request(
+      base,
+      "/v1/projects/control-app/data/snapshots/" + snapshotId + "/restore",
+      {method: "POST"},
+    );
+    assert.equal(restoredData.status, 200);
+    assert.equal(restoredData.body.restore.restored, true);
+    assert.equal(await readFile(join(runtimeDir, "Note.json"), "utf8"), runtimeOriginal);
 
     const inspected = await request(
       base,
