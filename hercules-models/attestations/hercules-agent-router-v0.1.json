@@ -1,0 +1,33 @@
+{
+  "version": "0.1",
+  "modelId": "hercules-agent",
+  "capability": "agent-intent-routing",
+  "algorithm": "multinomial-naive-bayes",
+  "framework": "hercules-native-js",
+  "checkpointSha256": "ae3475d53cc75959bc52ca7e6bd39b6c84b693c71a2dbcac28977a65a220f618",
+  "checkpointBytes": 6104,
+  "sourceCommit": "2d1363c80ebe0e023eb1452932a29d80bed3f585",
+  "workflowRunId": 35917845877,
+  "workflowArtifactId": 10775369529,
+  "workflowArtifactDigest": "sha256:98f5013ccb92ae4d89616e023bd82ca8401f1b49956a1581b496a4ccfe3e9a51",
+  "trainingDataset": {
+    "path": "hercules-training/bootstrap/agent-routing-train.jsonl",
+    "records": 60,
+    "contentSha256": "7c6905a40b76772951ecd38f088c70f7db9d9c7dbc6fd6094e1262910ce9d081"
+  },
+  "evaluationDataset": {
+    "path": "hercules-training/bootstrap/agent-routing-eval.jsonl",
+    "records": 15,
+    "contentSha256": "d349ad6cbe72408ba1bb7eeadc194eb11ec1d27a30d618459e52d064eca217be"
+  },
+  "evaluation": {
+    "accuracy": 1,
+    "errorRate": 0,
+    "passed": true,
+    "gate": {
+      "minimumAccuracy": 0.8,
+      "maximumErrorRate": 0.2
+    }
+  },
+  "provenance": "Original Hercules-authored training/evaluation examples; no third-party model weights or ML SDK dependency."
+}
