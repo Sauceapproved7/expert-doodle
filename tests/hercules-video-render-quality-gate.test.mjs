@@ -70,3 +70,16 @@ test("semantic dimensions remain bounded",async()=>{
   assert.equal(quality.temporalConsistency,0);
   assert.equal(quality.audioQuality,.5);
 });
+
+
+test("quality evaluator is marked as a Hercules acceptance gate",()=>{
+  const evaluator=createHerculesRenderQualityEvaluator({
+    technicalProbe:async()=>({width:704,height:1280,fps:24,durationSeconds:4}),
+    semanticEvaluator:async()=>({
+      promptAdherence:.9,temporalConsistency:.9,visualQuality:.9,brandConsistency:.9,
+      artifactFreedom:.9,reliability:.9,
+    }),
+  });
+  assert.equal(evaluator.herculesRenderAcceptanceGate,true);
+  assert.equal(evaluator.herculesRenderAcceptanceGateVersion,1);
+});

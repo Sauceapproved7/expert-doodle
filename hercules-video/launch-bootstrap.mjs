@@ -9,6 +9,7 @@ import {HerculesSelfHostedRenderAdapter} from "./self-hosted-adapter.mjs";
 import {HerculesCampaignExecutionService} from "./campaign-execution-service.mjs";
 import {createCampaignExecutionPlan} from "./campaign-coordinator.mjs";
 import {runFfmpegAssembly} from "./ffmpeg-assembly-runner.mjs";
+import {createHerculesRenderQualityEvaluator} from "./render-quality-gate.mjs";
 import {fingerprint} from "./core.mjs";
 
 function requireAbsolute(value, name) {
@@ -201,9 +202,32 @@ export async function writeLaunchEvidenceBundle(bundle,filePath,{writeFileImpl=w
   };
 }
 
+export function resolveLaunchQualityEvaluator({
+  qualityEvaluator=null,
+  semanticEvaluator=null,
+  technicalProbe,
+  technicalPolicy={},
+}={}) {
+  if (qualityEvaluator != null) {
+    if (typeof qualityEvaluator!=="function" || qualityEvaluator.herculesRenderAcceptanceGate!==true) {
+      throw new Error("launch_unverified_quality_evaluator_rejected");
+    }
+    return qualityEvaluator;
+  }
+  if (typeof semanticEvaluator!=="function") throw new Error("launch_semantic_evaluator_required");
+  return createHerculesRenderQualityEvaluator({
+    semanticEvaluator,
+    ...(technicalProbe ? {technicalProbe} : {}),
+    technicalPolicy,
+  });
+}
+
 export async function executeWan22Launch(config,{
   brief=null,
-  qualityEvaluator,
+  qualityEvaluator=null,
+  semanticEvaluator=null,
+  technicalProbe,
+  technicalPolicy={},
   probeHost=probeCudaHost,
   runnerFactory,
   runtimeFactory,
@@ -216,7 +240,12 @@ export async function executeWan22Launch(config,{
   clock=()=>new Date(),
   sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
 }={}) {
-  if (typeof qualityEvaluator!=="function") throw new Error("launch_quality_evaluator_required");
+  const verifiedQualityEvaluator=resolveLaunchQualityEvaluator({
+    qualityEvaluator,
+    semanticEvaluator,
+    technicalProbe,
+    technicalPolicy,
+  });
 
   const host=await prepareWan22LaunchHost(config,{
     brief,
@@ -240,7 +269,7 @@ export async function executeWan22Launch(config,{
   const finalization=await host.service.finalize({
     executionPlan:host.executionPlan,
     session:rendered,
-    evaluate:qualityEvaluator,
+    evaluate:verifiedQualityEvaluator,
     audioTracks:host.config.audioTracks,
     assemblyPolicy:host.config.assemblyPolicy,
     assemblyRunner:(plan,{outputPath})=>assemblyRunner(plan,{
