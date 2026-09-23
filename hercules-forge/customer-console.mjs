@@ -41,6 +41,12 @@ export function customerConsoleHtml() {
         <button id="publish">Publish latest</button>
       </div>
       <div id="previewBox"></div>
+      <section class="data-panel">
+        <h3>Runtime data</h3>
+        <div id="dataUsage" class="muted">Loading usage...</div>
+        <div id="snapshotActions" class="actions"><button id="snapshot">Create snapshot</button></div>
+        <div id="snapshots"></div>
+      </section>
       <h3>Revisions</h3><div id="revisions"></div>
     </div>
     <pre id="status">Ready.</pre>
@@ -50,7 +56,7 @@ export function customerConsoleHtml() {
 }
 
 export function customerConsoleCss() {
-  return `:root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}*{box-sizing:border-box}body{margin:0}header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #263047;background:#0d111a}header span{margin-left:10px;color:#8791a7}.auth-card{max-width:430px;margin:9vh auto;padding:26px;background:#111724;border:1px solid #273047;border-radius:16px}.auth-card p{color:#aab4c8}#appShell{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 61px)}aside{padding:20px;border-right:1px solid #263047}.workspace{padding:28px;max-width:1100px;width:100%}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:20px;margin-bottom:18px}label{display:block;font-size:13px;color:#aab4c8;margin:8px 0}input,textarea,select{width:100%;margin-top:6px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:9px;padding:11px}textarea{min-height:115px;resize:vertical}button{background:#f5f7ff;color:#0b0f17;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;margin:5px 5px 5px 0}.project{padding:10px;border:1px solid #273047;border-radius:9px;margin:7px 0;cursor:pointer}.project:hover{background:#151d2d}.muted{color:#8791a7;font-size:12px}.revision{padding:10px 0;border-bottom:1px solid #273047}.revision button{font-size:12px;padding:7px 9px}.user-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}.heading{display:flex;justify-content:space-between;gap:12px}.actions{margin:10px 0}pre{white-space:pre-wrap;background:#080b12;border:1px solid #273047;padding:14px;border-radius:10px;min-height:54px}a{color:#8bc4ff}@media(max-width:760px){#appShell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #263047}.workspace{padding:16px}}`;
+  return `:root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}*{box-sizing:border-box}body{margin:0}header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #263047;background:#0d111a}header span{margin-left:10px;color:#8791a7}.auth-card{max-width:430px;margin:9vh auto;padding:26px;background:#111724;border:1px solid #273047;border-radius:16px}.auth-card p{color:#aab4c8}#appShell{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 61px)}aside{padding:20px;border-right:1px solid #263047}.workspace{padding:28px;max-width:1100px;width:100%}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:20px;margin-bottom:18px}label{display:block;font-size:13px;color:#aab4c8;margin:8px 0}input,textarea,select{width:100%;margin-top:6px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:9px;padding:11px}textarea{min-height:115px;resize:vertical}button{background:#f5f7ff;color:#0b0f17;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;margin:5px 5px 5px 0}.project{padding:10px;border:1px solid #273047;border-radius:9px;margin:7px 0;cursor:pointer}.project:hover{background:#151d2d}.muted{color:#8791a7;font-size:12px}.revision,.snapshot{padding:10px 0;border-bottom:1px solid #273047}.revision button,.snapshot button{font-size:12px;padding:7px 9px}.data-panel{margin-top:18px;padding-top:14px;border-top:1px solid #273047}.user-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}.heading{display:flex;justify-content:space-between;gap:12px}.actions{margin:10px 0}pre{white-space:pre-wrap;background:#080b12;border:1px solid #273047;padding:14px;border-radius:10px;min-height:54px}a{color:#8bc4ff}@media(max-width:760px){#appShell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #263047}.workspace{padding:16px}}`;
 }
 
 export function customerConsoleJs() {
@@ -120,7 +126,8 @@ async function selectProject(id){
   revisions=revisionData.revisions;
   $("projectPanel").hidden=false; $("projectName").textContent=project.name; $("selectedProject").textContent=id;
   $("builderControls").hidden=!canBuild(); $("adminControls").hidden=!canAdmin();
-  renderRevisions(); await refreshPreview();
+  renderRevisions();
+  await Promise.all([refreshPreview(), refreshData()]);
 }
 
 function renderRevisions(){
@@ -141,6 +148,49 @@ function renderRevisions(){
 
 function projectBase(){
   return "/v1/workspaces/"+encodeURIComponent(workspaceId)+"/projects/"+encodeURIComponent(selected);
+}
+
+async function refreshData(){
+  if(!selected)return;
+  const [usageData,snapshotData]=await Promise.all([
+    request(projectBase()+"/data/usage"),
+    request(projectBase()+"/data/snapshots")
+  ]);
+  const usage=usageData.usage;
+  const usedMb=(usage.totalBytes/1048576).toFixed(2);
+  const maxMb=(usage.maxBytes/1048576).toFixed(2);
+  $("dataUsage").textContent=usedMb+" MB used of "+maxMb+" MB · "+usage.files+" data files";
+  $("snapshotActions").hidden=!canBuild();
+  $("snapshots").innerHTML="";
+  for(const snapshot of snapshotData.snapshots){
+    const el=document.createElement("div"); el.className="snapshot";
+    el.innerHTML="<strong>"+esc(new Date(snapshot.createdAt).toLocaleString())+"</strong><div class=muted>"+
+      esc(snapshot.snapshotId)+" · "+(snapshot.totalBytes/1024).toFixed(1)+" KB</div>";
+    if(canAdmin()){
+      const restore=document.createElement("button");
+      restore.textContent="Restore";
+      restore.onclick=()=>restoreSnapshot(snapshot.snapshotId);
+      el.appendChild(restore);
+    }
+    $("snapshots").appendChild(el);
+  }
+  if(!snapshotData.snapshots.length)$("snapshots").textContent="No snapshots yet.";
+}
+
+async function createSnapshot(){
+  const data=await request(projectBase()+"/data/snapshots",{method:"POST",csrf:true});
+  status(data);
+  await Promise.all([refreshData(),refreshPreview()]);
+}
+
+async function restoreSnapshot(snapshotId){
+  if(!confirm("Restore this verified snapshot? Current runtime data will be replaced."))return;
+  const data=await request(
+    projectBase()+"/data/snapshots/"+encodeURIComponent(snapshotId)+"/restore",
+    {method:"POST",csrf:true}
+  );
+  status(data);
+  await Promise.all([refreshData(),refreshPreview()]);
 }
 
 async function refreshPreview(){
@@ -191,6 +241,7 @@ $("revise").onclick=async()=>{
 $("preview").onclick=async()=>{try{if(!revisions.length)throw new Error("No revisions.");await startPreview(revisions.at(-1).revisionId)}catch(error){status(error.message)}};
 $("publish").onclick=async()=>{try{if(!revisions.length)throw new Error("No revisions.");await publishRevision(revisions.at(-1).revisionId)}catch(error){status(error.message)}};
 $("stopPreview").onclick=async()=>{try{status(await request(projectBase()+"/preview",{method:"DELETE",csrf:true}));await refreshPreview()}catch(error){status(error.message)}};
+$("snapshot").onclick=async()=>{try{await createSnapshot()}catch(error){status(error.message)}};
 
 fetch("/health").then((r)=>r.json()).then((d)=>$("health").textContent=d.ok?"Forge online":"Forge unavailable").catch(()=>$("health").textContent="Forge unavailable");
 bootstrapSession().catch(()=>{});
