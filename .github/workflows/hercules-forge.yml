@@ -5,7 +5,7 @@ on:
   pull_request:
     paths:
       - "hercules-forge/**"
-      - "tests/hercules-forge.test.mjs"
+      - "tests/hercules-forge*.test.mjs"
       - "docs/HERCULES-FORGE-*.md"
       - ".github/workflows/hercules-forge.yml"
 
@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Forge owned-core tests
-        run: node --test tests/hercules-forge.test.mjs
+        run: node --test tests/hercules-forge*.test.mjs
       - name: Reject hosted-builder dependencies in owned runtime
         shell: bash
         run: |
@@ -28,6 +28,11 @@ jobs:
             hercules-forge/schema.mjs \
             hercules-forge/compiler.mjs \
             hercules-forge/interpreter.mjs \
+            hercules-forge/workspace.mjs \
+            hercules-forge/artifact.mjs \
+            hercules-forge/releases.mjs \
+            hercules-forge/control-api.mjs \
+            hercules-forge/control-cli.mjs \
             hercules-forge/index.mjs \
             hercules-forge/cli.mjs; then
             echo "Hosted builder dependency leaked into Hercules Forge owned runtime."
