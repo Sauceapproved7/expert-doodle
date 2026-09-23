@@ -1,0 +1,19 @@
+{
+  "version": "0.1",
+  "id": "agent-router-bootstrap",
+  "description": "Hercules-authored bootstrap examples for routing requests across the native model families.",
+  "sourceUri": "repo://hercules-training/bootstrap/agent-router-train.json",
+  "sourceType": "hercules-authored-bootstrap",
+  "contentSha256": "8df9e9fe54c923f02334175e1e3d315ff8be1bff43fdf26ae22d7ee5dbc0e8dd",
+  "recordCount": 48,
+  "license": "Apache-2.0",
+  "rightsBasis": "Project-authored bootstrap data generated for Hercules with AI assistance; no third-party corpus imported.",
+  "trainingAllowed": true,
+  "createdAt": "2026-09-23T20:20:00Z",
+  "provenance": {
+    "origin": "Hercules project bootstrap data",
+    "acquiredBy": "Sauceapproved7 project",
+    "sourceCommit": "fb45bdde5010664edefcbbb376467344b73a9df0",
+    "notes": "Bootstrap-only dataset. Small and synthetic; not evidence of broad model capability."
+  }
+}
