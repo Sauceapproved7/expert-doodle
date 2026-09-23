@@ -1,0 +1,14 @@
+{
+  "version": "0.1",
+  "id": "agent-router-bootstrap-gate-v01",
+  "task": "agent",
+  "description": "Bootstrap gate for the first Hercules-native agent-routing micro-model.",
+  "thresholds": [
+    {
+      "metric": "accuracy",
+      "op": "gte",
+      "value": 0.9
+    }
+  ],
+  "sourceCommit": "af252fa33bf29cfce4c0db323e38ae0387dc3ab3"
+}
