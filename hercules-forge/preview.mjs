@@ -3,11 +3,15 @@ import {fork} from "node:child_process";
 import {mkdir, readFile} from "node:fs/promises";
 import {join, resolve} from "node:path";
 import {verifyForgeArtifact, buildForgeArtifact} from "./artifact.mjs";
+import {DEFAULT_RUNTIME_DATA_MAX_BYTES} from "./runtime-data.mjs";
 
 const MAX_PROXY_BODY_BYTES = 1024 * 1024;
 const START_TIMEOUT_MS = 10000;
 
-export function buildPreviewChildEnv(source = process.env, {dataDir = null} = {}) {
+export function buildPreviewChildEnv(
+  source = process.env,
+  {dataDir = null, maxBytes = null} = {},
+) {
   const allowed = [
     "PATH",
     "SystemRoot",
@@ -28,6 +32,7 @@ export function buildPreviewChildEnv(source = process.env, {dataDir = null} = {}
   env.HOST = "127.0.0.1";
   env.PORT = "0";
   if (dataDir !== null) env.FORGE_DATA_DIR = resolve(dataDir);
+  if (maxBytes !== null) env.FORGE_DATA_MAX_BYTES = String(maxBytes);
   return env;
 }
 
@@ -99,7 +104,11 @@ async function stopChild(child) {
 export async function startForgePreview({
   artifactDir,
   runtimeDataDir = join(artifactDir, "runtime-data"),
+  runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
 }) {
+  if (!Number.isSafeInteger(runtimeDataMaxBytes) || runtimeDataMaxBytes < 1024) {
+    throw new TypeError("runtimeDataMaxBytes must be an integer >= 1024");
+  }
   const artifact = await verifyForgeArtifact(artifactDir);
   const bundleRoot = join(artifactDir, "bundle");
   const serverPath = join(bundleRoot, "server.mjs");
@@ -126,7 +135,10 @@ export async function startForgePreview({
 
   const child = fork(serverPath, [], {
     cwd: bundleRoot,
-    env: buildPreviewChildEnv(process.env, {dataDir: runtimeDataDir}),
+    env: buildPreviewChildEnv(process.env, {
+      dataDir: runtimeDataDir,
+      maxBytes: runtimeDataMaxBytes,
+    }),
     silent: true,
   });
 
@@ -213,6 +225,7 @@ export async function startForgePreview({
     url: "http://127.0.0.1:" + previewAddress.port,
     backendUrl,
     isolation: "loopback-controlled-process",
+    runtimeDataMaxBytes,
   };
 
   return {
@@ -225,8 +238,12 @@ export async function startForgePreview({
 }
 
 export class ForgePreviewManager {
-  constructor(root) {
+  constructor(root, {runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES} = {}) {
+    if (!Number.isSafeInteger(runtimeDataMaxBytes) || runtimeDataMaxBytes < 1024) {
+      throw new TypeError("runtimeDataMaxBytes must be an integer >= 1024");
+    }
     this.root = root;
+    this.runtimeDataMaxBytes = runtimeDataMaxBytes;
     this.sessions = new Map();
   }
 
@@ -242,6 +259,7 @@ export class ForgePreviewManager {
     const session = await startForgePreview({
       artifactDir: built.artifactDir,
       runtimeDataDir: join(this.root, "runtime-data", projectId),
+      runtimeDataMaxBytes: this.runtimeDataMaxBytes,
     });
     this.sessions.set(projectId, session);
     return this.get(projectId);
@@ -258,6 +276,7 @@ export class ForgePreviewManager {
       url: session.url,
       backendUrl: session.backendUrl,
       isolation: session.isolation,
+      runtimeDataMaxBytes: session.runtimeDataMaxBytes,
     };
   }
 
