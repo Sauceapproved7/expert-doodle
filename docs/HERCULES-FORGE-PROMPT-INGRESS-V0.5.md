@@ -4,7 +4,7 @@
 
 v0.5 adds a natural-language entry boundary without making any model provider the owner of Forge.
 
-A prompt interpreter may propose a Forge spec. The existing Forge validator, compiler, workspace, artifact verifier, and release path remain authoritative.
+A prompt interpreter may propose a Forge spec. The existing Forge validator, compiler, workspace, artifact verifier, control API, and release path remain authoritative.
 
 ## Owned prompt protocol
 
@@ -23,12 +23,23 @@ The endpoint returns either a Forge spec object or:
 
 No vendor SDK or vendor-specific hostname is embedded in the owned Forge runtime.
 
+## Adapter security rules
+
+The built-in HTTP adapter:
+
+- accepts only http or https endpoints
+- rejects credentials embedded in the endpoint URL
+- refuses HTTP redirects so prompts are not silently forwarded elsewhere
+- applies a bounded request timeout
+- caps interpreter response size before parsing
+- requires valid JSON returning a Forge spec-shaped object
+
 ## Control API routes
 
 - POST /v1/projects/from-prompt
 - POST /v1/projects/:projectId/revisions/from-prompt
 
-Prompt-created projects retain a SHA-256 hash of the prompt in project metadata for provenance without automatically storing the raw prompt.
+Prompt-created projects retain a SHA-256 hash of the prompt in project metadata for provenance without automatically storing the raw prompt itself.
 
 ## Configure an interpreter
 

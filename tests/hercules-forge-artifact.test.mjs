@@ -61,3 +61,20 @@ test("artifact verification fails after source tampering", async () => {
     await rm(root, {recursive: true, force: true});
   }
 });
+
+test("artifact builder rejects path-unsafe revision identity", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-artifact-id-"));
+  try {
+    await assert.rejects(
+      buildForgeArtifact({
+        workspaceRoot: root,
+        artifactRoot: join(root, "artifacts"),
+        projectId: "../escape",
+        revisionId: "revision-1",
+      }),
+      /path-safe identifier/,
+    );
+  } finally {
+    await rm(root, {recursive: true, force: true});
+  }
+});

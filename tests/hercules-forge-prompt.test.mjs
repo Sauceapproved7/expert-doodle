@@ -7,7 +7,7 @@ import {join} from "node:path";
 import {HttpForgeInterpreter} from "../hercules-forge/interpreter.mjs";
 import {createForgeControlService} from "../hercules-forge/control-api.mjs";
 
-const token = "forge-prompt-test-token-123";
+const token = "x".repeat(24);
 
 const spec = {
   version: "0.1",
@@ -48,6 +48,55 @@ test("HTTP interpreter uses the owned Forge prompt protocol", async () => {
   }
 });
 
+test("HTTP interpreter refuses redirects and oversized responses", async () => {
+  const target = http.createServer((req, res) => {
+    res.writeHead(200, {"content-type": "application/json"});
+    res.end(JSON.stringify({spec}));
+  });
+  const targetBase = await listen(target);
+
+  const redirector = http.createServer((req, res) => {
+    res.writeHead(302, {location: targetBase});
+    res.end();
+  });
+  const redirectBase = await listen(redirector);
+
+  const oversized = http.createServer((req, res) => {
+    res.writeHead(200, {"content-type": "application/json"});
+    res.end(JSON.stringify({spec: {...spec, description: "x".repeat(2048)}}));
+  });
+  const oversizedBase = await listen(oversized);
+
+  try {
+    await assert.rejects(
+      new HttpForgeInterpreter({endpoint: redirectBase}).interpret("do not redirect me"),
+    );
+
+    await assert.rejects(
+      new HttpForgeInterpreter({
+        endpoint: oversizedBase,
+        maxResponseBytes: 256,
+      }).interpret("bounded response"),
+      /response too large/,
+    );
+  } finally {
+    await new Promise((resolve) => redirector.close(resolve));
+    await new Promise((resolve) => target.close(resolve));
+    await new Promise((resolve) => oversized.close(resolve));
+  }
+});
+
+test("interpreter endpoint rejects unsafe schemes and embedded credentials", () => {
+  assert.throws(
+    () => new HttpForgeInterpreter({endpoint: "file:///tmp/model"}),
+    /http or https/,
+  );
+  assert.throws(
+    () => new HttpForgeInterpreter({endpoint: "https://user:pass@example.com/interpret"}),
+    /must not embed credentials/,
+  );
+});
+
 test("control API creates and revises projects through a replaceable prompt interpreter", async () => {
   const root = await mkdtemp(join(tmpdir(), "forge-prompt-"));
   const interpreter = {
@@ -78,6 +127,7 @@ test("control API creates and revises projects through a replaceable prompt inte
     assert.equal(created.status, 201);
     assert.equal(created.body.revision.spec.description, "build my lead tracker");
     assert.match(created.body.project.metadata.promptSha256, /^[a-f0-9]{64}$/);
+    assert.equal(created.body.project.metadata.prompt, undefined);
 
     const revised = await post("/v1/projects/prompt-app/revisions/from-prompt", {
       prompt: "add a better lead workflow",
