@@ -30,7 +30,7 @@ async function listen(server) {
   return "http://127.0.0.1:" + server.address().port;
 }
 
-test("canonical catalog defines seven planned families and one evidence-backed active native model", () => {
+test("canonical catalog defines six planned families and two evidence-backed active native models", () => {
   assert.equal(HERCULES_MODEL_SLOTS.length, 8);
   const registry = new HerculesModelRegistry(HERCULES_MODEL_SLOTS);
   assert.equal(registry.list().length, 8);
@@ -39,11 +39,16 @@ test("canonical catalog defines seven planned families and one evidence-backed a
   }
   const active = registry.list({state: "active"});
   const planned = registry.list({state: "planned"});
-  assert.equal(active.length, 1);
-  assert.equal(planned.length, 7);
-  assert.equal(active[0].id, "hercules-agent");
-  assert.equal(active[0].runtime.kind, "embedded");
-  assert.match(active[0].checkpoint, /^sha256:[a-f0-9]{64}$/);
+  assert.equal(active.length, 2);
+  assert.equal(planned.length, 6);
+  assert.deepEqual(active.map((model) => model.id).sort(), [
+    "hercules-agent",
+    "hercules-retrieval",
+  ]);
+  for (const model of active) {
+    assert.equal(model.runtime.kind, "embedded");
+    assert.match(model.checkpoint, /^sha256:[a-f0-9]{64}$/);
+  }
 });
 
 test("active models require an actual runtime", () => {
