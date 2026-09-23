@@ -36,7 +36,7 @@ Each artifact records:
 - Hercules render request fingerprint,
 - Wan runner identity,
 - pinned upstream commit,
-- optional checkpoint SHA-256,
+- required checkpoint SHA-256,
 - output SHA-256,
 - task/size/fps/frame count.
 
@@ -54,5 +54,5 @@ Before an actual render, the host still needs:
 1. compatible NVIDIA/CUDA host,
 2. separately installed pinned Wan2.2 checkout,
 3. TI2V-5B checkpoint,
-4. checkpoint checksum record,
+4. verified checkpoint checksum record (required by the runner),
 5. Python dependencies from the upstream project.
