@@ -40,10 +40,14 @@ export function createModelPlaneService({
   models,
   token,
   nativeOnly = true,
+  embeddedRuntimes = {},
 }) {
   if (!Array.isArray(models)) throw new TypeError("models array is required");
   if (typeof token !== "string" || token.length < 16) {
     throw new TypeError("control token must be at least 16 characters");
+  }
+  if (!embeddedRuntimes || typeof embeddedRuntimes !== "object") {
+    throw new TypeError("embeddedRuntimes must be an object");
   }
 
   const registry = new HerculesModelRegistry(models);
@@ -62,6 +66,7 @@ export function createModelPlaneService({
           nativeOnly,
           models: all.length,
           active: all.filter((model) => model.state === "active").length,
+          embeddedRuntimes: Object.keys(embeddedRuntimes).length,
         });
       }
 
@@ -81,6 +86,34 @@ export function createModelPlaneService({
         return send(res, 200, {model});
       }
 
+      if (req.method === "POST" && url.pathname === "/v1/infer") {
+        const body = await readBody(req);
+        const model = router.route({
+          task: body.task,
+          mode: body.mode ?? "production",
+          modelId: body.modelId ?? null,
+        });
+
+        if (model.runtime?.kind !== "embedded") {
+          throw Object.assign(new Error("selected model is not an embedded runtime"), {statusCode: 501});
+        }
+
+        const runtime = embeddedRuntimes[model.id];
+        if (!runtime || typeof runtime.infer !== "function") {
+          throw Object.assign(new Error("embedded runtime is not loaded: " + model.id), {statusCode: 503});
+        }
+
+        const output = await runtime.infer(body.input);
+        return send(res, 200, {
+          model: {
+            id: model.id,
+            checkpoint: model.checkpoint,
+            origin: model.origin,
+          },
+          output,
+        });
+      }
+
       return send(res, 404, {error: "not_found"});
     } catch (error) {
       const status = error?.statusCode ?? (
@@ -95,10 +128,16 @@ export function listenModelPlaneService({
   models,
   token,
   nativeOnly = true,
+  embeddedRuntimes = {},
   host = "127.0.0.1",
   port = 38900,
 }) {
-  const server = createModelPlaneService({models, token, nativeOnly});
+  const server = createModelPlaneService({
+    models,
+    token,
+    nativeOnly,
+    embeddedRuntimes,
+  });
   server.listen(port, host);
   return server;
 }
