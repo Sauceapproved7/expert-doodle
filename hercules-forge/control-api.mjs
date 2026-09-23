@@ -1,4 +1,5 @@
 import http from "node:http";
+import {timingSafeEqual} from "node:crypto";
 import {join} from "node:path";
 import {ForgeWorkspaceStore} from "./workspace.mjs";
 import {buildForgeArtifact} from "./artifact.mjs";
@@ -28,13 +29,31 @@ async function readBody(req) {
 }
 
 function requireToken(req, token) {
-  if (req.headers.authorization !== "Bearer " + token) {
+  const header = req.headers.authorization ?? "";
+  const prefix = "Bearer ";
+  if (!header.startsWith(prefix)) {
+    throw Object.assign(new Error("unauthorized"), {statusCode: 401});
+  }
+
+  const supplied = Buffer.from(header.slice(prefix.length));
+  const expected = Buffer.from(token);
+  if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
     throw Object.assign(new Error("unauthorized"), {statusCode: 401});
   }
 }
 
 function routeParts(url) {
   return url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+}
+
+function errorStatus(error) {
+  if (Number.isInteger(error?.statusCode)) return error.statusCode;
+  if (error?.code === "ENOENT") return 404;
+  if (error?.code === "EEXIST") return 409;
+  if (Array.isArray(error?.details)) return 400;
+  if (error instanceof TypeError) return 400;
+  if (/path-safe identifier/.test(error?.message ?? "")) return 400;
+  return 500;
 }
 
 export function createForgeControlService({root, token}) {
@@ -85,6 +104,33 @@ export function createForgeControlService({root, token}) {
           return send(res, 201, revision);
         }
 
+        if (
+          req.method === "GET" &&
+          parts[3] === "revisions" &&
+          parts[4] &&
+          parts.length === 5
+        ) {
+          return send(res, 200, await store.getRevision(projectId, parts[4]));
+        }
+
+        if (
+          req.method === "POST" &&
+          parts[3] === "revisions" &&
+          parts[4] &&
+          parts[5] === "artifact" &&
+          parts.length === 6
+        ) {
+          const revisionId = parts[4];
+          await store.getRevision(projectId, revisionId);
+          const artifact = await buildForgeArtifact({
+            workspaceRoot: root,
+            artifactRoot,
+            projectId,
+            revisionId,
+          });
+          return send(res, 201, {artifact: artifact.manifest});
+        }
+
         if (req.method === "POST" && parts[3] === "publish" && parts.length === 4) {
           const body = await readBody(req);
           const revision = body.revisionId
@@ -107,7 +153,12 @@ export function createForgeControlService({root, token}) {
           return send(res, 201, {release, artifact: artifact.manifest});
         }
 
-        if (req.method === "GET" && parts[3] === "releases" && parts[4] === "active" && parts.length === 5) {
+        if (
+          req.method === "GET" &&
+          parts[3] === "releases" &&
+          parts[4] === "active" &&
+          parts.length === 5
+        ) {
           return send(res, 200, await releases.getActive(projectId));
         }
 
@@ -125,13 +176,9 @@ export function createForgeControlService({root, token}) {
 
       return send(res, 404, {error: "not_found"});
     } catch (error) {
-      const status = error.statusCode ?? (
-        error.code === "ENOENT" ? 404 :
-        error.code === "EEXIST" ? 409 :
-        400
-      );
+      const status = errorStatus(error);
       return send(res, status, {
-        error: error.message,
+        error: status >= 500 ? "internal_error" : error.message,
       });
     }
   });

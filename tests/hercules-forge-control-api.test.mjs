@@ -42,7 +42,7 @@ async function request(base, path, options = {}) {
   return {status: response.status, body};
 }
 
-test("control API owns create, revise, publish, active release, and rollback flow", async () => {
+test("control API owns create, inspect, revise, artifact, publish, active release, and rollback flow", async () => {
   const root = await mkdtemp(join(tmpdir(), "forge-control-"));
   const {server, base} = await start(root);
 
@@ -58,12 +58,38 @@ test("control API owns create, revise, publish, active release, and rollback flo
     });
     assert.equal(denied.status, 401);
 
+    const wrongToken = await fetch(base + "/v1/projects", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer wrong-token-value",
+      },
+      body: JSON.stringify({spec}),
+    });
+    assert.equal(wrongToken.status, 401);
+
     const created = await request(base, "/v1/projects", {
       method: "POST",
       body: {spec, metadata: {projectId: "control-app"}},
     });
     assert.equal(created.status, 201);
     const firstRevisionId = created.body.revision.revisionId;
+
+    const inspected = await request(
+      base,
+      "/v1/projects/control-app/revisions/" + firstRevisionId,
+    );
+    assert.equal(inspected.status, 200);
+    assert.equal(inspected.body.revisionId, firstRevisionId);
+
+    const built = await request(
+      base,
+      "/v1/projects/control-app/revisions/" + firstRevisionId + "/artifact",
+      {method: "POST"},
+    );
+    assert.equal(built.status, 201);
+    assert.equal(built.body.artifact.revisionId, firstRevisionId);
+    assert.match(built.body.artifact.artifactFingerprint, /^[a-f0-9]{64}$/);
 
     const nextSpec = structuredClone(spec);
     nextSpec.description = "Forge control API fixture v2.";
