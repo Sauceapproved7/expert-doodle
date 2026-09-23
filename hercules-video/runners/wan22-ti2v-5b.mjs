@@ -168,7 +168,7 @@ export class Wan22Ti2v5bRunner extends HerculesLocalVideoRunner {
 
   async render(request) {
     await this.health();
-    if (request.shot.requiresAudio) {
+    if (request.shot.requiresAudio && request.shot.audioStrategy === "native") {
       const error = new Error("wan22_native_audio_not_supported");
       error.code = "wan22_native_audio_not_supported";
       error.retryable = false;
