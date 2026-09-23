@@ -178,6 +178,95 @@ export class HerculesCampaignExecutionService {
     return seal(session);
   }
 
+  async resume(executionPlan, inputSession) {
+    assertSessionPlan(inputSession, executionPlan);
+    if (inputSession.phase === "completed") return inputSession;
+
+    const health = await this.adapter.health();
+    if (health?.ok !== true) {
+      const error = new Error("campaign_execution_runtime_unhealthy");
+      error.health = health;
+      throw error;
+    }
+
+    const session = clone(inputSession);
+    const requests = new Map(executionPlan.renderRequests.map(request => [request.shot.id, request]));
+    if (session.jobs.length !== executionPlan.renderRequests.length) {
+      throw new Error("campaign_execution_resume_job_count_mismatch");
+    }
+
+    const seen = new Set();
+    for (const job of session.jobs) {
+      if (seen.has(job.shotId)) throw new Error("campaign_execution_resume_duplicate_job:" + job.shotId);
+      seen.add(job.shotId);
+      const request = requests.get(job.shotId);
+      if (!request) throw new Error("campaign_execution_resume_unknown_job:" + job.shotId);
+      if (job.requestFingerprint !== request.requestFingerprint) {
+        throw new Error("campaign_execution_resume_request_mismatch:" + job.shotId);
+      }
+    }
+
+    const at = nowIso(this.clock);
+    session.error = null;
+    addEvent(session, {type:"resume_started"}, at);
+
+    for (const job of session.jobs) {
+      if (job.status === "completed" && job.artifact) {
+        addEvent(session, {
+          type:"render_reused_after_resume",
+          shotId:job.shotId,
+          remoteJobId:job.remoteJobId,
+          artifactSha256:job.artifact.sha256,
+        }, nowIso(this.clock));
+        continue;
+      }
+
+      const request = requests.get(job.shotId);
+      job.remoteJobId = null;
+      job.status = "pending";
+      job.artifact = null;
+      job.error = null;
+
+      try {
+        const estimate = await this.adapter.estimate(request);
+        if (estimate?.supported === false) {
+          throw new Error("campaign_execution_request_unsupported:" + request.shot.id);
+        }
+        const submitted = await this.adapter.generate(request);
+        const remoteJobId = String(submitted?.remoteJobId || "");
+        const status = String(submitted?.status || "queued");
+        if (!remoteJobId) throw new Error("campaign_execution_remote_job_id_required:" + request.shot.id);
+        if (!REMOTE_STATES.has(status)) throw new Error("campaign_execution_remote_status_invalid:" + request.shot.id);
+        job.remoteJobId = remoteJobId;
+        job.status = status;
+        addEvent(session, {
+          type:"render_resubmitted_after_resume",
+          shotId:job.shotId,
+          remoteJobId,
+          status,
+          reused:submitted?.reused === true,
+        }, nowIso(this.clock));
+      } catch (cause) {
+        job.status = "failed";
+        job.error = normalizeRemoteError(cause);
+        session.error = {code:"campaign_execution_resume_submit_failed", shotId:job.shotId, cause:job.error};
+        setPhase(session, "failed", nowIso(this.clock));
+        const sealed = seal(session);
+        const error = new Error("campaign_execution_resume_submit_failed:" + job.shotId);
+        error.session = sealed;
+        error.cause = cause;
+        throw error;
+      }
+    }
+
+    setPhase(
+      session,
+      session.jobs.every(job => job.status === "completed" && job.artifact) ? "renders_completed" : "rendering",
+      nowIso(this.clock),
+    );
+    return seal(session);
+  }
+
   async refresh(executionPlan, inputSession) {
     assertSessionPlan(inputSession, executionPlan);
     const session = clone(inputSession);

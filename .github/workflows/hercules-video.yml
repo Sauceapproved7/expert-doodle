@@ -31,7 +31,8 @@ jobs:
             hercules-video/campaign-coordinator.mjs \
             hercules-video/campaign-execution-service.mjs \
             hercules-video/render-quality-gate.mjs \
-            hercules-video/launch-bootstrap.mjs; then
+            hercules-video/launch-bootstrap.mjs \
+            hercules-video/launch-state.mjs; then
             echo "Provider-specific dependency leaked into Hercules Video owned layer."
             exit 1
           fi
