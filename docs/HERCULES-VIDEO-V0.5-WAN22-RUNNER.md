@@ -10,7 +10,7 @@ This increment adds a provider-specific runner **behind** the Hercules-owned loc
 
 ## Hardware gate
 
-The runner requires a recorded CUDA hardware probe with at least one GPU meeting the Hercules policy floor of **24 GiB VRAM**. This matches Wan's official documented single-GPU TI2V-5B path using:
+The runner requires a recorded CUDA hardware probe with at least one GPU meeting the Hercules policy floor of a **24 GB-class VRAM device**. This matches Wan's official documented single-GPU TI2V-5B path using:
 
 - `--offload_model True`
 - `--convert_model_dtype`
