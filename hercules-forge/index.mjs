@@ -1,4 +1,5 @@
 export {FORGE_SPEC_VERSION, normalizeForgeSpec, validateForgeSpec} from "./schema.mjs";
+export {FORGE_OWNERSHIP_POLICY_VERSION, FORGE_OWNED_ENGINE, FORGE_DECLARED_RIGHTS_HOLDER, createOwnerCodeAttestation, assertOwnerCodeAttestation} from "./ownership.mjs";
 export {compileForgeProject, compileFromInterpreter} from "./compiler.mjs";
 export {ForgeInterpreter, StaticForgeInterpreter, HttpForgeInterpreter} from "./interpreter.mjs";
 export {ForgeWorkspaceStore} from "./workspace.mjs";
