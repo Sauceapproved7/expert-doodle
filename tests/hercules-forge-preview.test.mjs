@@ -102,6 +102,20 @@ test("verified artifact starts a loopback preview with proxied CRUD API", async 
     const persistedBody = await persisted.json();
     assert.equal(persistedBody.items.length, 1);
     assert.equal(persistedBody.items[0].name, "first");
+
+    const concurrent = await Promise.all(
+      Array.from({length: 12}, (_, index) =>
+        fetch(preview.url + "/api/Item", {
+          method: "POST",
+          headers: {"content-type": "application/json"},
+          body: JSON.stringify({name: "concurrent-" + index}),
+        }),
+      ),
+    );
+    assert.equal(concurrent.every((response) => response.status === 201), true);
+    const afterConcurrent = await fetch(preview.url + "/api/Item");
+    assert.equal(afterConcurrent.status, 200);
+    assert.equal((await afterConcurrent.json()).items.length, 13);
   } finally {
     if (preview) await preview.stop();
     await rm(root, {recursive: true, force: true});
