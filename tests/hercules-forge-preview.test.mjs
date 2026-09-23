@@ -35,6 +35,8 @@ test("preview child environment strips Forge and credential variables", () => {
   assert.equal(env.OPENAI_API_KEY, undefined);
   assert.equal(env.HOST, "127.0.0.1");
   assert.equal(env.PORT, "0");
+  const withData = buildPreviewChildEnv({PATH: "/bin"}, {dataDir: "/tmp/forge-data"});
+  assert.equal(withData.FORGE_DATA_DIR, "/tmp/forge-data");
 });
 
 test("verified artifact starts a loopback preview with proxied CRUD API", async () => {
@@ -50,7 +52,11 @@ test("verified artifact starts a loopback preview with proxied CRUD API", async 
       revisionId: revision.revisionId,
     });
 
-    preview = await startForgePreview({artifactDir: artifact.artifactDir});
+    const runtimeDataDir = join(root, "runtime-data", "preview-app");
+    preview = await startForgePreview({
+      artifactDir: artifact.artifactDir,
+      runtimeDataDir,
+    });
     assert.match(preview.url, /^http:\/\/127\.0\.0\.1:/);
     assert.match(preview.backendUrl, /^http:\/\/127\.0\.0\.1:/);
     assert.equal(preview.isolation, "loopback-controlled-process");
@@ -85,6 +91,31 @@ test("verified artifact starts a loopback preview with proxied CRUD API", async 
     const listed = await fetch(preview.url + "/api/Item");
     assert.equal(listed.status, 200);
     assert.equal((await listed.json()).items.length, 1);
+
+    await preview.stop();
+    preview = await startForgePreview({
+      artifactDir: artifact.artifactDir,
+      runtimeDataDir,
+    });
+    const persisted = await fetch(preview.url + "/api/Item");
+    assert.equal(persisted.status, 200);
+    const persistedBody = await persisted.json();
+    assert.equal(persistedBody.items.length, 1);
+    assert.equal(persistedBody.items[0].name, "first");
+
+    const concurrent = await Promise.all(
+      Array.from({length: 12}, (_, index) =>
+        fetch(preview.url + "/api/Item", {
+          method: "POST",
+          headers: {"content-type": "application/json"},
+          body: JSON.stringify({name: "concurrent-" + index}),
+        }),
+      ),
+    );
+    assert.equal(concurrent.every((response) => response.status === 201), true);
+    const afterConcurrent = await fetch(preview.url + "/api/Item");
+    assert.equal(afterConcurrent.status, 200);
+    assert.equal((await afterConcurrent.json()).items.length, 13);
   } finally {
     if (preview) await preview.stop();
     await rm(root, {recursive: true, force: true});
@@ -131,11 +162,38 @@ test("control API starts, reports, and stops an owned preview", async () => {
     const page = await fetch(status.body.preview.url);
     assert.equal(page.status, 200);
 
+    const firstItem = await fetch(status.body.preview.url + "/api/Item", {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({name: "persists-across-revision"}),
+    });
+    assert.equal(firstItem.status, 201);
+
     const stopped = await request("/v1/projects/preview-api-app/preview", {
       method: "DELETE",
     });
     assert.equal(stopped.status, 200);
     assert.equal(stopped.body.stopped, true);
+
+    const nextSpec = structuredClone(spec);
+    nextSpec.description = "Owned preview fixture revision two.";
+    const revised = await request("/v1/projects/preview-api-app/revisions", {
+      method: "POST",
+      body: {spec: nextSpec, message: "revision two"},
+    });
+    assert.equal(revised.status, 201);
+
+    const restarted = await request(
+      "/v1/projects/preview-api-app/revisions/" + revised.body.revisionId + "/preview",
+      {method: "POST"},
+    );
+    assert.equal(restarted.status, 201);
+
+    const persisted = await fetch(restarted.body.preview.url + "/api/Item");
+    assert.equal(persisted.status, 200);
+    const persistedBody = await persisted.json();
+    assert.equal(persistedBody.items.length, 1);
+    assert.equal(persistedBody.items[0].name, "persists-across-revision");
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(root, {recursive: true, force: true});

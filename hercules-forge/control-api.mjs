@@ -162,9 +162,10 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "0.9",
+          version: "1.0",
           promptIngress: Boolean(interpreter),
           preview: true,
+          persistentRuntime: true,
         });
       }
 
