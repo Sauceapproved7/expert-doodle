@@ -55,6 +55,7 @@ test("Wan runner builds the official TI2V-5B CLI shape without shell interpolati
     outputDir:out,
     upstreamCommit:"3a5cbcdd208e0acbe5c2c90478551660407ea26c",
     hardwareProbe:{cudaAvailable:true,cudaToolkitVersion:"12.4",gpus:[{name:"RTX 4090",memoryGiB:24,driverVersion:"555"}]},
+    checkpointSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     spawnImpl,
   });
   const request=createRenderRequest({
@@ -89,10 +90,31 @@ test("Wan runner refuses native-audio jobs rather than pretending support", asyn
     outputDir:out,
     upstreamCommit:"3a5cbcdd208e0acbe5c2c90478551660407ea26c",
     hardwareProbe:{cudaAvailable:true,gpus:[{name:"RTX 4090",memoryGiB:24}]},
+    checkpointSha256:"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   });
   const request=createRenderRequest({
     projectId:"launch",
     shot:{id:"hero",prompt:"test",durationSeconds:4,aspectRatio:"9:16",requiresAudio:true},
   });
   await assert.rejects(() => runner.render(request), /wan22_native_audio_not_supported/);
+});
+
+
+test("Wan runner rejects relative installation paths and missing checkpoint evidence", async () => {
+  assert.throws(() => new Wan22Ti2v5bRunner({
+    wanRepoDir:"./Wan2.2",
+    checkpointDir:"/tmp/ckpt",
+    outputDir:"/tmp/out",
+    upstreamCommit:"3a5cbcdd208e0acbe5c2c90478551660407ea26c",
+    checkpointSha256:"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    hardwareProbe:{cudaAvailable:true,gpus:[{name:"RTX 4090",memoryGiB:24}]},
+  }), /wan22_repo_dir_required/);
+
+  assert.throws(() => new Wan22Ti2v5bRunner({
+    wanRepoDir:"/tmp/Wan2.2",
+    checkpointDir:"/tmp/ckpt",
+    outputDir:"/tmp/out",
+    upstreamCommit:"3a5cbcdd208e0acbe5c2c90478551660407ea26c",
+    hardwareProbe:{cudaAvailable:true,gpus:[{name:"RTX 4090",memoryGiB:24}]},
+  }), /wan22_checkpoint_sha256_required/);
 });
