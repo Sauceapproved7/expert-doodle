@@ -126,7 +126,7 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
         headers: {
           cookie: ownerLogin.cookie,
           "content-type": "application/json",
-          "x-forge-csrf": ownerCsrf,
+          "x-forge-csrf": ownerLogin.body.csrfToken,
         },
         body: JSON.stringify({prompt: "build a stale csrf app"}),
       },
