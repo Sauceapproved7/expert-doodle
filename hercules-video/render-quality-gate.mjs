@@ -93,7 +93,7 @@ export function createHerculesRenderQualityEvaluator({
   if (typeof technicalProbe!=="function") throw new Error("quality_technical_probe_required");
   if (typeof semanticEvaluator!=="function") throw new Error("quality_semantic_evaluator_required");
 
-  return async function evaluate({shot,artifact,request,route}) {
+  const evaluate=async function evaluate({shot,artifact,request,route}) {
     if (!shot||!artifact) throw new Error("quality_context_required");
     const media=await technicalProbe(artifact.uri);
     const technical=evaluateTechnicalMedia({
@@ -126,4 +126,9 @@ export function createHerculesRenderQualityEvaluator({
       technicalEvidence:technical,
     };
   };
+  Object.defineProperties(evaluate,{
+    herculesRenderAcceptanceGate:{value:true,enumerable:false},
+    herculesRenderAcceptanceGateVersion:{value:1,enumerable:false},
+  });
+  return evaluate;
 }
