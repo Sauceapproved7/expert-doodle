@@ -1,0 +1,24 @@
+name: Hercules Owner Code Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  owner-code-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check verifier syntax
+        run: node --check scripts/verify-owner-code-only.mjs
+
+      - name: Verify full Hercules runtime ownership boundary
+        run: node scripts/verify-owner-code-only.mjs

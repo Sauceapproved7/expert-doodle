@@ -25,13 +25,25 @@ Do not claim ownership of third-party, open-source, externally supplied, or othe
 
 If project ownership is later assigned to an LLC, corporation, or other entity, record the transfer separately and update ownership notices prospectively.
 
-### Owner-code-only build boundary
+### Repository-wide owner-code-only runtime boundary
 
-Hercules Forge build, artifact, and release paths are restricted to code produced by the repository's owned-core implementation and carrying an explicit owner-code-only provenance attestation.
+The owner-code-only boundary applies to the complete canonical Hercules runtime surface, not only Forge. The enforced runtime roots are declared in `governance/owner-code-policy.json` and currently cover Forge, Model Plane, Training, Video, observability policy data, operator scripts, and the staging plane.
 
-Third-party source code, vendored code, copied code, externally generated runtime code, and package runtime dependencies are not eligible for inclusion in a Forge build artifact under this policy. Third-party material may still be reviewed as reference material or used outside the shipped Forge runtime when separately authorized and properly licensed, but it must not be packaged as Hercules-owned product code.
+Within those roots:
 
-A build must fail closed when the required attestation is missing, altered, or indicates that third-party code is included.
+- third-party package/runtime module imports are prohibited;
+- vendored dependency trees and copied dependency bundles are prohibited;
+- committed third-party binaries, archives, model weights, and native libraries are prohibited;
+- child-process and shell execution boundaries must be explicitly declared;
+- external container images must be pinned and declared;
+- external CI actions must be allowlisted;
+- runtime source may import only repository-owned runtime source or Node built-ins.
+
+External infrastructure remains external. Node.js, GitHub Actions, Docker, PostgreSQL/PostgREST, FFmpeg/ffprobe, NVIDIA/CUDA tooling, Python, and Wan2.2 are not claimed as Hercules-owned code. Where used, they must remain behind an explicit boundary recorded in the policy and must not be packaged or represented as SauceApproved-owned source.
+
+The repository-wide verifier is `scripts/verify-owner-code-only.mjs`. Hercules build/test workflows must execute it before subsystem work. A violation is a failed build condition.
+
+This policy does not rewrite historical license grants or convert third-party infrastructure into project-owned intellectual property.
 
 ## Canonical-source rules
 

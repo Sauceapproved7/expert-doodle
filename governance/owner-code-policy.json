@@ -1,0 +1,234 @@
+{
+  "schema": "sauceapproved.hercules.owner-code-policy",
+  "version": 1,
+  "declaredRightsHolder": "Sauceapproved7",
+  "canonicalRepository": "Sauceapproved7/expert-doodle",
+  "runtimeRoots": [
+    {
+      "path": "hercules-forge",
+      "role": "product-runtime"
+    },
+    {
+      "path": "hercules-models",
+      "role": "model-runtime"
+    },
+    {
+      "path": "hercules-training",
+      "role": "training-runtime"
+    },
+    {
+      "path": "hercules-video",
+      "role": "video-runtime"
+    },
+    {
+      "path": "observability",
+      "role": "runtime-policy-data"
+    },
+    {
+      "path": "scripts",
+      "role": "operator-runtime"
+    },
+    {
+      "path": "staging-plane",
+      "role": "staging-runtime"
+    }
+  ],
+  "allowedModuleSpecifierPrefixes": [
+    "./",
+    "../",
+    "node:"
+  ],
+  "forbiddenDirectoryNames": [
+    "node_modules",
+    "vendor",
+    "vendors",
+    "third_party",
+    "third-party",
+    "deps"
+  ],
+  "forbiddenDependencyFiles": [
+    "package.json",
+    "package-lock.json",
+    "npm-shrinkwrap.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "requirements.txt",
+    "pyproject.toml",
+    "Pipfile",
+    "Pipfile.lock",
+    "poetry.lock",
+    "Gemfile",
+    "Gemfile.lock",
+    "composer.json",
+    "composer.lock",
+    "Cargo.toml",
+    "Cargo.lock",
+    "go.mod",
+    "go.sum",
+    "Dockerfile"
+  ],
+  "forbiddenCommittedExtensions": [
+    ".zip",
+    ".tar",
+    ".tgz",
+    ".gz",
+    ".7z",
+    ".rar",
+    ".whl",
+    ".so",
+    ".dll",
+    ".dylib",
+    ".exe",
+    ".bin",
+    ".pt",
+    ".pth",
+    ".ckpt",
+    ".safetensors",
+    ".onnx"
+  ],
+  "allowedWorkflowActions": [
+    "actions/checkout@v4",
+    "actions/upload-artifact@v4"
+  ],
+  "allowedContainerImages": [
+    "postgres:16.4-alpine",
+    "postgrest/postgrest:v12.2.3",
+    "node:22.12.0-alpine"
+  ],
+  "childProcessBoundaries": [
+    {
+      "path": "hercules-forge/preview.mjs",
+      "kind": "owned-internal-process",
+      "dependencies": [
+        "nodejs"
+      ]
+    },
+    {
+      "path": "hercules-video/ffmpeg-assembly-runner.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "ffmpeg"
+      ]
+    },
+    {
+      "path": "hercules-video/hardware-probe.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "nvidia-cuda"
+      ]
+    },
+    {
+      "path": "hercules-video/render-quality-gate.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "ffmpeg"
+      ]
+    },
+    {
+      "path": "hercules-video/runners/wan22-ti2v-5b.mjs",
+      "kind": "external-model-adapter",
+      "dependencies": [
+        "python",
+        "wan2.2"
+      ]
+    },
+    {
+      "path": "scripts/staging-plane.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "docker"
+      ]
+    },
+    {
+      "path": "scripts/staging-recovery-drill.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "docker"
+      ]
+    }
+  ],
+  "shellCommandBoundaries": [
+    {
+      "path": "staging-plane/bin/backup.sh",
+      "dependencies": [
+        "posix-shell",
+        "postgresql-client"
+      ]
+    },
+    {
+      "path": "staging-plane/bin/migrate.sh",
+      "dependencies": [
+        "posix-shell",
+        "postgresql-client"
+      ]
+    }
+  ],
+  "externalInfrastructure": [
+    {
+      "id": "nodejs",
+      "name": "Node.js runtime",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "github-actions",
+      "name": "GitHub Actions",
+      "ownership": "third-party-ci-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "docker",
+      "name": "Docker Engine / Compose",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "postgresql-client",
+      "name": "PostgreSQL client tools",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "posix-shell",
+      "name": "POSIX shell",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "ffmpeg",
+      "name": "FFmpeg / ffprobe",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "nvidia-cuda",
+      "name": "NVIDIA driver / CUDA CLI",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "python",
+      "name": "Python runtime",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "wan2.2",
+      "name": "Wan2.2 external model runtime and weights",
+      "ownership": "third-party-model-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "postgres",
+      "name": "PostgreSQL container image",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "postgrest",
+      "name": "PostgREST container image",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    }
+  ]
+}

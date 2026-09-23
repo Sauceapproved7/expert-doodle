@@ -18,13 +18,24 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
       - name: Run Hercules Video tests
         run: node --test tests/hercules-video*.test.mjs
       - name: Enforce provider-neutral owned layers
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RniE 'from ["'\'' ]*(google|runway|bytedance|seedance|minimax|veo)|require\(["'\''](google|runway|bytedance|seedance|minimax|veo)'             hercules-video/core.mjs             hercules-video/adapter.mjs             hercules-video/storyboard.mjs             hercules-video/render-bridge.mjs             hercules-video/self-hosted-adapter.mjs             hercules-video/local-runner.mjs             hercules-video/local-runtime.mjs             hercules-video/local-http-server.mjs \
+          if grep -RniE 'from ["'\'' ]*(google|runway|bytedance|seedance|minimax|veo)|require\(["'\''](google|runway|bytedance|seedance|minimax|veo)' \
+            hercules-video/core.mjs \
+            hercules-video/adapter.mjs \
+            hercules-video/storyboard.mjs \
+            hercules-video/render-bridge.mjs \
+            hercules-video/self-hosted-adapter.mjs \
+            hercules-video/local-runner.mjs \
+            hercules-video/local-runtime.mjs \
+            hercules-video/local-http-server.mjs \
             hercules-video/hardware-probe.mjs \
             hercules-video/assembly-core.mjs \
             hercules-video/ffmpeg-assembly-runner.mjs \
@@ -32,7 +43,9 @@ jobs:
             hercules-video/campaign-execution-service.mjs \
             hercules-video/render-quality-gate.mjs \
             hercules-video/launch-bootstrap.mjs \
-            hercules-video/launch-state.mjs; then
+            hercules-video/launch-state.mjs \
+            hercules-video/run-status.mjs \
+            hercules-video/run-status-cli.mjs; then
             echo "Provider-specific dependency leaked into Hercules Video owned layer."
             exit 1
           fi
