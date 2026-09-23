@@ -23,6 +23,9 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
       - name: Verify Docker runtime
         run: docker compose version
       - name: Validate staging boundaries

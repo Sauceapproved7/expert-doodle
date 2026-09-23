@@ -18,6 +18,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
       - name: Run Forge owned-core tests
         run: node --test tests/hercules-forge*.test.mjs
       - name: Reject hosted-builder dependencies in owned runtime

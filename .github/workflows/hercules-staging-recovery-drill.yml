@@ -15,6 +15,9 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
       - run: node scripts/validate-staging-plane.mjs
       - name: Start isolated staging and verify recovery baseline
         run: node scripts/staging-plane.mjs all
