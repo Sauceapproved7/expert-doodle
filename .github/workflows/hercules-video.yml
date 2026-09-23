@@ -1,0 +1,31 @@
+name: Hercules Video Core
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "hercules-video/**"
+      - "tests/hercules-video.test.mjs"
+      - "docs/HERCULES-VIDEO-V0.1.md"
+      - ".github/workflows/hercules-video.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  video-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Hercules Video core tests
+        run: node --test tests/hercules-video.test.mjs
+      - name: Enforce provider-neutral core
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE 'from ["'\'' ]*(google|runway|bytedance|seedance|minimax|veo)|require\(["'\''](google|runway|bytedance|seedance|minimax|veo)' hercules-video/core.mjs hercules-video/adapter.mjs; then
+            echo "Provider-specific dependency leaked into Hercules Video core."
+            exit 1
+          fi
+          echo "Hercules Video core remains provider-neutral."
