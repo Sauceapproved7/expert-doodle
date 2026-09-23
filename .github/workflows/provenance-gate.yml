@@ -12,6 +12,11 @@ jobs:
     name: provenance-attestation
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+
       - name: Require provenance attestation
         env:
           PR_BODY: ${{ github.event.pull_request.body }}
