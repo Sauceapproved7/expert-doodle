@@ -1,0 +1,15 @@
+{"query":"how does forge turn a spec into generated code","relevantId":"forge-compiler","candidateIds":["forge-compiler","forge-release","model-plane","staging-plane"]}
+{"query":"what verifies a deployable artifact before it goes live","relevantId":"forge-release","candidateIds":["forge-release","rollback","artifact-hash","staging-plane"]}
+{"query":"where are model lifecycle checkpoints and runtimes registered","relevantId":"model-plane","candidateIds":["model-plane","training-provenance","checkpoint-lineage","embedded-runtime"]}
+{"query":"what information proves a dataset is allowed for training","relevantId":"training-provenance","candidateIds":["training-provenance","dataset-registry","provenance-gate","training-worker"]}
+{"query":"which native component routes prompts into code research vision or speech work","relevantId":"agent-router","candidateIds":["agent-router","core-model","research-model","coder-model"]}
+{"query":"which model handles document ranking for memory search","relevantId":"retrieval-model","candidateIds":["retrieval-model","memory-search","semantic-ranking","research-model"]}
+{"query":"what blocks policy or permission violations before sensitive actions","relevantId":"guard-model","candidateIds":["guard-model","control-token","secrets","provenance-gate"]}
+{"query":"which specialist is for debugging repositories and generating software","relevantId":"coder-model","candidateIds":["coder-model","core-model","agent-router","github-workflow"]}
+{"query":"what model is meant to understand screenshots and interface layouts","relevantId":"vision-model","candidateIds":["vision-model","voice-model","research-model","core-model"]}
+{"query":"which model handles transcription and speech synthesis","relevantId":"voice-model","candidateIds":["voice-model","vision-model","agent-router","core-model"]}
+{"query":"what gate requires measured model thresholds before activation","relevantId":"evaluation-gate","candidateIds":["evaluation-gate","provenance-gate","checkpoint-lineage","native-only"]}
+{"query":"how do we tie a checkpoint to its data job code and evaluation","relevantId":"checkpoint-lineage","candidateIds":["checkpoint-lineage","artifact-hash","dataset-registry","training-worker"]}
+{"query":"where should bearer tokens be stored instead of source code","relevantId":"secrets","candidateIds":["secrets","control-token","native-only","http-runtime"]}
+{"query":"what service executes a declared training job without controlling activation","relevantId":"training-worker","candidateIds":["training-worker","training-provenance","model-plane","evaluation-gate"]}
+{"query":"what technique identifies checkpoints with an immutable digest","relevantId":"artifact-hash","candidateIds":["artifact-hash","checkpoint-lineage","dataset-registry","observability"]}

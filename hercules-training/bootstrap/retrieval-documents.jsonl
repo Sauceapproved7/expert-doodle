@@ -1,0 +1,32 @@
+{"id":"forge-compiler","text":"Hercules Forge compiler validates application specifications and deterministically generates source files and build fingerprints."}
+{"id":"forge-release","text":"Forge release control verifies artifacts before publish and records rollback evidence for safe deployments."}
+{"id":"model-plane","text":"The Hercules model plane registers model families, lifecycle state, checkpoints, runtimes, and native routing policy."}
+{"id":"training-provenance","text":"Hercules training requires dataset provenance, license rights, content hashes, training permission, source commits, and immutable evidence."}
+{"id":"agent-router","text":"The Hercules agent router classifies instructions into code research vision speech and general orchestration intents."}
+{"id":"retrieval-model","text":"The Hercules retrieval model creates native sparse text embeddings and reranks documents for memory and search."}
+{"id":"guard-model","text":"Hercules Guard will enforce policy permissions secret handling and action validation before sensitive operations."}
+{"id":"coder-model","text":"Hercules Coder will specialize in software engineering debugging repository changes testing and code generation."}
+{"id":"vision-model","text":"Hercules Vision will understand screenshots images documents interface layouts and visual evidence."}
+{"id":"voice-model","text":"Hercules Voice will support speech recognition transcription speech synthesis and spoken conversation."}
+{"id":"research-model","text":"Hercules Research will retrieve sources verify evidence synthesize findings and preserve citations."}
+{"id":"core-model","text":"Hercules Core will provide general reasoning instruction following planning and broad language capabilities."}
+{"id":"staging-plane","text":"The Hercules staging plane isolates deployment tests and benchmarks before production promotion."}
+{"id":"observability","text":"Hercules observability tracks service health latency errors evidence and reliability objectives."}
+{"id":"provenance-gate","text":"The provenance gate requires origin documentation license compatibility third party notices and AI assistance disclosure."}
+{"id":"shopify-store","text":"SauceApproved Commerce uses Shopify for storefront products collections checkout discounts and ecommerce operations."}
+{"id":"printify","text":"Printify provides print on demand fulfillment for apparel products including hoodie variants and production shipping."}
+{"id":"organic-traffic","text":"Organic traffic strategy uses search visibility useful content landing pages and conversion measurement before paid advertising."}
+{"id":"github-workflow","text":"GitHub Actions workflows run automated tests provenance checks training jobs and deployment validation on repository changes."}
+{"id":"checkpoint-lineage","text":"Checkpoint lineage ties a model artifact hash to the exact training job dataset fingerprints code commit and evaluation evidence."}
+{"id":"evaluation-gate","text":"Evaluation gates require measured thresholds to pass before a candidate model checkpoint can become active."}
+{"id":"embedded-runtime","text":"An embedded model runtime executes inside the Hercules service and is loaded only when its checkpoint hash is verified."}
+{"id":"http-runtime","text":"An HTTP model runtime calls an authorized model service through a bounded provider neutral adapter."}
+{"id":"secrets","text":"Runtime secrets such as control tokens must be injected through environment or secret management and never committed to source."}
+{"id":"rollback","text":"Safe rollback restores a prior verified release when a deployment check fails or production behavior regresses."}
+{"id":"dataset-registry","text":"The dataset registry records source URI record count license rights basis training approval and SHA 256 content identity."}
+{"id":"training-worker","text":"A training worker executes a declared job but cannot change canonical model identity dataset admission or activation policy."}
+{"id":"artifact-hash","text":"SHA 256 artifact hashing gives immutable identity to generated bundles checkpoints evidence packages and datasets."}
+{"id":"native-only","text":"Native only production routing rejects external model origins unless migration policy is deliberately changed."}
+{"id":"control-token","text":"Authenticated control APIs require bearer tokens and use bounded request bodies with fail closed behavior."}
+{"id":"memory-search","text":"Hercules memory search uses document representations ranking and retrieval to surface relevant stored knowledge."}
+{"id":"semantic-ranking","text":"Semantic style ranking compares query representations with document representations and orders the most relevant results first."}
