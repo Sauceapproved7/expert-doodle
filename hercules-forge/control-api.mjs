@@ -4,6 +4,7 @@ import {join} from "node:path";
 import {ForgeWorkspaceStore} from "./workspace.mjs";
 import {buildForgeArtifact} from "./artifact.mjs";
 import {ForgeLocalReleaseAdapter} from "./releases.mjs";
+import {ForgePreviewManager} from "./preview.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const promptHash = (prompt) => createHash("sha256").update(prompt).digest("hex");
@@ -35,7 +36,6 @@ function requireToken(req, token) {
   if (!header.startsWith(prefix)) {
     throw Object.assign(new Error("unauthorized"), {statusCode: 401});
   }
-
   const supplied = Buffer.from(header.slice(prefix.length));
   const expected = Buffer.from(token);
   if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) {
@@ -78,9 +78,10 @@ export function createForgeControlService({root, token, interpreter = null}) {
 
   const store = new ForgeWorkspaceStore(root);
   const releases = new ForgeLocalReleaseAdapter(root);
+  const previews = new ForgePreviewManager(root);
   const artifactRoot = join(root, "artifacts");
 
-  return http.createServer(async (req, res) => {
+  const server = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, "http://localhost");
       const parts = routeParts(url);
@@ -89,8 +90,9 @@ export function createForgeControlService({root, token, interpreter = null}) {
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "0.5",
+          version: "0.6",
           promptIngress: Boolean(interpreter),
+          preview: true,
         });
       }
 
@@ -176,6 +178,31 @@ export function createForgeControlService({root, token, interpreter = null}) {
           return send(res, 201, {artifact: artifact.manifest});
         }
 
+        if (
+          req.method === "POST" &&
+          parts[3] === "revisions" &&
+          parts[4] &&
+          parts[5] === "preview" &&
+          parts.length === 6
+        ) {
+          await store.getRevision(projectId, parts[4]);
+          return send(res, 201, {
+            preview: await previews.start(projectId, parts[4]),
+          });
+        }
+
+        if (req.method === "GET" && parts[3] === "preview" && parts.length === 4) {
+          const preview = previews.get(projectId);
+          return preview
+            ? send(res, 200, {preview})
+            : send(res, 404, {error: "preview_not_running"});
+        }
+
+        if (req.method === "DELETE" && parts[3] === "preview" && parts.length === 4) {
+          const stopped = await previews.stop(projectId);
+          return send(res, stopped ? 200 : 404, {stopped});
+        }
+
         if (req.method === "POST" && parts[3] === "publish" && parts.length === 4) {
           const body = await readBody(req);
           const revision = body.revisionId
@@ -227,6 +254,12 @@ export function createForgeControlService({root, token, interpreter = null}) {
       });
     }
   });
+
+  server.on("close", () => {
+    void previews.stopAll();
+  });
+
+  return server;
 }
 
 export function listenForgeControlService({
