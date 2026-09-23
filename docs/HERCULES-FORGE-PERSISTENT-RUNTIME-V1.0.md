@@ -23,6 +23,7 @@ The generated server uses `ForgeRuntimeStore` from the generated owned `runtime-
 The runtime store:
 
 - uses one durable JSON file per entity
+- serializes mutations per entity inside the runtime process
 - writes through a temporary file and atomic rename
 - rejects unknown entity names
 - preserves generated record IDs and timestamps
@@ -75,6 +76,7 @@ Automated tests cover:
 - credential stripping
 - persistence across preview stop/start
 - persistence across source revision changes
+- concurrent same-entity writes without lost updates
 - existing CRUD, artifact, workspace, session, provenance, and release behavior
 
 ## Next database layer
