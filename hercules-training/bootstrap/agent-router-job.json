@@ -1,0 +1,25 @@
+{
+  "version": "0.1",
+  "id": "agent-router-bootstrap-job-v01",
+  "modelId": "hercules-agent",
+  "task": "agent",
+  "datasets": [
+    {
+      "id": "agent-router-bootstrap",
+      "contentSha256": "8df9e9fe54c923f02334175e1e3d315ff8be1bff43fdf26ae22d7ee5dbc0e8dd",
+      "manifestFingerprint": "5b3df2f48bf3fb69252827e6137629162e8d058b16ac1282cd808662f52cb633"
+    }
+  ],
+  "seed": 7,
+  "codeCommit": "2b086492bed06a9967d4e143cdbb64cd6c225f27",
+  "trainer": {
+    "engine": "hercules-native-node",
+    "version": "0.1",
+    "entrypoint": "hercules-training/native-agent-router.mjs"
+  },
+  "hyperparameters": {
+    "algorithm": "multinomial-naive-bayes",
+    "alpha": 1
+  },
+  "createdAt": "2026-09-23T20:21:00Z"
+}
