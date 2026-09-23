@@ -140,7 +140,7 @@ export class Wan22Ti2v5bRunner extends HerculesLocalVideoRunner {
   }
 
   async health() {
-    const hardware = assertWan22Hardware(this.hardwareProbe, {minVramGiB:24});
+    const hardware = assertWan22Hardware(this.hardwareProbe, {minVramGb:24});
     await assertDirectory(this.wanRepoDir, "wan22_repo_missing");
     await assertDirectory(this.checkpointDir, "wan22_checkpoint_missing");
     await assertDirectory(this.outputDir, "wan22_output_dir_missing");
