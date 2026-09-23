@@ -41,7 +41,7 @@ async function walk(absolutePath, {
 function sourceModuleSpecifiers(content) {
   const values = [];
   const patterns = [
-    /\b(?:import|export)\s+[^"'\n]*?\s+from\s+["']([^"']+)["']/g,
+    /\bfrom\s+["']([^"']+)["']/g,
     /\bimport\s*["']([^"']+)["']/g,
     /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g,
     /\brequire\s*\(\s*["']([^"']+)["']\s*\)/g,
