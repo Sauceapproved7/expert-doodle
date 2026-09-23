@@ -12,6 +12,13 @@ import {createCampaignExecutionPlan} from "./campaign-coordinator.mjs";
 import {runFfmpegAssembly} from "./ffmpeg-assembly-runner.mjs";
 import {createHerculesRenderQualityEvaluator} from "./render-quality-gate.mjs";
 import {fingerprint} from "./core.mjs";
+import {
+  createLaunchRunState,
+  readLaunchRunState,
+  validateLaunchRunState,
+  verifyLaunchRunStateArtifacts,
+  writeLaunchRunStateAtomic,
+} from "./launch-state.mjs";
 
 function requireAbsolute(value, name) {
   const raw=String(value || "");
@@ -79,14 +86,21 @@ export async function loadHerculesLaunchPreset({
 }
 
 export function normalizeWan22LaunchConfig(config={}) {
+  const finalOutputPath=requireAbsolute(config.finalOutputPath,"launch_final_output_path_required");
+  const evidenceOutputPath=requireAbsolute(config.evidenceOutputPath,"launch_evidence_output_path_required");
   const normalized={
     projectId:String(config.projectId || "hercules-launch"),
     runtimeId:String(config.runtimeId || "hercules-video-local"),
     wanRepoDir:requireAbsolute(config.wanRepoDir,"launch_wan_repo_dir_required"),
     checkpointDir:requireAbsolute(config.checkpointDir,"launch_checkpoint_dir_required"),
     renderOutputDir:requireAbsolute(config.renderOutputDir,"launch_render_output_dir_required"),
-    finalOutputPath:requireAbsolute(config.finalOutputPath,"launch_final_output_path_required"),
-    evidenceOutputPath:requireAbsolute(config.evidenceOutputPath,"launch_evidence_output_path_required"),
+    finalOutputPath,
+    evidenceOutputPath,
+    statePath:requireAbsolute(
+      config.statePath || evidenceOutputPath + ".state.json",
+      "launch_state_path_required"
+    ),
+    resume:config.resume===true,
     upstreamCommit:requireCommit(config.upstreamCommit,"launch_upstream_commit_required"),
     checkpointSha256:requireSha256(config.checkpointSha256,"launch_checkpoint_sha256_required"),
     python:String(config.python || "python"),
@@ -123,8 +137,12 @@ export async function prepareWan22LaunchHost(config,{
   await mkdirImpl(normalized.renderOutputDir,{recursive:true});
   await mkdirImpl(path.dirname(normalized.finalOutputPath),{recursive:true});
   await mkdirImpl(path.dirname(normalized.evidenceOutputPath),{recursive:true});
-  await assertAbsent(normalized.finalOutputPath,"launch_final_output_exists");
-  await assertAbsent(normalized.evidenceOutputPath,"launch_evidence_output_exists");
+  await mkdirImpl(path.dirname(normalized.statePath),{recursive:true});
+  if (!normalized.resume) {
+    await assertAbsent(normalized.finalOutputPath,"launch_final_output_exists");
+    await assertAbsent(normalized.evidenceOutputPath,"launch_evidence_output_exists");
+    await assertAbsent(normalized.statePath,"launch_state_exists_resume_required");
+  }
 
   for (const [index,track] of normalized.audioTracks.entries()) {
     const audioPath=fileURLToPath(track.uri);
@@ -282,6 +300,9 @@ export async function executeWan22Launch(config,{
   mkdirImpl=mkdir,
   writeFileImpl=writeFile,
   assemblyRunner=runFfmpegAssembly,
+  readState=readLaunchRunState,
+  writeState=writeLaunchRunStateAtomic,
+  verifyStateArtifacts=verifyLaunchRunStateArtifacts,
   clock=()=>new Date(),
   sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms)),
 }={}) {
@@ -305,27 +326,89 @@ export async function executeWan22Launch(config,{
     sleep,
   });
 
-  const evaluations=[];
+  let evaluations=[];
+  let currentState=null;
+
+  const persistState=async ({session,stage,finalOutputSha256=null,campaignEvidenceFingerprint=null})=>{
+    currentState=createLaunchRunState({
+      executionPlan:host.executionPlan,
+      config:host.config,
+      session,
+      stage,
+      evaluations,
+      finalOutputSha256,
+      campaignEvidenceFingerprint,
+    });
+    await writeState(currentState,host.config.statePath);
+    return currentState;
+  };
+
+  let session;
+  if (host.config.resume) {
+    currentState=await readState(host.config.statePath);
+    validateLaunchRunState(currentState,{executionPlan:host.executionPlan,config:host.config});
+    await verifyStateArtifacts(currentState);
+    if (currentState.stage==="completed") throw new Error("launch_resume_already_completed");
+
+    const [finalInfo,evidenceInfo]=await Promise.all([
+      stat(host.config.finalOutputPath).catch(()=>null),
+      stat(host.config.evidenceOutputPath).catch(()=>null),
+    ]);
+    if (finalInfo || evidenceInfo) throw new Error("launch_resume_output_conflict");
+
+    evaluations=structuredClone(currentState.evaluations || []);
+    session=await host.service.resume(host.executionPlan,currentState.session);
+  } else {
+    session=await host.service.start(host.executionPlan);
+  }
+  await persistState({session,stage:"rendering"});
+
+  let rendered=session;
+  for (let poll=0; poll<host.config.maxPolls; poll+=1) {
+    if (rendered.phase==="renders_completed") break;
+    if (rendered.phase==="failed") {
+      const error=new Error("campaign_execution_failed");
+      error.session=rendered;
+      throw error;
+    }
+    rendered=await host.service.refresh(host.executionPlan,rendered);
+    await persistState({session:rendered,stage:"rendering"});
+    if (rendered.phase==="renders_completed") break;
+    if (rendered.phase==="failed") {
+      const error=new Error("campaign_execution_failed");
+      error.session=rendered;
+      throw error;
+    }
+    if (poll+1<host.config.maxPolls) await sleep(host.config.pollIntervalMs);
+  }
+  if (rendered.phase!=="renders_completed") {
+    const error=new Error("campaign_execution_poll_limit");
+    error.session=rendered;
+    throw error;
+  }
+
   const evaluate=async context=>{
-    const result=await verifiedQualityEvaluator(context);
+    const shotId=String(context?.shot?.id || "");
     const artifactSha256=requireSha256(
       context?.artifact?.sha256,
-      "launch_evaluation_artifact_sha256_required:" + String(context?.shot?.id || "")
+      "launch_evaluation_artifact_sha256_required:" + shotId
     );
-    const unsigned={
-      shotId:String(context?.shot?.id || ""),
-      artifactSha256,
-      result,
-    };
+    const existing=evaluations.find(item=>item.shotId===shotId);
+    if (existing) {
+      if (existing.artifactSha256!==artifactSha256) {
+        throw new Error("launch_resume_evaluation_artifact_mismatch:" + shotId);
+      }
+      return structuredClone(existing.result);
+    }
+
+    const result=await verifiedQualityEvaluator(context);
+    const unsigned={shotId,artifactSha256,result};
     evaluations.push({...unsigned,fingerprint:fingerprint(unsigned)});
+    await persistState({session:rendered,stage:"finalizing"});
     return result;
   };
 
-  const session=await host.service.start(host.executionPlan);
-  const rendered=await host.service.awaitRenders(host.executionPlan,session,{
-    maxPolls:host.config.maxPolls,
-    pollIntervalMs:host.config.pollIntervalMs,
-  });
+  await persistState({session:rendered,stage:"finalizing"});
 
   const finalization=await host.service.finalize({
     executionPlan:host.executionPlan,
@@ -371,11 +454,19 @@ export async function executeWan22Launch(config,{
     {writeFileImpl},
   );
 
+  await persistState({
+    session:finalization.session,
+    stage:"completed",
+    finalOutputSha256,
+    campaignEvidenceFingerprint:finalization.campaignEvidence.fingerprint,
+  });
+
   return {
     status:"completed",
     executionPlan:host.executionPlan,
     finalization,
     evidenceBundle:bundle,
     evidenceExport:exportEvidence,
+    launchState:currentState,
   };
 }
