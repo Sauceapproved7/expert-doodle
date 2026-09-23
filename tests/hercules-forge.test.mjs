@@ -51,6 +51,8 @@ test("compiles deterministic runnable source with loopback and request limits", 
   assert.ok(a.files["server.mjs"].includes("FORGE_DATA_DIR"));
   assert.ok(a.files["runtime-store.mjs"].includes("atomicWrite"));
   assert.ok(a.files["runtime-store.mjs"].includes("ForgeRuntimeStore"));
+  assert.match(a.files["runtime-store.mjs"], /^import .+\nimport /);
+  assert.equal(a.files["runtime-store.mjs"].includes("\\nimport"), false);
   assert.ok(a.files["db/001_init.sql"].includes("Customer"));
   assert.ok(a.files["public/index.html"].includes("/app.js"));
   assert.ok(a.files["public/app.js"].includes("Customer"));
