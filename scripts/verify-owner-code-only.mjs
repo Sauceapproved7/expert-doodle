@@ -180,7 +180,9 @@ export async function verifyOwnerCodePolicy() {
   const childProcessUsers = [];
   for (const relativePath of runtimeFiles.filter(isModuleSource)) {
     const content = await readFile(path.join(repoRoot, relativePath), "utf8");
-    if (content.includes("node:child_process")) childProcessUsers.push(relativePath);
+    if (sourceModuleSpecifiers(content).includes("node:child_process")) {
+      childProcessUsers.push(relativePath);
+    }
   }
   for (const relativePath of childProcessUsers) {
     if (!declaredProcesses.has(relativePath)) {
