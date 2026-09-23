@@ -18,6 +18,9 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
       - name: Run Hercules Video tests
         run: node --test tests/hercules-video*.test.mjs
       - name: Enforce provider-neutral owned layers
