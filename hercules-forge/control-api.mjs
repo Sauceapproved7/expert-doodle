@@ -1,11 +1,12 @@
+import {createHash, timingSafeEqual} from "node:crypto";
 import http from "node:http";
-import {timingSafeEqual} from "node:crypto";
 import {join} from "node:path";
 import {ForgeWorkspaceStore} from "./workspace.mjs";
 import {buildForgeArtifact} from "./artifact.mjs";
 import {ForgeLocalReleaseAdapter} from "./releases.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
+const promptHash = (prompt) => createHash("sha256").update(prompt).digest("hex");
 
 function send(res, status, body) {
   res.writeHead(status, {"content-type": "application/json; charset=utf-8"});
@@ -42,6 +43,19 @@ function requireToken(req, token) {
   }
 }
 
+function requireInterpreter(interpreter) {
+  if (!interpreter || typeof interpreter.interpret !== "function") {
+    throw Object.assign(new Error("prompt interpreter is not configured"), {statusCode: 503});
+  }
+}
+
+function requirePrompt(body) {
+  if (typeof body.prompt !== "string" || !body.prompt.trim()) {
+    throw Object.assign(new Error("prompt is required"), {statusCode: 400});
+  }
+  return body.prompt.trim();
+}
+
 function routeParts(url) {
   return url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
 }
@@ -56,7 +70,7 @@ function errorStatus(error) {
   return 500;
 }
 
-export function createForgeControlService({root, token}) {
+export function createForgeControlService({root, token, interpreter = null}) {
   if (!root) throw new TypeError("root is required");
   if (typeof token !== "string" || token.length < 16) {
     throw new TypeError("control token must be at least 16 characters");
@@ -75,11 +89,26 @@ export function createForgeControlService({root, token}) {
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "0.4",
+          version: "0.5",
+          promptIngress: Boolean(interpreter),
         });
       }
 
       requireToken(req, token);
+
+      if (req.method === "POST" && url.pathname === "/v1/projects/from-prompt") {
+        requireInterpreter(interpreter);
+        const body = await readBody(req);
+        const prompt = requirePrompt(body);
+        const spec = await interpreter.interpret(prompt);
+        const metadata = {
+          ...(body.metadata ?? {}),
+          source: "prompt",
+          promptSha256: promptHash(prompt),
+        };
+        const result = await store.createProject(spec, metadata);
+        return send(res, 201, result);
+      }
 
       if (req.method === "POST" && url.pathname === "/v1/projects") {
         const body = await readBody(req);
@@ -92,6 +121,22 @@ export function createForgeControlService({root, token}) {
 
         if (req.method === "GET" && parts.length === 3) {
           return send(res, 200, await store.getProject(projectId));
+        }
+
+        if (
+          req.method === "POST" &&
+          parts[3] === "revisions" &&
+          parts[4] === "from-prompt" &&
+          parts.length === 5
+        ) {
+          requireInterpreter(interpreter);
+          const body = await readBody(req);
+          const prompt = requirePrompt(body);
+          const spec = await interpreter.interpret(prompt);
+          const revision = await store.saveRevision(projectId, spec, {
+            message: body.message ?? "Prompt revision " + promptHash(prompt).slice(0, 12),
+          });
+          return send(res, 201, revision);
         }
 
         if (req.method === "GET" && parts[3] === "revisions" && parts.length === 4) {
@@ -187,10 +232,11 @@ export function createForgeControlService({root, token}) {
 export function listenForgeControlService({
   root,
   token,
+  interpreter = null,
   host = "127.0.0.1",
   port = 38700,
 }) {
-  const server = createForgeControlService({root, token});
+  const server = createForgeControlService({root, token, interpreter});
   server.listen(port, host);
   return server;
 }
