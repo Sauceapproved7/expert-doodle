@@ -1,259 +1,139 @@
 import {createHash} from "node:crypto";
 import {mkdir, readFile, writeFile} from "node:fs/promises";
 import {join, resolve} from "node:path";
-import {HERCULES_MODEL_SLOTS} from "../hercules-models/catalog.mjs";
 import {trainAgentRouter, evaluateAgentRouter} from "./native-agent-router.mjs";
-import {createTrainingJob} from "./planner.mjs";
 import {
-  validateCheckpoint,
   validateDatasetManifest,
-  validateEvaluationResult,
+  validateTrainingJob,
+  validateCheckpoint,
   validateEvaluationSuite,
+  validateEvaluationResult,
 } from "./schema.mjs";
-import {decideActivation} from "./activation.mjs";
-import {stableStringify} from "./hash.mjs";
+import {scoreEvaluation} from "./evaluation.mjs";
 
-function sha256Bytes(value) {
-  return createHash("sha256").update(value).digest("hex");
+const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+
+async function loadJson(path) {
+  return JSON.parse(await readFile(path, "utf8"));
 }
 
-function parseJsonl(text) {
-  return text.split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
-}
+export async function reproduceNativeAgentRouter({
+  root = "hercules-training/bootstrap",
+  outDir = ".hercules-training/bootstrap-agent-router",
+} = {}) {
+  const base = resolve(root);
+  const [
+    trainText,
+    evalText,
+    datasetManifest,
+    jobManifest,
+    checkpointManifest,
+    suiteManifest,
+    evaluationResult,
+    evidenceText,
+  ] = await Promise.all([
+    readFile(join(base, "agent-router-train.json"), "utf8"),
+    readFile(join(base, "agent-router-eval.json"), "utf8"),
+    loadJson(join(base, "agent-router-dataset-manifest.json")),
+    loadJson(join(base, "agent-router-job.json")),
+    loadJson(join(base, "agent-router-checkpoint.json")),
+    loadJson(join(base, "agent-router-eval-suite.json")),
+    loadJson(join(base, "agent-router-eval-result.json")),
+    readFile(join(base, "agent-router-evaluation-evidence.json"), "utf8"),
+  ]);
 
-function canonicalModel(id) {
-  const model = HERCULES_MODEL_SLOTS.find((item) => item.id === id);
-  if (!model) throw new Error("unknown canonical model: " + id);
-  return structuredClone(model);
-}
-
-export function buildNativeAgentRouter({
-  trainText,
-  evalText,
-  sourceCommit,
-  createdAt,
-}) {
-  const trainRecords = parseJsonl(trainText);
-  const evalRecords = parseJsonl(evalText);
-
-  const trainManifestCheck = validateDatasetManifest({
-    version: "0.1",
-    id: "agent-routing-train",
-    description: "Hercules-authored bootstrap corpus for native agent intent routing.",
-    sourceUri: "repo://hercules-training/bootstrap/agent-routing-train.jsonl",
-    sourceType: "hercules-authored",
-    contentSha256: sha256Bytes(Buffer.from(trainText, "utf8")),
-    recordCount: trainRecords.length,
-    license: "Apache-2.0",
-    rightsBasis: "Original Hercules project training material committed in the canonical repository.",
-    trainingAllowed: true,
-    createdAt,
-    provenance: {
-      origin: "Hercules canonical repository",
-      acquiredBy: "Sauceapproved7",
-      sourceCommit,
-      notes: "Original bootstrap examples; no third-party model weights or dataset dependency.",
-    },
-  });
-  if (!trainManifestCheck.ok) {
-    throw new Error("training dataset failed provenance gate: " + trainManifestCheck.errors.join("; "));
+  const datasetCheck = validateDatasetManifest(datasetManifest);
+  if (!datasetCheck.ok) throw new Error("dataset manifest invalid: " + datasetCheck.errors.join("; "));
+  if (sha256(trainText) !== datasetManifest.contentSha256) {
+    throw new Error("training dataset content hash mismatch");
   }
 
-  const evalManifestCheck = validateDatasetManifest({
-    version: "0.1",
-    id: "agent-routing-eval",
-    description: "Hercules-authored held-out evaluation corpus for native agent intent routing.",
-    sourceUri: "repo://hercules-training/bootstrap/agent-routing-eval.jsonl",
-    sourceType: "hercules-authored",
-    contentSha256: sha256Bytes(Buffer.from(evalText, "utf8")),
-    recordCount: evalRecords.length,
-    license: "Apache-2.0",
-    rightsBasis: "Original Hercules project evaluation material committed in the canonical repository.",
-    trainingAllowed: true,
-    createdAt,
-    provenance: {
-      origin: "Hercules canonical repository",
-      acquiredBy: "Sauceapproved7",
-      sourceCommit,
-      notes: "Held out from training and used only for bootstrap evaluation.",
-    },
-  });
-  if (!evalManifestCheck.ok) {
-    throw new Error("evaluation dataset failed provenance gate: " + evalManifestCheck.errors.join("; "));
+  const jobCheck = validateTrainingJob(jobManifest);
+  if (!jobCheck.ok) throw new Error("training job invalid: " + jobCheck.errors.join("; "));
+  const ref = jobManifest.datasets[0];
+  if (
+    ref.id !== datasetManifest.id ||
+    ref.contentSha256 !== datasetManifest.contentSha256 ||
+    ref.manifestFingerprint !== datasetCheck.fingerprint
+  ) {
+    throw new Error("training job dataset lineage mismatch");
   }
 
-  const planned = createTrainingJob({
-    id: "agent-router-bootstrap",
-    modelId: "hercules-agent",
-    task: "agent",
-    datasetManifests: [trainManifestCheck.dataset],
-    seed: 7,
-    codeCommit: sourceCommit,
-    trainer: {
-      engine: "hercules-native",
-      version: "0.1",
-      entrypoint: "hercules-training/native-agent-router.mjs",
-    },
-    hyperparameters: {
-      algorithm: "multinomial-naive-bayes",
-      alpha: 1,
-    },
-    createdAt,
-  });
+  const trainRecords = JSON.parse(trainText);
+  const evalRecords = JSON.parse(evalText);
+  const model = trainAgentRouter(trainRecords, {alpha: jobManifest.hyperparameters.alpha});
+  const modelText = JSON.stringify(model, null, 2) + "\n";
 
-  const model = trainAgentRouter(trainRecords, {alpha: 1});
-  const modelBytes = Buffer.from(stableStringify(model) + "\n", "utf8");
-  const artifactSha256 = sha256Bytes(modelBytes);
-
-  const checkpointCheck = validateCheckpoint({
-    version: "0.1",
-    id: "agent-router-bootstrap-checkpoint",
-    modelId: "hercules-agent",
-    jobId: planned.job.id,
-    jobFingerprint: planned.fingerprint,
-    artifactSha256,
-    bytes: modelBytes.length,
-    format: "hercules-agent-router-naive-bayes",
-    framework: "hercules-native-js",
-    parentCheckpointSha256: null,
-    createdAt,
-    sourceCommit,
-  });
-  if (!checkpointCheck.ok) {
-    throw new Error("checkpoint metadata invalid: " + checkpointCheck.errors.join("; "));
+  const checkpointCheck = validateCheckpoint(checkpointManifest);
+  if (!checkpointCheck.ok) throw new Error("checkpoint manifest invalid: " + checkpointCheck.errors.join("; "));
+  if (checkpointManifest.jobFingerprint !== jobCheck.fingerprint) {
+    throw new Error("checkpoint job fingerprint mismatch");
+  }
+  if (Buffer.byteLength(modelText) !== checkpointManifest.bytes) {
+    throw new Error("checkpoint byte size mismatch");
+  }
+  if (sha256(modelText) !== checkpointManifest.artifactSha256) {
+    throw new Error("checkpoint hash mismatch");
   }
 
-  const detailed = evaluateAgentRouter(model, evalRecords);
-  const metrics = {
-    accuracy: detailed.accuracy,
-    "error-rate": 1 - detailed.accuracy,
-  };
-
-  const suiteCheck = validateEvaluationSuite({
-    version: "0.1",
-    id: "agent-routing-bootstrap-gate",
-    task: "agent",
-    description: "Bootstrap gate for the first Hercules-native agent router.",
-    thresholds: [
-      {metric: "accuracy", op: "gte", value: 0.8},
-      {metric: "error-rate", op: "lte", value: 0.2},
-    ],
-    sourceCommit,
-  });
-  if (!suiteCheck.ok) {
-    throw new Error("evaluation suite invalid: " + suiteCheck.errors.join("; "));
+  const suiteCheck = validateEvaluationSuite(suiteManifest);
+  if (!suiteCheck.ok) throw new Error("evaluation suite invalid: " + suiteCheck.errors.join("; "));
+  const resultCheck = validateEvaluationResult(evaluationResult);
+  if (!resultCheck.ok) throw new Error("evaluation result invalid: " + resultCheck.errors.join("; "));
+  if (evaluationResult.suiteFingerprint !== suiteCheck.fingerprint) {
+    throw new Error("evaluation suite fingerprint mismatch");
+  }
+  if (evaluationResult.checkpointSha256 !== checkpointManifest.artifactSha256) {
+    throw new Error("evaluation checkpoint mismatch");
+  }
+  if (sha256(evidenceText) !== evaluationResult.evidenceSha256) {
+    throw new Error("evaluation evidence hash mismatch");
   }
 
-  const evaluationEvidence = {
-    dataset: {
-      id: evalManifestCheck.dataset.id,
-      contentSha256: evalManifestCheck.dataset.contentSha256,
-      manifestFingerprint: evalManifestCheck.fingerprint,
-    },
-    predictions: detailed.rows,
-  };
-
-  const resultCheck = validateEvaluationResult({
-    version: "0.1",
-    id: "agent-routing-bootstrap-eval",
-    suiteId: suiteCheck.suite.id,
-    suiteFingerprint: suiteCheck.fingerprint,
-    checkpointSha256: artifactSha256,
-    metrics,
-    evidenceSha256: sha256Bytes(Buffer.from(stableStringify(evaluationEvidence), "utf8")),
-    createdAt,
-  });
-  if (!resultCheck.ok) {
-    throw new Error("evaluation result invalid: " + resultCheck.errors.join("; "));
+  const evaluation = evaluateAgentRouter(model, evalRecords);
+  if (evaluation.accuracy !== evaluationResult.metrics.accuracy) {
+    throw new Error("recorded evaluation accuracy does not reproduce");
   }
 
-  const decision = decideActivation({
-    model: canonicalModel("hercules-agent"),
-    checkpoint: checkpointCheck.checkpoint,
-    evaluations: [resultCheck.result],
-    requiredSuites: [suiteCheck.suite],
-    runtime: {kind: "embedded", endpoint: null},
-  });
+  const scored = scoreEvaluation({suite: suiteManifest, result: evaluationResult});
+  if (!scored.ok) {
+    throw new Error("bootstrap evaluation gate failed");
+  }
+
+  const output = resolve(outDir);
+  await mkdir(output, {recursive: true});
+  await Promise.all([
+    writeFile(join(output, "model.json"), modelText),
+    writeFile(join(output, "reproduction.json"), JSON.stringify({
+      ok: true,
+      modelId: checkpointManifest.modelId,
+      checkpointSha256: checkpointManifest.artifactSha256,
+      bytes: checkpointManifest.bytes,
+      trainingRecords: trainRecords.length,
+      evaluationRecords: evalRecords.length,
+      accuracy: evaluation.accuracy,
+      bootstrapGatePassed: true,
+      productionActivated: false,
+      limitation: "Narrow bootstrap router only; not a general-purpose language model.",
+    }, null, 2) + "\n"),
+  ]);
 
   return {
-    ok: decision.ok,
-    model,
-    modelBytes,
-    trainManifest: {
-      manifest: trainManifestCheck.dataset,
-      fingerprint: trainManifestCheck.fingerprint,
-    },
-    evalManifest: {
-      manifest: evalManifestCheck.dataset,
-      fingerprint: evalManifestCheck.fingerprint,
-    },
-    job: planned,
-    checkpoint: {
-      checkpoint: checkpointCheck.checkpoint,
-      fingerprint: checkpointCheck.fingerprint,
-    },
-    suite: {
-      suite: suiteCheck.suite,
-      fingerprint: suiteCheck.fingerprint,
-    },
-    evaluation: {
-      result: resultCheck.result,
-      fingerprint: resultCheck.fingerprint,
-      evidence: evaluationEvidence,
-    },
-    decision,
+    ok: true,
+    modelId: checkpointManifest.modelId,
+    checkpointSha256: checkpointManifest.artifactSha256,
+    bytes: checkpointManifest.bytes,
+    trainingRecords: trainRecords.length,
+    evaluationRecords: evalRecords.length,
+    accuracy: evaluation.accuracy,
+    scored,
+    output,
   };
 }
 
 async function main() {
-  const sourceCommit = process.env.HERCULES_SOURCE_COMMIT ?? process.env.GITHUB_SHA;
-  if (!sourceCommit || !/^[a-f0-9]{40}$/.test(sourceCommit)) {
-    throw new Error("HERCULES_SOURCE_COMMIT or GITHUB_SHA must be a 40-character git SHA");
-  }
-
-  const createdAt = process.env.HERCULES_CREATED_AT ?? new Date().toISOString();
-  const trainPath = resolve(process.argv[2] ?? "hercules-training/bootstrap/agent-routing-train.jsonl");
-  const evalPath = resolve(process.argv[3] ?? "hercules-training/bootstrap/agent-routing-eval.jsonl");
-  const outDir = resolve(process.argv[4] ?? ".hercules-training/bootstrap-agent-router");
-
-  const [trainText, evalText] = await Promise.all([
-    readFile(trainPath, "utf8"),
-    readFile(evalPath, "utf8"),
-  ]);
-
-  const build = buildNativeAgentRouter({
-    trainText,
-    evalText,
-    sourceCommit,
-    createdAt,
-  });
-
-  if (!build.ok) {
-    throw new Error("native agent router failed activation gate: " + build.decision.reasons.join("; "));
-  }
-
-  await mkdir(outDir, {recursive: true});
-  await Promise.all([
-    writeFile(join(outDir, "model.json"), build.modelBytes),
-    writeFile(join(outDir, "training-evidence.json"), JSON.stringify({
-      trainManifest: build.trainManifest,
-      evalManifest: build.evalManifest,
-      job: build.job,
-      checkpoint: build.checkpoint,
-      suite: build.suite,
-      evaluation: build.evaluation,
-      decision: build.decision,
-    }, null, 2) + "\n"),
-  ]);
-
-  console.log(JSON.stringify({
-    ok: true,
-    modelId: "hercules-agent",
-    checkpointSha256: build.checkpoint.checkpoint.artifactSha256,
-    accuracy: build.evaluation.result.metrics.accuracy,
-    errorRate: build.evaluation.result.metrics["error-rate"],
-    output: outDir,
-  }, null, 2));
+  const result = await reproduceNativeAgentRouter();
+  console.log(JSON.stringify(result, null, 2));
 }
 
 if (process.argv[1] && import.meta.url === new URL("file://" + process.argv[1]).href) {
