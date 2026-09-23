@@ -29,7 +29,8 @@ jobs:
             hercules-video/assembly-core.mjs \
             hercules-video/ffmpeg-assembly-runner.mjs \
             hercules-video/campaign-coordinator.mjs \
-            hercules-video/campaign-execution-service.mjs; then
+            hercules-video/campaign-execution-service.mjs \
+            hercules-video/launch-bootstrap.mjs; then
             echo "Provider-specific dependency leaked into Hercules Video owned layer."
             exit 1
           fi
