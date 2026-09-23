@@ -1,0 +1,14 @@
+{
+  "version": "0.1",
+  "id": "agent-router-bootstrap-checkpoint-v01",
+  "modelId": "hercules-agent",
+  "jobId": "agent-router-bootstrap-job-v01",
+  "jobFingerprint": "0b0a986c8b4f30c60a6d56fdaf01ad97ec887d6921a4bc2e02c5218f931a8143",
+  "artifactSha256": "b8a2973aad22a9425b4143d008b1f9e1920ec0a3cb1e3585b03c2220216b0e4b",
+  "bytes": 7410,
+  "format": "json",
+  "framework": "hercules-native-node",
+  "parentCheckpointSha256": null,
+  "createdAt": "2026-09-23T20:22:00Z",
+  "sourceCommit": "2b086492bed06a9967d4e143cdbb64cd6c225f27"
+}
