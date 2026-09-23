@@ -9,6 +9,9 @@ import {HerculesSelfHostedRenderAdapter} from "./self-hosted-adapter.mjs";
 import {createCampaignExecutionPlan} from "./campaign-coordinator.mjs";
 import {HerculesCampaignExecutionService} from "./campaign-execution-service.mjs";
 import {runFfmpegAssembly} from "./ffmpeg-assembly-runner.mjs";
+import {fingerprint} from "./core.mjs";
+
+const CANONICAL_PRESET_PATH = fileURLToPath(new URL("./presets/hercules-launch.json", import.meta.url));
 
 const QUALITY_DIMENSIONS = Object.freeze([
   "promptAdherence",
@@ -46,6 +49,15 @@ async function assertDirectory(dirPath, code) {
 
 async function sha256File(filePath) {
   return createHash("sha256").update(await readFile(filePath)).digest("hex");
+}
+
+async function assertAbsent(filePath, code) {
+  const info = await stat(filePath).catch(() => null);
+  if (info) throw new Error(code);
+}
+
+function parentDirectory(filePath) {
+  return path.dirname(filePath);
 }
 
 function normalizeQuality(quality, shotId) {
@@ -95,7 +107,9 @@ export function normalizeLaunchConfig(config) {
     schema:"sauceapproved.hercules.video-launch-config",
     version:1,
     projectId:String(config.projectId || "hercules-launch"),
-    presetPath:absolute(config.presetPath, "launch_preset_path_required"),
+    presetPath:config.presetPath
+      ? absolute(config.presetPath, "launch_preset_path_required")
+      : CANONICAL_PRESET_PATH,
     wanRepoDir:absolute(config.wanRepoDir, "launch_wan_repo_dir_required"),
     checkpointDir:absolute(config.checkpointDir, "launch_checkpoint_dir_required"),
     checkpointSha256:sha256(config.checkpointSha256, "launch_checkpoint_sha256_required"),
@@ -119,6 +133,9 @@ export function normalizeLaunchConfig(config) {
 
 export async function validateLaunchInputs(config) {
   const normalized = normalizeLaunchConfig(config);
+  if (path.resolve(normalized.presetPath) !== path.resolve(CANONICAL_PRESET_PATH)) {
+    throw new Error("launch_preset_must_be_canonical");
+  }
   if (!/^[a-f0-9]{40}$/.test(normalized.upstreamCommit)) throw new Error("launch_upstream_commit_required");
   if (!Number.isFinite(normalized.minimumScore) || normalized.minimumScore < 0 || normalized.minimumScore > 1) {
     throw new Error("launch_minimum_score_invalid");
@@ -133,6 +150,10 @@ export async function validateLaunchInputs(config) {
   await assertDirectory(normalized.checkpointDir, "launch_checkpoint_missing");
   await assertDirectory(normalized.renderOutputDir, "launch_render_output_dir_missing");
   await assertFile(normalized.evaluationEvidencePath, "launch_evaluation_evidence_missing");
+  await assertDirectory(parentDirectory(normalized.finalOutputPath), "launch_final_output_parent_missing");
+  await assertDirectory(parentDirectory(normalized.evidenceOutputPath), "launch_evidence_output_parent_missing");
+  await assertAbsent(normalized.finalOutputPath, "launch_final_output_exists");
+  await assertAbsent(normalized.evidenceOutputPath, "launch_evidence_output_exists");
 
   for (const [index, track] of normalized.audioTracks.entries()) {
     await assertFile(track.path, "launch_audio_missing:" + index);
@@ -145,6 +166,10 @@ export async function validateLaunchInputs(config) {
 
 export function createEvidenceEvaluator(evidence) {
   if (!evidence || typeof evidence !== "object") throw new Error("launch_evaluation_evidence_invalid");
+  if (evidence.schema !== "sauceapproved.hercules.video-evaluation-evidence") {
+    throw new Error("launch_evaluation_schema_invalid");
+  }
+  if (Number(evidence.version) !== 1) throw new Error("launch_evaluation_version_invalid");
   const shots = evidence.shots;
   if (!shots || typeof shots !== "object" || Array.isArray(shots)) {
     throw new Error("launch_evaluation_shots_required");
@@ -158,6 +183,7 @@ export function createEvidenceEvaluator(evidence) {
     if (expectedArtifact !== String(artifact?.sha256 || "").toLowerCase()) {
       throw new Error("launch_evaluation_artifact_mismatch:" + shotId);
     }
+    if (!String(entry.method || "").trim()) throw new Error("launch_evaluation_method_required:" + shotId);
     return normalizeQuality(entry.quality, shotId);
   };
 }
@@ -191,6 +217,8 @@ export async function runHerculesLaunch(config, dependencies={}) {
   const brief = await readJson(normalized.presetPath);
   const evaluationEvidence = await readJson(normalized.evaluationEvidencePath);
   const evaluate = createEvidenceEvaluator(evaluationEvidence);
+  const presetSha256 = await sha256File(normalized.presetPath);
+  const evaluationEvidenceSha256 = await sha256File(normalized.evaluationEvidencePath);
 
   const runner = dependencies.runner || new Wan22Ti2v5bRunner({
     wanRepoDir:normalized.wanRepoDir,
@@ -253,7 +281,7 @@ export async function runHerculesLaunch(config, dependencies={}) {
     minimumScore:normalized.minimumScore,
   });
 
-  const launchEvidence = {
+  const launchEvidenceBase = {
     schema:"sauceapproved.hercules.video-launch-evidence",
     version:1,
     projectId:normalized.projectId,
@@ -268,7 +296,9 @@ export async function runHerculesLaunch(config, dependencies={}) {
     },
     inputs:{
       presetPath:normalized.presetPath,
+      presetSha256,
       evaluationEvidencePath:normalized.evaluationEvidencePath,
+      evaluationEvidenceSha256,
       audioTracks:audioTracks.map(track => ({
         id:track.id,
         kind:track.kind,
@@ -277,6 +307,7 @@ export async function runHerculesLaunch(config, dependencies={}) {
       })),
     },
   };
+  const launchEvidence = {...launchEvidenceBase,fingerprint:fingerprint(launchEvidenceBase)};
 
   await writeEvidence(normalized.evidenceOutputPath,launchEvidence);
   return {
