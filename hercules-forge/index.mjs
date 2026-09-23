@@ -6,6 +6,7 @@ export {ForgeWorkspaceStore} from "./workspace.mjs";
 export {ForgeIdentityStore, normalizeEmail, verifyPassword} from "./identity.mjs";
 export {buildForgeArtifact, verifyForgeArtifact} from "./artifact.mjs";
 export {ForgeDeploymentAdapter, ForgeLocalReleaseAdapter} from "./releases.mjs";
+export {DEFAULT_RUNTIME_DATA_MAX_BYTES, ForgeRuntimeDataAdapter, ForgeLocalRuntimeDataAdapter} from "./runtime-data.mjs";
 export {buildPreviewChildEnv, startForgePreview, ForgePreviewManager} from "./preview.mjs";
 export {builderConsoleHtml, builderConsoleCss, builderConsoleJs, builderConsoleAsset} from "./builder-console.mjs";
 export {customerConsoleHtml, customerConsoleCss, customerConsoleJs, customerConsoleAsset} from "./customer-console.mjs";
