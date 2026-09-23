@@ -4,6 +4,7 @@ import {createHash} from "node:crypto";
 import {mkdtemp,writeFile} from "node:fs/promises";
 import {EventEmitter} from "node:events";
 import {PassThrough} from "node:stream";
+import {execFileSync} from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -176,4 +177,10 @@ test("Hercules quality gate preserves semantic evaluator evidence",async()=>{
     request:{output:{fps:24}},
   });
   assert.deepEqual(result.semanticEvidence,semanticEvidence);
+});
+
+
+test("Qwen Python worker is syntactically valid",()=>{
+  const workerPath=path.resolve("hercules-video/evaluators/qwen3_vl_worker.py");
+  execFileSync("python",["-m","py_compile",workerPath],{stdio:"pipe"});
 });
