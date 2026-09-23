@@ -1,0 +1,20 @@
+{"label":"primary","text":"find the official specification that defines this behavior"}
+{"label":"primary","text":"use the original filing to confirm the reported value"}
+{"label":"primary","text":"read the vendor documentation for the configuration option"}
+{"label":"primary","text":"locate the agency rule text itself"}
+{"label":"current","text":"what is the latest update from today"}
+{"label":"current","text":"find recent news from this week about the outage"}
+{"label":"current","text":"check the newest release available now"}
+{"label":"current","text":"what changed recently in the platform rules"}
+{"label":"compare","text":"compare both implementations on the same technical criteria"}
+{"label":"compare","text":"show the documented differences between these service plans"}
+{"label":"compare","text":"contrast the two papers and their methodologies"}
+{"label":"compare","text":"compare the current rule with the previous rule"}
+{"label":"verify","text":"fact check this number against its original source"}
+{"label":"verify","text":"confirm whether the documentation really supports this statement"}
+{"label":"verify","text":"verify the reported date using authoritative evidence"}
+{"label":"verify","text":"check whether this release actually contains the feature"}
+{"label":"background","text":"explain the history and fundamentals of this protocol"}
+{"label":"background","text":"give me an overview of the field before current events"}
+{"label":"background","text":"provide historical context for how the system developed"}
+{"label":"background","text":"teach me the basic architecture and terminology"}
