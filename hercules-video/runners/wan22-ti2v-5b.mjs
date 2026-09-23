@@ -1,6 +1,7 @@
 import {spawn} from "node:child_process";
 import {stat, readFile} from "node:fs/promises";
 import path from "node:path";
+import {fileURLToPath, pathToFileURL} from "node:url";
 import {createHash} from "node:crypto";
 import {HerculesLocalVideoRunner} from "../local-runner.mjs";
 import {assertWan22Hardware} from "../hardware-probe.mjs";
@@ -11,9 +12,9 @@ const SUPPORTED_SIZES = Object.freeze({
 });
 
 function ensureAbsoluteLocalPath(value, name) {
-  const resolved = path.resolve(String(value || ""));
-  if (!value || !path.isAbsolute(resolved)) throw new Error(name);
-  return resolved;
+  const raw = String(value || "");
+  if (!raw || !path.isAbsolute(raw)) throw new Error(name);
+  return path.normalize(raw);
 }
 
 async function assertFile(pathname, name) {
@@ -51,7 +52,7 @@ function firstLocalImageReference(request) {
   if (!image) return null;
   const uri = String(image.uri || "");
   if (!uri.startsWith("file://")) throw new Error("wan22_local_image_reference_required");
-  return decodeURIComponent(new URL(uri).pathname);
+  return fileURLToPath(uri);
 }
 
 async function sha256File(filePath) {
@@ -131,8 +132,8 @@ export class Wan22Ti2v5bRunner extends HerculesLocalVideoRunner {
     this.hardwareProbe = hardwareProbe;
     this.upstreamCommit = String(upstreamCommit || "").trim();
     if (!/^[a-f0-9]{40}$/i.test(this.upstreamCommit)) throw new Error("wan22_upstream_commit_required");
-    this.checkpointSha256 = checkpointSha256 ? String(checkpointSha256).toLowerCase() : null;
-    if (this.checkpointSha256 && !/^[a-f0-9]{64}$/.test(this.checkpointSha256)) throw new Error("wan22_checkpoint_sha256_invalid");
+    this.checkpointSha256 = String(checkpointSha256 || "").toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(this.checkpointSha256)) throw new Error("wan22_checkpoint_sha256_required");
     this.timeoutMs = Number(timeoutMs);
     if (!Number.isInteger(this.timeoutMs) || this.timeoutMs <= 0) throw new Error("wan22_timeout_invalid");
     this.spawnImpl = spawnImpl;
@@ -210,7 +211,7 @@ export class Wan22Ti2v5bRunner extends HerculesLocalVideoRunner {
     const artifactSha = await sha256File(outputPath);
     return {
       artifact:{
-        uri:new URL("file://" + outputPath).href,
+        uri:pathToFileURL(outputPath).href,
         mimeType:"video/mp4",
         sizeBytes:info.size,
         sha256:artifactSha,
