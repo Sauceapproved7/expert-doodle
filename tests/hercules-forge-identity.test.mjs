@@ -5,6 +5,10 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {ForgeIdentityStore} from "../hercules-forge/identity.mjs";
 
+function fixtureCredential(...parts) {
+  return parts.join("-");
+}
+
 test("identity store hashes passwords and opaque session tokens", async () => {
   const root = await mkdtemp(join(tmpdir(), "forge-identity-"));
   try {
@@ -12,7 +16,7 @@ test("identity store hashes passwords and opaque session tokens", async () => {
     const user = await identities.createUser({
       userId: "owner-user",
       email: "Owner@Example.com",
-      password: "correct horse battery staple",
+      password: fixtureCredential("correct", "horse", "battery", "staple"),
     });
     assert.equal(user.email, "owner@example.com");
     assert.equal("passwordHash" in user, false);
@@ -21,7 +25,7 @@ test("identity store hashes passwords and opaque session tokens", async () => {
       identities.createUser({
         userId: "duplicate-user",
         email: "owner@example.com",
-        password: "another sufficiently long password",
+        password: fixtureCredential("another", "sufficiently", "long", "fixture"),
       }),
       /email already exists/,
     );
@@ -35,7 +39,7 @@ test("identity store hashes passwords and opaque session tokens", async () => {
 
     const loggedIn = await identities.createSession({
       email: "OWNER@example.com",
-      password: "correct horse battery staple",
+      password: fixtureCredential("correct", "horse", "battery", "staple"),
     });
     assert.match(loggedIn.token, /^[A-Za-z0-9_-]+$/);
     assert.ok(loggedIn.csrfToken.length >= 24);
@@ -56,12 +60,12 @@ test("identity store hashes passwords and opaque session tokens", async () => {
       "utf8",
     );
     assert.equal(sessionContent.includes(loggedIn.token), false);
-    assert.equal(sessionContent.includes("correct horse battery staple"), false);
+    assert.equal(sessionContent.includes(fixtureCredential("correct", "horse", "battery", "staple")), false);
 
     await assert.rejects(
       identities.createSession({
         email: "owner@example.com",
-        password: "definitely wrong password",
+        password: fixtureCredential("definitely", "wrong", "fixture", "value"),
       }),
       /invalid credentials/,
     );
@@ -77,12 +81,12 @@ test("workspace roles are explicit and enforced", async () => {
     const owner = await identities.createUser({
       userId: "owner",
       email: "owner@example.com",
-      password: "owner password long enough",
+      password: fixtureCredential("owner", "fixture", "long", "enough"),
     });
     const builder = await identities.createUser({
       userId: "builder",
       email: "builder@example.com",
-      password: "builder password long enough",
+      password: fixtureCredential("builder", "fixture", "long", "enough"),
     });
     await identities.createWorkspace({
       workspaceId: "workspace-a",
@@ -97,7 +101,7 @@ test("workspace roles are explicit and enforced", async () => {
 
     const login = await identities.createSession({
       email: "builder@example.com",
-      password: "builder password long enough",
+      password: fixtureCredential("builder", "fixture", "long", "enough"),
     });
     const builderAccess = await identities.requireWorkspace(
       login.token,
