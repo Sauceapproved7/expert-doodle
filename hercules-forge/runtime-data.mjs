@@ -210,6 +210,12 @@ export class ForgeLocalRuntimeDataAdapter extends ForgeRuntimeDataAdapter {
       throw new Error("runtime snapshot identity mismatch");
     }
 
+    const actualFiles = await listDataFiles(join(dir, "data"));
+    const expectedFiles = Object.keys(manifest.files ?? {}).sort();
+    if (JSON.stringify(actualFiles) !== JSON.stringify(expectedFiles)) {
+      throw new Error("runtime snapshot file set mismatch");
+    }
+
     let totalBytes = 0;
     for (const [name, expected] of Object.entries(manifest.files ?? {})) {
       if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}\.json$/.test(name)) {
@@ -247,25 +253,33 @@ export class ForgeLocalRuntimeDataAdapter extends ForgeRuntimeDataAdapter {
     const previousDir = join(runtimeRoot, "." + projectId + ".previous-" + randomUUID());
     await mkdir(tempDir, {recursive: true});
 
+    let previousMoved = false;
+    let restoreActivated = false;
     try {
       for (const name of Object.keys(manifest.files)) {
         await copyFile(join(sourceDir, name), join(tempDir, name));
       }
 
-      let hadPrevious = false;
       if (await exists(dataDir)) {
         await rename(dataDir, previousDir);
-        hadPrevious = true;
+        previousMoved = true;
       }
 
       try {
         await rename(tempDir, dataDir);
+        restoreActivated = true;
       } catch (error) {
-        if (hadPrevious) await rename(previousDir, dataDir);
+        if (previousMoved) {
+          await rename(previousDir, dataDir);
+          previousMoved = false;
+        }
         throw error;
       }
 
-      if (hadPrevious) await rm(previousDir, {recursive: true, force: true});
+      if (previousMoved) {
+        await rm(previousDir, {recursive: true, force: true});
+        previousMoved = false;
+      }
       return {
         projectId,
         snapshotId,
@@ -275,8 +289,8 @@ export class ForgeLocalRuntimeDataAdapter extends ForgeRuntimeDataAdapter {
         files: Object.keys(manifest.files).length,
       };
     } finally {
-      await rm(tempDir, {recursive: true, force: true});
-      await rm(previousDir, {recursive: true, force: true});
+      if (!restoreActivated) await rm(tempDir, {recursive: true, force: true});
+      if (!previousMoved) await rm(previousDir, {recursive: true, force: true});
     }
   }
 }
