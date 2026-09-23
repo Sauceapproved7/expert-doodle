@@ -89,6 +89,15 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
     assert.match(ownerLogin.cookie, /^forge_session=/);
     assert.ok(ownerLogin.body.csrfToken);
 
+    const csrfRefresh = await fetch(base + "/v1/session/csrf", {
+      headers: {cookie: ownerLogin.cookie},
+    });
+    assert.equal(csrfRefresh.status, 200);
+    const csrfRefreshBody = await csrfRefresh.json();
+    assert.ok(csrfRefreshBody.csrfToken);
+    assert.notEqual(csrfRefreshBody.csrfToken, ownerLogin.body.csrfToken);
+    const ownerCsrf = csrfRefreshBody.csrfToken;
+
     const me = await fetch(base + "/v1/me", {
       headers: {cookie: ownerLogin.cookie},
     });
@@ -110,6 +119,20 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
     );
     assert.equal(noCsrf.status, 403);
 
+    const staleCsrf = await fetch(
+      base + "/v1/workspaces/workspace-a/projects/from-prompt",
+      {
+        method: "POST",
+        headers: {
+          cookie: ownerLogin.cookie,
+          "content-type": "application/json",
+          "x-forge-csrf": ownerCsrf,
+        },
+        body: JSON.stringify({prompt: "build a stale csrf app"}),
+      },
+    );
+    assert.equal(staleCsrf.status, 403);
+
     const created = await fetch(
       base + "/v1/workspaces/workspace-a/projects/from-prompt",
       {
@@ -117,7 +140,7 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
         headers: {
           cookie: ownerLogin.cookie,
           "content-type": "application/json",
-          "x-forge-csrf": ownerLogin.body.csrfToken,
+          "x-forge-csrf": ownerCsrf,
         },
         body: JSON.stringify({
           prompt: "build a task app",
@@ -188,7 +211,7 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
         headers: {
           cookie: ownerLogin.cookie,
           "content-type": "application/json",
-          "x-forge-csrf": ownerLogin.body.csrfToken,
+          "x-forge-csrf": ownerCsrf,
         },
         body: JSON.stringify({revisionId: createdBody.revision.revisionId}),
       },
@@ -199,7 +222,7 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
       method: "DELETE",
       headers: {
         cookie: ownerLogin.cookie,
-        "x-forge-csrf": ownerLogin.body.csrfToken,
+        "x-forge-csrf": ownerCsrf,
       },
     });
     assert.equal(logout.status, 200);
