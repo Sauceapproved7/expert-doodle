@@ -8,6 +8,7 @@ import {
   executeWan22Launch,
   createLaunchEvidenceBundle,
   writeLaunchEvidenceBundle,
+  resolveLaunchQualityEvaluator,
 } from "../hercules-video/launch-bootstrap.mjs";
 
 const sha=label=>createHash("sha256").update(label).digest("hex");
@@ -107,7 +108,11 @@ test("launch execution drives canonical service and exports evidence",async()=>{
 
   const result=await executeWan22Launch(config(),{
     brief,
-    qualityEvaluator:async()=>({promptAdherence:1}),
+    semanticEvaluator:async()=>({
+      promptAdherence:1,temporalConsistency:1,visualQuality:1,brandConsistency:1,
+      artifactFreedom:1,reliability:1,
+    }),
+    technicalProbe:async()=>({width:704,height:1280,fps:24,durationSeconds:2}),
     probeHost:async()=>({
       cudaAvailable:true,
       cudaToolkitVersion:"12.4",
@@ -164,5 +169,20 @@ test("evidence export hashes exact serialized bundle",async()=>{
 });
 
 test("launch execution refuses to invent quality evaluation",async()=>{
-  await assert.rejects(()=>executeWan22Launch(config(),{brief}),/launch_quality_evaluator_required/);
+  await assert.rejects(()=>executeWan22Launch(config(),{brief}),/launch_semantic_evaluator_required/);
+});
+
+test("launch rejects a raw un-gated quality evaluator",async()=>{
+  await assert.rejects(()=>executeWan22Launch(config(),{
+    brief,
+    qualityEvaluator:async()=>({promptAdherence:1}),
+  }),/launch_unverified_quality_evaluator_rejected/);
+});
+
+test("launch accepts only a Hercules-marked quality gate when passed directly",()=>{
+  const marked=Object.assign(async()=>({promptAdherence:1}),{herculesRenderAcceptanceGate:true});
+  assert.equal(resolveLaunchQualityEvaluator({qualityEvaluator:marked}),marked);
+  assert.throws(()=>resolveLaunchQualityEvaluator({
+    qualityEvaluator:async()=>({promptAdherence:1}),
+  }),/launch_unverified_quality_evaluator_rejected/);
 });
