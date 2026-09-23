@@ -6,22 +6,86 @@
   "correct": 16,
   "accuracy": 1.0,
   "rows": [
-    {"text": "write code to add a new endpoint", "expected": "code", "predicted": "code"},
-    {"text": "repair a bug in the build logic", "expected": "code", "predicted": "code"},
-    {"text": "research current approaches and provide evidence", "expected": "research", "predicted": "research"},
-    {"text": "compare the available technical options with citations", "expected": "research", "predicted": "research"},
-    {"text": "tell me what is visible in this screenshot", "expected": "vision", "predicted": "vision"},
-    {"text": "inspect the attached image interface", "expected": "vision", "predicted": "vision"},
-    {"text": "convert this recording to text", "expected": "voice", "predicted": "voice"},
-    {"text": "speak this response aloud", "expected": "voice", "predicted": "voice"},
-    {"text": "decide which tool to call next", "expected": "agent", "predicted": "agent"},
-    {"text": "coordinate the workflow across tools", "expected": "agent", "predicted": "agent"},
-    {"text": "rank these documents for relevance", "expected": "retrieval", "predicted": "retrieval"},
-    {"text": "create embeddings for these notes", "expected": "retrieval", "predicted": "retrieval"},
-    {"text": "verify whether this action is permitted", "expected": "safety", "predicted": "safety"},
-    {"text": "check this command against security rules", "expected": "safety", "predicted": "safety"},
-    {"text": "explain what this means", "expected": "general", "predicted": "general"},
-    {"text": "answer my normal question", "expected": "general", "predicted": "general"}
+    {
+      "text": "write code to add a new endpoint",
+      "expected": "code",
+      "predicted": "code"
+    },
+    {
+      "text": "repair a bug in the build logic",
+      "expected": "code",
+      "predicted": "code"
+    },
+    {
+      "text": "research current approaches and provide evidence",
+      "expected": "research",
+      "predicted": "research"
+    },
+    {
+      "text": "compare the available technical options with citations",
+      "expected": "research",
+      "predicted": "research"
+    },
+    {
+      "text": "tell me what is visible in this screenshot",
+      "expected": "vision",
+      "predicted": "vision"
+    },
+    {
+      "text": "inspect the attached image interface",
+      "expected": "vision",
+      "predicted": "vision"
+    },
+    {
+      "text": "convert this recording to text",
+      "expected": "voice",
+      "predicted": "voice"
+    },
+    {
+      "text": "speak this response aloud",
+      "expected": "voice",
+      "predicted": "voice"
+    },
+    {
+      "text": "decide which tool to call next",
+      "expected": "agent",
+      "predicted": "agent"
+    },
+    {
+      "text": "coordinate the workflow across tools",
+      "expected": "agent",
+      "predicted": "agent"
+    },
+    {
+      "text": "rank these documents for relevance",
+      "expected": "retrieval",
+      "predicted": "retrieval"
+    },
+    {
+      "text": "create embeddings for these notes",
+      "expected": "retrieval",
+      "predicted": "retrieval"
+    },
+    {
+      "text": "verify whether this action is permitted",
+      "expected": "safety",
+      "predicted": "safety"
+    },
+    {
+      "text": "check this command against security rules",
+      "expected": "safety",
+      "predicted": "safety"
+    },
+    {
+      "text": "explain what this means",
+      "expected": "general",
+      "predicted": "general"
+    },
+    {
+      "text": "answer my normal question",
+      "expected": "general",
+      "predicted": "general"
+    }
   ],
   "limitations": [
     "Bootstrap evaluation contains 16 project-authored examples.",
