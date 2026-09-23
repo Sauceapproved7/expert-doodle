@@ -2,65 +2,89 @@
 
 ## Purpose
 
-Hercules Training Foundation makes model creation auditable and reproducible before any checkpoint can become active.
+Hercules Training Foundation turns the Model Plane into an auditable, reproducible model-building system.
 
-The model plane defines what Hercules models exist and how they are routed. The training foundation defines how a Hercules-native checkpoint earns the right to occupy one of those model slots.
+The Model Plane defines model identity, lifecycle, routing, and runtime bindings. The Training Foundation defines how data is admitted, how jobs are declared, how workers execute training, how checkpoints are fingerprinted, how evaluation evidence is recorded, and what must pass before any model can be considered for activation.
 
 ## Evidence chain
 
-A production-eligible native checkpoint must trace through:
+Every production-eligible checkpoint must trace through:
 
     dataset manifest
       -> training job
       -> training worker
-      -> checkpoint hash
+      -> checkpoint SHA-256
       -> evaluation suite
       -> evaluation evidence
       -> activation decision
       -> model-plane runtime binding
 
-Every material record is fingerprinted. Dataset admission fails closed unless the source, content hash, rights basis, license, training permission, record count, and source commit are declared.
+Dataset admission fails closed unless the source, content hash, record count, license or rights basis, explicit training permission, provenance origin, and source commit are recorded.
 
-Training jobs bind the exact dataset fingerprints, seed, code commit, trainer identity, entrypoint, and hyperparameters.
+Training jobs bind exact dataset fingerprints, a deterministic seed, source commit, trainer identity, entrypoint, and hyperparameters.
 
-Checkpoints bind the exact job fingerprint and model identity.
+Checkpoint records bind model identity to the exact training-job fingerprint and serialized artifact hash.
 
-Evaluation results bind both the evaluation-suite fingerprint and checkpoint SHA-256.
+Evaluation results bind a checkpoint to an immutable suite fingerprint and evidence hash.
 
-Activation requires the canonical Hercules model identity, the required evaluation suites, passing thresholds, and a routeable runtime.
+Activation checks use the canonical Hercules model catalog rather than accepting a caller-supplied model definition.
 
-## First real Hercules-native model
+## First real Hercules-native checkpoint
 
-v0.2 includes the first small model trained from scratch by Hercules:
+v0.2 includes the first checkpoint actually trained for Hercules:
 
-**Hercules Agent Router v0.1**
+**Hercules Agent Router bootstrap v0.1**
 
-It is a multinomial Naive Bayes text classifier implemented in repository-owned JavaScript with no external model weights and no machine-learning SDK dependency.
+- canonical family: `hercules-agent`
+- role: narrow request-routing micro-model
+- algorithm: multinomial naive Bayes
+- implementation: repository-owned JavaScript
+- external pretrained weights: none
+- external training corpus: none
+- training examples: 48
+- held-out bootstrap examples: 16
+- routing labels: agent, code, general, research, retrieval, safety, vision, voice
+- checkpoint format: inspectable JSON
+- checkpoint bytes: 7,410
+- checkpoint SHA-256: `b8a2973aad22a9425b4143d008b1f9e1920ec0a3cb1e3585b03c2220216b0e4b`
+- bootstrap evaluation: 16/16 correct
 
-Its job is intentionally narrow: classify an instruction into one of five orchestration intents:
+The training examples and evaluation examples are project-authored bootstrap material. No third-party model weights or third-party corpus were imported for this checkpoint.
 
-- code
-- research
-- vision
-- speech
-- general
+The perfect bootstrap score is intentionally narrow evidence only. Sixteen project-authored examples do not establish broad reasoning, robustness, generalization, or frontier-model capability.
 
-Training and held-out evaluation examples are original Hercules project material committed under:
+For that reason, the canonical `hercules-agent` slot remains `planned`. The checkpoint is a verified training milestone, not a production activation.
 
-- `hercules-training/bootstrap/agent-routing-train.jsonl`
-- `hercules-training/bootstrap/agent-routing-eval.jsonl`
+## Reproducibility
 
-The reproducible bootstrap command is:
+Run:
 
-    HERCULES_SOURCE_COMMIT=$(git rev-parse HEAD) \
-      node hercules-training/bootstrap-agent-router.mjs
+    node hercules-training/bootstrap-agent-router.mjs
 
-The command trains the model, evaluates it, hashes the exact serialized checkpoint, applies the activation gate, and writes:
+The reproduction command:
 
-- `.hercules-training/bootstrap-agent-router/model.json`
-- `.hercules-training/bootstrap-agent-router/training-evidence.json`
+1. validates the dataset manifest
+2. verifies the exact training-data SHA-256
+3. validates the immutable job declaration
+4. retrains the model from the committed data
+5. serializes the checkpoint deterministically
+6. verifies byte count and SHA-256 against the recorded checkpoint
+7. reruns the held-out evaluation
+8. verifies the evaluation evidence hash
+9. applies the bootstrap evaluation threshold
+10. writes local reproduction evidence under `.hercules-training/`
 
-The local state directory is ignored by Git.
+CI performs the same reproduction and refuses to auto-activate the bootstrap model.
+
+## Training worker boundary
+
+The general training control plane supports a replaceable worker protocol:
+
+    hercules-training-worker/0.1
+
+A worker receives an immutable job declaration plus admitted dataset manifests and returns checkpoint metadata. The worker executes training only. It does not control canonical model identity, provenance policy, evaluation thresholds, or activation policy.
+
+The built-in HTTP runner rejects redirects, bounds response size, and supports bearer authentication without credentials embedded in URLs.
 
 ## Control service
 
@@ -68,18 +92,14 @@ Run:
 
     HERCULES_TRAINING_TOKEN=<secret> node hercules-training/control-cli.mjs
 
-Optional remote worker:
+Optional worker binding:
 
     HERCULES_TRAINING_RUNNER_URL=http://127.0.0.1:38920/train
     HERCULES_TRAINING_RUNNER_TOKEN=<secret>
 
-The worker protocol is:
+The control service binds to `127.0.0.1:38910` by default.
 
-    hercules-training-worker/0.1
-
-The worker executes training only. It does not control canonical model identity, dataset admission, checkpoint acceptance, evaluation requirements, or activation policy.
-
-## API surface
+API surface:
 
 - GET /health
 - GET /v1/datasets
@@ -94,21 +114,19 @@ The worker executes training only. It does not control canonical model identity,
 - POST /v1/evaluations
 - POST /v1/activations/check
 
-Mutating and evidence-reading routes require the bearer control token.
+Mutating and evidence-reading routes require the control token.
 
-## What this does not claim
+## Next model-building increments
 
-The native agent router is a real trained model, but it is deliberately small and specialized. It is not a general-purpose language model and it does not make Hercules equivalent to frontier-scale LLMs.
+The remaining work now shifts from control-plane plumbing toward actual model capability:
 
-The remaining Hercules families stay in `planned` state until real training/evaluation evidence exists for them.
+1. corpus normalization, deduplication, contamination checks, and quality scoring
+2. Hercules tokenizer training and versioning
+3. accelerator-backed training worker with deterministic job capture
+4. native embedding and reranking checkpoints
+5. small Hercules language-model pretraining experiments
+6. broader held-out, adversarial, and regression evaluation suites
+7. quantization and inference resource admission
+8. vision, voice, code, guard, research, and core training pipelines
 
-## Next training increments
-
-1. native retrieval embeddings / reranking experiments
-2. tokenizer and corpus builder for language-model work
-3. accelerator-backed training worker
-4. checkpoint object store and signed artifact attestations
-5. larger native agent model
-6. coding, research, vision, voice, guard, and core model pipelines
-
-The same evidence chain must apply to every future model family.
+Every later family must inherit the same provenance, reproducibility, checkpoint, and evaluation rules.
