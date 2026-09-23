@@ -27,7 +27,8 @@ jobs:
           if grep -RniE 'from ["'\'' ]*(google|runway|bytedance|seedance|minimax|veo)|require\(["'\''](google|runway|bytedance|seedance|minimax|veo)'             hercules-video/core.mjs             hercules-video/adapter.mjs             hercules-video/storyboard.mjs             hercules-video/render-bridge.mjs             hercules-video/self-hosted-adapter.mjs             hercules-video/local-runner.mjs             hercules-video/local-runtime.mjs             hercules-video/local-http-server.mjs \
             hercules-video/hardware-probe.mjs \
             hercules-video/assembly-core.mjs \
-            hercules-video/ffmpeg-assembly-runner.mjs; then
+            hercules-video/ffmpeg-assembly-runner.mjs \
+            hercules-video/campaign-coordinator.mjs; then
             echo "Provider-specific dependency leaked into Hercules Video owned layer."
             exit 1
           fi
