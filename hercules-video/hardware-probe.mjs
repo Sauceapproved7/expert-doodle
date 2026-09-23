@@ -25,11 +25,21 @@ function parseCudaVersion(stdout) {
   return release ? release[1] : null;
 }
 
+function meetsVramClass(gpu, minimumGb) {
+  if (Number.isFinite(Number(gpu?.memoryMiB))) {
+    return Number(gpu.memoryMiB) >= minimumGb * 1000;
+  }
+  if (Number.isFinite(Number(gpu?.memoryGiB))) {
+    return Number(gpu.memoryGiB) >= (minimumGb * 1000 / 1024);
+  }
+  return false;
+}
+
 export async function probeCudaHost({
   exec = execFileAsync,
-  minVramGiB = 24,
+  minVramGb = 24,
 } = {}) {
-  const minimum = Number(minVramGiB);
+  const minimum = Number(minVramGb);
   if (!Number.isFinite(minimum) || minimum <= 0) throw new Error("hardware_probe_min_vram_invalid");
 
   let gpus = [];
@@ -53,13 +63,13 @@ export async function probeCudaHost({
     cudaError = String(error?.message || error);
   }
 
-  const eligible = gpus.filter(gpu => gpu.memoryGiB >= minimum);
+  const eligible = gpus.filter(gpu => meetsVramClass(gpu, minimum));
   return {
     schema:"sauceapproved.hercules.video-hardware-probe",
     version:1,
     cudaAvailable:gpus.length > 0,
     cudaToolkitVersion:cudaVersion,
-    minimumVramGiB:minimum,
+    minimumVramGb:minimum,
     gpus,
     eligibleGpuIndexes:eligible.map(gpu => gpu.index),
     eligible:eligible.length > 0,
@@ -70,12 +80,12 @@ export async function probeCudaHost({
   };
 }
 
-export function assertWan22Hardware(probe, {minVramGiB = 24} = {}) {
+export function assertWan22Hardware(probe, {minVramGb = 24} = {}) {
   if (!probe || typeof probe !== "object") throw new Error("wan22_hardware_probe_required");
   if (!probe.cudaAvailable) throw new Error("wan22_cuda_gpu_required");
   if (!Array.isArray(probe.gpus) || probe.gpus.length === 0) throw new Error("wan22_gpu_inventory_required");
-  const minimum = Number(minVramGiB);
-  const eligible = probe.gpus.filter(gpu => Number(gpu.memoryGiB) >= minimum);
+  const minimum = Number(minVramGb);
+  const eligible = probe.gpus.filter(gpu => meetsVramClass(gpu, minimum));
   if (!eligible.length) throw new Error("wan22_minimum_vram_not_met");
   return {
     eligible:true,
