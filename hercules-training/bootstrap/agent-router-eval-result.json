@@ -1,0 +1,12 @@
+{
+  "version": "0.1",
+  "id": "agent-router-bootstrap-eval-v01",
+  "suiteId": "agent-router-bootstrap-gate-v01",
+  "suiteFingerprint": "8f75eb9a3effddc07110415232bdca3cf20ce6317cb2c3dcb7977fde08f44c41",
+  "checkpointSha256": "b8a2973aad22a9425b4143d008b1f9e1920ec0a3cb1e3585b03c2220216b0e4b",
+  "metrics": {
+    "accuracy": 1.0
+  },
+  "evidenceSha256": "154997a34493ac27496d75fe12e32b6c6c3484ac1905ad8905411f3a5d7498f8",
+  "createdAt": "2026-09-23T20:23:00Z"
+}
