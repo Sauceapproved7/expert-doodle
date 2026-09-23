@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "name": "Hercules isolated staging SLO baseline",
+  "scope": "isolated-loopback-staging",
+  "windowDays": 30,
+  "objectives": {
+    "availability": {
+      "goodRequestRatioMin": 0.999
+    },
+    "latency": {
+      "p95MsMax": 500,
+      "p99MsMax": 1000
+    }
+  },
+  "evidenceRequirements": {
+    "minDistinctUtcDays": 30,
+    "minWindows": 30,
+    "minTotalDurationSeconds": 27000
+  },
+  "claims": {
+    "productionSlo": false,
+    "continuousTelemetry": false,
+    "purpose": "Build repeatable sampled SLO evidence without treating isolated staging as production history."
+  }
+}

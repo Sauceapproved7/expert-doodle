@@ -1,0 +1,113 @@
+name: Hercules SLO Evidence
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 4 * * *"
+  pull_request:
+    paths:
+      - "observability/**"
+      - "scripts/evaluate-slo.mjs"
+      - "scripts/performance-harness.mjs"
+      - "tests/slo-evaluator.test.mjs"
+      - "docs/HERCULES-OBSERVABILITY-SLO-BASELINE.md"
+      - ".github/workflows/hercules-slo-evidence.yml"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: hercules-slo-evidence-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  slo-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test SLO evaluator
+        run: node --test tests/slo-evaluator.test.mjs
+
+      - name: Verify Docker runtime
+        run: docker compose version
+
+      - name: Validate staging boundaries
+        run: node scripts/validate-staging-plane.mjs
+
+      - name: Start isolated staging
+        run: node scripts/staging-plane.mjs up
+
+      - name: Verify staging before measurement
+        run: node scripts/staging-plane.mjs verify
+
+      - name: Measure load window
+        run: node scripts/performance-harness.mjs --profile load --base-url http://127.0.0.1:38080 --confirm-fixture --output benchmarks/performance/slo-load.json
+
+      - name: Measure 15-minute soak window
+        timeout-minutes: 18
+        run: node scripts/performance-harness.mjs --profile soak --base-url http://127.0.0.1:38080 --confirm-fixture --output benchmarks/performance/slo-soak.json
+
+      - name: Verify staging after measurement
+        run: node scripts/staging-plane.mjs verify
+
+      - name: Retrieve retained prior SLO evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hercules-slo-history
+          ids="$(gh run list --workflow hercules-slo-evidence.yml --branch main --status success --limit 35 --json databaseId --jq '.[].databaseId' 2>/dev/null || true)"
+          count=0
+          for id in $ids; do
+            if [ "$count" -ge 30 ]; then break; fi
+            mkdir -p "/tmp/hercules-slo-history/$id"
+            gh run download "$id" -p 'slo-evidence-*' -D "/tmp/hercules-slo-history/$id" >/dev/null 2>&1 || true
+            count=$((count+1))
+          done
+          echo "Retrieved evidence from $count prior successful runs."
+
+      - name: Evaluate accumulated sampled SLO
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(--config observability/slo-baseline.json --output benchmarks/observability/slo-evaluation.json)
+          while IFS= read -r file; do
+            args+=(--evidence "$file")
+          done < <(find /tmp/hercules-slo-history benchmarks/performance -type f \( -name 'slo-load.json' -o -name 'slo-soak.json' \) | sort)
+          node scripts/evaluate-slo.mjs "${args[@]}"
+
+      - name: Publish SLO job summary
+        if: always()
+        shell: bash
+        run: |
+          if [ -f benchmarks/observability/slo-evaluation.json ]; then
+            node -e 'const fs=require("fs");const x=require("./benchmarks/observability/slo-evaluation.json");const a=x.objectives.availability;const c=x.evidenceCoverage;fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`# Hercules sampled SLO evidence\n\nStatus: **${x.status}**\n\nAvailability: **${(a.observed*100).toFixed(5)}%** against **${(a.target*100).toFixed(3)}%** target.\n\nError-budget consumed: **${a.budgetConsumedRatio===null?"n/a":(a.budgetConsumedRatio*100).toFixed(2)+"%"}**.\n\nEvidence: **${c.windows} windows across ${c.distinctUtcDays} UTC days**, ${Math.round(c.totalDurationSeconds)} measured seconds.\n\nHistory mature: **${c.historyMature}**.\n\nProduction SLO claim: **false**.\n`)'
+          else
+            echo "# Hercules sampled SLO evidence" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Evaluation did not complete." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Save SLO evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: slo-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            benchmarks/performance/slo-load.json
+            benchmarks/performance/slo-soak.json
+            benchmarks/observability/slo-evaluation.json
+          if-no-files-found: warn
+          retention-days: 60
+
+      - name: Capture staging diagnostics
+        if: failure()
+        run: docker compose --env-file staging-plane/.env -f staging-plane/compose.yml logs --no-color migrate postgres postgrest api
+
+      - name: Teardown
+        if: always()
+        run: node scripts/staging-plane.mjs down || true
