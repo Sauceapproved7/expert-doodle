@@ -174,7 +174,7 @@ export class HerculesCampaignExecutionService {
       }
     }
 
-    setPhase(session, session.jobs.every(job => job.status === "completed") ? "renders_completed" : "rendering", nowIso(this.clock));
+    setPhase(session, session.jobs.every(job => job.status === "completed" && job.artifact) ? "renders_completed" : "rendering", nowIso(this.clock));
     return seal(session);
   }
 
@@ -184,7 +184,7 @@ export class HerculesCampaignExecutionService {
     if (["completed", "failed"].includes(session.phase)) return session;
 
     for (const job of session.jobs) {
-      if (!job.remoteJobId || ["completed", "failed"].includes(job.status)) continue;
+      if (!job.remoteJobId || job.status === "failed" || (job.status === "completed" && job.artifact)) continue;
       const remote = await this.adapter.status(job.remoteJobId);
       const status = String(remote?.status || "");
       if (!REMOTE_STATES.has(status)) throw new Error("campaign_execution_remote_status_invalid:" + job.shotId);
@@ -298,8 +298,8 @@ export class HerculesCampaignExecutionService {
 
     let session = clone(inputSession);
     try {
+      const rounds = await this.buildEvaluatedRounds(executionPlan, inputSession, evaluate);
       setPhase(session, "evaluating", nowIso(this.clock));
-      const rounds = await this.buildEvaluatedRounds(executionPlan, seal(session), evaluate);
       const winners = collectCampaignWinners(executionPlan, rounds, minimumScore);
       session.winnersFingerprint = winners.fingerprint;
       addEvent(session, {type:"winners_collected", fingerprint:winners.fingerprint}, nowIso(this.clock));
