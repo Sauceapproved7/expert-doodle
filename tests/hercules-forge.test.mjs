@@ -40,14 +40,24 @@ test("fails closed on invalid references", () => {
   assert.match(result.errors.join("\n"), /unknown entity/);
 });
 
-test("compiles deterministic runnable source", () => {
+test("compiles deterministic runnable source with loopback and request limits", () => {
   const a = compileForgeProject(spec);
   const b = compileForgeProject(spec);
   assert.equal(a.engine, "hercules-forge-owned-core");
   assert.equal(a.fingerprint, b.fingerprint);
   assert.ok(a.files["server.mjs"].includes("/health"));
+  assert.ok(a.files["server.mjs"].includes('process.env.HOST ?? "127.0.0.1"'));
+  assert.ok(a.files["server.mjs"].includes("MAX_BODY_BYTES"));
   assert.ok(a.files["db/001_init.sql"].includes("Customer"));
   assert.ok(a.files["public/index.html"].includes("Customers"));
+});
+
+test("escapes prompt-derived descriptions in generated HTML", () => {
+  const malicious = structuredClone(spec);
+  malicious.description = '<script>alert("x")</script>';
+  const built = compileForgeProject(malicious);
+  assert.equal(built.files["public/index.html"].includes("<script>"), false);
+  assert.ok(built.files["public/index.html"].includes("&lt;script&gt;"));
 });
 
 test("prompt interpretation is replaceable and outside the compiler", async () => {

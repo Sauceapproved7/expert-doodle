@@ -4,4 +4,5 @@ export {ForgeInterpreter, StaticForgeInterpreter, HttpForgeInterpreter} from "./
 export {ForgeWorkspaceStore} from "./workspace.mjs";
 export {buildForgeArtifact, verifyForgeArtifact} from "./artifact.mjs";
 export {ForgeDeploymentAdapter, ForgeLocalReleaseAdapter} from "./releases.mjs";
+export {buildPreviewChildEnv, startForgePreview, ForgePreviewManager} from "./preview.mjs";
 export {createForgeControlService, listenForgeControlService} from "./control-api.mjs";
