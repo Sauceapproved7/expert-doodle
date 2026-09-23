@@ -1,5 +1,6 @@
 import {mkdir, readFile, writeFile} from "node:fs/promises";
 import {join} from "node:path";
+import {verifyForgeArtifact} from "./artifact.mjs";
 
 const json = (value) => JSON.stringify(value, null, 2) + "\n";
 const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
@@ -20,7 +21,19 @@ export class ForgeLocalReleaseAdapter extends ForgeDeploymentAdapter {
     this.root = root;
   }
 
-  async publish({projectId, revision}) {
+  async publish({projectId, revision, artifactDir}) {
+    const artifact = await verifyForgeArtifact(artifactDir);
+
+    if (artifact.projectId !== projectId) {
+      throw new Error("artifact project does not match release project");
+    }
+    if (artifact.revisionId !== revision.revisionId) {
+      throw new Error("artifact revision does not match release revision");
+    }
+    if (artifact.revisionFingerprint !== revision.fingerprint) {
+      throw new Error("artifact fingerprint does not match release revision");
+    }
+
     const releaseDir = join(this.root, "releases", projectId);
     await mkdir(releaseDir, {recursive: true});
 
@@ -28,8 +41,10 @@ export class ForgeLocalReleaseAdapter extends ForgeDeploymentAdapter {
       projectId,
       revisionId: revision.revisionId,
       fingerprint: revision.fingerprint,
+      artifactFingerprint: artifact.artifactFingerprint,
       publishedAt: new Date().toISOString(),
       target: "local-owned-release",
+      verified: true,
     };
 
     await writeFile(
@@ -48,6 +63,10 @@ export class ForgeLocalReleaseAdapter extends ForgeDeploymentAdapter {
   async rollback({projectId, revisionId}) {
     const releaseDir = join(this.root, "releases", projectId);
     const release = await readJson(join(releaseDir, revisionId + ".json"));
+    if (release.verified !== true || !release.artifactFingerprint) {
+      throw new Error("cannot activate an unverified release");
+    }
+
     const rollback = {
       ...release,
       activatedAt: new Date().toISOString(),
