@@ -1,0 +1,30 @@
+{
+  "modelId": "hercules-agent",
+  "checkpointSha256": "b8a2973aad22a9425b4143d008b1f9e1920ec0a3cb1e3585b03c2220216b0e4b",
+  "evalDatasetSha256": "2ee548907da0d6a9ffd9453e0eac99302ffe272ff38c3a0975329bd9972ce02c",
+  "total": 16,
+  "correct": 16,
+  "accuracy": 1.0,
+  "rows": [
+    {"text": "write code to add a new endpoint", "expected": "code", "predicted": "code"},
+    {"text": "repair a bug in the build logic", "expected": "code", "predicted": "code"},
+    {"text": "research current approaches and provide evidence", "expected": "research", "predicted": "research"},
+    {"text": "compare the available technical options with citations", "expected": "research", "predicted": "research"},
+    {"text": "tell me what is visible in this screenshot", "expected": "vision", "predicted": "vision"},
+    {"text": "inspect the attached image interface", "expected": "vision", "predicted": "vision"},
+    {"text": "convert this recording to text", "expected": "voice", "predicted": "voice"},
+    {"text": "speak this response aloud", "expected": "voice", "predicted": "voice"},
+    {"text": "decide which tool to call next", "expected": "agent", "predicted": "agent"},
+    {"text": "coordinate the workflow across tools", "expected": "agent", "predicted": "agent"},
+    {"text": "rank these documents for relevance", "expected": "retrieval", "predicted": "retrieval"},
+    {"text": "create embeddings for these notes", "expected": "retrieval", "predicted": "retrieval"},
+    {"text": "verify whether this action is permitted", "expected": "safety", "predicted": "safety"},
+    {"text": "check this command against security rules", "expected": "safety", "predicted": "safety"},
+    {"text": "explain what this means", "expected": "general", "predicted": "general"},
+    {"text": "answer my normal question", "expected": "general", "predicted": "general"}
+  ],
+  "limitations": [
+    "Bootstrap evaluation contains 16 project-authored examples.",
+    "Perfect bootstrap accuracy does not establish broad reasoning, robustness, or production readiness."
+  ]
+}
