@@ -10,6 +10,8 @@ import {probeCudaHost, assertWan22Hardware} from "../hercules-video/hardware-pro
 import {Wan22Ti2v5bRunner} from "../hercules-video/runners/wan22-ti2v-5b.mjs";
 import {createRenderRequest} from "../hercules-video/render-bridge.mjs";
 
+const testSha = label => createHash("sha256").update(label).digest("hex");
+
 test("hardware probe accepts a 24GB-class NVIDIA GPU", async () => {
   const fakeExec = async (cmd) => {
     if (cmd === "nvidia-smi") return {stdout:"NVIDIA RTX 4090, 24564, 555.99\n"};
