@@ -32,3 +32,7 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+# Hercules local runtime state
+.hercules-training/
+.hercules-models/
