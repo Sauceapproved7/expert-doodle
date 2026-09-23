@@ -1,0 +1,24 @@
+{
+  "version": "0.1",
+  "framework": "hercules-native-js",
+  "sourceCommit": "bbbed2ac40c7e3e4c8e2354f0477129b99c4e085",
+  "workflowRunId": 35928697830,
+  "workflowArtifactId": 10780420410,
+  "workflowArtifactDigest": "sha256:f17ed67e0483701e91e42c078fefcf97c3097e69b3614c8bd2124fca3fb0c0d7",
+  "trainingSource": "hercules-training/bootstrap/five-family-classifiers.json",
+  "provenance": "Original Hercules-authored training/evaluation examples and repository-owned JavaScript; no third-party model weights, datasets, or ML SDK dependency.",
+  "modelId": "hercules-voice",
+  "capability": "voice-request-routing",
+  "algorithm": "multinomial-naive-bayes",
+  "checkpointSha256": "46f91666a83ed86981b3605e2e1e53ccf2ea70ad2d20abf465684d34115a7004",
+  "checkpointBytes": 1222,
+  "evaluation": {
+    "accuracy": 1,
+    "errorRate": 0,
+    "passed": true,
+    "gate": {
+      "minimumAccuracy": 0.8,
+      "maximumErrorRate": 0.2
+    }
+  }
+}
