@@ -14,3 +14,7 @@ export {
   HERCULES_AGENT_ROUTER_CHECKPOINT_SHA256,
   HerculesEmbeddedAgentRouter,
 } from "./embedded-agent-router.mjs";
+export {
+  HERCULES_RETRIEVAL_CHECKPOINT_SHA256,
+  HerculesEmbeddedRetrieval,
+} from "./embedded-retrieval.mjs";
