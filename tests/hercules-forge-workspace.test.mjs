@@ -4,6 +4,7 @@ import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {ForgeWorkspaceStore} from "../hercules-forge/workspace.mjs";
+import {buildForgeArtifact} from "../hercules-forge/artifact.mjs";
 import {ForgeLocalReleaseAdapter} from "../hercules-forge/releases.mjs";
 
 const baseSpec = {
@@ -46,7 +47,7 @@ test("workspace owns projects and immutable revisions", async () => {
   }
 });
 
-test("owned release adapter publishes and rolls back by revision", async () => {
+test("owned release adapter publishes only verified artifacts and rolls back by revision", async () => {
   const root = await mkdtemp(join(tmpdir(), "forge-release-"));
   try {
     const store = new ForgeWorkspaceStore(root);
@@ -56,12 +57,34 @@ test("owned release adapter publishes and rolls back by revision", async () => {
     nextSpec.description = "Owned Hercules workspace v2.";
     const next = await store.saveRevision("ops-hub", nextSpec);
 
+    const firstArtifact = await buildForgeArtifact({
+      workspaceRoot: root,
+      artifactRoot: join(root, "artifacts"),
+      projectId: "ops-hub",
+      revisionId: created.revision.revisionId,
+    });
+    const nextArtifact = await buildForgeArtifact({
+      workspaceRoot: root,
+      artifactRoot: join(root, "artifacts"),
+      projectId: "ops-hub",
+      revisionId: next.revisionId,
+    });
+
     const adapter = new ForgeLocalReleaseAdapter(root);
-    await adapter.publish({projectId: "ops-hub", revision: created.revision});
-    await adapter.publish({projectId: "ops-hub", revision: next});
+    await adapter.publish({
+      projectId: "ops-hub",
+      revision: created.revision,
+      artifactDir: firstArtifact.artifactDir,
+    });
+    await adapter.publish({
+      projectId: "ops-hub",
+      revision: next,
+      artifactDir: nextArtifact.artifactDir,
+    });
 
     let active = await adapter.getActive("ops-hub");
     assert.equal(active.revisionId, next.revisionId);
+    assert.equal(active.verified, true);
 
     await adapter.rollback({projectId: "ops-hub", revisionId: created.revision.revisionId});
     active = await adapter.getActive("ops-hub");

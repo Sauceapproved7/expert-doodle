@@ -1,6 +1,6 @@
 import {createHash, randomUUID} from "node:crypto";
 import {mkdir, readFile, readdir, writeFile} from "node:fs/promises";
-import {join} from "node:path";
+import {dirname, join} from "node:path";
 import {compileForgeProject} from "./compiler.mjs";
 
 const json = (value) => JSON.stringify(value, null, 2) + "\n";
@@ -54,7 +54,7 @@ export class ForgeWorkspaceStore {
     const fileIndex = {};
     for (const [relativePath, content] of Object.entries(compiled.files)) {
       const target = join(sourceDir, relativePath);
-      await mkdir(join(target, ".."), {recursive: true});
+      await mkdir(dirname(target), {recursive: true});
       await writeFile(target, content, "utf8");
       fileIndex[relativePath] = {
         sha256: sha256(content),
