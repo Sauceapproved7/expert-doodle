@@ -13,6 +13,9 @@ import {
 } from "../hercules-video/local-model-manifest.mjs";
 import {createQwen3Vl4bSemanticEvaluator} from "../hercules-video/evaluators/qwen3-vl-4b.mjs";
 import {createHerculesRenderQualityEvaluator} from "../hercules-video/render-quality-gate.mjs";
+import {createQwen3VlEvaluationModelManifest} from "../hercules-video/evaluators/qwen3-vl-model-plane.mjs";
+import {HerculesModelRegistry} from "../hercules-models/registry.mjs";
+import {HerculesModelRouter} from "../hercules-models/router.mjs";
 
 const sha=value=>createHash("sha256").update(value).digest("hex");
 
@@ -183,4 +186,41 @@ test("Hercules quality gate preserves semantic evaluator evidence",async()=>{
 test("Qwen Python worker is syntactically valid",()=>{
   const workerPath=path.resolve("hercules-video/evaluators/qwen3_vl_worker.py");
   execFileSync("python",["-m","py_compile",workerPath],{stdio:"pipe"});
+});
+
+
+test("Qwen registers as open-weight candidate and native-only routing rejects it",()=>{
+  const model=createQwen3VlEvaluationModelManifest({
+    modelId:"Qwen/Qwen3-VL-4B-Instruct",
+    license:"apache-2.0",
+    manifestFingerprint:sha("manifest"),
+  });
+  assert.equal(model.origin,"open-weight");
+  assert.equal(model.state,"candidate");
+  assert.deepEqual(model.tasks,["vision"]);
+
+  const registry=new HerculesModelRegistry([model]);
+  const nativeRouter=new HerculesModelRouter(registry,{nativeOnly:true});
+  assert.throws(()=>nativeRouter.route({
+    task:"vision",
+    mode:"evaluation",
+    modelId:model.id,
+  }),/native-only policy rejected model/);
+
+  const evaluationRouter=new HerculesModelRouter(registry,{nativeOnly:false});
+  const routed=evaluationRouter.route({task:"vision",mode:"evaluation"});
+  assert.equal(routed.id,"qwen3-vl-4b-evaluator");
+});
+
+test("Qwen model-plane manifest requires verified Apache-2.0 model evidence",()=>{
+  assert.throws(()=>createQwen3VlEvaluationModelManifest({
+    modelId:"Qwen/Qwen3-VL-4B-Instruct",
+    license:"other",
+    manifestFingerprint:sha("manifest"),
+  }),/qwen_model_license_mismatch/);
+  assert.throws(()=>createQwen3VlEvaluationModelManifest({
+    modelId:"Qwen/Qwen3-VL-4B-Instruct",
+    license:"apache-2.0",
+    manifestFingerprint:"bad",
+  }),/qwen_model_manifest_fingerprint_required/);
 });
