@@ -32,7 +32,7 @@ jobs:
             hercules-forge/artifact.mjs \
             hercules-forge/releases.mjs \
             hercules-forge/control-api.mjs \
-            hercules-forge/control-cli.mjs \
+            hercules-forge/control-server.mjs \
             hercules-forge/index.mjs \
             hercules-forge/cli.mjs; then
             echo "Hosted builder dependency leaked into Hercules Forge owned runtime."
