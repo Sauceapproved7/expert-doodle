@@ -25,6 +25,14 @@ Do not claim ownership of third-party, open-source, externally supplied, or othe
 
 If project ownership is later assigned to an LLC, corporation, or other entity, record the transfer separately and update ownership notices prospectively.
 
+### Owner-code-only build boundary
+
+Hercules Forge build, artifact, and release paths are restricted to code produced by the repository's owned-core implementation and carrying an explicit owner-code-only provenance attestation.
+
+Third-party source code, vendored code, copied code, externally generated runtime code, and package runtime dependencies are not eligible for inclusion in a Forge build artifact under this policy. Third-party material may still be reviewed as reference material or used outside the shipped Forge runtime when separately authorized and properly licensed, but it must not be packaged as Hercules-owned product code.
+
+A build must fail closed when the required attestation is missing, altered, or indicates that third-party code is included.
+
 ## Canonical-source rules
 
 1. **Shipped source authority:** Source code, configuration, schemas, workflows, and repository documentation intended to define Hercules are canonical only when committed to this GitHub repository and identified by commit SHA.

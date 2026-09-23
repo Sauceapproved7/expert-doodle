@@ -1,6 +1,7 @@
 import {createHash} from "node:crypto";
 import {mkdir, readFile, writeFile} from "node:fs/promises";
 import {dirname, isAbsolute, join, normalize, sep} from "node:path";
+import {assertOwnerCodeAttestation} from "./ownership.mjs";
 
 const json = (value) => JSON.stringify(value, null, 2) + "\n";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
@@ -27,6 +28,7 @@ function artifactFingerprint(manifest) {
     projectId: manifest.projectId,
     revisionId: manifest.revisionId,
     revisionFingerprint: manifest.revisionFingerprint,
+    ownership: manifest.ownership,
     files: manifest.files,
   }));
 }
@@ -53,6 +55,8 @@ export async function buildForgeArtifact({
   if (revision.projectId !== projectId || revision.revisionId !== revisionId) {
     throw new Error("revision identity mismatch");
   }
+
+  const ownership = assertOwnerCodeAttestation(revision.ownership, "artifact build");
 
   const sourceRoot = join(
     workspaceRoot,
@@ -91,6 +95,7 @@ export async function buildForgeArtifact({
     projectId,
     revisionId,
     revisionFingerprint: revision.fingerprint,
+    ownership,
     files,
     verified: true,
   };
@@ -105,6 +110,8 @@ export async function verifyForgeArtifact(artifactDir) {
   if (manifest.artifactVersion !== "0.1") {
     throw new Error("unsupported artifact version");
   }
+
+  assertOwnerCodeAttestation(manifest.ownership, "artifact verification");
 
   for (const [relativePath, expected] of Object.entries(manifest.files ?? {})) {
     const safePath = safeRelative(relativePath);

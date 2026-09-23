@@ -24,6 +24,7 @@ jobs:
             "- [x] License compatibility checked"
             "- [x] Third-party notices preserved or not applicable"
             "- [x] AI assistance disclosed or not applicable"
+            "- [x] Owner-code-only build scope confirmed; no third-party code is packaged"
           )
 
           missing=0
@@ -42,6 +43,7 @@ jobs:
           - [x] License compatibility checked
           - [x] Third-party notices preserved or not applicable
           - [x] AI assistance disclosed or not applicable
+          - [x] Owner-code-only build scope confirmed; no third-party code is packaged
           EOF
             exit 1
           fi

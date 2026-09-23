@@ -33,6 +33,9 @@ test("builds and verifies an artifact from an exact revision", async () => {
     const verified = await verifyForgeArtifact(built.artifactDir);
     assert.equal(verified.verified, true);
     assert.equal(verified.revisionFingerprint, revision.fingerprint);
+    assert.equal(verified.ownership.buildScope, "owner-code-only");
+    assert.equal(verified.ownership.declaredRightsHolder, "Sauceapproved7");
+    assert.equal(verified.ownership.thirdPartyCodeIncluded, false);
     assert.match(verified.artifactFingerprint, /^[a-f0-9]{64}$/);
   } finally {
     await rm(root, {recursive: true, force: true});
@@ -73,6 +76,46 @@ test("artifact builder rejects path-unsafe revision identity", async () => {
         revisionId: "revision-1",
       }),
       /path-safe identifier/,
+    );
+  } finally {
+    await rm(root, {recursive: true, force: true});
+  }
+});
+
+test("artifact builder blocks revisions that include third-party code", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-artifact-owner-gate-"));
+  try {
+    const store = new ForgeWorkspaceStore(root);
+    const {revision} = await store.createProject(spec, {projectId: "artifact-app"});
+    const revisionPath = join(
+      root,
+      "projects",
+      "artifact-app",
+      "revisions",
+      revision.revisionId,
+      "revision.json",
+    );
+
+    await writeFile(
+      revisionPath,
+      JSON.stringify({
+        ...revision,
+        ownership: {
+          ...revision.ownership,
+          thirdPartyCodeIncluded: true,
+        },
+      }, null, 2) + "\n",
+      "utf8",
+    );
+
+    await assert.rejects(
+      buildForgeArtifact({
+        workspaceRoot: root,
+        artifactRoot: join(root, "artifacts"),
+        projectId: "artifact-app",
+        revisionId: revision.revisionId,
+      }),
+      /owner-code-only provenance is required/,
     );
   } finally {
     await rm(root, {recursive: true, force: true});

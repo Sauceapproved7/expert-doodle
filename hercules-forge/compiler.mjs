@@ -1,5 +1,6 @@
 import {createHash} from "node:crypto";
 import {validateForgeSpec} from "./schema.mjs";
+import {createOwnerCodeAttestation} from "./ownership.mjs";
 
 function escapeHtml(value) {
   return String(value)
@@ -222,6 +223,7 @@ export function compileForgeProject(input) {
   return {
     engine: "hercules-forge-owned-core",
     engineVersion: "0.1",
+    ownership: createOwnerCodeAttestation({engine: "hercules-forge-owned-core"}),
     spec,
     files,
     fingerprint,
