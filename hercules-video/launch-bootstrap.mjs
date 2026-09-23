@@ -1,4 +1,5 @@
-import {readFile, writeFile, mkdir} from "node:fs/promises";
+import {readFile, writeFile, mkdir, stat} from "node:fs/promises";
+import {createReadStream} from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {createHash} from "node:crypto";
@@ -10,6 +11,16 @@ import {HerculesCampaignExecutionService} from "./campaign-execution-service.mjs
 import {createCampaignExecutionPlan} from "./campaign-coordinator.mjs";
 import {runFfmpegAssembly} from "./ffmpeg-assembly-runner.mjs";
 import {fingerprint} from "./core.mjs";
+
+const QUALITY_DIMENSIONS=Object.freeze([
+  "promptAdherence",
+  "temporalConsistency",
+  "visualQuality",
+  "brandConsistency",
+  "audioQuality",
+  "artifactFreedom",
+  "reliability",
+]);
 
 function requireAbsolute(value, name) {
   const raw=String(value || "");
@@ -31,6 +42,76 @@ function requireCommit(value,name) {
 
 function sha256Bytes(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+async function sha256File(filePath) {
+  return new Promise((resolve,reject)=>{
+    const hash=createHash("sha256");
+    const stream=createReadStream(filePath);
+    stream.on("error",reject);
+    stream.on("data",chunk=>hash.update(chunk));
+    stream.on("end",()=>resolve(hash.digest("hex")));
+  });
+}
+
+async function assertFile(filePath,code) {
+  const info=await stat(filePath).catch(()=>null);
+  if (!info?.isFile()) throw new Error(code);
+  return info;
+}
+
+async function assertAbsent(filePath,code) {
+  const info=await stat(filePath).catch(()=>null);
+  if (info) throw new Error(code);
+}
+
+function normalizeAudioTrack(track,index) {
+  const uri=String(track?.uri || "");
+  if (!uri.startsWith("file://")) throw new Error("launch_audio_local_uri_required:" + index);
+  const kind=String(track?.kind || "");
+  if (!["soundtrack","ambience","sfx","narration"].includes(kind)) throw new Error("launch_audio_kind_invalid:" + index);
+  const startSeconds=Number(track?.startSeconds ?? 0);
+  const durationSeconds=Number(track?.durationSeconds);
+  const gainDb=Number(track?.gainDb ?? 0);
+  if (!Number.isFinite(startSeconds) || startSeconds<0) throw new Error("launch_audio_start_invalid:" + index);
+  if (!Number.isFinite(durationSeconds) || durationSeconds<=0) throw new Error("launch_audio_duration_invalid:" + index);
+  if (!Number.isFinite(gainDb) || gainDb<-60 || gainDb>12) throw new Error("launch_audio_gain_invalid:" + index);
+  return {
+    ...track,
+    id:String(track?.id || "audio-" + String(index+1)),
+    kind,
+    uri,
+    startSeconds,
+    durationSeconds,
+    gainDb,
+    sha256:requireSha256(track?.sha256,"launch_audio_sha256_required:" + index),
+  };
+}
+
+function normalizeEvaluationResult(result,context) {
+  const shotId=String(context?.shot?.id || "");
+  if (!result || typeof result!=="object") throw new Error("launch_evaluation_result_required:" + shotId);
+  const artifactSha256=requireSha256(
+    result.artifactSha256,
+    "launch_evaluation_artifact_sha256_required:" + shotId
+  );
+  const actualArtifactSha256=String(context?.artifact?.sha256 || "").toLowerCase();
+  if (artifactSha256!==actualArtifactSha256) throw new Error("launch_evaluation_artifact_mismatch:" + shotId);
+  const method=String(result.method || "").trim();
+  if (!method) throw new Error("launch_evaluation_method_required:" + shotId);
+  const evaluatorId=String(result.evaluatorId || "").trim();
+  if (!evaluatorId) throw new Error("launch_evaluator_id_required:" + shotId);
+
+  const quality={};
+  for (const dimension of QUALITY_DIMENSIONS) {
+    const value=Number(result.quality?.[dimension]);
+    if (!Number.isFinite(value) || value<0 || value>1) {
+      throw new Error("launch_evaluation_quality_invalid:" + shotId + ":" + dimension);
+    }
+    quality[dimension]=value;
+  }
+  const unsigned={shotId,artifactSha256,method,evaluatorId,quality};
+  return {...unsigned,fingerprint:fingerprint(unsigned)};
 }
 
 export async function loadHerculesLaunchPreset({
@@ -62,7 +143,7 @@ export function normalizeWan22LaunchConfig(config={}) {
     pollIntervalMs:Number(config.pollIntervalMs ?? 250),
     maxPolls:Number(config.maxPolls ?? 1200),
     minimumScore:Number(config.minimumScore ?? 0.78),
-    audioTracks:Array.isArray(config.audioTracks) ? config.audioTracks : [],
+    audioTracks:Array.isArray(config.audioTracks) ? config.audioTracks.map(normalizeAudioTrack) : [],
     assemblyPolicy:config.assemblyPolicy && typeof config.assemblyPolicy==="object" ? config.assemblyPolicy : {},
   };
   if (!normalized.projectId.trim()) throw new Error("launch_project_id_required");
@@ -90,6 +171,15 @@ export async function prepareWan22LaunchHost(config,{
   await mkdirImpl(normalized.renderOutputDir,{recursive:true});
   await mkdirImpl(path.dirname(normalized.finalOutputPath),{recursive:true});
   await mkdirImpl(path.dirname(normalized.evidenceOutputPath),{recursive:true});
+  await assertAbsent(normalized.finalOutputPath,"launch_final_output_exists");
+  await assertAbsent(normalized.evidenceOutputPath,"launch_evidence_output_exists");
+
+  for (const [index,track] of normalized.audioTracks.entries()) {
+    const audioPath=fileURLToPath(track.uri);
+    await assertFile(audioPath,"launch_audio_missing:" + index);
+    const actualSha256=await sha256File(audioPath);
+    if (actualSha256!==track.sha256) throw new Error("launch_audio_checksum_mismatch:" + index);
+  }
 
   const hardwareProbe=await probeHost({minVramGb:24});
   const hardware=assertWan22Hardware(hardwareProbe,{minVramGb:24});
@@ -166,6 +256,8 @@ export function createLaunchEvidenceBundle({
   finalization,
   hardwareProbe,
   config,
+  evaluations=[],
+  finalOutputSha256=null,
 }) {
   if (!finalization?.campaignEvidence) throw new Error("launch_campaign_evidence_required");
   const unsigned={
@@ -179,6 +271,8 @@ export function createLaunchEvidenceBundle({
     assemblyEvidenceFingerprint:finalization.assemblyResult?.evidence?.fingerprint || null,
     campaignEvidenceFingerprint:finalization.campaignEvidence.fingerprint,
     finalOutput:finalization.campaignEvidence.finalOutput,
+    finalOutputSha256:finalOutputSha256 || finalization.campaignEvidence.finalOutput?.sha256 || null,
+    evaluations,
     runtime:{
       modelRef:"wan22-ti2v-5b@" + config.upstreamCommit,
       upstreamCommit:config.upstreamCommit,
@@ -192,7 +286,7 @@ export function createLaunchEvidenceBundle({
 export async function writeLaunchEvidenceBundle(bundle,filePath,{writeFileImpl=writeFile}={}) {
   const absolute=requireAbsolute(filePath,"launch_evidence_output_path_required");
   const bytes=Buffer.from(JSON.stringify(bundle,null,2)+"\n","utf8");
-  await writeFileImpl(absolute,bytes);
+  await writeFileImpl(absolute,bytes,{flag:"wx"});
   return {
     path:absolute,
     sizeBytes:bytes.length,
@@ -237,10 +331,17 @@ export async function executeWan22Launch(config,{
     pollIntervalMs:host.config.pollIntervalMs,
   });
 
+  const evaluations=[];
+  const evaluate=async context=>{
+    const result=normalizeEvaluationResult(await qualityEvaluator(context),context);
+    evaluations.push(result);
+    return result.quality;
+  };
+
   const finalization=await host.service.finalize({
     executionPlan:host.executionPlan,
     session:rendered,
-    evaluate:qualityEvaluator,
+    evaluate,
     audioTracks:host.config.audioTracks,
     assemblyPolicy:host.config.assemblyPolicy,
     assemblyRunner:(plan,{outputPath})=>assemblyRunner(plan,{
@@ -251,11 +352,29 @@ export async function executeWan22Launch(config,{
     minimumScore:host.config.minimumScore,
   });
 
+  if (evaluations.length!==host.executionPlan.storyboard.shots.length) {
+    throw new Error("launch_evaluation_incomplete");
+  }
+  const evaluatedShots=new Set(evaluations.map(item=>item.shotId));
+  for (const shot of host.executionPlan.storyboard.shots) {
+    if (!evaluatedShots.has(shot.id)) throw new Error("launch_evaluation_missing:" + shot.id);
+  }
+
+  await assertFile(host.config.finalOutputPath,"launch_final_output_missing");
+  const finalOutputSha256=await sha256File(host.config.finalOutputPath);
+  const claimedOutputSha256=requireSha256(
+    finalization?.campaignEvidence?.finalOutput?.sha256,
+    "launch_campaign_output_sha256_required"
+  );
+  if (finalOutputSha256!==claimedOutputSha256) throw new Error("launch_final_output_checksum_mismatch");
+
   const bundle=createLaunchEvidenceBundle({
     executionPlan:host.executionPlan,
     finalization,
     hardwareProbe:host.hardwareProbe,
     config:host.config,
+    evaluations,
+    finalOutputSha256,
   });
   const exportEvidence=await writeLaunchEvidenceBundle(
     bundle,
