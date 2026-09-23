@@ -3,6 +3,7 @@ export {FORGE_OWNERSHIP_POLICY_VERSION, FORGE_OWNED_ENGINE, FORGE_DECLARED_RIGHT
 export {compileForgeProject, compileFromInterpreter} from "./compiler.mjs";
 export {ForgeInterpreter, StaticForgeInterpreter, HttpForgeInterpreter} from "./interpreter.mjs";
 export {ForgeWorkspaceStore} from "./workspace.mjs";
+export {ForgeIdentityStore, normalizeEmail, verifyPassword} from "./identity.mjs";
 export {buildForgeArtifact, verifyForgeArtifact} from "./artifact.mjs";
 export {ForgeDeploymentAdapter, ForgeLocalReleaseAdapter} from "./releases.mjs";
 export {buildPreviewChildEnv, startForgePreview, ForgePreviewManager} from "./preview.mjs";

@@ -30,6 +30,7 @@ jobs:
             hercules-forge/compiler.mjs \
             hercules-forge/interpreter.mjs \
             hercules-forge/workspace.mjs \
+            hercules-forge/identity.mjs \
             hercules-forge/artifact.mjs \
             hercules-forge/releases.mjs \
             hercules-forge/preview.mjs \

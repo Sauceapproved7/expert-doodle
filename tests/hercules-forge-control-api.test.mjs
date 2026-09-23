@@ -50,7 +50,7 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     const health = await request(base, "/health", {authorized: false});
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
-    assert.equal(health.body.version, "0.7");
+    assert.equal(health.body.version, "0.8");
 
     const consoleResponse = await fetch(base + "/");
     assert.equal(consoleResponse.status, 200);

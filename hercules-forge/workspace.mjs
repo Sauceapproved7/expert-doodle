@@ -27,7 +27,8 @@ export class ForgeWorkspaceStore {
     return join(this.root, "projects", assertId("projectId", projectId));
   }
 
-  async listProjects() {
+  async listProjects({workspaceId = null} = {}) {
+    const workspaceFilter = workspaceId === null ? null : assertId("workspaceId", workspaceId);
     const projectsDir = join(this.root, "projects");
     let entries;
     try {
@@ -43,6 +44,7 @@ export class ForgeWorkspaceStore {
       try {
         const project = await this.getProject(entry.name);
         const latestRevision = await this.getLatestRevision(entry.name);
+        if (workspaceFilter && project.metadata?.workspaceId !== workspaceFilter) continue;
         projects.push({
           ...project,
           latestRevisionId: latestRevision.revisionId,
