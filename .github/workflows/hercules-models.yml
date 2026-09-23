@@ -38,6 +38,11 @@ jobs:
           import {readFile} from "node:fs/promises";
           import {HERCULES_MODEL_SLOTS} from "./hercules-models/catalog.mjs";
 
+          const attestations = {
+            "hercules-agent": "hercules-models/attestations/hercules-agent-router-v0.1.json",
+            "hercules-retrieval": "hercules-models/attestations/hercules-retrieval-v0.1.json",
+          };
+
           if (!HERCULES_MODEL_SLOTS.length) throw new Error("catalog is empty");
 
           for (const model of HERCULES_MODEL_SLOTS) {
@@ -55,7 +60,6 @@ jobs:
             if (model.state !== "active") {
               throw new Error("canonical catalog may contain only planned or evidence-backed active models: " + model.id);
             }
-
             if (!model.runtime || !["embedded", "http"].includes(model.runtime.kind)) {
               throw new Error("active model lacks routeable runtime: " + model.id);
             }
@@ -63,25 +67,22 @@ jobs:
               throw new Error("active model lacks immutable checkpoint hash: " + model.id);
             }
 
-            if (model.id === "hercules-agent") {
-              const attestation = JSON.parse(await readFile(
-                "hercules-models/attestations/hercules-agent-router-v0.1.json",
-                "utf8",
-              ));
-              const expected = model.checkpoint.slice("sha256:".length);
-              if (attestation.modelId !== model.id) {
-                throw new Error("agent attestation model mismatch");
-              }
-              if (attestation.checkpointSha256 !== expected) {
-                throw new Error("agent attestation checkpoint mismatch");
-              }
-              if (attestation.evaluation?.passed !== true) {
-                throw new Error("agent attestation did not pass evaluation");
-              }
-              continue;
+            const attestationPath = attestations[model.id];
+            if (!attestationPath) {
+              throw new Error("active model has no CI attestation verifier: " + model.id);
             }
 
-            throw new Error("active model has no CI attestation verifier: " + model.id);
+            const attestation = JSON.parse(await readFile(attestationPath, "utf8"));
+            const expected = model.checkpoint.slice("sha256:".length);
+            if (attestation.modelId !== model.id) {
+              throw new Error("attestation model mismatch: " + model.id);
+            }
+            if (attestation.checkpointSha256 !== expected) {
+              throw new Error("attestation checkpoint mismatch: " + model.id);
+            }
+            if (attestation.evaluation?.passed !== true) {
+              throw new Error("attestation did not pass evaluation: " + model.id);
+            }
           }
 
           console.log("Hercules catalog is native, fail-closed, and evidence-backed.");
