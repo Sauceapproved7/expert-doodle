@@ -49,15 +49,17 @@ test("compiles deterministic runnable source with loopback and request limits", 
   assert.ok(a.files["server.mjs"].includes('process.env.HOST ?? "127.0.0.1"'));
   assert.ok(a.files["server.mjs"].includes("MAX_BODY_BYTES"));
   assert.ok(a.files["db/001_init.sql"].includes("Customer"));
-  assert.ok(a.files["public/index.html"].includes("Customers"));
+  assert.ok(a.files["public/index.html"].includes("/app.js"));
+  assert.ok(a.files["public/app.js"].includes("Customer"));
+  assert.ok(a.files["public/app.css"].includes(".grid"));
 });
 
 test("escapes prompt-derived descriptions in generated HTML", () => {
   const malicious = structuredClone(spec);
   malicious.description = '<script>alert("x")</script>';
   const built = compileForgeProject(malicious);
-  assert.equal(built.files["public/index.html"].includes("<script>"), false);
-  assert.ok(built.files["public/index.html"].includes("&lt;script&gt;"));
+  assert.equal(built.files["public/index.html"].includes('<script>alert("x")</script>'), false);
+  assert.ok(built.files["public/index.html"].includes("&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;"));
 });
 
 test("prompt interpretation is replaceable and outside the compiler", async () => {

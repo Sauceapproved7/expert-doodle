@@ -50,6 +50,17 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     const health = await request(base, "/health", {authorized: false});
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
+    assert.equal(health.body.version, "0.7");
+
+    const consoleResponse = await fetch(base + "/");
+    assert.equal(consoleResponse.status, 200);
+    assert.match(consoleResponse.headers.get("content-type"), /text\/html/);
+    const consoleHtml = await consoleResponse.text();
+    assert.match(consoleHtml, /HERCULES FORGE/);
+    assert.equal(consoleHtml.includes(token), false);
+
+    const deniedList = await request(base, "/v1/projects", {authorized: false});
+    assert.equal(deniedList.status, 401);
 
     const denied = await request(base, "/v1/projects", {
       method: "POST",
@@ -74,6 +85,12 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     });
     assert.equal(created.status, 201);
     const firstRevisionId = created.body.revision.revisionId;
+
+    const listed = await request(base, "/v1/projects");
+    assert.equal(listed.status, 200);
+    assert.equal(listed.body.projects.length, 1);
+    assert.equal(listed.body.projects[0].projectId, "control-app");
+    assert.equal(listed.body.projects[0].latestRevisionId, firstRevisionId);
 
     const inspected = await request(
       base,

@@ -41,7 +41,7 @@ test("workspace owns projects and immutable revisions", async () => {
 
     const diff = await store.diffRevisions("ops-hub", revisions[0].revisionId, next.revisionId);
     assert.equal(diff.changed, true);
-    assert.ok(diff.changes.some((change) => change.path === "public/index.html"));
+    assert.ok(diff.changes.some((change) => ["forge.manifest.json", "public/app.js"].includes(change.path)));
   } finally {
     await rm(root, {recursive: true, force: true});
   }

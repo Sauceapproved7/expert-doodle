@@ -27,6 +27,34 @@ export class ForgeWorkspaceStore {
     return join(this.root, "projects", assertId("projectId", projectId));
   }
 
+  async listProjects() {
+    const projectsDir = join(this.root, "projects");
+    let entries;
+    try {
+      entries = await readdir(projectsDir, {withFileTypes: true});
+    } catch (error) {
+      if (error?.code === "ENOENT") return [];
+      throw error;
+    }
+
+    const projects = [];
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !ID.test(entry.name)) continue;
+      try {
+        const project = await this.getProject(entry.name);
+        const latestRevision = await this.getLatestRevision(entry.name);
+        projects.push({
+          ...project,
+          latestRevisionId: latestRevision.revisionId,
+          latestRevisionAt: latestRevision.createdAt,
+        });
+      } catch (error) {
+        if (error?.code !== "ENOENT") throw error;
+      }
+    }
+    return projects.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
   async createProject(spec, metadata = {}) {
     const compiled = compileForgeProject(spec);
     const projectId = assertId("projectId", metadata.projectId ?? randomUUID());

@@ -59,6 +59,15 @@ test("verified artifact starts a loopback preview with proxied CRUD API", async 
     assert.equal(page.status, 200);
     assert.match(await page.text(), /PreviewApp/);
 
+    const appJs = await fetch(preview.url + "/app.js");
+    assert.equal(appJs.status, 200);
+    assert.match(appJs.headers.get("content-type"), /javascript/);
+    assert.match(await appJs.text(), /Create/);
+
+    const appCss = await fetch(preview.url + "/app.css");
+    assert.equal(appCss.status, 200);
+    assert.match(appCss.headers.get("content-type"), /text\/css/);
+
     const health = await fetch(preview.url + "/health");
     assert.equal(health.status, 200);
     assert.equal((await health.json()).ok, true);

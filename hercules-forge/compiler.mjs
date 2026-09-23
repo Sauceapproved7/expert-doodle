@@ -142,11 +142,6 @@ function renderServer(spec) {
 }
 
 function renderIndex(spec) {
-  const cards = spec.pages.map((page) =>
-    "<section><h2>" + escapeHtml(page.name) + "</h2><p>" + escapeHtml(page.kind) +
-    (page.entity ? " · " + escapeHtml(page.entity) : "") + "</p></section>"
-  ).join("\n");
-
   return [
     "<!doctype html>",
     "<html>",
@@ -154,19 +149,52 @@ function renderIndex(spec) {
     '  <meta charset="utf-8" />',
     '  <meta name="viewport" content="width=device-width,initial-scale=1" />',
     "  <title>" + escapeHtml(spec.name) + "</title>",
-    "  <style>",
-    "    body{font-family:system-ui,sans-serif;max-width:960px;margin:40px auto;padding:0 20px}",
-    "    section{border:1px solid #ddd;border-radius:12px;padding:16px;margin:12px 0}",
-    "  </style>",
+    '  <link rel="stylesheet" href="/app.css" />',
     "</head>",
     "<body>",
-    "  <h1>" + escapeHtml(spec.name) + "</h1>",
-    "  <p>" + escapeHtml(spec.description) + "</p>",
-    "  " + (cards || "<p>No pages defined.</p>"),
+    '  <header class="hero"><div><span class="eyebrow">Hercules Forge App</span><h1>' + escapeHtml(spec.name) + "</h1><p>" + escapeHtml(spec.description) + "</p></div></header>",
+    '  <main><nav id="entityNav"></nav><section id="app"></section></main>',
+    '  <script src="/app.js" defer></script>',
     "</body>",
     "</html>",
     "",
   ].join("\n");
+}
+
+function renderAppCss() {
+  return [
+    ":root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}",
+    "*{box-sizing:border-box}body{margin:0}",
+    ".hero{padding:28px clamp(18px,5vw,64px);border-bottom:1px solid #253047;background:#0d111a}",
+    ".hero h1{margin:5px 0;font-size:clamp(28px,5vw,48px)}.hero p{color:#aab4c8;max-width:760px}.eyebrow{font-size:12px;letter-spacing:.16em;color:#8bc4ff;text-transform:uppercase}",
+    "main{padding:24px clamp(18px,5vw,64px);max-width:1200px;margin:auto}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}",
+    "button{border:0;border-radius:9px;padding:10px 13px;font-weight:700;cursor:pointer}nav button{background:#172033;color:#dce6ff}.primary{background:#f5f7ff;color:#0b0f17}.danger{background:#331922;color:#ffb6c5}",
+    ".grid{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:20px}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:18px}",
+    "label{display:block;color:#aab4c8;font-size:13px;margin:10px 0}input,textarea{width:100%;margin-top:5px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:8px;padding:10px}textarea{min-height:90px}",
+    ".item{border:1px solid #273047;border-radius:10px;padding:12px;margin:9px 0}.item pre{white-space:pre-wrap;overflow-wrap:anywhere}.muted{color:#8791a7;font-size:12px}.empty{color:#8791a7;padding:20px 0}",
+    "@media(max-width:760px){.grid{grid-template-columns:1fr}}",
+    "",
+  ].join("\n");
+}
+
+function renderAppJs(spec) {
+  const entities = JSON.stringify(spec.entities);
+  const pages = JSON.stringify(spec.pages);
+  return `(() => {
+const entities=${entities}; const pages=${pages};
+const entityByName=new Map(entities.map((entity)=>[entity.name,entity]));
+const nav=document.getElementById("entityNav"); const app=document.getElementById("app");
+let active=pages[0]?.entity?entityByName.get(pages[0].entity):entities[0]||null; let editing=null;
+const esc=(v)=>String(v).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const inputType=(t)=>t==="number"?"number":t==="datetime"?"datetime-local":"text";
+function coerce(field,value,checked){if(field.type==="boolean")return checked;if(field.type==="number")return value===""?null:Number(value);if(field.type==="json"){if(value==="")return null;return JSON.parse(value)}if(field.type==="datetime")return value?new Date(value).toISOString():null;return value}
+async function request(path,options={}){const r=await fetch(path,{method:options.method||"GET",headers:{"content-type":"application/json"},body:options.body===undefined?undefined:JSON.stringify(options.body)});if(r.status===204)return null;const b=await r.json();if(!r.ok)throw new Error(b.error||("HTTP "+r.status));return b}
+function renderNav(){nav.innerHTML="";const items=pages.length?pages:entities.map((entity)=>({name:entity.name,entity:entity.name}));for(const page of items){const b=document.createElement("button");b.textContent=page.name;b.onclick=()=>{active=page.entity?entityByName.get(page.entity):null;editing=null;render(page)};nav.appendChild(b)}}
+function fieldControl(field,item={}){const label=document.createElement("label");label.textContent=field.name+(field.required?" *":"");let input;if(field.type==="boolean"){input=document.createElement("input");input.type="checkbox";input.checked=Boolean(item[field.name])}else if(field.type==="json"){input=document.createElement("textarea");input.value=item[field.name]===undefined||item[field.name]===null?"":JSON.stringify(item[field.name],null,2)}else{input=document.createElement("input");input.type=inputType(field.type);const raw=item[field.name];input.value=raw===undefined||raw===null?"":(field.type==="datetime"?String(raw).slice(0,16):raw)}input.dataset.field=field.name;label.appendChild(input);return label}
+async function refreshList(entity,list){const data=await request("/api/"+encodeURIComponent(entity.name));list.innerHTML="";if(!data.items.length){list.innerHTML='<div class="empty">No records yet.</div>';return}for(const item of data.items){const card=document.createElement("div");card.className="item";card.innerHTML="<pre>"+esc(JSON.stringify(item,null,2))+"</pre>";const edit=document.createElement("button");edit.textContent="Edit";edit.onclick=()=>{editing=item;render()};const del=document.createElement("button");del.className="danger";del.textContent="Delete";del.onclick=async()=>{await request("/api/"+encodeURIComponent(entity.name)+"/"+encodeURIComponent(item.id),{method:"DELETE"});if(editing?.id===item.id)editing=null;render()};card.append(edit,del);list.appendChild(card)}}
+function render(page=null){app.innerHTML="";if(!active){app.innerHTML='<div class="empty">'+esc(page?.name||"This page")+" has no data entity yet.</div>";return}const grid=document.createElement("div");grid.className="grid";const formPanel=document.createElement("section");formPanel.className="panel";const listPanel=document.createElement("section");listPanel.className="panel";formPanel.innerHTML="<h2>"+esc(editing?"Edit "+active.name:"Create "+active.name)+"</h2>";const form=document.createElement("form");for(const field of active.fields)form.appendChild(fieldControl(field,editing||{}));const save=document.createElement("button");save.className="primary";save.type="submit";save.textContent=editing?"Save changes":"Create";form.appendChild(save);if(editing){const cancel=document.createElement("button");cancel.type="button";cancel.textContent="Cancel";cancel.onclick=()=>{editing=null;render()};form.appendChild(cancel)}form.onsubmit=async(e)=>{e.preventDefault();try{const body={};for(const field of active.fields){const input=form.querySelector('[data-field="'+CSS.escape(field.name)+'"]');body[field.name]=coerce(field,input.value,input.checked);if(field.required&&(body[field.name]===null||body[field.name]===""))throw new Error(field.name+" is required")}if(editing){await request("/api/"+encodeURIComponent(active.name)+"/"+encodeURIComponent(editing.id),{method:"PUT",body})}else{await request("/api/"+encodeURIComponent(active.name),{method:"POST",body})}editing=null;render()}catch(error){alert(error.message)}};formPanel.appendChild(form);listPanel.innerHTML="<h2>"+esc(active.name)+" records</h2>";const list=document.createElement("div");listPanel.appendChild(list);grid.append(formPanel,listPanel);app.appendChild(grid);refreshList(active,list).catch((error)=>{list.textContent=error.message})}
+renderNav();render();
+})();`;
 }
 
 export function compileForgeProject(input) {
@@ -183,6 +211,8 @@ export function compileForgeProject(input) {
     "db/001_init.sql": renderMigration(spec),
     "server.mjs": renderServer(spec),
     "public/index.html": renderIndex(spec),
+    "public/app.css": renderAppCss(),
+    "public/app.js": renderAppJs(spec),
   };
 
   const fingerprint = createHash("sha256")

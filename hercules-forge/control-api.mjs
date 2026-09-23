@@ -5,6 +5,7 @@ import {ForgeWorkspaceStore} from "./workspace.mjs";
 import {buildForgeArtifact} from "./artifact.mjs";
 import {ForgeLocalReleaseAdapter} from "./releases.mjs";
 import {ForgePreviewManager} from "./preview.mjs";
+import {builderConsoleAsset} from "./builder-console.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const promptHash = (prompt) => createHash("sha256").update(prompt).digest("hex");
@@ -86,17 +87,34 @@ export function createForgeControlService({root, token, interpreter = null}) {
       const url = new URL(req.url, "http://localhost");
       const parts = routeParts(url);
 
+      if (req.method === "GET") {
+        const asset = builderConsoleAsset(url.pathname);
+        if (asset) {
+          res.writeHead(200, {
+            "content-type": asset.type,
+            "cache-control": "no-store",
+            "x-content-type-options": "nosniff",
+            "referrer-policy": "no-referrer",
+          });
+          return res.end(asset.body);
+        }
+      }
+
       if (req.method === "GET" && url.pathname === "/health") {
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "0.6",
+          version: "0.7",
           promptIngress: Boolean(interpreter),
           preview: true,
         });
       }
 
       requireToken(req, token);
+
+      if (req.method === "GET" && url.pathname === "/v1/projects") {
+        return send(res, 200, {projects: await store.listProjects()});
+      }
 
       if (req.method === "POST" && url.pathname === "/v1/projects/from-prompt") {
         requireInterpreter(interpreter);
