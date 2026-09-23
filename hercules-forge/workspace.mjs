@@ -5,6 +5,14 @@ import {compileForgeProject} from "./compiler.mjs";
 
 const json = (value) => JSON.stringify(value, null, 2) + "\n";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+
+function assertId(label, value) {
+  if (!ID.test(String(value ?? ""))) {
+    throw new Error(label + " must be a path-safe identifier");
+  }
+  return String(value);
+}
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
@@ -16,14 +24,17 @@ export class ForgeWorkspaceStore {
   }
 
   projectPath(projectId) {
-    return join(this.root, "projects", projectId);
+    return join(this.root, "projects", assertId("projectId", projectId));
   }
 
   async createProject(spec, metadata = {}) {
     const compiled = compileForgeProject(spec);
-    const projectId = metadata.projectId ?? randomUUID();
+    const projectId = assertId("projectId", metadata.projectId ?? randomUUID());
+    const projectsDir = join(this.root, "projects");
     const projectDir = this.projectPath(projectId);
 
+    await mkdir(projectsDir, {recursive: true});
+    await mkdir(projectDir, {recursive: false});
     await mkdir(join(projectDir, "revisions"), {recursive: true});
 
     const project = {
@@ -42,13 +53,16 @@ export class ForgeWorkspaceStore {
   }
 
   async saveRevision(projectId, spec, options = {}) {
+    projectId = assertId("projectId", projectId);
     const compiled = compileForgeProject(spec);
     const projectDir = this.projectPath(projectId);
     await readJson(join(projectDir, "project.json"));
 
-    const revisionId = options.revisionId ?? randomUUID();
+    const revisionId = assertId("revisionId", options.revisionId ?? randomUUID());
     const revisionDir = join(projectDir, "revisions", revisionId);
     const sourceDir = join(revisionDir, "source");
+
+    await mkdir(revisionDir, {recursive: false});
     await mkdir(sourceDir, {recursive: true});
 
     const fileIndex = {};
@@ -85,15 +99,19 @@ export class ForgeWorkspaceStore {
   }
 
   async getRevision(projectId, revisionId) {
+    projectId = assertId("projectId", projectId);
+    revisionId = assertId("revisionId", revisionId);
     return readJson(join(this.projectPath(projectId), "revisions", revisionId, "revision.json"));
   }
 
   async getLatestRevision(projectId) {
+    projectId = assertId("projectId", projectId);
     const latest = await readJson(join(this.projectPath(projectId), "latest-revision.json"));
     return this.getRevision(projectId, latest.revisionId);
   }
 
   async listRevisions(projectId) {
+    projectId = assertId("projectId", projectId);
     const dir = join(this.projectPath(projectId), "revisions");
     const entries = await readdir(dir, {withFileTypes: true});
     const revisions = [];
