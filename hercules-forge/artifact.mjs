@@ -4,6 +4,14 @@ import {dirname, isAbsolute, join, normalize, sep} from "node:path";
 
 const json = (value) => JSON.stringify(value, null, 2) + "\n";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+
+function assertId(label, value) {
+  if (!ID.test(String(value ?? ""))) {
+    throw new Error(label + " must be a path-safe identifier");
+  }
+  return String(value);
+}
 
 function safeRelative(path) {
   const clean = normalize(path);
@@ -29,6 +37,9 @@ export async function buildForgeArtifact({
   projectId,
   revisionId,
 }) {
+  projectId = assertId("projectId", projectId);
+  revisionId = assertId("revisionId", revisionId);
+
   const revisionPath = join(
     workspaceRoot,
     "projects",
