@@ -103,6 +103,20 @@ export async function startForgePreview({artifactDir}) {
 
   await readFile(serverPath);
   const indexHtml = await readFile(indexPath);
+  const publicAssets = new Map([["/index.html", {type: "text/html; charset=utf-8", body: indexHtml}]]);
+  for (const [pathname, filename, type] of [
+    ["/app.js", "app.js", "text/javascript; charset=utf-8"],
+    ["/app.css", "app.css", "text/css; charset=utf-8"],
+  ]) {
+    try {
+      publicAssets.set(pathname, {
+        type,
+        body: await readFile(join(bundleRoot, "public", filename)),
+      });
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+  }
 
   const child = fork(serverPath, [], {
     cwd: bundleRoot,
@@ -124,21 +138,23 @@ export async function startForgePreview({artifactDir}) {
     try {
       const url = new URL(req.url, "http://localhost");
 
-      if (
-        req.method === "GET" &&
-        (url.pathname === "/" || url.pathname === "/index.html")
-      ) {
+      if (req.method === "GET" && url.pathname === "/") {
+        url.pathname = "/index.html";
+      }
+
+      if (req.method === "GET" && publicAssets.has(url.pathname)) {
+        const asset = publicAssets.get(url.pathname);
         res.writeHead(200, {
-          "content-type": "text/html; charset=utf-8",
+          "content-type": asset.type,
           "cache-control": "no-store",
           "content-security-policy":
             "default-src 'self'; connect-src 'self'; img-src 'self' data:; " +
-            "style-src 'self' 'unsafe-inline'; script-src 'self'; " +
+            "style-src 'self'; script-src 'self'; " +
             "base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
           "x-content-type-options": "nosniff",
           "referrer-policy": "no-referrer",
         });
-        return res.end(indexHtml);
+        return res.end(asset.body);
       }
 
       if (
