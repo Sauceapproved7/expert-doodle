@@ -4,6 +4,7 @@ import {mkdtemp, mkdir, writeFile} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {EventEmitter} from "node:events";
+import {createHash} from "node:crypto";
 import {PassThrough} from "node:stream";
 import {probeCudaHost, assertWan22Hardware} from "../hercules-video/hardware-probe.mjs";
 import {Wan22Ti2v5bRunner} from "../hercules-video/runners/wan22-ti2v-5b.mjs";
@@ -55,7 +56,7 @@ test("Wan runner builds the official TI2V-5B CLI shape without shell interpolati
     outputDir:out,
     upstreamCommit:"3a5cbcdd208e0acbe5c2c90478551660407ea26c",
     hardwareProbe:{cudaAvailable:true,cudaToolkitVersion:"12.4",gpus:[{name:"RTX 4090",memoryGiB:24,driverVersion:"555"}]},
-    checkpointSha256:"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    checkpointSha256:testSha("wan-checkpoint-a"),
     spawnImpl,
   });
   const request=createRenderRequest({
@@ -90,7 +91,7 @@ test("Wan runner refuses native-audio jobs rather than pretending support", asyn
     outputDir:out,
     upstreamCommit:"3a5cbcdd208e0acbe5c2c90478551660407ea26c",
     hardwareProbe:{cudaAvailable:true,gpus:[{name:"RTX 4090",memoryGiB:24}]},
-    checkpointSha256:"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    checkpointSha256:testSha("wan-checkpoint-b"),
   });
   const request=createRenderRequest({
     projectId:"launch",
@@ -106,7 +107,7 @@ test("Wan runner rejects relative installation paths and missing checkpoint evid
     checkpointDir:"/tmp/ckpt",
     outputDir:"/tmp/out",
     upstreamCommit:"3a5cbcdd208e0acbe5c2c90478551660407ea26c",
-    checkpointSha256:"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    checkpointSha256:testSha("wan-checkpoint-c"),
     hardwareProbe:{cudaAvailable:true,gpus:[{name:"RTX 4090",memoryGiB:24}]},
   }), /wan22_repo_dir_required/);
 
