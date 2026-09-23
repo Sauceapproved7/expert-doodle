@@ -9,3 +9,4 @@ export {
 export {HerculesModelRegistry} from "./registry.mjs";
 export {HerculesModelRouter} from "./router.mjs";
 export {HERCULES_MODEL_SLOTS} from "./catalog.mjs";
+export {createModelPlaneService, listenModelPlaneService} from "./service.mjs";
