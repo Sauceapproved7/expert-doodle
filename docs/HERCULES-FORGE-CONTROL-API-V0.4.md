@@ -13,20 +13,24 @@ The service is implemented with Node.js standard-library primitives and does not
 - GET /v1/projects/:projectId
 - GET /v1/projects/:projectId/revisions
 - POST /v1/projects/:projectId/revisions
+- GET /v1/projects/:projectId/revisions/:revisionId
+- POST /v1/projects/:projectId/revisions/:revisionId/artifact
 - POST /v1/projects/:projectId/publish
 - GET /v1/projects/:projectId/releases/active
 - POST /v1/projects/:projectId/rollback
 
-Publish builds and verifies the artifact internally before creating a release record.
+Publish builds and verifies the artifact internally before creating a release record. The explicit artifact route lets an operator or future UI produce and inspect the exact verified deployable bundle before publication.
 
 ## Security defaults
 
 - Mutating and project-data routes require a bearer control token.
+- Bearer-token equality is checked with a constant-time comparison after length validation.
 - The CLI binds to 127.0.0.1 by default.
 - Request bodies are capped at 1 MiB.
-- Project and revision identifiers must be path-safe.
+- Project and revision identifiers must be path-safe in both workspace and artifact layers.
 - Project creation fails if the project directory already exists.
 - Revision creation fails if a revision ID already exists, making revision records immutable by construction.
+- Unexpected internal failures return a generic internal_error response instead of exposing internal error text.
 
 The control token is an operator credential. Production deployments should inject it as FORGE_CONTROL_TOKEN through the runtime secret system rather than commit it.
 
