@@ -28,6 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+
       - name: Test SLO evaluator
         run: node --test tests/slo-evaluator.test.mjs
 
