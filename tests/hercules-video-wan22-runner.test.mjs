@@ -121,3 +121,52 @@ test("Wan runner rejects relative installation paths and missing checkpoint evid
     hardwareProbe:{cudaAvailable:true,gpus:[{name:"RTX 4090",memoryGiB:24}]},
   }), /wan22_checkpoint_sha256_required/);
 });
+
+
+test("Wan runner renders visuals when audio is explicitly staged for post", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(),"hercules-wan-post-audio-"));
+  const repo = path.join(root,"Wan2.2");
+  const ckpt = path.join(root,"ckpt");
+  const out = path.join(root,"out");
+  await Promise.all([mkdir(repo),mkdir(ckpt),mkdir(out)]);
+  await writeFile(path.join(repo,"generate.py"),"# fake");
+
+  const spawnImpl=(cmd,args)=>{
+    const child=new EventEmitter();
+    child.stdout=new PassThrough();
+    child.stderr=new PassThrough();
+    child.kill=()=>{};
+    queueMicrotask(async()=>{
+      const saveIndex=args.indexOf("--save_file");
+      await writeFile(args[saveIndex+1],Buffer.from("visual-only-video"));
+      child.emit("close",0);
+    });
+    return child;
+  };
+
+  const runner=new Wan22Ti2v5bRunner({
+    wanRepoDir:repo,
+    checkpointDir:ckpt,
+    outputDir:out,
+    upstreamCommit:"3a5cbcdd208e0acbe5c2c90478551660407ea26c",
+    checkpointSha256:testSha("wan-checkpoint-post-audio"),
+    hardwareProbe:{cudaAvailable:true,gpus:[{name:"RTX 4090",memoryGiB:24}]},
+    spawnImpl,
+  });
+
+  const request=createRenderRequest({
+    projectId:"launch",
+    shot:{
+      id:"hero-post",
+      prompt:"test visual",
+      durationSeconds:4,
+      aspectRatio:"9:16",
+      requiresAudio:true,
+      audioStrategy:"post",
+    },
+  });
+
+  const result=await runner.render(request);
+  assert.equal(result.artifact.metadata.nativeAudio,false);
+  assert.match(result.artifact.sha256,/^[a-f0-9]{64}$/);
+});
