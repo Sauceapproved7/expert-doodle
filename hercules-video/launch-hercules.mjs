@@ -1,4 +1,5 @@
 import {createHash} from "node:crypto";
+import {spawn} from "node:child_process";
 import {readFile, stat, writeFile} from "node:fs/promises";
 import path from "node:path";
 import {fileURLToPath, pathToFileURL} from "node:url";
@@ -11,8 +12,6 @@ import {HerculesCampaignExecutionService} from "./campaign-execution-service.mjs
 import {runFfmpegAssembly} from "./ffmpeg-assembly-runner.mjs";
 import {fingerprint} from "./core.mjs";
 
-const CANONICAL_PRESET_PATH = fileURLToPath(new URL("./presets/hercules-launch.json", import.meta.url));
-
 const QUALITY_DIMENSIONS = Object.freeze([
   "promptAdherence",
   "temporalConsistency",
@@ -22,6 +21,8 @@ const QUALITY_DIMENSIONS = Object.freeze([
   "artifactFreedom",
   "reliability",
 ]);
+
+const CANONICAL_PRESET_PATH = fileURLToPath(new URL("./presets/hercules-launch.json", import.meta.url));
 
 function absolute(value, code) {
   const raw = String(value || "");
@@ -47,17 +48,13 @@ async function assertDirectory(dirPath, code) {
   return info;
 }
 
-async function sha256File(filePath) {
-  return createHash("sha256").update(await readFile(filePath)).digest("hex");
-}
-
 async function assertAbsent(filePath, code) {
   const info = await stat(filePath).catch(() => null);
   if (info) throw new Error(code);
 }
 
-function parentDirectory(filePath) {
-  return path.dirname(filePath);
+async function sha256File(filePath) {
+  return createHash("sha256").update(await readFile(filePath)).digest("hex");
 }
 
 function normalizeQuality(quality, shotId) {
@@ -73,6 +70,25 @@ function normalizeQuality(quality, shotId) {
     normalized[dimension] = value;
   }
   return normalized;
+}
+
+function normalizeEvaluatorResult(result, context) {
+  const shotId = String(context?.shot?.id || "");
+  if (!result || typeof result !== "object") throw new Error("launch_evaluation_result_required:" + shotId);
+  const artifactSha256 = sha256(
+    result.artifactSha256,
+    "launch_evaluation_artifact_sha256_required:" + shotId
+  );
+  if (artifactSha256 !== String(context?.artifact?.sha256 || "").toLowerCase()) {
+    throw new Error("launch_evaluation_artifact_mismatch:" + shotId);
+  }
+  const method = String(result.method || "").trim();
+  if (!method) throw new Error("launch_evaluation_method_required:" + shotId);
+  const evaluatorId = String(result.evaluatorId || "local-evaluator").trim();
+  if (!evaluatorId) throw new Error("launch_evaluator_id_required:" + shotId);
+  const quality = normalizeQuality(result.quality, shotId);
+  const base = {shotId,artifactSha256,method,evaluatorId,quality};
+  return {...base,fingerprint:fingerprint(base)};
 }
 
 export function normalizeLaunchConfig(config) {
@@ -103,6 +119,11 @@ export function normalizeLaunchConfig(config) {
     }
   }
 
+  const evaluationArgs = config.evaluationArgs == null ? [] : config.evaluationArgs;
+  if (!Array.isArray(evaluationArgs) || evaluationArgs.some(value => typeof value !== "string")) {
+    throw new Error("launch_evaluation_args_invalid");
+  }
+
   return {
     schema:"sauceapproved.hercules.video-launch-config",
     version:1,
@@ -116,11 +137,15 @@ export function normalizeLaunchConfig(config) {
     upstreamCommit:String(config.upstreamCommit || "").toLowerCase(),
     renderOutputDir:absolute(config.renderOutputDir, "launch_render_output_dir_required"),
     finalOutputPath:absolute(config.finalOutputPath, "launch_final_output_path_required"),
-    evaluationEvidencePath:absolute(config.evaluationEvidencePath, "launch_evaluation_evidence_path_required"),
     evidenceOutputPath:absolute(
       config.evidenceOutputPath || String(config.finalOutputPath || "") + ".evidence.json",
       "launch_evidence_output_path_required"
     ),
+    evaluationCommand:config.evaluationCommand
+      ? absolute(config.evaluationCommand, "launch_evaluation_command_invalid")
+      : null,
+    evaluationArgs:[...evaluationArgs],
+    evaluationTimeoutMs:Number(config.evaluationTimeoutMs ?? 60_000),
     python:String(config.python || "python"),
     ffmpegBinary:String(config.ffmpegBinary || "ffmpeg"),
     runtimeId:String(config.runtimeId || "hercules-video-local"),
@@ -131,7 +156,7 @@ export function normalizeLaunchConfig(config) {
   };
 }
 
-export async function validateLaunchInputs(config) {
+export async function validateLaunchInputs(config, {requireEvaluator=true}={}) {
   const normalized = normalizeLaunchConfig(config);
   if (path.resolve(normalized.presetPath) !== path.resolve(CANONICAL_PRESET_PATH)) {
     throw new Error("launch_preset_must_be_canonical");
@@ -144,16 +169,22 @@ export async function validateLaunchInputs(config) {
   if (!Number.isFinite(normalized.pollIntervalMs) || normalized.pollIntervalMs < 0) {
     throw new Error("launch_poll_interval_invalid");
   }
+  if (!Number.isInteger(normalized.evaluationTimeoutMs) || normalized.evaluationTimeoutMs <= 0) {
+    throw new Error("launch_evaluation_timeout_invalid");
+  }
+  if (requireEvaluator && !normalized.evaluationCommand) throw new Error("launch_evaluation_command_required");
 
   await assertFile(normalized.presetPath, "launch_preset_missing");
   await assertDirectory(normalized.wanRepoDir, "launch_wan_repo_missing");
   await assertDirectory(normalized.checkpointDir, "launch_checkpoint_missing");
   await assertDirectory(normalized.renderOutputDir, "launch_render_output_dir_missing");
-  await assertFile(normalized.evaluationEvidencePath, "launch_evaluation_evidence_missing");
-  await assertDirectory(parentDirectory(normalized.finalOutputPath), "launch_final_output_parent_missing");
-  await assertDirectory(parentDirectory(normalized.evidenceOutputPath), "launch_evidence_output_parent_missing");
+  await assertDirectory(path.dirname(normalized.finalOutputPath), "launch_final_output_parent_missing");
+  await assertDirectory(path.dirname(normalized.evidenceOutputPath), "launch_evidence_output_parent_missing");
   await assertAbsent(normalized.finalOutputPath, "launch_final_output_exists");
   await assertAbsent(normalized.evidenceOutputPath, "launch_evidence_output_exists");
+  if (normalized.evaluationCommand) {
+    await assertFile(normalized.evaluationCommand, "launch_evaluation_command_missing");
+  }
 
   for (const [index, track] of normalized.audioTracks.entries()) {
     await assertFile(track.path, "launch_audio_missing:" + index);
@@ -164,28 +195,85 @@ export async function validateLaunchInputs(config) {
   return normalized;
 }
 
-export function createEvidenceEvaluator(evidence) {
-  if (!evidence || typeof evidence !== "object") throw new Error("launch_evaluation_evidence_invalid");
-  if (evidence.schema !== "sauceapproved.hercules.video-evaluation-evidence") {
-    throw new Error("launch_evaluation_schema_invalid");
-  }
-  if (Number(evidence.version) !== 1) throw new Error("launch_evaluation_version_invalid");
-  const shots = evidence.shots;
-  if (!shots || typeof shots !== "object" || Array.isArray(shots)) {
-    throw new Error("launch_evaluation_shots_required");
-  }
+export async function runLocalEvaluator({
+  command,
+  args=[],
+  timeoutMs=60_000,
+  context,
+  spawnImpl=spawn,
+}) {
+  const payload = JSON.stringify({
+    schema:"sauceapproved.hercules.video-evaluation-request",
+    version:1,
+    shot:context.shot,
+    request:context.request,
+    artifact:context.artifact,
+    route:context.route,
+  });
 
-  return async ({shot, artifact}) => {
-    const shotId = String(shot?.id || "");
-    const entry = shots[shotId];
-    if (!entry || typeof entry !== "object") throw new Error("launch_evaluation_missing:" + shotId);
-    const expectedArtifact = sha256(entry.artifactSha256, "launch_evaluation_artifact_sha256_required:" + shotId);
-    if (expectedArtifact !== String(artifact?.sha256 || "").toLowerCase()) {
-      throw new Error("launch_evaluation_artifact_mismatch:" + shotId);
-    }
-    if (!String(entry.method || "").trim()) throw new Error("launch_evaluation_method_required:" + shotId);
-    return normalizeQuality(entry.quality, shotId);
+  return new Promise((resolve,reject)=>{
+    const child = spawnImpl(command,args,{
+      shell:false,
+      stdio:["pipe","pipe","pipe"],
+      env:{
+        PATH:process.env.PATH || "",
+        SYSTEMROOT:process.env.SYSTEMROOT || "",
+      },
+    });
+    let stdout="";
+    let stderr="";
+    let settled=false;
+
+    const timer=setTimeout(()=>{
+      if (settled) return;
+      settled=true;
+      child.kill("SIGTERM");
+      reject(new Error("launch_evaluation_timeout:" + String(context?.shot?.id || "")));
+    },timeoutMs);
+
+    child.stdout?.on("data",chunk=>{stdout+=chunk.toString();});
+    child.stderr?.on("data",chunk=>{stderr+=chunk.toString();});
+    child.once("error",error=>{
+      if (settled) return;
+      settled=true;
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.once("close",code=>{
+      if (settled) return;
+      settled=true;
+      clearTimeout(timer);
+      if (code!==0) {
+        reject(new Error("launch_evaluation_failed:" + String(context?.shot?.id || "") + ":" + stderr.slice(-500)));
+        return;
+      }
+      try {
+        resolve(JSON.parse(stdout));
+      } catch {
+        reject(new Error("launch_evaluation_output_invalid:" + String(context?.shot?.id || "")));
+      }
+    });
+    child.stdin?.end(payload);
+  });
+}
+
+function createEvaluationBoundary({normalized, injectedEvaluate, spawnImpl=spawn}) {
+  const records=[];
+  const evaluate=async context=>{
+    const raw = injectedEvaluate
+      ? await injectedEvaluate(context)
+      : await runLocalEvaluator({
+          command:normalized.evaluationCommand,
+          args:normalized.evaluationArgs,
+          timeoutMs:normalized.evaluationTimeoutMs,
+          context,
+          spawnImpl,
+        });
+    const record=normalizeEvaluatorResult(raw,context);
+    records.push(record);
+    return record.quality;
   };
+  return {evaluate,records};
 }
 
 function providerDescriptor(runtimeId) {
@@ -207,18 +295,15 @@ function providerDescriptor(runtimeId) {
 }
 
 export async function runHerculesLaunch(config, dependencies={}) {
-  const normalized = await validateLaunchInputs(config);
+  const normalized = await validateLaunchInputs(config,{requireEvaluator:typeof dependencies.evaluate!=="function"});
   const readJson = dependencies.readJson || (async filePath => JSON.parse(await readFile(filePath,"utf8")));
   const writeEvidence = dependencies.writeEvidence || (async (filePath,value) => {
     await writeFile(filePath, JSON.stringify(value,null,2) + "\n", {encoding:"utf8",flag:"wx"});
   });
-  const probe = dependencies.probeHardware ? await dependencies.probeHardware() : await probeCudaHost();
 
+  const probe = dependencies.probeHardware ? await dependencies.probeHardware() : await probeCudaHost();
   const brief = await readJson(normalized.presetPath);
-  const evaluationEvidence = await readJson(normalized.evaluationEvidencePath);
-  const evaluate = createEvidenceEvaluator(evaluationEvidence);
   const presetSha256 = await sha256File(normalized.presetPath);
-  const evaluationEvidenceSha256 = await sha256File(normalized.evaluationEvidencePath);
 
   const runner = dependencies.runner || new Wan22Ti2v5bRunner({
     wanRepoDir:normalized.wanRepoDir,
@@ -250,6 +335,19 @@ export async function runHerculesLaunch(config, dependencies={}) {
     candidatesPerShot:1,
   });
 
+  const requiresPostAudio = executionPlan.storyboard.shots.some(
+    shot=>shot.requiresAudio && shot.audioStrategy==="post"
+  );
+  if (requiresPostAudio && normalized.audioTracks.length===0) {
+    throw new Error("launch_post_audio_required");
+  }
+
+  const evaluation = createEvaluationBoundary({
+    normalized,
+    injectedEvaluate:dependencies.evaluate,
+    spawnImpl:dependencies.spawnEvaluator || spawn,
+  });
+
   const session = await service.start(executionPlan);
   const rendered = await service.awaitRenders(executionPlan,session,{
     maxPolls:normalized.maxPolls,
@@ -274,7 +372,7 @@ export async function runHerculesLaunch(config, dependencies={}) {
   const finalized = await service.finalize({
     executionPlan,
     session:rendered,
-    evaluate,
+    evaluate:evaluation.evaluate,
     audioTracks,
     assemblyRunner,
     outputPath:normalized.finalOutputPath,
@@ -288,6 +386,7 @@ export async function runHerculesLaunch(config, dependencies={}) {
     executionPlanFingerprint:executionPlan.fingerprint,
     sessionFingerprint:finalized.session.fingerprint,
     campaignEvidence:finalized.campaignEvidence,
+    evaluations:[...evaluation.records],
     runtime:{
       runtimeId:normalized.runtimeId,
       runnerId:runner.descriptor?.id || null,
@@ -297,14 +396,16 @@ export async function runHerculesLaunch(config, dependencies={}) {
     inputs:{
       presetPath:normalized.presetPath,
       presetSha256,
-      evaluationEvidencePath:normalized.evaluationEvidencePath,
-      evaluationEvidenceSha256,
       audioTracks:audioTracks.map(track => ({
         id:track.id,
         kind:track.kind,
         uri:track.uri,
         sha256:track.sha256,
       })),
+      evaluation:{
+        kind:dependencies.evaluate ? "injected" : "local-command",
+        command:dependencies.evaluate ? null : normalized.evaluationCommand,
+      },
     },
   };
   const launchEvidence = {...launchEvidenceBase,fingerprint:fingerprint(launchEvidenceBase)};
@@ -328,6 +429,7 @@ async function main(argv=process.argv.slice(2)) {
     outputPath:result.outputPath,
     evidencePath:result.evidencePath,
     campaignEvidenceFingerprint:result.finalized.campaignEvidence.fingerprint,
+    launchEvidenceFingerprint:result.launchEvidence.fingerprint,
   }) + "\n");
 }
 
