@@ -1,0 +1,79 @@
+{
+  "title": "Hercules Launch Hero",
+  "campaign": "DON'T TRUST THE AI. TRUST THE EVIDENCE.",
+  "aspectRatio": "9:16",
+  "requireAudio": true,
+  "brand": {
+    "visualLanguage": "premium dark autonomous software operating system, black and graphite surfaces, metallic highlights, restrained electric-blue system accents, high-contrast cinematic macro UI, serious operator-control feel",
+    "avoid": [
+      "humanoid robots",
+      "crypto coins",
+      "dollar rain",
+      "fake profit claims",
+      "stock-footage look",
+      "cartoon sci-fi"
+    ]
+  },
+  "scenes": [
+    {
+      "id": "proof-awakens",
+      "durationSeconds": 4,
+      "purpose": "hook",
+      "visual": "Black screen wakes into precise system telemetry and a minimal Hercules control surface",
+      "action": "Build graph assembles from source to tested artifact",
+      "camera": "slow macro push-in with crisp parallax",
+      "text": "BUILD",
+      "audio": "deep pulse, restrained system ticks"
+    },
+    {
+      "id": "forge-route",
+      "durationSeconds": 4,
+      "purpose": "deployment",
+      "visual": "Release gates lock into place as deployment travels through a controlled Forge path",
+      "action": "Provenance, test, and deployment gates turn verified one by one",
+      "camera": "controlled lateral move across layered interfaces",
+      "text": "SHIP",
+      "audio": "low mechanical impacts and confirmation tones"
+    },
+    {
+      "id": "verification",
+      "durationSeconds": 4,
+      "purpose": "proof",
+      "visual": "Benchmark evidence, checksums, health signals, and verified build receipts resolve into a clean evidence panel",
+      "action": "Signals converge from uncertain to verified",
+      "camera": "tight rack-focus between metrics and green verification marks",
+      "text": "VERIFY",
+      "audio": "rising pulse with precise UI confirmations"
+    },
+    {
+      "id": "trading-proof",
+      "durationSeconds": 4,
+      "purpose": "high-stakes proof example",
+      "visual": "Professional trading-system control interface with market data, risk gates, audit trail, and execution controls",
+      "action": "A proposed action is checked against risk controls before execution",
+      "camera": "cinematic glide over interface depth",
+      "text": "CONTROL",
+      "audio": "subtle market-room ambience and gated confirmation tone"
+    },
+    {
+      "id": "recover",
+      "durationSeconds": 4,
+      "purpose": "resilience",
+      "visual": "A deployment signal breaks, checkpoint state appears, and Hercules restores the verified state",
+      "action": "Failure turns red, rollback engages, system returns healthy",
+      "camera": "brief impact shake followed by steady locked frame",
+      "text": "RECOVER",
+      "audio": "short fault hit, descending reset tone, confident recovery impact"
+    },
+    {
+      "id": "hero-lockup",
+      "durationSeconds": 5,
+      "purpose": "brand close",
+      "visual": "Clean Hercules wordmark emerges over a near-black control-room field with subtle live telemetry",
+      "action": "Everything quiets into a single verified status",
+      "camera": "slow final push and hold",
+      "text": "DON'T TRUST THE AI. TRUST THE EVIDENCE.\nHERCULES — Build it. Ship it. Prove it.",
+      "audio": "cinematic resolve and final low-frequency logo hit"
+    }
+  ]
+}
