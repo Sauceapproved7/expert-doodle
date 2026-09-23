@@ -124,6 +124,7 @@ export function createHerculesRenderQualityEvaluator({
       ...quality,
       technicalPassed:true,
       technicalEvidence:technical,
+      semanticEvidence:semantic.evidence || null,
     };
   };
   Object.defineProperties(evaluate,{
