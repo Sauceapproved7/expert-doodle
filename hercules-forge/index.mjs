@@ -2,6 +2,7 @@ export {FORGE_SPEC_VERSION, normalizeForgeSpec, validateForgeSpec} from "./schem
 export {compileForgeProject, compileFromInterpreter} from "./compiler.mjs";
 export {ForgeInterpreter, StaticForgeInterpreter, HttpForgeInterpreter} from "./interpreter.mjs";
 export {ForgeWorkspaceStore} from "./workspace.mjs";
+export {ForgeIdentityStore, normalizeEmail, verifyPassword} from "./identity.mjs";
 export {buildForgeArtifact, verifyForgeArtifact} from "./artifact.mjs";
 export {ForgeDeploymentAdapter, ForgeLocalReleaseAdapter} from "./releases.mjs";
 export {buildPreviewChildEnv, startForgePreview, ForgePreviewManager} from "./preview.mjs";
