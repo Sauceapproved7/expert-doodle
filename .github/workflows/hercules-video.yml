@@ -20,12 +20,12 @@ jobs:
       - uses: actions/checkout@v4
       - name: Run Hercules Video tests
         run: node --test tests/hercules-video*.test.mjs
-      - name: Enforce provider-neutral core
+      - name: Enforce provider-neutral owned layers
         shell: bash
         run: |
           set -euo pipefail
-          if grep -RniE 'from ["'\'' ]*(google|runway|bytedance|seedance|minimax|veo)|require\(["'\''](google|runway|bytedance|seedance|minimax|veo)'             hercules-video/core.mjs             hercules-video/adapter.mjs             hercules-video/storyboard.mjs             hercules-video/render-bridge.mjs             hercules-video/self-hosted-adapter.mjs; then
-            echo "Provider-specific dependency leaked into Hercules Video owned code."
+          if grep -RniE 'from ["'\'' ]*(google|runway|bytedance|seedance|minimax|veo)|require\(["'\''](google|runway|bytedance|seedance|minimax|veo)'             hercules-video/core.mjs             hercules-video/adapter.mjs             hercules-video/storyboard.mjs             hercules-video/render-bridge.mjs             hercules-video/self-hosted-adapter.mjs             hercules-video/local-runner.mjs             hercules-video/local-runtime.mjs             hercules-video/local-http-server.mjs; then
+            echo "Provider-specific dependency leaked into Hercules Video owned layer."
             exit 1
           fi
-          echo "Hercules Video owned code remains provider-neutral."
+          echo "Hercules Video owned layers remain provider-neutral."
