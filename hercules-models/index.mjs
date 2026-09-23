@@ -18,3 +18,7 @@ export {
   HERCULES_RETRIEVAL_CHECKPOINT_SHA256,
   HerculesEmbeddedRetrieval,
 } from "./embedded-retrieval.mjs";
+export {
+  HERCULES_GUARD_CHECKPOINT_SHA256,
+  HerculesEmbeddedGuard,
+} from "./embedded-guard.mjs";
