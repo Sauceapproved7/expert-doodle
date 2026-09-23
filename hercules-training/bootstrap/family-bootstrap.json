@@ -1,0 +1,239 @@
+{
+  "version": "0.1",
+  "families": {
+    "hercules-core": {
+      "kind": "classifier",
+      "task": "general",
+      "capability": "instruction-mode-routing",
+      "description": "Native bootstrap classifier for choosing a general-response mode. It is not the future Hercules general-reasoning model.",
+      "train": [
+        {"label":"explain","text":"explain this concept in simple terms"},
+        {"label":"explain","text":"break down what this means"},
+        {"label":"explain","text":"teach me how this works"},
+        {"label":"explain","text":"define the idea and explain why"},
+        {"label":"plan","text":"make a step by step plan"},
+        {"label":"plan","text":"build a roadmap with milestones"},
+        {"label":"plan","text":"give me a strategy and next steps"},
+        {"label":"plan","text":"organize this into an execution plan"},
+        {"label":"transform","text":"rewrite this message professionally"},
+        {"label":"transform","text":"summarize this paragraph"},
+        {"label":"transform","text":"translate and polish this text"},
+        {"label":"transform","text":"shorten this draft without losing meaning"},
+        {"label":"compare","text":"compare these two options"},
+        {"label":"compare","text":"show the differences and tradeoffs"},
+        {"label":"compare","text":"pros and cons of both choices"},
+        {"label":"compare","text":"contrast these alternatives side by side"}
+      ],
+      "eval": [
+        {"label":"explain","text":"can you explain what this term means"},
+        {"label":"explain","text":"break this idea down for me"},
+        {"label":"plan","text":"create a roadmap for the next steps"},
+        {"label":"plan","text":"turn this goal into a step by step strategy"},
+        {"label":"transform","text":"rewrite and shorten this note"},
+        {"label":"transform","text":"summarize and polish this draft"},
+        {"label":"compare","text":"compare both choices and their tradeoffs"},
+        {"label":"compare","text":"what are the differences between these options"}
+      ]
+    },
+    "hercules-coder": {
+      "kind": "classifier",
+      "task": "code",
+      "capability": "software-work-intent-routing",
+      "description": "Native bootstrap classifier for software-work intent. It is not the future Hercules code-generation model.",
+      "train": [
+        {"label":"build","text":"implement a new api endpoint"},
+        {"label":"build","text":"create the feature and wire it up"},
+        {"label":"build","text":"add a new command to the cli"},
+        {"label":"build","text":"build the module from scratch"},
+        {"label":"debug","text":"fix this bug and error"},
+        {"label":"debug","text":"debug the failing function"},
+        {"label":"debug","text":"the stack trace shows an exception"},
+        {"label":"debug","text":"repair the crash in this code"},
+        {"label":"test","text":"write unit tests for this module"},
+        {"label":"test","text":"add regression coverage"},
+        {"label":"test","text":"create integration tests and assertions"},
+        {"label":"test","text":"increase test coverage for the function"},
+        {"label":"review","text":"review this pull request"},
+        {"label":"review","text":"audit the code for problems"},
+        {"label":"review","text":"inspect this implementation for security issues"},
+        {"label":"review","text":"perform a code review and suggest improvements"}
+      ],
+      "eval": [
+        {"label":"build","text":"create and implement this new feature"},
+        {"label":"build","text":"add a cli command for deployment"},
+        {"label":"debug","text":"fix the exception causing this crash"},
+        {"label":"debug","text":"debug the broken javascript function"},
+        {"label":"test","text":"write regression tests for this behavior"},
+        {"label":"test","text":"add unit test coverage"},
+        {"label":"review","text":"audit this pull request for issues"},
+        {"label":"review","text":"review the implementation for security problems"}
+      ]
+    },
+    "hercules-vision": {
+      "kind": "classifier",
+      "task": "vision",
+      "capability": "visual-request-intent-routing",
+      "description": "Native bootstrap classifier for visual-request intent. It does not inspect pixels and is not the future Hercules vision model.",
+      "train": [
+        {"label":"inspect","text":"inspect this screenshot and tell me what is shown"},
+        {"label":"inspect","text":"look at this image and describe it"},
+        {"label":"inspect","text":"analyze the picture contents"},
+        {"label":"inspect","text":"what do you see in this screenshot"},
+        {"label":"ocr","text":"read the text in this image"},
+        {"label":"ocr","text":"extract the words from this document scan"},
+        {"label":"ocr","text":"ocr this screenshot"},
+        {"label":"ocr","text":"transcribe the visible text from the picture"},
+        {"label":"compare","text":"compare these two screenshots"},
+        {"label":"compare","text":"show visual differences between the images"},
+        {"label":"compare","text":"compare the before and after pictures"},
+        {"label":"compare","text":"find what changed between these screenshots"},
+        {"label":"ui","text":"find the button in this interface"},
+        {"label":"ui","text":"identify the menu and form fields"},
+        {"label":"ui","text":"locate the control on this screen"},
+        {"label":"ui","text":"which ui element should be clicked"}
+      ],
+      "eval": [
+        {"label":"inspect","text":"describe what is visible in this screenshot"},
+        {"label":"inspect","text":"analyze what this image shows"},
+        {"label":"ocr","text":"extract all text from this scanned image"},
+        {"label":"ocr","text":"read the words visible in the screenshot"},
+        {"label":"compare","text":"compare both screenshots and find changes"},
+        {"label":"compare","text":"what changed between these two images"},
+        {"label":"ui","text":"locate the submit button on the screen"},
+        {"label":"ui","text":"identify the interface control I need"}
+      ]
+    },
+    "hercules-voice": {
+      "kind": "classifier",
+      "task": "speech-to-text",
+      "capability": "voice-request-intent-routing",
+      "description": "Native bootstrap classifier for voice-request intent. It does not decode or synthesize audio and is not the future Hercules speech model.",
+      "train": [
+        {"label":"transcribe","text":"transcribe this audio recording"},
+        {"label":"transcribe","text":"turn this speech into text"},
+        {"label":"transcribe","text":"write down what is said in the recording"},
+        {"label":"transcribe","text":"convert the spoken words to text"},
+        {"label":"synthesize","text":"read this text out loud"},
+        {"label":"synthesize","text":"generate speech from this script"},
+        {"label":"synthesize","text":"turn this text into spoken audio"},
+        {"label":"synthesize","text":"create a voice reading of this paragraph"},
+        {"label":"translate","text":"translate the spoken audio to english"},
+        {"label":"translate","text":"convert this speech into spanish"},
+        {"label":"translate","text":"translate what the speaker says"},
+        {"label":"translate","text":"make an english version of this recording"},
+        {"label":"summarize","text":"summarize this podcast audio"},
+        {"label":"summarize","text":"give me the key points from this recording"},
+        {"label":"summarize","text":"summarize what was said in the meeting audio"},
+        {"label":"summarize","text":"pull the main ideas from this voice note"}
+      ],
+      "eval": [
+        {"label":"transcribe","text":"convert this recording into written text"},
+        {"label":"transcribe","text":"transcribe the spoken words"},
+        {"label":"synthesize","text":"generate spoken audio from this text"},
+        {"label":"synthesize","text":"read this script aloud"},
+        {"label":"translate","text":"translate the speaker into english"},
+        {"label":"translate","text":"make a spanish version of this speech"},
+        {"label":"summarize","text":"summarize the key points from this audio"},
+        {"label":"summarize","text":"what are the main ideas in this voice note"}
+      ]
+    },
+    "hercules-research": {
+      "kind": "classifier",
+      "task": "research",
+      "capability": "research-strategy-routing",
+      "description": "Native bootstrap classifier for choosing a research strategy. It is not the future Hercules evidence-synthesis model.",
+      "train": [
+        {"label":"current","text":"find the latest information from today"},
+        {"label":"current","text":"research recent changes this week"},
+        {"label":"current","text":"check the newest update and current status"},
+        {"label":"current","text":"look up what changed recently"},
+        {"label":"primary","text":"use the official documentation"},
+        {"label":"primary","text":"find the original research paper"},
+        {"label":"primary","text":"check the primary source and specification"},
+        {"label":"primary","text":"use the government or vendor source"},
+        {"label":"compare","text":"compare multiple sources on this topic"},
+        {"label":"compare","text":"contrast the documented positions"},
+        {"label":"compare","text":"show where the sources agree and disagree"},
+        {"label":"compare","text":"compare evidence from several references"},
+        {"label":"verify","text":"verify whether this claim is true"},
+        {"label":"verify","text":"fact check this statement"},
+        {"label":"verify","text":"corroborate this claim with evidence"},
+        {"label":"verify","text":"confirm this fact using independent sources"}
+      ],
+      "eval": [
+        {"label":"current","text":"find the most recent update available"},
+        {"label":"current","text":"research what changed this week"},
+        {"label":"primary","text":"use the official specification and documentation"},
+        {"label":"primary","text":"find the original paper for this claim"},
+        {"label":"compare","text":"compare evidence across several sources"},
+        {"label":"compare","text":"show how the sources differ"},
+        {"label":"verify","text":"fact check and corroborate this statement"},
+        {"label":"verify","text":"verify this claim with independent evidence"}
+      ]
+    },
+    "hercules-guard": {
+      "kind": "classifier",
+      "task": "safety",
+      "capability": "action-risk-routing",
+      "description": "Native bootstrap classifier for action-risk routing. It supports policy enforcement but does not replace deterministic authorization checks.",
+      "train": [
+        {"label":"read","text":"show me the current configuration"},
+        {"label":"read","text":"list the files in this directory"},
+        {"label":"read","text":"inspect the repository status"},
+        {"label":"read","text":"read the deployment logs"},
+        {"label":"write","text":"create a new file"},
+        {"label":"write","text":"update this configuration value"},
+        {"label":"write","text":"edit the document and save it"},
+        {"label":"write","text":"push this code change to a branch"},
+        {"label":"sensitive","text":"show the api token and secret"},
+        {"label":"sensitive","text":"read the password from credentials"},
+        {"label":"sensitive","text":"expose the private key"},
+        {"label":"sensitive","text":"print the authentication secret"},
+        {"label":"destructive","text":"delete the production database"},
+        {"label":"destructive","text":"erase all files permanently"},
+        {"label":"destructive","text":"drop the table and remove the data"},
+        {"label":"destructive","text":"terminate and destroy the production service"}
+      ],
+      "eval": [
+        {"label":"read","text":"inspect and show the current logs"},
+        {"label":"read","text":"list the repository files"},
+        {"label":"write","text":"edit and save this configuration"},
+        {"label":"write","text":"create a branch with this change"},
+        {"label":"sensitive","text":"display the private api secret"},
+        {"label":"sensitive","text":"print the stored password"},
+        {"label":"destructive","text":"permanently delete all production data"},
+        {"label":"destructive","text":"drop and destroy the database"}
+      ]
+    },
+    "hercules-retrieval": {
+      "kind": "retrieval",
+      "task": "rerank",
+      "capability": "lexical-document-ranking",
+      "description": "Native TF-IDF bootstrap retriever for Hercules-owned documentation. It is a real retriever but not the future neural embedding model.",
+      "documents": [
+        {"id":"forge","text":"Hercules Forge owns application specifications compilation artifacts releases deployment policy builder console and prompt ingress."},
+        {"id":"model-plane","text":"Hercules Model Plane owns model identity lifecycle routing runtime binding checkpoint references and native model selection."},
+        {"id":"training","text":"Hercules Training owns dataset provenance licensing jobs checkpoints evaluation suites activation gates and reproducible training evidence."},
+        {"id":"staging","text":"Hercules Staging Plane provides isolated deployment verification database migration recovery drills and synthetic environment testing."},
+        {"id":"observability","text":"Hercules Observability tracks service level objectives latency availability evidence health telemetry and operational status."},
+        {"id":"video","text":"Hercules Video handles storyboard rendering campaign coordination post production quality gates and local launch workflows."},
+        {"id":"provenance","text":"Hercules provenance controls record ownership canonical source lineage licensing commit history and artifact origin."},
+        {"id":"agent","text":"Hercules Agent routes intents selects tools coordinates workflows and controls agent orchestration."},
+        {"id":"retrieval","text":"Hercules Retrieval ranks documents searches memory computes relevance and returns evidence candidates."},
+        {"id":"guard","text":"Hercules Guard classifies action risk validates permissions protects secrets and supports policy enforcement."},
+        {"id":"core","text":"Hercules Core is the target general reasoning instruction following planning explanation and transformation family."},
+        {"id":"coder","text":"Hercules Coder is the target software engineering debugging implementation testing review and repository work family."}
+      ],
+      "eval": [
+        {"query":"dataset provenance checkpoints evaluation activation training evidence","expectedId":"training"},
+        {"query":"application compilation artifacts release deployment builder console","expectedId":"forge"},
+        {"query":"model identity lifecycle routing runtime checkpoint model plane","expectedId":"model-plane"},
+        {"query":"latency availability slo telemetry service health","expectedId":"observability"},
+        {"query":"rank documents search memory relevance evidence","expectedId":"retrieval"},
+        {"query":"permissions secrets policy risk action validation","expectedId":"guard"},
+        {"query":"storyboard render campaign post production video quality","expectedId":"video"},
+        {"query":"ownership lineage canonical source licensing artifact origin","expectedId":"provenance"}
+      ]
+    }
+  }
+}
