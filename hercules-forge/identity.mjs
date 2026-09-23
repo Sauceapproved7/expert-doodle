@@ -253,6 +253,17 @@ export class ForgeIdentityStore {
     return auth;
   }
 
+  async rotateCsrf(token) {
+    const auth = await this.getSession(token);
+    const csrfToken = randomBytes(24).toString("base64url");
+    const session = {
+      ...auth.session,
+      csrfSha256: hashToken(csrfToken),
+    };
+    await writeJson(this.sessionPath(token), session);
+    return {csrfToken, session, user: auth.user};
+  }
+
   async requireWorkspace(token, workspaceId, allowedRoles = null) {
     const auth = await this.getSession(token);
     let membership;

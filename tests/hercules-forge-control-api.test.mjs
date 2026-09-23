@@ -50,14 +50,22 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     const health = await request(base, "/health", {authorized: false});
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
-    assert.equal(health.body.version, "0.8");
+    assert.equal(health.body.version, "0.9");
 
     const consoleResponse = await fetch(base + "/");
     assert.equal(consoleResponse.status, 200);
     assert.match(consoleResponse.headers.get("content-type"), /text\/html/);
     const consoleHtml = await consoleResponse.text();
     assert.match(consoleHtml, /HERCULES FORGE/);
+    assert.match(consoleHtml, /Sign in/);
+    assert.equal(consoleHtml.includes("Control token"), false);
     assert.equal(consoleHtml.includes(token), false);
+
+    const operatorResponse = await fetch(base + "/operator");
+    assert.equal(operatorResponse.status, 200);
+    const operatorHtml = await operatorResponse.text();
+    assert.match(operatorHtml, /Control token/);
+    assert.equal(operatorHtml.includes(token), false);
 
     const deniedList = await request(base, "/v1/projects", {authorized: false});
     assert.equal(deniedList.status, 401);
