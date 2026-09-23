@@ -50,13 +50,13 @@ function checked(result, label) {
   return result;
 }
 
-export function createTrainingControlService({root, token}) {
+export function createTrainingControlService({root, token, models = [], runner = null}) {
   if (!root) throw new TypeError("root is required");
   if (typeof token !== "string" || token.length < 16) {
     throw new TypeError("control token must be at least 16 characters");
   }
 
-  const store = new TrainingEvidenceStore(root);
+  const store = new TrainingEvidenceStore(root);\n  const modelMap = new Map(models.map((model) => [model.id, structuredClone(model)]));
 
   return http.createServer(async (req, res) => {
     try {
@@ -72,7 +72,7 @@ export function createTrainingControlService({root, token}) {
         return send(res, 200, {
           ok: true,
           service: "hercules-training-control",
-          version: "0.1",
+          version: "0.1",\n          models: modelMap.size,\n          runnerConfigured: Boolean(runner),
           counts: {
             datasets: datasets.length,
             jobs: jobs.length,
@@ -103,7 +103,7 @@ export function createTrainingControlService({root, token}) {
         const datasets = await Promise.all(
           body.datasetIds.map((id) => store.get("datasets", id).then((record) => record.manifest)),
         );
-        const planned = createTrainingJob({
+        let planned;\n        try {\n          planned = createTrainingJob({
           id: body.id,
           modelId: body.modelId,
           task: body.task,
@@ -116,6 +116,31 @@ export function createTrainingControlService({root, token}) {
         });
         await store.save("jobs", planned.job.id, planned);
         return send(res, 201, planned);
+      }
+
+      const runMatch = url.pathname.match(/^\\/v1\\/jobs\\/([a-z][a-z0-9-]{1,63})\\/run$/);
+      if (req.method === "POST" && runMatch) {
+        if (!runner || typeof runner.run !== "function") {
+          throw Object.assign(new Error("training runner is not configured"), {statusCode: 503});
+        }
+        const jobRecord = await store.get("jobs", runMatch[1]);
+        const datasets = await Promise.all(
+          jobRecord.job.datasets.map((ref) => store.get("datasets", ref.id).then((record) => record.manifest)),
+        );
+        const output = await runner.run({job: jobRecord.job, datasets});
+        const check = checked(validateCheckpoint({
+          ...output,
+          modelId: output.modelId ?? jobRecord.job.modelId,
+          jobId: jobRecord.job.id,
+          jobFingerprint: jobRecord.fingerprint,
+          sourceCommit: output.sourceCommit ?? jobRecord.job.codeCommit,
+        }), "invalid runner checkpoint");
+        if (check.checkpoint.modelId !== jobRecord.job.modelId) {
+          throw Object.assign(new Error("runner checkpoint model mismatch"), {statusCode: 409});
+        }
+        const record = {checkpoint: check.checkpoint, fingerprint: check.fingerprint};
+        await store.save("checkpoints", check.checkpoint.id, record);
+        return send(res, 201, record);
       }
 
       if (req.method === "POST" && url.pathname === "/v1/checkpoints") {
@@ -202,7 +227,7 @@ export function listenTrainingControlService({
   host = "127.0.0.1",
   port = 38910,
 }) {
-  const server = createTrainingControlService({root, token});
+  const server = createTrainingControlService({root, token, models, runner});
   server.listen(port, host);
   return server;
 }
