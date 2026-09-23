@@ -38,7 +38,8 @@ jobs:
           node --test \
             tests/hercules-training.test.mjs \
             tests/hercules-native-agent-router.test.mjs \
-            tests/hercules-native-retrieval.test.mjs
+            tests/hercules-native-retrieval.test.mjs \
+            tests/hercules-native-guard.test.mjs
 
       - name: Train and evaluate Hercules Agent Router
         env:
@@ -119,5 +120,48 @@ jobs:
         with:
           name: hercules-retrieval-v0.1
           path: .hercules-training/bootstrap-retrieval/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Train and evaluate Hercules Guard
+        env:
+          HERCULES_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          HERCULES_CREATED_AT: "2026-09-23T22:00:00Z"
+        run: node hercules-training/bootstrap-guard.mjs
+
+      - name: Verify Guard evidence exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .hercules-training/bootstrap-guard/model.json
+          test -s .hercules-training/bootstrap-guard/training-evidence.json
+          node --input-type=module <<'NODE'
+          import {readFile} from "node:fs/promises";
+          const evidence = JSON.parse(await readFile(
+            ".hercules-training/bootstrap-guard/training-evidence.json",
+            "utf8"
+          ));
+          if (!evidence.decision?.ok) throw new Error("Guard activation decision did not pass");
+          if (evidence.decision?.activatedModel?.origin !== "hercules-native") {
+            throw new Error("Guard model is not Hercules-native");
+          }
+          if (evidence.evaluation?.result?.metrics?.accuracy < 0.9) {
+            throw new Error("native Guard missed minimum accuracy");
+          }
+          if (evidence.evaluation?.result?.metrics?.["error-rate"] > 0.1) {
+            throw new Error("native Guard exceeded maximum error rate");
+          }
+          console.log(JSON.stringify({
+            checkpoint: evidence.checkpoint.checkpoint.artifactSha256,
+            accuracy: evidence.evaluation.result.metrics.accuracy,
+            errorRate: evidence.evaluation.result.metrics["error-rate"],
+          }, null, 2));
+          NODE
+
+      - name: Upload Guard checkpoint evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: hercules-guard-v0.1
+          path: .hercules-training/bootstrap-guard/
           if-no-files-found: error
           retention-days: 30
