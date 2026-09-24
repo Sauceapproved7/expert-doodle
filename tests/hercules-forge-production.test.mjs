@@ -142,8 +142,8 @@ test("production session cookies are Secure and failed login throttling returns 
     assert.equal(healthBody.mode, "production");
     assert.equal(healthBody.publicOrigin, "https://forge.example.test");
 
-    assert.equal((await signIn("wrong-one")).status, 401);
-    assert.equal((await signIn("wrong-two")).status, 401);
+    assert.equal((await signIn(fixtureCredential("wrong", "one", "credential", "long", "enough"))).status, 401);
+    assert.equal((await signIn(fixtureCredential("wrong", "two", "credential", "long", "enough"))).status, 401);
     const blocked = await signIn(password);
     assert.equal(blocked.status, 429);
     assert.ok(Number(blocked.headers.get("retry-after")) >= 1);
