@@ -44,6 +44,30 @@ services:
       PGRST_DB_CHANNEL_ENABLED: "false"
     networks: [staging]
 
+  forge:
+    image: node:22.12.0-alpine
+    environment:
+      FORGE_ROOT: /forge-state
+      FORGE_CONTROL_TOKEN: ${HERCULES_FORGE_STAGING_CONTROL_TOKEN}
+      FORGE_PUBLIC_ORIGIN: https://forge.staging.invalid
+      FORGE_HOST: 0.0.0.0
+      FORGE_PORT: "38700"
+      FORGE_DATA_MAX_BYTES: "52428800"
+      FORGE_LOGIN_MAX_FAILURES: "8"
+      FORGE_LOGIN_WINDOW_MS: "300000"
+    command: ["node", "/repo/hercules-forge/production-cli.mjs"]
+    volumes:
+      - ../hercules-forge:/repo/hercules-forge:ro
+      - hercules_forge_state:/forge-state
+    ports:
+      - "127.0.0.1:38700:38700"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:38700/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [edge]
+
   api:
     image: node:22.12.0-alpine
     depends_on:
@@ -71,3 +95,4 @@ networks:
 
 volumes:
   hercules_staging_pg:
+  hercules_forge_state:
