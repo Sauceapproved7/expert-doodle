@@ -544,12 +544,25 @@ export function createForgeControlService({
 
       if (req.method === "POST" && url.pathname === "/v1/admin/users") {
         const body = await readBody(req);
-        return send(res, 201, {user: await identities.createUser(body)});
+        const user = await identities.createUser(body);
+        await audit.append({
+          type: "admin.user.create",
+          actor: {kind: "control"},
+          details: {userId: user.userId},
+        });
+        return send(res, 201, {user});
       }
 
       if (req.method === "POST" && url.pathname === "/v1/admin/workspaces") {
         const body = await readBody(req);
-        return send(res, 201, {workspace: await identities.createWorkspace(body)});
+        const workspace = await identities.createWorkspace(body);
+        await audit.append({
+          type: "admin.workspace.create",
+          actor: {kind: "control"},
+          workspaceId: workspace.workspaceId,
+          details: {ownerUserId: workspace.ownerUserId},
+        });
+        return send(res, 201, {workspace});
       }
 
       if (
@@ -562,13 +575,18 @@ export function createForgeControlService({
         parts.length === 5
       ) {
         const body = await readBody(req);
-        return send(res, 201, {
-          membership: await identities.addMember({
-            workspaceId: parts[3],
-            userId: body.userId,
-            role: body.role,
-          }),
+        const membership = await identities.addMember({
+          workspaceId: parts[3],
+          userId: body.userId,
+          role: body.role,
         });
+        await audit.append({
+          type: "admin.member.add",
+          actor: {kind: "control"},
+          workspaceId: parts[3],
+          details: {userId: membership.userId, role: membership.role},
+        });
+        return send(res, 201, {membership});
       }
 
       if (req.method === "GET" && url.pathname === "/v1/projects") {
@@ -586,12 +604,24 @@ export function createForgeControlService({
           promptSha256: promptHash(prompt),
         };
         const result = await store.createProject(spec, metadata);
+        await audit.append({
+          type: "project.create",
+          actor: {kind: "control"},
+          projectId: result.project.projectId,
+          details: {revisionId: result.revision.revisionId, source: "prompt"},
+        });
         return send(res, 201, result);
       }
 
       if (req.method === "POST" && url.pathname === "/v1/projects") {
         const body = await readBody(req);
         const result = await store.createProject(body.spec, body.metadata ?? {});
+        await audit.append({
+          type: "project.create",
+          actor: {kind: "control"},
+          projectId: result.project.projectId,
+          details: {revisionId: result.revision.revisionId, source: "spec"},
+        });
         return send(res, 201, result);
       }
 
@@ -615,6 +645,12 @@ export function createForgeControlService({
           const revision = await store.saveRevision(projectId, spec, {
             message: body.message ?? "Prompt revision " + promptHash(prompt).slice(0, 12),
           });
+          await audit.append({
+            type: "project.revision",
+            actor: {kind: "control"},
+            projectId,
+            details: {revisionId: revision.revisionId, source: "prompt"},
+          });
           return send(res, 201, revision);
         }
 
@@ -625,6 +661,12 @@ export function createForgeControlService({
         if (req.method === "POST" && parts[3] === "revisions" && parts.length === 4) {
           const body = await readBody(req);
           const revision = await store.saveRevision(projectId, body.spec, {message: body.message});
+          await audit.append({
+            type: "project.revision",
+            actor: {kind: "control"},
+            projectId,
+            details: {revisionId: revision.revisionId, source: "spec"},
+          });
           return send(res, 201, revision);
         }
 
@@ -652,6 +694,15 @@ export function createForgeControlService({
             projectId,
             revisionId,
           });
+          await audit.append({
+            type: "artifact.build",
+            actor: {kind: "control"},
+            projectId,
+            details: {
+              revisionId,
+              artifactFingerprint: artifact.manifest.artifactFingerprint,
+            },
+          });
           return send(res, 201, {artifact: artifact.manifest});
         }
 
@@ -663,9 +714,14 @@ export function createForgeControlService({
           parts.length === 6
         ) {
           await store.getRevision(projectId, parts[4]);
-          return send(res, 201, {
-            preview: await previews.start(projectId, parts[4]),
+          const preview = await previews.start(projectId, parts[4]);
+          await audit.append({
+            type: "preview.start",
+            actor: {kind: "control"},
+            projectId,
+            details: {revisionId: parts[4]},
           });
+          return send(res, 201, {preview});
         }
 
         if (req.method === "GET" && parts[3] === "preview" && parts.length === 4) {
@@ -677,6 +733,13 @@ export function createForgeControlService({
 
         if (req.method === "DELETE" && parts[3] === "preview" && parts.length === 4) {
           const stopped = await previews.stop(projectId);
+          if (stopped) {
+            await audit.append({
+              type: "preview.stop",
+              actor: {kind: "control"},
+              projectId,
+            });
+          }
           return send(res, stopped ? 200 : 404, {stopped});
         }
 
