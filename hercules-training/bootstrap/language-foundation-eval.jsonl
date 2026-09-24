@@ -1,0 +1,20 @@
+{"text":"Hercules verifies every checkpoint before production activation."}
+{"text":"Hercules records provenance before any model training begins."}
+{"text":"The model plane rejects a checkpoint when the runtime cannot be verified."}
+{"text":"The training plane binds evaluation evidence to an exact checkpoint hash."}
+{"text":"Forge checks application specifications before project compilation."}
+{"text":"Owner code policy rejects unapproved dependencies inside runtime source."}
+{"text":"A tokenizer maps language into deterministic token identifiers."}
+{"text":"A language model predicts the next token from previous context."}
+{"text":"A backoff model prefers trigram context before shorter context."}
+{"text":"Held out evaluation measures reusable language sequence learning."}
+{"text":"Lower perplexity indicates less surprise on the same held out tokens."}
+{"text":"A contextual language model should beat a unigram baseline."}
+{"text":"Training evidence reports checkpoint identity and evaluation metrics."}
+{"text":"Hercules Core language work begins with a reproducible next token baseline."}
+{"text":"Every model upgrade preserves provenance evaluation and owner code controls."}
+{"text":"The canonical repository remains the source of truth for model evidence."}
+{"text":"Guard denies unauthorized credential theft and provenance tampering."}
+{"text":"Research verifies factual claims against authoritative evidence."}
+{"text":"Retrieval ranks relevant memory before downstream synthesis."}
+{"text":"Reliable model systems expose limits instead of claiming unsupported capability."}

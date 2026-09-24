@@ -43,7 +43,8 @@ jobs:
             tests/hercules-native-agent-router.test.mjs \
             tests/hercules-native-retrieval.test.mjs \
             tests/hercules-native-guard.test.mjs \
-            tests/hercules-native-five-families.test.mjs
+            tests/hercules-native-five-families.test.mjs \
+            tests/hercules-native-language-foundation.test.mjs
 
       - name: Train and evaluate Hercules Agent Router
         env:
@@ -209,5 +210,51 @@ jobs:
         with:
           name: hercules-five-native-families-v0.1
           path: .hercules-training/five-native-families/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Train and evaluate Hercules Language Foundation v0.2
+        env:
+          HERCULES_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          HERCULES_CREATED_AT: "2026-09-23T23:00:00Z"
+        run: node hercules-training/bootstrap-language-foundation.mjs
+
+      - name: Verify Language Foundation candidate evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .hercules-training/language-foundation-v0.2/checkpoint.json
+          test -s .hercules-training/language-foundation-v0.2/training-evidence.json
+          node --input-type=module <<'NODE'
+          import {readFile} from "node:fs/promises";
+          const evidence = JSON.parse(await readFile(
+            ".hercules-training/language-foundation-v0.2/training-evidence.json",
+            "utf8"
+          ));
+          const metrics = evidence.evaluation?.result?.metrics ?? {};
+          if (evidence.candidateReady !== true) {
+            throw new Error("language foundation did not clear candidate gate");
+          }
+          if (metrics["top1-accuracy"] < 0.35) {
+            throw new Error("language foundation missed top-1 gate");
+          }
+          if (metrics["cross-entropy-ratio"] > 0.85) {
+            throw new Error("language foundation did not beat unigram baseline enough");
+          }
+          if (metrics["token-coverage"] < 0.8) {
+            throw new Error("language foundation missed token coverage gate");
+          }
+          console.log(JSON.stringify({
+            checkpoint: evidence.checkpoint.checkpoint.artifactSha256,
+            checkpointBytes: evidence.checkpoint.checkpoint.bytes,
+            metrics,
+          }, null, 2));
+          NODE
+
+      - name: Upload Language Foundation candidate evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hercules-language-foundation-v0.2
+          path: .hercules-training/language-foundation-v0.2/
           if-no-files-found: error
           retention-days: 30
