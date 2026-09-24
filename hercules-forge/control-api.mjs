@@ -9,9 +9,11 @@ import {builderConsoleAsset} from "./builder-console.mjs";
 import {customerConsoleAsset} from "./customer-console.mjs";
 import {ForgeIdentityStore} from "./identity.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES, ForgeLocalRuntimeDataAdapter} from "./runtime-data.mjs";
+import {ForgeAuditStore} from "./audit.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const promptHash = (prompt) => createHash("sha256").update(prompt).digest("hex");
+const emailAuditHash = (email) => createHash("sha256").update(String(email ?? "").trim().toLowerCase()).digest("hex");
 
 function send(res, status, body, headers = {}) {
   res.writeHead(status, {"content-type": "application/json; charset=utf-8", ...headers});
@@ -146,6 +148,7 @@ export function createForgeControlService({
     maxProjectBytes: runtimeDataMaxBytes,
   });
   const identities = new ForgeIdentityStore(root);
+  const audit = new ForgeAuditStore(root);
   const artifactRoot = join(root, "artifacts");
 
   const server = http.createServer(async (req, res) => {
@@ -170,13 +173,14 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "1.2",
+          version: "1.4",
           mode: serviceMode,
           publicOrigin,
           promptIngress: Boolean(interpreter),
           preview: true,
           persistentRuntime: true,
           runtimeDataControl: true,
+          auditEvents: true,
           runtimeDataMaxBytes,
         });
       }
@@ -184,13 +188,32 @@ export function createForgeControlService({
       if (req.method === "POST" && url.pathname === "/v1/session") {
         const body = await readBody(req);
         const rateKey = typeof body.email === "string" ? body.email : "<unknown>";
-        loginRateLimiter?.beforeAttempt(rateKey);
+        const emailHash = emailAuditHash(rateKey);
+        try {
+          loginRateLimiter?.beforeAttempt(rateKey);
+        } catch (error) {
+          if (error?.statusCode === 429) {
+            await audit.append({
+              type: "session.login",
+              outcome: "blocked",
+              actor: {kind: "system"},
+              details: {emailHash, reason: "rate_limit"},
+            });
+          }
+          throw error;
+        }
         try {
           const result = await identities.createSession({
             email: body.email,
             password: body.password,
           });
           loginRateLimiter?.recordSuccess(rateKey);
+          await audit.append({
+            type: "session.login",
+            outcome: "success",
+            actor: {kind: "user", userId: result.user.userId},
+            details: {emailHash},
+          });
           return send(res, 201, {
             user: result.user,
             session: {
@@ -200,7 +223,15 @@ export function createForgeControlService({
             csrfToken: result.csrfToken,
           }, {"set-cookie": sessionCookie(result.token, secureSessionCookies)});
         } catch (error) {
-          if (error?.statusCode === 401) loginRateLimiter?.recordFailure(rateKey);
+          if (error?.statusCode === 401) {
+            loginRateLimiter?.recordFailure(rateKey);
+            await audit.append({
+              type: "session.login",
+              outcome: "failure",
+              actor: {kind: "system"},
+              details: {emailHash, reason: "invalid_credentials"},
+            });
+          }
           throw error;
         }
       }
@@ -230,8 +261,12 @@ export function createForgeControlService({
 
       if (req.method === "DELETE" && url.pathname === "/v1/session") {
         const sessionToken = parseCookies(req).forge_session;
-        await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+        const auth = await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
         await identities.revokeSession(sessionToken);
+        await audit.append({
+          type: "session.logout",
+          actor: {kind: "user", userId: auth.user.userId},
+        });
         return send(res, 200, {revoked: true}, {
           "set-cookie": clearSessionCookie(secureSessionCookies),
         });
@@ -415,6 +450,22 @@ export function createForgeControlService({
       }
 
       requireToken(req, token);
+
+      if (req.method === "GET" && url.pathname === "/v1/audit/verify") {
+        return send(res, 200, {integrity: await audit.verify()});
+      }
+
+      if (req.method === "GET" && url.pathname === "/v1/audit") {
+        const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 100;
+        return send(res, 200, {
+          events: await audit.list({
+            limit,
+            workspaceId: url.searchParams.get("workspaceId"),
+            projectId: url.searchParams.get("projectId"),
+            type: url.searchParams.get("type"),
+          }),
+        });
+      }
 
       if (req.method === "POST" && url.pathname === "/v1/admin/users") {
         const body = await readBody(req);
