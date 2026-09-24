@@ -1,0 +1,9 @@
+{
+  "schema": "sauceapproved.hercules.hurc.deployment-intent",
+  "version": 1,
+  "network": "base-sepolia",
+  "chainId": 84532,
+  "treasuryAddress": "0x1111111111111111111111111111111111111111",
+  "initialSupplyWholeTokens": "100000000",
+  "broadcast": false
+}
