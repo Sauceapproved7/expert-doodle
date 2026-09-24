@@ -26,7 +26,7 @@ test("identity store hashes passwords and opaque session tokens", async () => {
     ));
     assert.match(
       storedUser.passwordHash,
-      new RegExp("^scrypt-v2\\\\$" + SCRYPT_PROFILE.N + "\\\\$" + SCRYPT_PROFILE.r + "\\\\$" + SCRYPT_PROFILE.p + "\\\\$"),
+      new RegExp("^scrypt-v2\\$" + SCRYPT_PROFILE.N + "\\$" + SCRYPT_PROFILE.r + "\\$" + SCRYPT_PROFILE.p + "\\$"),
     );
 
     await assert.rejects(
