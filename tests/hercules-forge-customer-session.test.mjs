@@ -264,6 +264,42 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
     );
     assert.equal(ownerPublish.status, 201);
 
+    const builderAudit = await fetch(
+      base + "/v1/workspaces/workspace-a/audit",
+      {headers: {cookie: builderLogin.cookie}},
+    );
+    assert.equal(builderAudit.status, 403);
+
+    const ownerAudit = await fetch(
+      base + "/v1/workspaces/workspace-a/audit?limit=100",
+      {headers: {cookie: ownerLogin.cookie}},
+    );
+    assert.equal(ownerAudit.status, 200);
+    const ownerAuditBody = await ownerAudit.json();
+    assert.equal(ownerAuditBody.integrity.verified, true);
+    const workspaceAuditTypes = new Set(ownerAuditBody.events.map((event) => event.type));
+    assert.equal(workspaceAuditTypes.has("project.create"), true);
+    assert.equal(workspaceAuditTypes.has("preview.start"), true);
+    assert.equal(workspaceAuditTypes.has("data.snapshot"), true);
+    assert.equal(workspaceAuditTypes.has("data.restore"), true);
+    assert.equal(workspaceAuditTypes.has("project.publish"), true);
+
+    const globalAudit = await fetch(base + "/v1/audit?limit=100", {
+      headers: {authorization: "Bearer " + controlToken},
+    });
+    assert.equal(globalAudit.status, 200);
+    const globalAuditBody = await globalAudit.json();
+    assert.equal(
+      globalAuditBody.events.some((event) => event.type === "session.login"),
+      true,
+    );
+    const auditText = JSON.stringify(globalAuditBody.events);
+    assert.equal(
+      auditText.includes(fixtureCredential("owner", "a", "fixture", "long", "enough")),
+      false,
+    );
+    assert.equal(auditText.includes(controlToken), false);
+
     const logout = await fetch(base + "/v1/session", {
       method: "DELETE",
       headers: {

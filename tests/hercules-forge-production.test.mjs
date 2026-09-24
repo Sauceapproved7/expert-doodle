@@ -113,9 +113,10 @@ test("production session cookies are Secure and failed login throttling returns 
   });
 
   const limiter = new ForgeLoginRateLimiter({maxFailures: 2, windowMs: 60000});
+  const controlToken = fixtureCredential("control", "fixture", "credential", "long", "enough");
   const server = createForgeControlService({
     root,
-    token: fixtureCredential("control", "fixture", "credential", "long", "enough"),
+    token: controlToken,
     secureSessionCookies: true,
     loginRateLimiter: limiter,
     serviceMode: "production",
@@ -138,7 +139,7 @@ test("production session cookies are Secure and failed login throttling returns 
   try {
     const health = await fetch(base + "/health");
     const healthBody = await health.json();
-    assert.equal(healthBody.version, "1.2");
+    assert.equal(healthBody.version, "1.4");
     assert.equal(healthBody.mode, "production");
     assert.equal(healthBody.publicOrigin, "https://forge.example.test");
 
@@ -155,6 +156,18 @@ test("production session cookies are Secure and failed login throttling returns 
     assert.match(cookie, /HttpOnly/);
     assert.match(cookie, /SameSite=Strict/);
     assert.match(cookie, /Secure/);
+
+    const audit = await fetch(base + "/v1/audit?type=session.login&limit=20", {
+      headers: {authorization: "Bearer " + controlToken},
+    });
+    assert.equal(audit.status, 200);
+    const auditBody = await audit.json();
+    assert.equal(auditBody.events.some((event) => event.outcome === "failure"), true);
+    assert.equal(auditBody.events.some((event) => event.outcome === "blocked"), true);
+    assert.equal(auditBody.events.some((event) => event.outcome === "success"), true);
+    const auditText = JSON.stringify(auditBody.events);
+    assert.equal(auditText.includes(password), false);
+    assert.equal(auditText.includes(controlToken), false);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(root, {recursive: true, force: true});

@@ -9,9 +9,11 @@ import {builderConsoleAsset} from "./builder-console.mjs";
 import {customerConsoleAsset} from "./customer-console.mjs";
 import {ForgeIdentityStore} from "./identity.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES, ForgeLocalRuntimeDataAdapter} from "./runtime-data.mjs";
+import {ForgeAuditStore} from "./audit.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const promptHash = (prompt) => createHash("sha256").update(prompt).digest("hex");
+const emailAuditHash = (email) => createHash("sha256").update(String(email ?? "").trim().toLowerCase()).digest("hex");
 
 function send(res, status, body, headers = {}) {
   res.writeHead(status, {"content-type": "application/json; charset=utf-8", ...headers});
@@ -146,6 +148,7 @@ export function createForgeControlService({
     maxProjectBytes: runtimeDataMaxBytes,
   });
   const identities = new ForgeIdentityStore(root);
+  const audit = new ForgeAuditStore(root);
   const artifactRoot = join(root, "artifacts");
 
   const server = http.createServer(async (req, res) => {
@@ -170,13 +173,14 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "1.2",
+          version: "1.4",
           mode: serviceMode,
           publicOrigin,
           promptIngress: Boolean(interpreter),
           preview: true,
           persistentRuntime: true,
           runtimeDataControl: true,
+          auditEvents: true,
           runtimeDataMaxBytes,
         });
       }
@@ -184,13 +188,32 @@ export function createForgeControlService({
       if (req.method === "POST" && url.pathname === "/v1/session") {
         const body = await readBody(req);
         const rateKey = typeof body.email === "string" ? body.email : "<unknown>";
-        loginRateLimiter?.beforeAttempt(rateKey);
+        const emailHash = emailAuditHash(rateKey);
+        try {
+          loginRateLimiter?.beforeAttempt(rateKey);
+        } catch (error) {
+          if (error?.statusCode === 429) {
+            await audit.append({
+              type: "session.login",
+              outcome: "blocked",
+              actor: {kind: "system"},
+              details: {emailHash, reason: "rate_limit"},
+            });
+          }
+          throw error;
+        }
         try {
           const result = await identities.createSession({
             email: body.email,
             password: body.password,
           });
           loginRateLimiter?.recordSuccess(rateKey);
+          await audit.append({
+            type: "session.login",
+            outcome: "success",
+            actor: {kind: "user", userId: result.user.userId},
+            details: {emailHash},
+          });
           return send(res, 201, {
             user: result.user,
             session: {
@@ -200,7 +223,15 @@ export function createForgeControlService({
             csrfToken: result.csrfToken,
           }, {"set-cookie": sessionCookie(result.token, secureSessionCookies)});
         } catch (error) {
-          if (error?.statusCode === 401) loginRateLimiter?.recordFailure(rateKey);
+          if (error?.statusCode === 401) {
+            loginRateLimiter?.recordFailure(rateKey);
+            await audit.append({
+              type: "session.login",
+              outcome: "failure",
+              actor: {kind: "system"},
+              details: {emailHash, reason: "invalid_credentials"},
+            });
+          }
           throw error;
         }
       }
@@ -230,8 +261,12 @@ export function createForgeControlService({
 
       if (req.method === "DELETE" && url.pathname === "/v1/session") {
         const sessionToken = parseCookies(req).forge_session;
-        await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+        const auth = await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
         await identities.revokeSession(sessionToken);
+        await audit.append({
+          type: "session.logout",
+          actor: {kind: "user", userId: auth.user.userId},
+        });
         return send(res, 200, {revoked: true}, {
           "set-cookie": clearSessionCookie(secureSessionCookies),
         });
@@ -240,6 +275,21 @@ export function createForgeControlService({
       if (parts[0] === "v1" && parts[1] === "workspaces" && parts[2]) {
         const workspaceId = parts[2];
         const sessionToken = parseCookies(req).forge_session;
+
+        if (req.method === "GET" && parts[3] === "audit" && parts.length === 4) {
+          await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+          const integrity = await audit.verify();
+          const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 100;
+          return send(res, 200, {
+            integrity: {verified: integrity.verified},
+            events: await audit.list({
+              limit,
+              workspaceId,
+              projectId: url.searchParams.get("projectId"),
+              type: url.searchParams.get("type"),
+            }),
+          });
+        }
 
         if (req.method === "GET" && parts.length === 3) {
           const auth = await identities.requireWorkspace(sessionToken, workspaceId);
@@ -272,6 +322,13 @@ export function createForgeControlService({
             source: "prompt",
             promptSha256: promptHash(prompt),
           });
+          await audit.append({
+            type: "project.create",
+            actor: {kind: "user", userId: auth.user.userId},
+            workspaceId,
+            projectId: result.project.projectId,
+            details: {revisionId: result.revision.revisionId, source: "prompt"},
+          });
           return send(res, 201, result);
         }
 
@@ -292,7 +349,7 @@ export function createForgeControlService({
           if (req.method === "POST" && parts[5] === "revisions" && parts[6] === "from-prompt" && parts.length === 7) {
             requireInterpreter(interpreter);
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const body = await readBody(req);
             const prompt = requirePrompt(body);
@@ -300,15 +357,30 @@ export function createForgeControlService({
             const revision = await store.saveRevision(projectId, spec, {
               message: body.message ?? "Prompt revision " + promptHash(prompt).slice(0, 12),
             });
+            await audit.append({
+              type: "project.revision",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {revisionId: revision.revisionId, source: "prompt"},
+            });
             return send(res, 201, revision);
           }
 
           if (req.method === "POST" && parts[5] === "revisions" && parts[6] && parts[7] === "preview" && parts.length === 8) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             await store.getRevision(projectId, parts[6]);
-            return send(res, 201, {preview: await previews.start(projectId, parts[6])});
+            const preview = await previews.start(projectId, parts[6]);
+            await audit.append({
+              type: "preview.start",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {revisionId: parts[6]},
+            });
+            return send(res, 201, {preview});
           }
 
           if (req.method === "GET" && parts[5] === "preview" && parts.length === 6) {
@@ -320,9 +392,17 @@ export function createForgeControlService({
 
           if (req.method === "DELETE" && parts[5] === "preview" && parts.length === 6) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const stopped = await previews.stop(projectId);
+            if (stopped) {
+              await audit.append({
+                type: "preview.stop",
+                actor: {kind: "user", userId: auth.user.userId},
+                workspaceId,
+                projectId,
+              });
+            }
             return send(res, stopped ? 200 : 404, {stopped});
           }
 
@@ -354,12 +434,18 @@ export function createForgeControlService({
 
           if (req.method === "POST" && parts[5] === "data" && parts[6] === "snapshots" && parts.length === 7) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             await previews.stop(projectId);
-            return send(res, 201, {
-              snapshot: await runtimeData.createSnapshot(projectId),
+            const snapshot = await runtimeData.createSnapshot(projectId);
+            await audit.append({
+              type: "data.snapshot",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {snapshotId: snapshot.snapshotId, totalBytes: snapshot.totalBytes},
             });
+            return send(res, 201, {snapshot});
           }
 
           if (
@@ -371,17 +457,23 @@ export function createForgeControlService({
             parts.length === 9
           ) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             await previews.stop(projectId);
-            return send(res, 200, {
-              restore: await runtimeData.restoreSnapshot(projectId, parts[7]),
+            const restore = await runtimeData.restoreSnapshot(projectId, parts[7]);
+            await audit.append({
+              type: "data.restore",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {snapshotId: parts[7]},
             });
+            return send(res, 200, {restore});
           }
 
           if (req.method === "POST" && parts[5] === "publish" && parts.length === 6) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const body = await readBody(req);
             const revision = body.revisionId
@@ -398,32 +490,79 @@ export function createForgeControlService({
               revision,
               artifactDir: artifact.artifactDir,
             });
+            await audit.append({
+              type: "project.publish",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {
+                revisionId: revision.revisionId,
+                releaseId: release.releaseId ?? null,
+              },
+            });
             return send(res, 201, {release, artifact: artifact.manifest});
           }
 
           if (req.method === "POST" && parts[5] === "rollback" && parts.length === 6) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const body = await readBody(req);
             if (!body.revisionId) {
               throw Object.assign(new Error("revisionId is required"), {statusCode: 400});
             }
-            return send(res, 200, await releases.rollback({projectId, revisionId: body.revisionId}));
+            const rollback = await releases.rollback({projectId, revisionId: body.revisionId});
+            await audit.append({
+              type: "project.rollback",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {revisionId: body.revisionId},
+            });
+            return send(res, 200, rollback);
           }
         }
       }
 
       requireToken(req, token);
 
+      if (req.method === "GET" && url.pathname === "/v1/audit/verify") {
+        return send(res, 200, {integrity: await audit.verify()});
+      }
+
+      if (req.method === "GET" && url.pathname === "/v1/audit") {
+        const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 100;
+        return send(res, 200, {
+          events: await audit.list({
+            limit,
+            workspaceId: url.searchParams.get("workspaceId"),
+            projectId: url.searchParams.get("projectId"),
+            type: url.searchParams.get("type"),
+          }),
+        });
+      }
+
       if (req.method === "POST" && url.pathname === "/v1/admin/users") {
         const body = await readBody(req);
-        return send(res, 201, {user: await identities.createUser(body)});
+        const user = await identities.createUser(body);
+        await audit.append({
+          type: "admin.user.create",
+          actor: {kind: "control"},
+          details: {userId: user.userId},
+        });
+        return send(res, 201, {user});
       }
 
       if (req.method === "POST" && url.pathname === "/v1/admin/workspaces") {
         const body = await readBody(req);
-        return send(res, 201, {workspace: await identities.createWorkspace(body)});
+        const workspace = await identities.createWorkspace(body);
+        await audit.append({
+          type: "admin.workspace.create",
+          actor: {kind: "control"},
+          workspaceId: workspace.workspaceId,
+          details: {ownerUserId: workspace.ownerUserId},
+        });
+        return send(res, 201, {workspace});
       }
 
       if (
@@ -436,13 +575,18 @@ export function createForgeControlService({
         parts.length === 5
       ) {
         const body = await readBody(req);
-        return send(res, 201, {
-          membership: await identities.addMember({
-            workspaceId: parts[3],
-            userId: body.userId,
-            role: body.role,
-          }),
+        const membership = await identities.addMember({
+          workspaceId: parts[3],
+          userId: body.userId,
+          role: body.role,
         });
+        await audit.append({
+          type: "admin.member.add",
+          actor: {kind: "control"},
+          workspaceId: parts[3],
+          details: {userId: membership.userId, role: membership.role},
+        });
+        return send(res, 201, {membership});
       }
 
       if (req.method === "GET" && url.pathname === "/v1/projects") {
@@ -460,12 +604,24 @@ export function createForgeControlService({
           promptSha256: promptHash(prompt),
         };
         const result = await store.createProject(spec, metadata);
+        await audit.append({
+          type: "project.create",
+          actor: {kind: "control"},
+          projectId: result.project.projectId,
+          details: {revisionId: result.revision.revisionId, source: "prompt"},
+        });
         return send(res, 201, result);
       }
 
       if (req.method === "POST" && url.pathname === "/v1/projects") {
         const body = await readBody(req);
         const result = await store.createProject(body.spec, body.metadata ?? {});
+        await audit.append({
+          type: "project.create",
+          actor: {kind: "control"},
+          projectId: result.project.projectId,
+          details: {revisionId: result.revision.revisionId, source: "spec"},
+        });
         return send(res, 201, result);
       }
 
@@ -489,6 +645,12 @@ export function createForgeControlService({
           const revision = await store.saveRevision(projectId, spec, {
             message: body.message ?? "Prompt revision " + promptHash(prompt).slice(0, 12),
           });
+          await audit.append({
+            type: "project.revision",
+            actor: {kind: "control"},
+            projectId,
+            details: {revisionId: revision.revisionId, source: "prompt"},
+          });
           return send(res, 201, revision);
         }
 
@@ -499,6 +661,12 @@ export function createForgeControlService({
         if (req.method === "POST" && parts[3] === "revisions" && parts.length === 4) {
           const body = await readBody(req);
           const revision = await store.saveRevision(projectId, body.spec, {message: body.message});
+          await audit.append({
+            type: "project.revision",
+            actor: {kind: "control"},
+            projectId,
+            details: {revisionId: revision.revisionId, source: "spec"},
+          });
           return send(res, 201, revision);
         }
 
@@ -526,6 +694,15 @@ export function createForgeControlService({
             projectId,
             revisionId,
           });
+          await audit.append({
+            type: "artifact.build",
+            actor: {kind: "control"},
+            projectId,
+            details: {
+              revisionId,
+              artifactFingerprint: artifact.manifest.artifactFingerprint,
+            },
+          });
           return send(res, 201, {artifact: artifact.manifest});
         }
 
@@ -537,9 +714,14 @@ export function createForgeControlService({
           parts.length === 6
         ) {
           await store.getRevision(projectId, parts[4]);
-          return send(res, 201, {
-            preview: await previews.start(projectId, parts[4]),
+          const preview = await previews.start(projectId, parts[4]);
+          await audit.append({
+            type: "preview.start",
+            actor: {kind: "control"},
+            projectId,
+            details: {revisionId: parts[4]},
           });
+          return send(res, 201, {preview});
         }
 
         if (req.method === "GET" && parts[3] === "preview" && parts.length === 4) {
@@ -551,6 +733,13 @@ export function createForgeControlService({
 
         if (req.method === "DELETE" && parts[3] === "preview" && parts.length === 4) {
           const stopped = await previews.stop(projectId);
+          if (stopped) {
+            await audit.append({
+              type: "preview.stop",
+              actor: {kind: "control"},
+              projectId,
+            });
+          }
           return send(res, stopped ? 200 : 404, {stopped});
         }
 
@@ -580,9 +769,14 @@ export function createForgeControlService({
         if (req.method === "POST" && parts[3] === "data" && parts[4] === "snapshots" && parts.length === 5) {
           await store.getProject(projectId);
           await previews.stop(projectId);
-          return send(res, 201, {
-            snapshot: await runtimeData.createSnapshot(projectId),
+          const snapshot = await runtimeData.createSnapshot(projectId);
+          await audit.append({
+            type: "data.snapshot",
+            actor: {kind: "control"},
+            projectId,
+            details: {snapshotId: snapshot.snapshotId, totalBytes: snapshot.totalBytes},
           });
+          return send(res, 201, {snapshot});
         }
 
         if (
@@ -595,9 +789,14 @@ export function createForgeControlService({
         ) {
           await store.getProject(projectId);
           await previews.stop(projectId);
-          return send(res, 200, {
-            restore: await runtimeData.restoreSnapshot(projectId, parts[5]),
+          const restore = await runtimeData.restoreSnapshot(projectId, parts[5]);
+          await audit.append({
+            type: "data.restore",
+            actor: {kind: "control"},
+            projectId,
+            details: {snapshotId: parts[5]},
           });
+          return send(res, 200, {restore});
         }
 
         if (req.method === "POST" && parts[3] === "publish" && parts.length === 4) {
@@ -618,6 +817,15 @@ export function createForgeControlService({
             revision,
             artifactDir: artifact.artifactDir,
           });
+          await audit.append({
+            type: "project.publish",
+            actor: {kind: "control"},
+            projectId,
+            details: {
+              revisionId: revision.revisionId,
+              releaseId: release.releaseId ?? null,
+            },
+          });
 
           return send(res, 201, {release, artifact: artifact.manifest});
         }
@@ -636,10 +844,17 @@ export function createForgeControlService({
           if (!body.revisionId) {
             throw Object.assign(new Error("revisionId is required"), {statusCode: 400});
           }
-          return send(res, 200, await releases.rollback({
+          const rollback = await releases.rollback({
             projectId,
             revisionId: body.revisionId,
-          }));
+          });
+          await audit.append({
+            type: "project.rollback",
+            actor: {kind: "control"},
+            projectId,
+            details: {revisionId: body.revisionId},
+          });
+          return send(res, 200, rollback);
         }
       }
 

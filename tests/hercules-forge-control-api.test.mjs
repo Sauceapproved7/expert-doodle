@@ -51,8 +51,9 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
     assert.equal(health.body.persistentRuntime, true);
-    assert.equal(health.body.version, "1.2");
+    assert.equal(health.body.version, "1.4");
     assert.equal(health.body.runtimeDataControl, true);
+    assert.equal(health.body.auditEvents, true);
     assert.ok(health.body.runtimeDataMaxBytes > 0);
 
     const consoleResponse = await fetch(base + "/");
@@ -63,6 +64,7 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.match(consoleHtml, /Sign in/);
     assert.match(consoleHtml, /Runtime data/);
     assert.match(consoleHtml, /Create snapshot/);
+    assert.match(consoleHtml, /Security audit/);
     assert.equal(consoleHtml.includes("Control token"), false);
     assert.equal(consoleHtml.includes(token), false);
 
@@ -194,6 +196,32 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(rollback.status, 200);
     assert.equal(rollback.body.rollback, true);
     assert.equal(rollback.body.revisionId, revised.body.revisionId);
+
+    const auditDenied = await request(base, "/v1/audit", {authorized: false});
+    assert.equal(auditDenied.status, 401);
+
+    const auditIntegrity = await request(base, "/v1/audit/verify");
+    assert.equal(auditIntegrity.status, 200);
+    assert.equal(auditIntegrity.body.integrity.verified, true);
+    assert.ok(auditIntegrity.body.integrity.events >= 8);
+
+    const auditEvents = await request(
+      base,
+      "/v1/audit?projectId=control-app&limit=100",
+    );
+    assert.equal(auditEvents.status, 200);
+    const types = new Set(auditEvents.body.events.map((event) => event.type));
+    assert.equal(types.has("project.create"), true);
+    assert.equal(types.has("data.snapshot"), true);
+    assert.equal(types.has("data.restore"), true);
+    assert.equal(types.has("artifact.build"), true);
+    assert.equal(types.has("project.revision"), true);
+    assert.equal(types.has("project.publish"), true);
+    assert.equal(types.has("project.rollback"), true);
+    assert.equal(
+      JSON.stringify(auditEvents.body.events).includes(token),
+      false,
+    );
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(root, {recursive: true, force: true});

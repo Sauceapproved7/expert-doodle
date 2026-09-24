@@ -34,6 +34,7 @@ jobs:
             hercules-forge/interpreter.mjs \
             hercules-forge/workspace.mjs \
             hercules-forge/identity.mjs \
+            hercules-forge/audit.mjs \
             hercules-forge/rate-limit.mjs \
             hercules-forge/production.mjs \
             hercules-forge/production-cli.mjs \
