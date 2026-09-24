@@ -10,6 +10,18 @@ const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const ROLES = new Set(["owner", "admin", "builder", "viewer"]);
 const DEFAULT_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
+// OWASP Password Storage Cheat Sheet (2026): one accepted scrypt profile is
+// N=2^15, r=8, p=3. Keep the parameters encoded with each password hash so
+// future upgrades remain backward compatible.
+export const SCRYPT_PROFILE = Object.freeze({
+  version: "scrypt-v2",
+  N: 2 ** 15,
+  r: 8,
+  p: 3,
+  keylen: 32,
+  maxmem: 64 * 1024 * 1024,
+});
+
 function assertId(label, value) {
   if (!ID.test(String(value ?? ""))) throw new Error(label + " must be a path-safe identifier");
   return String(value);
@@ -39,12 +51,17 @@ async function writeJson(path, value, options = {}) {
   await writeFile(path, json(value), {encoding: "utf8", ...options});
 }
 
-async function derivePassword(password, saltHex = null) {
+async function derivePassword(password, saltHex = null, profile = SCRYPT_PROFILE) {
   if (typeof password !== "string" || password.length < 12 || password.length > 1024) {
     throw new TypeError("password must be between 12 and 1024 characters");
   }
   const salt = saltHex ? Buffer.from(saltHex, "hex") : randomBytes(16);
-  const key = await scrypt(password, salt, 32);
+  const key = await scrypt(password, salt, profile.keylen, {
+    N: profile.N,
+    r: profile.r,
+    p: profile.p,
+    maxmem: profile.maxmem,
+  });
   return {
     salt: salt.toString("hex"),
     hash: Buffer.from(key).toString("hex"),
@@ -52,9 +69,52 @@ async function derivePassword(password, saltHex = null) {
 }
 
 async function verifyPassword(password, encoded) {
-  const [scheme, salt, expectedHex] = String(encoded ?? "").split("$");
-  if (scheme !== "scrypt-v1" || !salt || !expectedHex) return false;
-  const derived = await derivePassword(password, salt);
+  const parts = String(encoded ?? "").split("$");
+  const scheme = parts[0];
+
+  let profile;
+  let salt;
+  let expectedHex;
+
+  if (scheme === "scrypt-v2" && parts.length === 6) {
+    const N = Number(parts[1]);
+    const r = Number(parts[2]);
+    const p = Number(parts[3]);
+    salt = parts[4];
+    expectedHex = parts[5];
+    if (
+      !Number.isSafeInteger(N) || N < 2 ** 14 || N > 2 ** 20 ||
+      !Number.isSafeInteger(r) || r < 1 || r > 32 ||
+      !Number.isSafeInteger(p) || p < 1 || p > 16 ||
+      !salt || !expectedHex
+    ) return false;
+    profile = {
+      version: "scrypt-v2",
+      N,
+      r,
+      p,
+      keylen: expectedHex.length / 2,
+      maxmem: Math.max(64 * 1024 * 1024, 128 * N * r + 8 * 1024 * 1024),
+    };
+  } else if (scheme === "scrypt-v1" && parts.length === 3) {
+    // Backward compatibility for existing Hercules identities created before
+    // the explicit work-factor hardening. New identities never use v1.
+    salt = parts[1];
+    expectedHex = parts[2];
+    profile = {
+      version: "scrypt-v1",
+      N: 2 ** 14,
+      r: 8,
+      p: 1,
+      keylen: expectedHex.length / 2,
+      maxmem: 32 * 1024 * 1024,
+    };
+  } else {
+    return false;
+  }
+
+  if (!Number.isSafeInteger(profile.keylen) || profile.keylen < 16 || profile.keylen > 64) return false;
+  const derived = await derivePassword(password, salt, profile);
   const actual = Buffer.from(derived.hash, "hex");
   const expected = Buffer.from(expectedHex, "hex");
   return actual.length === expected.length && timingSafeEqual(actual, expected);
@@ -98,7 +158,14 @@ export class ForgeIdentityStore {
     const user = {
       userId,
       email,
-      passwordHash: "scrypt-v1$" + passwordParts.salt + "$" + passwordParts.hash,
+      passwordHash: [
+        SCRYPT_PROFILE.version,
+        SCRYPT_PROFILE.N,
+        SCRYPT_PROFILE.r,
+        SCRYPT_PROFILE.p,
+        passwordParts.salt,
+        passwordParts.hash,
+      ].join("$"),
       createdAt: now,
     };
 
