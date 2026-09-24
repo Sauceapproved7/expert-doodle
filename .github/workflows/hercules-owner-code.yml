@@ -33,3 +33,6 @@ jobs:
 
       - name: Verify HURC unsigned deployment planning
         run: node --test tests/hercules-hurc-deployment-plan.test.mjs
+
+      - name: Verify HURC testnet deployment gate
+        run: node --test tests/hercules-hurc-deployment-intent.test.mjs

@@ -1,0 +1,19 @@
+{
+  "schema": "sauceapproved.hercules.hurc-deployment-intent",
+  "version": 1,
+  "token": {
+    "name": "Hercules Coin",
+    "symbol": "HURC"
+  },
+  "source": "hercules-hurc/HURC.sol",
+  "network": {
+    "environment": "testnet",
+    "chainId": 0,
+    "name": "UNSET"
+  },
+  "treasuryAddress": "UNSET",
+  "initialSupplyWholeTokens": 0,
+  "authorization": {
+    "mainnetApproved": false
+  }
+}
