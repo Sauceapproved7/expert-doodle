@@ -21,9 +21,25 @@ function dockerCapture(args,input){
 }
 
 async function ensureEnv(){
-  if(existsSync(envFile))return;
   const secret=()=>randomBytes(32).toString("hex");
-  await writeFile(envFile,`HERCULES_STAGING_DB_PASSWORD=${secret()}\nHERCULES_STAGING_API_PASSWORD=${secret()}\nHERCULES_STAGING_JWT_SECRET=${secret()}\n`,{mode:0o600});
+  let text=existsSync(envFile)?await readFile(envFile,"utf8"):"";
+  const present=new Set(
+    text.split(/\r?\n/).map(line=>line.slice(0,line.indexOf("="))).filter(Boolean),
+  );
+  const required=[
+    "HERCULES_STAGING_DB_PASSWORD",
+    "HERCULES_STAGING_API_PASSWORD",
+    "HERCULES_STAGING_JWT_SECRET",
+    "HERCULES_FORGE_STAGING_CONTROL_TOKEN",
+  ];
+  let changed=!existsSync(envFile);
+  for(const name of required){
+    if(present.has(name))continue;
+    if(text && !text.endsWith("\n"))text+="\n";
+    text+=name+"="+secret()+"\n";
+    changed=true;
+  }
+  if(changed)await writeFile(envFile,text,{mode:0o600});
 }
 
 async function action(name){

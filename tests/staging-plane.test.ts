@@ -8,7 +8,15 @@ describe("self-hosted staging plane",()=>{
     const compose=read("compose.yml");
     expect(compose).toContain("127.0.0.1:55432:5432");
     expect(compose).toContain("127.0.0.1:38080:8080");
+    expect(compose).toContain("127.0.0.1:38700:38700");
     expect(compose).toContain("internal: true");
+  });
+  it("runs Forge from read-only owned source with persistent state",()=>{
+    const compose=read("compose.yml");
+    expect(compose).toContain("../hercules-forge:/repo/hercules-forge:ro");
+    expect(compose).toContain("hercules_forge_state:/forge-state");
+    expect(compose).toContain("/repo/hercules-forge/production-cli.mjs");
+    expect(compose).toContain("HERCULES_FORGE_STAGING_CONTROL_TOKEN");
   });
   it("enforces synthetic data and row ownership",()=>{
     const schema=read("migrations/001_initialize.sql");

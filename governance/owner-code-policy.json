@@ -133,6 +133,13 @@
       ]
     },
     {
+      "path": "scripts/forge-staging-drill.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "docker"
+      ]
+    },
+    {
       "path": "scripts/staging-plane.mjs",
       "kind": "external-infrastructure-adapter",
       "dependencies": [

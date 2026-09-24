@@ -47,7 +47,7 @@ jobs:
           retention-days: 30
       - name: Capture staging diagnostics
         if: failure()
-        run: docker compose --env-file staging-plane/.env -f staging-plane/compose.yml logs --no-color migrate postgres postgrest api
+        run: docker compose --env-file staging-plane/.env -f staging-plane/compose.yml logs --no-color migrate postgres postgrest api forge
       - name: Recalculate global benchmark
         run: node scripts/recalculate-global-infrastructure.mjs
       - name: Publish job summary
