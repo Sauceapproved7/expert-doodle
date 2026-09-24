@@ -1,0 +1,44 @@
+name: Hercules Security Baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "hercules-forge/**"
+      - "hercules-hurc/**"
+      - "scripts/security-baseline.mjs"
+      - "SECURITY.md"
+      - "docs/HERCULES-THREAT-MODEL.md"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "hercules-forge/**"
+      - "hercules-hurc/**"
+      - "scripts/security-baseline.mjs"
+      - "SECURITY.md"
+      - "docs/HERCULES-THREAT-MODEL.md"
+      - ".github/workflows/**"
+
+permissions:
+  contents: read
+
+jobs:
+  security-baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Enforce owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+
+      - name: Enforce security baseline
+        run: node scripts/security-baseline.mjs
+
+      - name: Run Forge security-sensitive tests
+        run: node --test tests/hercules-forge*.test.mjs
+
+      - name: Run HURC security-sensitive tests
+        run: node --test tests/hercules-hurc-*.test.mjs
