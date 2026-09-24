@@ -30,11 +30,30 @@ That amount is converted to 18-decimal units, created once, and assigned entirel
 
 This keeps the token supply decision outside source code until deployment approval.
 
+## Compiler gate
+
+HURC is pinned to Solidity `0.8.24+commit.e11b9ed9`. The contract workflow downloads the official static compiler, verifies its pinned SHA-256 before execution, generates deterministic Standard JSON input from the canonical source, compiles the contract, and validates the resulting ABI and bytecode.
+
+No compiler package or third-party contract library is vendored into Hercules.
+
+## Deployment readiness
+
+Production deployment remains disabled.
+
+The deployment planner currently permits only:
+
+- Base Sepolia — chain ID `84532`
+- Ethereum Sepolia — chain ID `11155111`
+
+`hercules-hurc/deployment-request.template.json` intentionally leaves treasury and supply unset. `scripts/hurc-plan.mjs` validates the selected public testnet, treasury address, supply, and optional compiler bytecode, then creates unsigned deployment data.
+
+The planner does **not** store private keys, sign transactions, broadcast transactions, or spend gas.
+
 ## Deployment state
 
 **Not deployed.**
 
-No mainnet contract address, treasury address, chain, or token-supply quantity is asserted by this source foundation. Those are irreversible or financial deployment choices and require an authorized deployment transaction.
+The canonical deployment manifest remains `not-deployed` until the required deployment parameters are explicitly authorized. No mainnet contract address, treasury address, chain, or token-supply quantity is asserted by the repository.
 
 ## Intended Hercules utility
 
@@ -42,9 +61,13 @@ HURC is designed as a utility/payment layer that Hercules can later use for plat
 
 ## Verification
 
-Run the repository owner-code verifier and HURC source test before deployment work:
-
 ```sh
 node scripts/verify-owner-code-only.mjs
+node scripts/validate-hurc-deployment.mjs
 node --test tests/hercules-hurc-source.test.mjs
+node --test tests/hercules-hurc-deployment.test.mjs
+node --test tests/hercules-hurc-deployment-plan.test.mjs
+node scripts/hurc-solc-input.mjs > /tmp/hurc-solc-input.json
 ```
+
+The `HURC Contract Gate` performs the pinned compiler download, checksum verification, compilation, ABI/bytecode validation, and HURC test suite automatically.
