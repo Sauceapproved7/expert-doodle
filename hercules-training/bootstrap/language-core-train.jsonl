@@ -1,0 +1,99 @@
+{"text":"Hercules explains the goal with clear context and concrete steps."}
+{"text":"Hercules checks evidence before claiming that a result is complete."}
+{"text":"Hercules records provenance before a checkpoint can become active."}
+{"text":"Hercules compares alternatives using the same documented criteria."}
+{"text":"Hercules summarizes findings without hiding important uncertainty."}
+{"text":"The system plans the work by naming constraints actions and verification."}
+{"text":"The system routes each request to the smallest capable native model."}
+{"text":"The system keeps unverified artifacts outside the production path."}
+{"text":"The system tests changes before merging them into the canonical branch."}
+{"text":"The system uses deterministic hashes to identify generated artifacts."}
+{"text":"The model plane explains the goal with clear context and concrete steps."}
+{"text":"The model plane checks evidence before claiming that a result is complete."}
+{"text":"The model plane records provenance before a checkpoint can become active."}
+{"text":"The model plane compares alternatives using the same documented criteria."}
+{"text":"The model plane summarizes findings without hiding important uncertainty."}
+{"text":"The training pipeline plans the work by naming constraints actions and verification."}
+{"text":"The training pipeline routes each request to the smallest capable native model."}
+{"text":"The training pipeline keeps unverified artifacts outside the production path."}
+{"text":"The training pipeline tests changes before merging them into the canonical branch."}
+{"text":"The training pipeline uses deterministic hashes to identify generated artifacts."}
+{"text":"The operator console explains the goal with clear context and concrete steps."}
+{"text":"The operator console checks evidence before claiming that a result is complete."}
+{"text":"The operator console records provenance before a checkpoint can become active."}
+{"text":"The operator console compares alternatives using the same documented criteria."}
+{"text":"The operator console summarizes findings without hiding important uncertainty."}
+{"text":"The compiler plans the work by naming constraints actions and verification."}
+{"text":"The compiler routes each request to the smallest capable native model."}
+{"text":"The compiler keeps unverified artifacts outside the production path."}
+{"text":"The compiler tests changes before merging them into the canonical branch."}
+{"text":"The compiler uses deterministic hashes to identify generated artifacts."}
+{"text":"The release service explains the goal with clear context and concrete steps."}
+{"text":"The release service checks evidence before claiming that a result is complete."}
+{"text":"The release service records provenance before a checkpoint can become active."}
+{"text":"The release service compares alternatives using the same documented criteria."}
+{"text":"The release service summarizes findings without hiding important uncertainty."}
+{"text":"The evidence layer plans the work by naming constraints actions and verification."}
+{"text":"The evidence layer routes each request to the smallest capable native model."}
+{"text":"The evidence layer keeps unverified artifacts outside the production path."}
+{"text":"The evidence layer tests changes before merging them into the canonical branch."}
+{"text":"The evidence layer uses deterministic hashes to identify generated artifacts."}
+{"text":"The native runtime explains the goal with clear context and concrete steps."}
+{"text":"The native runtime checks evidence before claiming that a result is complete."}
+{"text":"The native runtime records provenance before a checkpoint can become active."}
+{"text":"The native runtime compares alternatives using the same documented criteria."}
+{"text":"The native runtime summarizes findings without hiding important uncertainty."}
+{"text":"The research engine plans the work by naming constraints actions and verification."}
+{"text":"The research engine routes each request to the smallest capable native model."}
+{"text":"The research engine keeps unverified artifacts outside the production path."}
+{"text":"The research engine tests changes before merging them into the canonical branch."}
+{"text":"The research engine uses deterministic hashes to identify generated artifacts."}
+{"text":"A reliable answer separates observed facts from assumptions and interpretations."}
+{"text":"A safe deployment requires a verified artifact a known source commit and a rollback path."}
+{"text":"A useful plan states the target the blockers the next action and the evidence of completion."}
+{"text":"A model checkpoint should never be called active before evaluation evidence passes its gate."}
+{"text":"Hercules keeps external infrastructure replaceable while preserving owner controlled product logic."}
+{"text":"The native registry binds model identity task capability lifecycle state runtime and checkpoint hash."}
+{"text":"The retrieval layer ranks relevant knowledge before a research or reasoning step consumes it."}
+{"text":"The Guard model classifies routine consequential and prohibited actions before execution."}
+{"text":"The Agent model chooses the orchestration path for code research vision speech and general work."}
+{"text":"Core language capability must grow from measured checkpoints rather than marketing labels."}
+{"text":"Coder should eventually generate review debug test and build output from native language checkpoints."}
+{"text":"Research should choose primary current comparative or verification evidence strategies before synthesis."}
+{"text":"Vision needs a future pixel native checkpoint before it can claim direct image understanding."}
+{"text":"Voice needs future audio decoding and synthesis checkpoints before it can claim speech capability."}
+{"text":"Every native model should preserve reproducibility from data declaration through runtime activation."}
+{"text":"Training data must have an explicit rights basis content hash source commit and permission for training."}
+{"text":"Held out evaluation data must remain separate from examples used to fit model parameters."}
+{"text":"The model plane must fail closed when an active checkpoint runtime is unavailable."}
+{"text":"Production policy should prefer verified native checkpoints and reject unknown model origins."}
+{"text":"A generated response should be concise when the task is simple and detailed when the task is complex."}
+{"text":"The system can revise a plan when new repository evidence makes an older branch stale."}
+{"text":"Repository state is canonical only after required checks pass and the change reaches main."}
+{"text":"Tests should catch syntax errors runtime mismatches stale attestations and broken ownership boundaries."}
+{"text":"A control API should authenticate mutations bound request sizes and return structured errors."}
+{"text":"The language foundation begins with tokenizer training next token prediction evaluation and generation."}
+{"text":"A byte based tokenizer can represent any utf eight text without unknown token failures."}
+{"text":"Byte pair merges reduce sequence length by learning repeated adjacent byte patterns from owned text."}
+{"text":"An n gram language model predicts the next token from recent token history with smoothing and backoff."}
+{"text":"Perplexity measures how surprised a language model is by held out token sequences."}
+{"text":"Next token accuracy measures how often the highest probability token matches the held out target."}
+{"text":"Round trip decoding proves that tokenizer encoding preserves the original text exactly."}
+{"text":"Compression ratio measures whether learned merges shorten token sequences relative to raw bytes."}
+{"text":"The first generative baseline is intentionally small and should not be confused with frontier reasoning."}
+{"text":"Later versions can replace the statistical baseline with larger neural checkpoints under the same controls."}
+{"text":"A future transformer trainer must still preserve dataset rights checkpoint hashes evaluations and attestations."}
+{"text":"The system should improve capability without weakening provenance security or owner code policy."}
+{"text":"Hercules can use specialized models together instead of forcing every task through one checkpoint."}
+{"text":"A model family may advance versions while its stable task contract remains unchanged."}
+{"text":"A candidate checkpoint should be promoted only after reproducible training succeeds on canonical main."}
+{"text":"The owner code gate prevents vendored runtime dependencies from silently entering the product."}
+{"text":"Pinned workflow actions make continuous integration dependencies explicit and auditable."}
+{"text":"External compute can be infrastructure without becoming packaged Hercules source code."}
+{"text":"The strongest next step is the one that increases real capability while preserving verification."}
+{"text":"Generation quality should be evaluated on text that was not used to train the language parameters."}
+{"text":"A prompt can seed generation while the language model predicts a continuation token by token."}
+{"text":"The tokenizer vocabulary is learned from project authored text and stored inside the checkpoint bundle."}
+{"text":"The language model uses additive smoothing so unseen continuations still receive finite probability."}
+{"text":"Backoff lets prediction use shorter contexts when a longer token history was never observed."}
+{"text":"Deterministic tie breaking makes training and evaluation reproducible across repeated runs."}
