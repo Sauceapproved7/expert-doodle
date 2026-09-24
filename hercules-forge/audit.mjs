@@ -1,5 +1,5 @@
 import {createHash} from "node:crypto";
-import {appendFile, mkdir, readFile} from "node:fs/promises";
+import {appendFile, mkdir, readFile, rename, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 
 const AUDIT_VERSION = 1;
@@ -89,6 +89,22 @@ function verifyEventShape(event, expectedSequence, previousHash) {
   if (event.hash !== expectedHash) throw new Error("audit event hash mismatch");
 }
 
+async function readJsonOrNull(path) {
+  try {
+    return JSON.parse(await readFile(path, "utf8"));
+  } catch (error) {
+    if (error?.code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+async function writeJsonAtomic(path, value) {
+  await mkdir(dirname(path), {recursive: true});
+  const temp = path + ".tmp-" + process.pid + "-" + Date.now();
+  await writeFile(temp, JSON.stringify(value, null, 2) + "\n", {encoding: "utf8", mode: 0o600});
+  await rename(temp, path);
+}
+
 async function readEvents(path) {
   let text;
   try {
@@ -120,17 +136,35 @@ export class ForgeAuditStore {
     if (!root) throw new TypeError("root is required");
     if (typeof now !== "function") throw new TypeError("now must be a function");
     this.path = join(root, "audit", "events.jsonl");
+    this.headPath = join(root, "audit", "head.json");
     this.now = now;
     this.queue = Promise.resolve();
   }
 
   async verify() {
     const events = await readEvents(this.path);
+    const expected = {
+      version: AUDIT_VERSION,
+      lastSequence: events.at(-1)?.sequence ?? 0,
+      lastHash: events.at(-1)?.hash ?? null,
+    };
+    const head = await readJsonOrNull(this.headPath);
+    if (events.length === 0 && head == null) {
+      return {verified: true, events: 0, ...expected};
+    }
+    if (
+      !head ||
+      head.version !== expected.version ||
+      head.lastSequence !== expected.lastSequence ||
+      head.lastHash !== expected.lastHash
+    ) {
+      throw new Error("audit head checkpoint mismatch");
+    }
     return {
       verified: true,
       events: events.length,
-      lastSequence: events.at(-1)?.sequence ?? 0,
-      lastHash: events.at(-1)?.hash ?? null,
+      lastSequence: expected.lastSequence,
+      lastHash: expected.lastHash,
     };
   }
 
@@ -172,6 +206,11 @@ export class ForgeAuditStore {
       }
       await mkdir(dirname(this.path), {recursive: true});
       await appendFile(this.path, line, {encoding: "utf8", mode: 0o600});
+      await writeJsonAtomic(this.headPath, {
+        version: AUDIT_VERSION,
+        lastSequence: event.sequence,
+        lastHash: event.hash,
+      });
       return event;
     });
     this.queue = current;
