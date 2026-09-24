@@ -71,3 +71,19 @@ node scripts/hurc-solc-input.mjs > /tmp/hurc-solc-input.json
 ```
 
 The `HURC Contract Gate` performs the pinned compiler download, checksum verification, compilation, ABI/bytecode validation, and HURC test suite automatically.
+
+
+## Base Sepolia readiness
+
+The canonical testnet target is Base Sepolia:
+
+- chain ID: `84532`
+- chain ID hex: `0x14a34`
+- public RPC: `https://sepolia.base.org`
+- explorer: `https://sepolia.basescan.org`
+
+The repository pins Solidity compiler `0.8.24+commit.e11b9ed9` and verifies its published SHA-256 before compiling. The compiler and public RPC are external infrastructure boundaries; neither is packaged or represented as Hercules-owned code.
+
+The HURC build workflow compiles the exact committed `hercules-hurc/HURC.sol`, records source/build evidence, validates the testnet deployment intent, and confirms the RPC reports Base Sepolia before any signing step.
+
+Repository deployment intents must keep `broadcast=false`. A blockchain transaction is not broadcast from committed configuration, and no private key belongs in this repository.
