@@ -1,0 +1,75 @@
+{"label":"primary","text":"find the official api documentation for this endpoint"}
+{"label":"primary","text":"use the government regulation text as the source"}
+{"label":"primary","text":"read the vendor reference manual and extract the required fields"}
+{"label":"primary","text":"find the original research paper and summarize its method"}
+{"label":"primary","text":"use the official release notes for this software change"}
+{"label":"primary","text":"check the statute and quote the controlling section"}
+{"label":"primary","text":"read the company filing for the reported revenue"}
+{"label":"primary","text":"find the standards body specification for this protocol"}
+{"label":"primary","text":"use the repository documentation as the canonical source"}
+{"label":"primary","text":"find the court opinion rather than a blog summary"}
+{"label":"primary","text":"read the official product documentation for configuration details"}
+{"label":"primary","text":"use the agency guidance page for the compliance requirement"}
+{"label":"primary","text":"find the original dataset documentation and methodology"}
+{"label":"primary","text":"look up the exchange rulebook for the trading requirement"}
+{"label":"primary","text":"use the official security advisory for the vulnerability details"}
+{"label":"current","text":"what changed today with this company"}
+{"label":"current","text":"find the latest news and current official updates"}
+{"label":"current","text":"what happened this week in the market"}
+{"label":"current","text":"check the newest release announced today"}
+{"label":"current","text":"find recent reporting about the outage"}
+{"label":"current","text":"what is the current status of the service incident"}
+{"label":"current","text":"look up the latest policy announcement"}
+{"label":"current","text":"find developments from the past twenty four hours"}
+{"label":"current","text":"check this week's news about the platform"}
+{"label":"current","text":"what are the newest changes to the pricing plan"}
+{"label":"current","text":"find the most recent election results that are already established"}
+{"label":"current","text":"what is the latest version released by the project"}
+{"label":"current","text":"check current availability and recent updates"}
+{"label":"current","text":"find breaking developments about the merger"}
+{"label":"current","text":"what changed recently in the regulation"}
+{"label":"compare","text":"compare these two software frameworks using the same criteria"}
+{"label":"compare","text":"evaluate the documented differences between both api versions"}
+{"label":"compare","text":"compare three cloud providers on price and features"}
+{"label":"compare","text":"show how these two standards differ"}
+{"label":"compare","text":"compare the policies side by side without choosing a winner"}
+{"label":"compare","text":"contrast these two research papers and their methods"}
+{"label":"compare","text":"compare the fees across these trading platforms"}
+{"label":"compare","text":"show the differences between these product plans"}
+{"label":"compare","text":"compare these suppliers on fulfillment and quality"}
+{"label":"compare","text":"contrast the old and new specification"}
+{"label":"compare","text":"compare the two implementation approaches"}
+{"label":"compare","text":"show differences across the three datasets"}
+{"label":"compare","text":"compare these services using documented capabilities"}
+{"label":"compare","text":"contrast historical and current rules"}
+{"label":"compare","text":"compare the source claims and supporting evidence"}
+{"label":"verify","text":"verify whether this factual claim is true"}
+{"label":"verify","text":"check this statement against reliable evidence"}
+{"label":"verify","text":"confirm whether the quoted number matches the filing"}
+{"label":"verify","text":"fact check this assertion using authoritative sources"}
+{"label":"verify","text":"validate that this release really includes the feature"}
+{"label":"verify","text":"confirm the reported date from the original record"}
+{"label":"verify","text":"check whether this citation supports the claim"}
+{"label":"verify","text":"verify that the policy language says what this summary claims"}
+{"label":"verify","text":"confirm the checksum against the published artifact"}
+{"label":"verify","text":"check whether the article accurately describes the study"}
+{"label":"verify","text":"validate the version number from official documentation"}
+{"label":"verify","text":"confirm whether this company actually announced the change"}
+{"label":"verify","text":"fact check the timeline with primary records"}
+{"label":"verify","text":"verify the statistic and identify its source"}
+{"label":"verify","text":"check if the documentation contradicts this claim"}
+{"label":"background","text":"explain the history of this technology"}
+{"label":"background","text":"give me background context on how this system developed"}
+{"label":"background","text":"teach me the basic concepts behind this protocol"}
+{"label":"background","text":"summarize the long term history of the company"}
+{"label":"background","text":"explain how this law evolved over time"}
+{"label":"background","text":"give an overview of the field and key terminology"}
+{"label":"background","text":"explain the architecture at a high level"}
+{"label":"background","text":"summarize the background of this scientific topic"}
+{"label":"background","text":"give me historical context for the market structure"}
+{"label":"background","text":"explain what this standard is and why it exists"}
+{"label":"background","text":"provide an overview before we go into current changes"}
+{"label":"background","text":"teach me the fundamentals of the technology"}
+{"label":"background","text":"explain the origin and major milestones of the project"}
+{"label":"background","text":"give context for how these systems usually work"}
+{"label":"background","text":"summarize the established background literature"}
