@@ -276,6 +276,21 @@ export function createForgeControlService({
         const workspaceId = parts[2];
         const sessionToken = parseCookies(req).forge_session;
 
+        if (req.method === "GET" && parts[3] === "audit" && parts.length === 4) {
+          await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+          const integrity = await audit.verify();
+          const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 100;
+          return send(res, 200, {
+            integrity: {verified: integrity.verified},
+            events: await audit.list({
+              limit,
+              workspaceId,
+              projectId: url.searchParams.get("projectId"),
+              type: url.searchParams.get("type"),
+            }),
+          });
+        }
+
         if (req.method === "GET" && parts.length === 3) {
           const auth = await identities.requireWorkspace(sessionToken, workspaceId);
           return send(res, 200, {
@@ -307,6 +322,13 @@ export function createForgeControlService({
             source: "prompt",
             promptSha256: promptHash(prompt),
           });
+          await audit.append({
+            type: "project.create",
+            actor: {kind: "user", userId: auth.user.userId},
+            workspaceId,
+            projectId: result.project.projectId,
+            details: {revisionId: result.revision.revisionId, source: "prompt"},
+          });
           return send(res, 201, result);
         }
 
@@ -327,7 +349,7 @@ export function createForgeControlService({
           if (req.method === "POST" && parts[5] === "revisions" && parts[6] === "from-prompt" && parts.length === 7) {
             requireInterpreter(interpreter);
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const body = await readBody(req);
             const prompt = requirePrompt(body);
@@ -335,15 +357,30 @@ export function createForgeControlService({
             const revision = await store.saveRevision(projectId, spec, {
               message: body.message ?? "Prompt revision " + promptHash(prompt).slice(0, 12),
             });
+            await audit.append({
+              type: "project.revision",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {revisionId: revision.revisionId, source: "prompt"},
+            });
             return send(res, 201, revision);
           }
 
           if (req.method === "POST" && parts[5] === "revisions" && parts[6] && parts[7] === "preview" && parts.length === 8) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             await store.getRevision(projectId, parts[6]);
-            return send(res, 201, {preview: await previews.start(projectId, parts[6])});
+            const preview = await previews.start(projectId, parts[6]);
+            await audit.append({
+              type: "preview.start",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {revisionId: parts[6]},
+            });
+            return send(res, 201, {preview});
           }
 
           if (req.method === "GET" && parts[5] === "preview" && parts.length === 6) {
@@ -355,9 +392,17 @@ export function createForgeControlService({
 
           if (req.method === "DELETE" && parts[5] === "preview" && parts.length === 6) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const stopped = await previews.stop(projectId);
+            if (stopped) {
+              await audit.append({
+                type: "preview.stop",
+                actor: {kind: "user", userId: auth.user.userId},
+                workspaceId,
+                projectId,
+              });
+            }
             return send(res, stopped ? 200 : 404, {stopped});
           }
 
@@ -389,12 +434,18 @@ export function createForgeControlService({
 
           if (req.method === "POST" && parts[5] === "data" && parts[6] === "snapshots" && parts.length === 7) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             await previews.stop(projectId);
-            return send(res, 201, {
-              snapshot: await runtimeData.createSnapshot(projectId),
+            const snapshot = await runtimeData.createSnapshot(projectId);
+            await audit.append({
+              type: "data.snapshot",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {snapshotId: snapshot.snapshotId, totalBytes: snapshot.totalBytes},
             });
+            return send(res, 201, {snapshot});
           }
 
           if (
@@ -406,17 +457,23 @@ export function createForgeControlService({
             parts.length === 9
           ) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             await previews.stop(projectId);
-            return send(res, 200, {
-              restore: await runtimeData.restoreSnapshot(projectId, parts[7]),
+            const restore = await runtimeData.restoreSnapshot(projectId, parts[7]);
+            await audit.append({
+              type: "data.restore",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {snapshotId: parts[7]},
             });
+            return send(res, 200, {restore});
           }
 
           if (req.method === "POST" && parts[5] === "publish" && parts.length === 6) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const body = await readBody(req);
             const revision = body.revisionId
@@ -433,18 +490,36 @@ export function createForgeControlService({
               revision,
               artifactDir: artifact.artifactDir,
             });
+            await audit.append({
+              type: "project.publish",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {
+                revisionId: revision.revisionId,
+                releaseId: release.releaseId ?? null,
+              },
+            });
             return send(res, 201, {release, artifact: artifact.manifest});
           }
 
           if (req.method === "POST" && parts[5] === "rollback" && parts.length === 6) {
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
-            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const body = await readBody(req);
             if (!body.revisionId) {
               throw Object.assign(new Error("revisionId is required"), {statusCode: 400});
             }
-            return send(res, 200, await releases.rollback({projectId, revisionId: body.revisionId}));
+            const rollback = await releases.rollback({projectId, revisionId: body.revisionId});
+            await audit.append({
+              type: "project.rollback",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              projectId,
+              details: {revisionId: body.revisionId},
+            });
+            return send(res, 200, rollback);
           }
         }
       }
