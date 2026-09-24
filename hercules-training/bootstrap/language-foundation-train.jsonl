@@ -1,0 +1,80 @@
+{"text":"Hercules validates every model checkpoint before production activation."}
+{"text":"Hercules records dataset provenance before a training job can begin."}
+{"text":"Hercules keeps model identity separate from the runtime that executes it."}
+{"text":"Hercules routes software work through the native Coder control model."}
+{"text":"Hercules routes research work through the native Research control model."}
+{"text":"Hercules routes visual requests through the native Vision control model."}
+{"text":"Hercules routes voice requests through the native Voice control model."}
+{"text":"Hercules routes sensitive actions through the native Guard policy model."}
+{"text":"Hercules retrieves relevant memory with the native Retrieval model."}
+{"text":"Hercules selects orchestration intent with the native Agent Router."}
+{"text":"The model plane rejects an active checkpoint without a verified runtime."}
+{"text":"The model plane rejects a checkpoint when the attestation hash does not match."}
+{"text":"The model plane exposes authenticated routes for model inventory and inference."}
+{"text":"The training plane records datasets jobs checkpoints evaluations and activation evidence."}
+{"text":"The training plane requires explicit rights and training permission for every dataset."}
+{"text":"The training plane binds every checkpoint to the exact training job fingerprint."}
+{"text":"The training plane binds every evaluation result to the exact checkpoint hash."}
+{"text":"The training plane keeps external training workers outside activation authority."}
+{"text":"Forge validates application specifications before compiling project source."}
+{"text":"Forge records artifact fingerprints before release promotion."}
+{"text":"Forge isolates staging checks before a production release."}
+{"text":"Forge preserves rollback evidence for verified releases."}
+{"text":"Owner code policy rejects vendored dependencies inside Hercules runtime roots."}
+{"text":"Owner code policy rejects unapproved workflow actions and committed model binaries."}
+{"text":"Owner code policy permits Node builtins and repository relative imports."}
+{"text":"Owner code policy keeps external infrastructure declared and replaceable."}
+{"text":"A native Hercules checkpoint must be reproducible from declared source and training data."}
+{"text":"A native Hercules checkpoint must pass held-out evaluation before activation."}
+{"text":"A native Hercules checkpoint must preserve an immutable SHA 256 identity."}
+{"text":"A native Hercules model must fail closed when its runtime is unavailable."}
+{"text":"Core language capability begins with tokenization and next token prediction."}
+{"text":"Core language capability grows through better corpora stronger objectives and larger models."}
+{"text":"A tokenizer maps text into stable token identifiers for training and inference."}
+{"text":"A tokenizer must preserve deterministic encoding for identical text and vocabulary."}
+{"text":"A language model predicts a next token from the context that came before it."}
+{"text":"A language model can use shorter context when a longer context was never observed."}
+{"text":"A backoff language model uses trigram context before bigram or unigram context."}
+{"text":"A held out language set measures whether the model learned reusable sequence patterns."}
+{"text":"Perplexity measures how surprised a language model is by held out tokens."}
+{"text":"Lower held out perplexity is better when the comparison uses the same tokenizer."}
+{"text":"A unigram baseline predicts tokens without using surrounding context."}
+{"text":"A contextual model should outperform a unigram baseline on structured project language."}
+{"text":"Training evidence should report model size token count accuracy and perplexity."}
+{"text":"Training evidence should never call a small baseline a frontier language model."}
+{"text":"Hercules can improve the baseline later without changing provenance and activation controls."}
+{"text":"Hercules Core v0.2 is a language foundation candidate and not a frontier reasoning model."}
+{"text":"Hercules Coder can later share the tokenizer while training on software specific corpora."}
+{"text":"Hercules Research can later share the tokenizer while training on evidence specific corpora."}
+{"text":"Hercules Agent can later use language representations for richer orchestration decisions."}
+{"text":"Hercules Guard can later use language representations for stronger policy classification."}
+{"text":"Every upgrade should preserve deterministic checkpoint hashing and held out evaluation."}
+{"text":"Every upgrade should preserve the owner code boundary and explicit external adapters."}
+{"text":"Every upgrade should preserve native first routing in production."}
+{"text":"Every upgrade should remain reversible when evaluation or runtime checks fail."}
+{"text":"The canonical repository is the source of truth for Hercules model code and evidence."}
+{"text":"The canonical branch must pass training model plane provenance and owner code gates."}
+{"text":"An unverified branch cannot silently redefine the active model catalog."}
+{"text":"An evaluation gate should block promotion when required metrics miss their thresholds."}
+{"text":"A checkpoint attestation records source commit workflow evidence and evaluation outcome."}
+{"text":"An embedded runtime reconstructs a model only when its checkpoint hash matches."}
+{"text":"An HTTP runtime remains replaceable behind the stable model plane contract."}
+{"text":"Memory search uses native retrieval embeddings and reranking before synthesis."}
+{"text":"Research strategy prefers primary sources when a claim depends on official documentation."}
+{"text":"Research strategy prefers current sources when the answer depends on recent changes."}
+{"text":"Research strategy compares matched evidence when alternatives must be contrasted."}
+{"text":"Research strategy verifies concrete claims against authoritative supporting evidence."}
+{"text":"Guard allows routine read test validation and local inspection work."}
+{"text":"Guard reviews consequential changes such as production deployment or secret rotation."}
+{"text":"Guard denies unauthorized access credential theft evidence tampering and provenance bypass."}
+{"text":"Agent routing sends code requests to software work and speech requests to voice work."}
+{"text":"Agent routing sends image requests to vision work and sourced questions to research work."}
+{"text":"Retrieval ranks relevant documents before downstream models consume memory context."}
+{"text":"Staging prevents an unverified release from becoming the canonical production build."}
+{"text":"Observability records health latency failures and evidence for operational review."}
+{"text":"Reliable model systems separate model quality from deployment authority."}
+{"text":"Reliable model systems preserve source lineage from corpus to checkpoint to runtime."}
+{"text":"Reliable model systems test failure behavior as carefully as successful inference."}
+{"text":"Reliable model systems expose capability limits instead of claiming unsupported intelligence."}
+{"text":"Hercules language training starts small so every behavior can be inspected and reproduced."}
+{"text":"Hercules language training can scale after tokenizer corpus and evaluation contracts stabilize."}
