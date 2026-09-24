@@ -4,6 +4,7 @@ export {compileForgeProject, compileFromInterpreter} from "./compiler.mjs";
 export {ForgeInterpreter, StaticForgeInterpreter, HttpForgeInterpreter} from "./interpreter.mjs";
 export {ForgeWorkspaceStore} from "./workspace.mjs";
 export {ForgeIdentityStore, normalizeEmail, verifyPassword} from "./identity.mjs";
+export {ForgeAuditStore} from "./audit.mjs";
 export {ForgeLoginRateLimiter} from "./rate-limit.mjs";
 export {buildForgeArtifact, verifyForgeArtifact} from "./artifact.mjs";
 export {ForgeDeploymentAdapter, ForgeLocalReleaseAdapter} from "./releases.mjs";
