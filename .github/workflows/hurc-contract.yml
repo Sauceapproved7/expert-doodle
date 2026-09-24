@@ -1,0 +1,51 @@
+name: HURC Contract Gate
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "hercules-hurc/**"
+      - "scripts/hurc-*.mjs"
+      - "tests/hercules-hurc-*.test.mjs"
+      - ".github/workflows/hurc-contract.yml"
+  pull_request:
+    paths:
+      - "hercules-hurc/**"
+      - "scripts/hurc-*.mjs"
+      - "tests/hercules-hurc-*.test.mjs"
+      - ".github/workflows/hurc-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  compile-and-verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Verify owner-code-only boundary
+        run: node scripts/verify-owner-code-only.mjs
+
+      - name: Generate deterministic solc input
+        run: node scripts/hurc-solc-input.mjs > /tmp/hurc-solc-input.json
+
+      - name: Fetch pinned Solidity compiler
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3             "https://binaries.soliditylang.org/linux-amd64/solc-linux-amd64-v0.8.24+commit.e11b9ed9"             -o /tmp/solc
+          printf '%s  %s\n'             'fb03a29a517452b9f12bcf459ef37d0a543765bb3bbc911e70a87d6a37c30d5f'             /tmp/solc | sha256sum -c -
+          chmod +x /tmp/solc
+          /tmp/solc --version | grep -F '0.8.24+commit.e11b9ed9'
+
+      - name: Compile HURC
+        run: /tmp/solc --standard-json < /tmp/hurc-solc-input.json > /tmp/hurc-solc-output.json
+
+      - name: Verify compiled contract surface
+        run: node scripts/hurc-check-solc-output.mjs /tmp/hurc-solc-output.json
+
+      - name: Run HURC tests
+        run: node --test tests/hercules-hurc-source.test.mjs tests/hercules-hurc-deployment-plan.test.mjs
