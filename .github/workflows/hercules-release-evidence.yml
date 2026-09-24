@@ -1,0 +1,66 @@
+name: Hercules Release Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  attest-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Enforce owner-code and security baselines
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+
+      - name: Generate runtime manifest and SPDX SBOM
+        run: node scripts/release-evidence.mjs --output-dir /tmp/hercules-release
+
+      - name: Build deterministic runtime source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar \
+            --sort=name \
+            --mtime='UTC 1970-01-01' \
+            --owner=0 \
+            --group=0 \
+            --numeric-owner \
+            -czf /tmp/hercules-release/hercules-runtime-source.tgz \
+            hercules-forge \
+            hercules-models \
+            hercules-training \
+            hercules-video \
+            hercules-hurc \
+            observability \
+            scripts \
+            staging-plane \
+            governance/owner-code-policy.json \
+            LICENSE
+
+      - name: Attest runtime bundle and SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: /tmp/hercules-release/hercules-runtime-source.tgz
+          sbom-path: /tmp/hercules-release/hercules-runtime.spdx.json
+
+      - name: Save release evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hercules-release-evidence-${{ github.sha }}
+          path: |
+            /tmp/hercules-release/hercules-runtime-source.tgz
+            /tmp/hercules-release/hercules-runtime-manifest.json
+            /tmp/hercules-release/hercules-runtime.spdx.json
+          if-no-files-found: error
+          retention-days: 90
