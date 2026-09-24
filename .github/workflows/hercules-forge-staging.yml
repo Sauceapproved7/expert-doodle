@@ -1,0 +1,59 @@
+name: Hercules Forge Staging Service
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "hercules-forge/**"
+      - "staging-plane/**"
+      - "scripts/forge-staging-drill.mjs"
+      - "scripts/staging-plane.mjs"
+      - "scripts/validate-staging-plane.mjs"
+      - "governance/owner-code-policy.json"
+      - ".github/workflows/hercules-forge-staging.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hercules-forge-staging-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  forge-staging:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+
+      - name: Verify Docker runtime
+        run: docker compose version
+
+      - name: Validate staging boundaries
+        run: node scripts/validate-staging-plane.mjs
+
+      - name: Start isolated staging
+        run: node scripts/staging-plane.mjs up
+
+      - name: Prove Forge restart and persistence
+        run: node scripts/forge-staging-drill.mjs --confirm-isolated-staging
+
+      - name: Save Forge staging evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-staging-${{ github.run_id }}-${{ github.run_attempt }}
+          path: benchmarks/performance/forge-staging-drill.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Capture Forge diagnostics
+        if: failure()
+        run: docker compose --env-file staging-plane/.env -f staging-plane/compose.yml logs --no-color forge
+
+      - name: Remove isolated staging
+        if: always()
+        run: node scripts/staging-plane.mjs down || true
