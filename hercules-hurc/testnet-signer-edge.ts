@@ -9,6 +9,27 @@ const SERVICE =
   JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}").default ||
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
   "";
+const CONTROL = Deno.env.get("HURC_SIGNER_CONTROL_TOKEN") || "";
+const MAX_REQUEST_BYTES = 4096;
+const encoder = new TextEncoder();
+
+async function safeEqual(a: string, b: string) {
+  const [left, right] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(a)),
+    crypto.subtle.digest("SHA-256", encoder.encode(b)),
+  ]);
+  const x = new Uint8Array(left);
+  const y = new Uint8Array(right);
+  let diff = 0;
+  for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
+  return diff === 0;
+}
+
+async function authorized(req: Request) {
+  const header = req.headers.get("authorization") || "";
+  if (!header.startsWith("Bearer ")) return false;
+  return safeEqual(header.slice(7), CONTROL);
+}
 
 function out(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -18,6 +39,10 @@ function out(body: unknown, status = 200) {
       "cache-control": "no-store",
       "x-content-type-options": "nosniff",
       "referrer-policy": "no-referrer",
+      "x-frame-options": "DENY",
+      "content-security-policy": "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+      "permissions-policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
     },
   });
 }
@@ -134,7 +159,10 @@ async function prepareSigner() {
 }
 
 Deno.serve(async (req: Request) => {
-  if (!U || !SERVICE) return out({error:"runtime_configuration_missing"}, 503);
+  if (!U || !SERVICE || CONTROL.length < 32) {
+    return out({error:"runtime_configuration_missing"}, 503);
+  }
+  if (!(await authorized(req))) return out({error:"unauthorized"}, 401);
 
   if (req.method === "GET") {
     try {
@@ -167,7 +195,18 @@ Deno.serve(async (req: Request) => {
 
   if (req.method !== "POST") return out({error:"method_not_allowed"}, 405);
 
-  const body = await req.json().catch(() => ({}));
+  const declaredLength = Number(req.headers.get("content-length") || "0");
+  if (declaredLength > MAX_REQUEST_BYTES) return out({error:"request_too_large"}, 413);
+  const raw = await req.text();
+  if (encoder.encode(raw).byteLength > MAX_REQUEST_BYTES) {
+    return out({error:"request_too_large"}, 413);
+  }
+  let body: Record<string,unknown>;
+  try {
+    body = raw ? JSON.parse(raw) : {};
+  } catch {
+    return out({error:"invalid_json"}, 400);
+  }
   if (String(body?.action || "") !== "prepare") {
     return out({error:"unsupported_action"}, 400);
   }
