@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {mkdtemp, readFile, readdir, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {ForgeIdentityStore} from "../hercules-forge/identity.mjs";
+import {ForgeIdentityStore, SCRYPT_PROFILE} from "../hercules-forge/identity.mjs";
 
 function fixtureCredential(...parts) {
   return parts.join("-");
@@ -20,6 +20,14 @@ test("identity store hashes passwords and opaque session tokens", async () => {
     });
     assert.equal(user.email, "owner@example.com");
     assert.equal("passwordHash" in user, false);
+    const storedUser = JSON.parse(await readFile(
+      join(root, "identity", "users", "owner-user.json"),
+      "utf8",
+    ));
+    assert.match(
+      storedUser.passwordHash,
+      new RegExp("^scrypt-v2\\\\$" + SCRYPT_PROFILE.N + "\\\\$" + SCRYPT_PROFILE.r + "\\\\$" + SCRYPT_PROFILE.p + "\\\\$"),
+    );
 
     await assert.rejects(
       identities.createUser({
