@@ -78,7 +78,8 @@ const token = env.HERCULES_FORGE_STAGING_CONTROL_TOKEN;
 if (!token || token.length < 32) throw new Error("forge_staging_control_token_missing");
 
 const before = await waitForForge();
-if (before.version !== "1.2") throw new Error("unexpected_forge_version:" + before.version);
+if (!/^\\d+\\.\\d+$/.test(String(before.version))) throw new Error("unexpected_forge_version:" + before.version);
+if (before.auditEvents !== true) throw new Error("forge_audit_events_unavailable");
 if (before.mode !== "production") throw new Error("forge_not_in_production_mode");
 if (before.publicOrigin !== "https://forge.staging.invalid") {
   throw new Error("unexpected_forge_public_origin");
@@ -134,6 +135,16 @@ if (!snapshots.snapshots.some((item) => item.snapshotId === snapshotId)) {
   throw new Error("forge_snapshot_not_persistent_after_restart");
 }
 
+const auditIntegrity = await operatorRequest("/v1/audit/verify", token);
+if (!auditIntegrity.integrity?.verified) throw new Error("forge_audit_chain_not_verified");
+const auditEvents = await operatorRequest(
+  "/v1/audit?projectId=" + encodeURIComponent(projectId) + "&limit=100",
+  token,
+);
+const auditTypes = new Set(auditEvents.events.map((event) => event.type));
+if (!auditTypes.has("project.create")) throw new Error("forge_project_audit_missing");
+if (!auditTypes.has("data.snapshot")) throw new Error("forge_snapshot_audit_missing");
+
 const evidence = {
   schema: "sauceapproved.hercules.forge-staging-drill",
   version: 1,
@@ -147,6 +158,10 @@ const evidence = {
   snapshotPersistedAfterRestart: true,
   runtimeDataControl: after.runtimeDataControl === true,
   persistentRuntime: after.persistentRuntime === true,
+  auditEvents: after.auditEvents === true,
+  auditChainVerifiedAfterRestart: auditIntegrity.integrity.verified === true,
+  projectAuditPersistedAfterRestart: auditTypes.has("project.create"),
+  snapshotAuditPersistedAfterRestart: auditTypes.has("data.snapshot"),
   controlTokenExposed: false,
 };
 
