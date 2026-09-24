@@ -51,7 +51,7 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
     assert.equal(health.body.persistentRuntime, true);
-    assert.equal(health.body.version, "1.1");
+    assert.equal(health.body.version, "1.2");
     assert.equal(health.body.runtimeDataControl, true);
     assert.ok(health.body.runtimeDataMaxBytes > 0);
 

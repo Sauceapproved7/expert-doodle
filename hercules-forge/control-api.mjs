@@ -130,6 +130,9 @@ export function createForgeControlService({
   interpreter = null,
   secureSessionCookies = false,
   runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
+  loginRateLimiter = null,
+  serviceMode = "development",
+  publicOrigin = null,
 }) {
   if (!root) throw new TypeError("root is required");
   if (typeof token !== "string" || token.length < 16) {
@@ -167,7 +170,9 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "1.1",
+          version: "1.2",
+          mode: serviceMode,
+          publicOrigin,
           promptIngress: Boolean(interpreter),
           preview: true,
           persistentRuntime: true,
@@ -178,18 +183,26 @@ export function createForgeControlService({
 
       if (req.method === "POST" && url.pathname === "/v1/session") {
         const body = await readBody(req);
-        const result = await identities.createSession({
-          email: body.email,
-          password: body.password,
-        });
-        return send(res, 201, {
-          user: result.user,
-          session: {
-            sessionId: result.session.sessionId,
-            expiresAt: result.session.expiresAt,
-          },
-          csrfToken: result.csrfToken,
-        }, {"set-cookie": sessionCookie(result.token, secureSessionCookies)});
+        const rateKey = typeof body.email === "string" ? body.email : "<unknown>";
+        loginRateLimiter?.beforeAttempt(rateKey);
+        try {
+          const result = await identities.createSession({
+            email: body.email,
+            password: body.password,
+          });
+          loginRateLimiter?.recordSuccess(rateKey);
+          return send(res, 201, {
+            user: result.user,
+            session: {
+              sessionId: result.session.sessionId,
+              expiresAt: result.session.expiresAt,
+            },
+            csrfToken: result.csrfToken,
+          }, {"set-cookie": sessionCookie(result.token, secureSessionCookies)});
+        } catch (error) {
+          if (error?.statusCode === 401) loginRateLimiter?.recordFailure(rateKey);
+          throw error;
+        }
       }
 
       if (req.method === "GET" && url.pathname === "/v1/session/csrf") {
@@ -633,9 +646,12 @@ export function createForgeControlService({
       return send(res, 404, {error: "not_found"});
     } catch (error) {
       const status = errorStatus(error);
+      const headers = error?.retryAfterSeconds
+        ? {"retry-after": String(error.retryAfterSeconds)}
+        : {};
       return send(res, status, {
         error: status >= 500 ? "internal_error" : error.message,
-      });
+      }, headers);
     }
   });
 
@@ -652,6 +668,9 @@ export function listenForgeControlService({
   interpreter = null,
   secureSessionCookies = false,
   runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
+  loginRateLimiter = null,
+  serviceMode = "development",
+  publicOrigin = null,
   host = "127.0.0.1",
   port = 38700,
 }) {
@@ -661,6 +680,9 @@ export function listenForgeControlService({
     interpreter,
     secureSessionCookies,
     runtimeDataMaxBytes,
+    loginRateLimiter,
+    serviceMode,
+    publicOrigin,
   });
   server.listen(port, host);
   return server;
