@@ -1,0 +1,19 @@
+{
+  "schema": "sauceapproved.hercules.hurc.build",
+  "version": 1,
+  "compiler": {
+    "name": "solc",
+    "version": "0.8.24",
+    "longVersion": "0.8.24+commit.e11b9ed9",
+    "linuxAmd64Url": "https://binaries.soliditylang.org/linux-amd64/solc-linux-amd64-v0.8.24+commit.e11b9ed9",
+    "sha256": "fb03a29a517452b9f12bcf459ef37d0a543765bb3bbc911e70a87d6a37c30d5f"
+  },
+  "source": "hercules-hurc/HURC.sol",
+  "contract": "HURC",
+  "optimizer": {
+    "enabled": true,
+    "runs": 200
+  },
+  "evmVersion": "shanghai",
+  "metadataHash": "none"
+}
