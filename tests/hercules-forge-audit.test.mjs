@@ -145,3 +145,30 @@ test("audit verification fails after line tampering", async () => {
     await rm(root, {recursive: true, force: true});
   }
 });
+
+test("audit verification detects tail truncation against the head checkpoint", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-audit-truncate-"));
+  try {
+    const audit = new ForgeAuditStore(root);
+    await audit.append({
+      type: "project.create",
+      actor: {kind: "control"},
+      projectId: "project-a",
+      details: {revisionId: "rev-1"},
+    });
+    await audit.append({
+      type: "project.publish",
+      actor: {kind: "control"},
+      projectId: "project-a",
+      details: {revisionId: "rev-1"},
+    });
+
+    const path = join(root, "audit", "events.jsonl");
+    const lines = (await readFile(path, "utf8")).trimEnd().split("\n");
+    await writeFile(path, lines[0] + "\n", "utf8");
+
+    await assert.rejects(audit.verify(), /head checkpoint mismatch/);
+  } finally {
+    await rm(root, {recursive: true, force: true});
+  }
+});
