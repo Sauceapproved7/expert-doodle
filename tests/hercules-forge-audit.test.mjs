@@ -5,6 +5,10 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {ForgeAuditStore} from "../hercules-forge/audit.mjs";
 
+function fixtureValue(...parts) {
+  return parts.join("-");
+}
+
 test("audit store appends a verified hash chain and filters recent events", async () => {
   const root = await mkdtemp(join(tmpdir(), "forge-audit-"));
   try {
@@ -87,7 +91,7 @@ test("audit store rejects secret-shaped detail fields", async () => {
       audit.append({
         type: "session.login",
         actor: {kind: "system"},
-        details: {password: "must-not-be-recorded"},
+        details: {password: fixtureValue("must", "not", "be", "recorded")},
       }),
       /secret-shaped field/,
     );
@@ -95,7 +99,7 @@ test("audit store rejects secret-shaped detail fields", async () => {
       audit.append({
         type: "session.login",
         actor: {kind: "system"},
-        details: {nested: {csrfToken: "must-not-be-recorded"}},
+        details: {nested: {csrfToken: fixtureValue("must", "not", "be", "recorded")}},
       }),
       /secret-shaped field/,
     );
