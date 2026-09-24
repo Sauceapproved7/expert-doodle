@@ -193,7 +193,6 @@ export class ForgeIdentityStore {
     if (typeof token !== "string" || token.length < 32) {
       throw Object.assign(new Error("invalid or expired invite"), {statusCode: 400});
     }
-    await derivePassword(password);
     return this.withLifecycleLock(async () => {
       const path = this.lifecyclePath("invites", token);
       let invite;
@@ -210,6 +209,7 @@ export class ForgeIdentityStore {
         throw Object.assign(new Error("invalid or expired invite"), {statusCode: 400});
       }
       await this.getWorkspace(invite.workspaceId);
+      await derivePassword(password);
       await rm(path, {force: true});
 
       const user = await this.createUser({
@@ -290,7 +290,6 @@ export class ForgeIdentityStore {
     if (typeof token !== "string" || token.length < 32) {
       throw Object.assign(new Error("invalid or expired recovery"), {statusCode: 400});
     }
-    const passwordParts = await derivePassword(password);
     return this.withLifecycleLock(async () => {
       const path = this.lifecyclePath("recovery", token);
       let recovery;
@@ -307,6 +306,7 @@ export class ForgeIdentityStore {
         throw Object.assign(new Error("invalid or expired recovery"), {statusCode: 400});
       }
 
+      const passwordParts = await derivePassword(password);
       await rm(path, {force: true});
       const user = await readJson(this.userPath(recovery.userId));
       const updated = {
