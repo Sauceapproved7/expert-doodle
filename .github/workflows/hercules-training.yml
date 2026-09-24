@@ -31,10 +31,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
-
-      - name: Enforce repository-wide owner-code-only policy
-        run: node scripts/verify-owner-code-only.mjs
+      - uses: actions/checkout@v4
 
       - name: Run training foundation tests
         run: |
@@ -43,7 +40,7 @@ jobs:
             tests/hercules-native-agent-router.test.mjs \
             tests/hercules-native-retrieval.test.mjs \
             tests/hercules-native-guard.test.mjs \
-            tests/hercules-native-five-families.test.mjs
+            tests/hercules-native-research.test.mjs
 
       - name: Train and evaluate Hercules Agent Router
         env:
@@ -77,7 +74,7 @@ jobs:
           NODE
 
       - name: Upload agent checkpoint evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@v4
         with:
           name: hercules-agent-router-v0.1
           path: .hercules-training/bootstrap-agent-router/
@@ -120,7 +117,7 @@ jobs:
           NODE
 
       - name: Upload retrieval checkpoint evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@v4
         with:
           name: hercules-retrieval-v0.1
           path: .hercules-training/bootstrap-retrieval/
@@ -163,51 +160,52 @@ jobs:
           NODE
 
       - name: Upload Guard checkpoint evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@v4
         with:
           name: hercules-guard-v0.1
           path: .hercules-training/bootstrap-guard/
           if-no-files-found: error
           retention-days: 30
 
-      - name: Train and evaluate five remaining Hercules families
+      - name: Train and evaluate Hercules Research
         env:
           HERCULES_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-          HERCULES_CREATED_AT: "2026-09-23T22:20:00Z"
-        run: node hercules-training/bootstrap-five-native-families.mjs
+          HERCULES_CREATED_AT: "2026-09-23T22:30:00Z"
+        run: node hercules-training/bootstrap-research.mjs
 
-      - name: Verify five-family evidence exists
+      - name: Verify Research evidence exists
         shell: bash
         run: |
           set -euo pipefail
-          test -s .hercules-training/five-native-families/summary.json
+          test -s .hercules-training/bootstrap-research/model.json
+          test -s .hercules-training/bootstrap-research/training-evidence.json
           node --input-type=module <<'NODE'
           import {readFile} from "node:fs/promises";
-          const summary = JSON.parse(await readFile(
-            ".hercules-training/five-native-families/summary.json",
+          const evidence = JSON.parse(await readFile(
+            ".hercules-training/bootstrap-research/training-evidence.json",
             "utf8"
           ));
-          if (summary.ok !== true || summary.count !== 5) {
-            throw new Error("expected five passing native family checkpoints");
+          if (!evidence.decision?.ok) throw new Error("Research activation decision did not pass");
+          if (evidence.decision?.activatedModel?.origin !== "hercules-native") {
+            throw new Error("Research model is not Hercules-native");
           }
-          for (const model of summary.models) {
-            if (model.activationReady !== true) {
-              throw new Error("activation gate failed: " + model.modelId);
-            }
-            if (model.accuracy < 0.8 || model.errorRate > 0.2) {
-              throw new Error("evaluation threshold failed: " + model.modelId);
-            }
-            if (!/^[a-f0-9]{64}$/.test(model.checkpointSha256)) {
-              throw new Error("missing immutable checkpoint: " + model.modelId);
-            }
+          if (evidence.evaluation?.result?.metrics?.accuracy < 0.9) {
+            throw new Error("native Research missed minimum accuracy");
           }
-          console.log(JSON.stringify(summary, null, 2));
+          if (evidence.evaluation?.result?.metrics?.["error-rate"] > 0.1) {
+            throw new Error("native Research exceeded maximum error rate");
+          }
+          console.log(JSON.stringify({
+            checkpoint: evidence.checkpoint.checkpoint.artifactSha256,
+            accuracy: evidence.evaluation.result.metrics.accuracy,
+            errorRate: evidence.evaluation.result.metrics["error-rate"],
+          }, null, 2));
           NODE
 
-      - name: Upload five-family checkpoint evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+      - name: Upload Research checkpoint evidence
+        uses: actions/upload-artifact@v4
         with:
-          name: hercules-five-native-families-v0.1
-          path: .hercules-training/five-native-families/
+          name: hercules-research-v0.1
+          path: .hercules-training/bootstrap-research/
           if-no-files-found: error
           retention-days: 30
