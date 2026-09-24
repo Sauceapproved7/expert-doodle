@@ -1,0 +1,21 @@
+{
+  "schema": "sauceapproved.hercules.hurc-deployment",
+  "version": 1,
+  "name": "Hercules Coin",
+  "symbol": "HURC",
+  "decimals": 18,
+  "source": "hercules-hurc/HURC.sol",
+  "supplyModel": "fixed-at-deployment",
+  "postDeploymentMinting": false,
+  "upgradeable": false,
+  "adminRole": false,
+  "deployment": {
+    "status": "not-deployed",
+    "chainId": null,
+    "contractAddress": null,
+    "treasuryAddress": null,
+    "initialSupplyWholeTokens": null,
+    "transactionHash": null,
+    "sourceCommit": null
+  }
+}

@@ -22,3 +22,6 @@ jobs:
 
       - name: Verify full Hercules runtime ownership boundary
         run: node scripts/verify-owner-code-only.mjs
+
+      - name: Verify HURC owner-code token source
+        run: node --test tests/hercules-hurc-source.test.mjs
