@@ -52,7 +52,7 @@ jobs:
         run: node scripts/recalculate-global-infrastructure.mjs
       - name: Publish job summary
         run: |
-          node -e 'const fs=require("fs");const x=require("./benchmarks/global-infrastructure-result-current.json");fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`# Hercules global benchmark\n\nInfrastructure: **${x.score}/100**\n\nAgentic capability: **${x.agenticCapabilityCoverage}%**\n\nStaging requests: **${x.stagingEvidence.requests}** with **${x.stagingEvidence.errorRate*100}%** errors.\n`)'
+          node -e 'const fs=require("fs");const x=require("./benchmarks/global-infrastructure-result-current.json");fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`# Hercules infrastructure evidence\n\nGlobal maturity score: **withheld until evidence-derived**.\n\nStaging requests: **${x.stagingEvidence.requests}** with **${x.stagingEvidence.errorRate*100}%** errors.\n\np95: **${x.stagingEvidence.p95LatencyMs.toFixed(2)} ms**; p99: **${x.stagingEvidence.p99LatencyMs.toFixed(2)} ms**.\n\nProduction-scale claim: **false**.\n`)'
       - name: Teardown
         if: always()
         run: node scripts/staging-plane.mjs down || true
