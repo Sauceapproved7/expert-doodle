@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 2,
+  "version": 3,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -239,6 +239,18 @@
       "id": "postgrest",
       "name": "PostgREST container image",
       "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "solidity-compiler",
+      "name": "Solidity compiler 0.8.24 (pinned, checksum-verified build infrastructure)",
+      "ownership": "third-party-build-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "base-sepolia-rpc",
+      "name": "Base Sepolia public JSON-RPC",
+      "ownership": "third-party-testnet-infrastructure",
       "packagedAsHerculesCode": false
     }
   ]
