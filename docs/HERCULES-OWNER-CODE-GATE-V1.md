@@ -38,12 +38,13 @@ The gate fails when the canonical runtime contains:
 - undeclared shell command boundaries
 - undeclared container images
 - undeclared external GitHub Actions
+- external GitHub Actions referenced by movable tags instead of approved immutable commit SHAs
 - runtime imports that escape the declared Hercules-owned runtime roots
 - git submodules
 
 ## External infrastructure boundary
 
-External infrastructure is allowed only as an explicitly declared dependency outside the Hercules-owned-code claim.
+External infrastructure is allowed only as an explicitly declared dependency outside the Hercules-owned-code claim. External GitHub Actions are additionally pinned to approved immutable commit SHAs so CI behavior cannot change through a moving version tag.
 
 Current declarations include Node.js, GitHub Actions, Docker, PostgreSQL/PostgREST, FFmpeg/ffprobe, NVIDIA/CUDA tooling, Python, POSIX shell/PostgreSQL client tooling, and the Wan2.2 external video model runtime/weights.
 

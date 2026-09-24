@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
 
       - name: Enforce repository-wide owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
@@ -77,7 +77,7 @@ jobs:
           NODE
 
       - name: Upload agent checkpoint evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: hercules-agent-router-v0.1
           path: .hercules-training/bootstrap-agent-router/
@@ -120,7 +120,7 @@ jobs:
           NODE
 
       - name: Upload retrieval checkpoint evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: hercules-retrieval-v0.1
           path: .hercules-training/bootstrap-retrieval/
@@ -163,7 +163,7 @@ jobs:
           NODE
 
       - name: Upload Guard checkpoint evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: hercules-guard-v0.1
           path: .hercules-training/bootstrap-guard/
@@ -205,7 +205,7 @@ jobs:
           NODE
 
       - name: Upload five-family checkpoint evidence
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: hercules-five-native-families-v0.1
           path: .hercules-training/five-native-families/
