@@ -149,6 +149,6 @@ export function evaluateNextTokenModel(tokenizer, model, texts) {
     perplexity: Math.exp(crossEntropy),
     unigramCrossEntropy,
     unigramPerplexity: Math.exp(unigramCrossEntropy),
-    relativePerplexity: unigramCrossEntropy ? crossEntropy / unigramCrossEntropy : 1,
+    crossEntropyRatio: unigramCrossEntropy ? crossEntropy / unigramCrossEntropy : 1,
   };
 }
