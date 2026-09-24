@@ -1,0 +1,17 @@
+{
+  "schema": "sauceapproved.hercules.hurc-compiler-policy",
+  "version": 1,
+  "compiler": "solc",
+  "compilerVersion": "0.8.24+commit.e11b9ed9",
+  "compilerAsset": "solc-linux-amd64-v0.8.24+commit.e11b9ed9",
+  "compilerSource": "https://binaries.soliditylang.org/linux-amd64/solc-linux-amd64-v0.8.24+commit.e11b9ed9",
+  "compilerSha256": "fb03a29a517452b9f12bcf459ef37d0a543765bb3bbc911e70a87d6a37c30d5f",
+  "evmVersion": "shanghai",
+  "optimizer": {
+    "enabled": true,
+    "runs": 200
+  },
+  "viaIR": false,
+  "source": "hercules-hurc/HURC.sol",
+  "contract": "HURC"
+}

@@ -25,3 +25,11 @@ jobs:
 
       - name: Verify HURC owner-code token source
         run: node --test tests/hercules-hurc-source.test.mjs
+
+      - name: Verify HURC deployment manifest
+        run: |
+          node scripts/validate-hurc-deployment.mjs
+          node --test tests/hercules-hurc-deployment.test.mjs
+
+      - name: Verify HURC unsigned deployment planning
+        run: node --test tests/hercules-hurc-deployment-plan.test.mjs
