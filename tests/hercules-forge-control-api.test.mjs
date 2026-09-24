@@ -64,6 +64,7 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.match(consoleHtml, /Sign in/);
     assert.match(consoleHtml, /Runtime data/);
     assert.match(consoleHtml, /Create snapshot/);
+    assert.match(consoleHtml, /Security audit/);
     assert.equal(consoleHtml.includes("Control token"), false);
     assert.equal(consoleHtml.includes(token), false);
 
