@@ -1,0 +1,115 @@
+name: HURC Build and Base Sepolia Preflight
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "hercules-hurc/**"
+      - "tests/hercules-hurc-*.test.mjs"
+      - "governance/owner-code-policy.json"
+      - ".github/workflows/hercules-hurc-build.yml"
+  pull_request:
+    paths:
+      - "hercules-hurc/**"
+      - "tests/hercules-hurc-*.test.mjs"
+      - "governance/owner-code-policy.json"
+      - ".github/workflows/hercules-hurc-build.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Enforce Hercules owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+
+      - name: Run HURC source and deployment-intent tests
+        run: |
+          node --test tests/hercules-hurc-source.test.mjs
+          node --test tests/hercules-hurc-deployment-intent.test.mjs
+          node hercules-hurc/validate-deployment-intent.mjs hercules-hurc/deployment-intent.example.json
+
+      - name: Fetch and verify pinned Solidity compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          compiler="/tmp/solc-0.8.24"
+          curl --fail --location --silent --show-error             "https://binaries.soliditylang.org/linux-amd64/solc-linux-amd64-v0.8.24+commit.e11b9ed9"             --output "$compiler"
+          echo "fb03a29a517452b9f12bcf459ef37d0a543765bb3bbc911e70a87d6a37c30d5f  $compiler" | sha256sum --check --strict
+          chmod 700 "$compiler"
+          "$compiler" --version
+
+      - name: Compile canonical HURC source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .hercules-hurc
+          /tmp/solc-0.8.24             --optimize             --optimize-runs 200             --evm-version shanghai             --metadata-hash none             --combined-json abi,bin,bin-runtime,metadata             hercules-hurc/HURC.sol > .hercules-hurc/solc-output.json
+
+      - name: Verify compiled HURC artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import {readFile, writeFile} from "node:fs/promises";
+          import {execFileSync} from "node:child_process";
+
+          const compiled = JSON.parse(await readFile(".hercules-hurc/solc-output.json", "utf8"));
+          const key = Object.keys(compiled.contracts ?? {}).find((item) => item.endsWith(":HURC"));
+          if (!key) throw new Error("compiled HURC contract missing");
+
+          const artifact = compiled.contracts[key];
+          if (!artifact.bin || artifact.bin.length < 100) throw new Error("HURC creation bytecode missing");
+          if (!artifact["bin-runtime"] || artifact["bin-runtime"].length < 100) throw new Error("HURC runtime bytecode missing");
+
+          const abi = typeof artifact.abi === "string" ? JSON.parse(artifact.abi) : artifact.abi;
+          const functions = abi.filter((item) => item.type === "function").map((item) => item.name).sort();
+          for (const name of ["allowance","approve","balanceOf","decimals","name","symbol","totalSupply","transfer","transferFrom"]) {
+            if (!functions.includes(name)) throw new Error("compiled ABI missing " + name);
+          }
+
+          const sourceSha256 = execFileSync("sha256sum", ["hercules-hurc/HURC.sol"], {encoding:"utf8"}).trim().split(/\s+/)[0];
+          const evidence = {
+            schema: "sauceapproved.hercules.hurc.build-evidence",
+            version: 1,
+            sourceCommit: process.env.GITHUB_SHA,
+            sourcePath: "hercules-hurc/HURC.sol",
+            sourceSha256,
+            compiler: "0.8.24+commit.e11b9ed9",
+            compilerSha256: "fb03a29a517452b9f12bcf459ef37d0a543765bb3bbc911e70a87d6a37c30d5f",
+            optimizer: {enabled:true, runs:200},
+            evmVersion: "shanghai",
+            metadataHash: "none",
+            creationBytecodeBytes: artifact.bin.length / 2,
+            runtimeBytecodeBytes: artifact["bin-runtime"].length / 2,
+            abiFunctions: functions,
+          };
+          await writeFile(".hercules-hurc/build-evidence.json", JSON.stringify(evidence, null, 2) + "\n");
+          console.log(JSON.stringify(evidence, null, 2));
+          NODE
+
+      - name: Verify Base Sepolia RPC identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error https://sepolia.base.org             -H 'content-type: application/json'             --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}')"
+          result="$(node -e 'const r=JSON.parse(process.argv[1]); if(r.error) throw new Error(JSON.stringify(r.error)); process.stdout.write(String(r.result||""));' "$response")"
+          test "$result" = "0x14a34"
+          printf '%s\n' "$response" > .hercules-hurc/base-sepolia-chain-id.json
+
+      - name: Upload HURC build evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: hurc-build-evidence
+          path: |
+            .hercules-hurc/build-evidence.json
+            .hercules-hurc/solc-output.json
+            .hercules-hurc/base-sepolia-chain-id.json
+          if-no-files-found: error
