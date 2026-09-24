@@ -49,6 +49,12 @@ The deployment planner currently permits only:
 
 The planner does **not** store private keys, sign transactions, broadcast transactions, or spend gas.
 
+## Hercules Browser runtime
+
+The HURC testnet preparation layer is integrated with the existing Hercules browser gateway. The live `hercules-hurc-browser` Edge Function is recorded in `hercules-hurc/browser-runtime.json`.
+
+This browser layer discovers current Base Sepolia funding resources through Hercules-controlled browser infrastructure. It does not hold wallet private keys, sign transactions, or broadcast blockchain transactions.
+
 ## Deployment state
 
 **Not deployed.**
