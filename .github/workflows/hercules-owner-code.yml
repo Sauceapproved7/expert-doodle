@@ -30,3 +30,6 @@ jobs:
         run: |
           node scripts/validate-hurc-deployment.mjs
           node --test tests/hercules-hurc-deployment.test.mjs
+
+      - name: Verify HURC unsigned deployment planning
+        run: node --test tests/hercules-hurc-deployment-plan.test.mjs
