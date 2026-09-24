@@ -47,6 +47,11 @@ export function customerConsoleHtml() {
         <div id="snapshotActions" class="actions"><button id="snapshot">Create snapshot</button></div>
         <div id="snapshots"></div>
       </section>
+      <section id="auditPanel" class="data-panel" hidden>
+        <div class="heading"><h3>Security audit</h3><button id="refreshAudit">Refresh</button></div>
+        <div id="auditStatus" class="muted"></div>
+        <div id="auditEvents"></div>
+      </section>
       <h3>Revisions</h3><div id="revisions"></div>
     </div>
     <pre id="status">Ready.</pre>
@@ -56,7 +61,7 @@ export function customerConsoleHtml() {
 }
 
 export function customerConsoleCss() {
-  return `:root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}*{box-sizing:border-box}body{margin:0}header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #263047;background:#0d111a}header span{margin-left:10px;color:#8791a7}.auth-card{max-width:430px;margin:9vh auto;padding:26px;background:#111724;border:1px solid #273047;border-radius:16px}.auth-card p{color:#aab4c8}#appShell{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 61px)}aside{padding:20px;border-right:1px solid #263047}.workspace{padding:28px;max-width:1100px;width:100%}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:20px;margin-bottom:18px}label{display:block;font-size:13px;color:#aab4c8;margin:8px 0}input,textarea,select{width:100%;margin-top:6px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:9px;padding:11px}textarea{min-height:115px;resize:vertical}button{background:#f5f7ff;color:#0b0f17;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;margin:5px 5px 5px 0}.project{padding:10px;border:1px solid #273047;border-radius:9px;margin:7px 0;cursor:pointer}.project:hover{background:#151d2d}.muted{color:#8791a7;font-size:12px}.revision,.snapshot{padding:10px 0;border-bottom:1px solid #273047}.revision button,.snapshot button{font-size:12px;padding:7px 9px}.data-panel{margin-top:18px;padding-top:14px;border-top:1px solid #273047}.user-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}.heading{display:flex;justify-content:space-between;gap:12px}.actions{margin:10px 0}pre{white-space:pre-wrap;background:#080b12;border:1px solid #273047;padding:14px;border-radius:10px;min-height:54px}a{color:#8bc4ff}@media(max-width:760px){#appShell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #263047}.workspace{padding:16px}}`;
+  return `:root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}*{box-sizing:border-box}body{margin:0}header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #263047;background:#0d111a}header span{margin-left:10px;color:#8791a7}.auth-card{max-width:430px;margin:9vh auto;padding:26px;background:#111724;border:1px solid #273047;border-radius:16px}.auth-card p{color:#aab4c8}#appShell{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 61px)}aside{padding:20px;border-right:1px solid #263047}.workspace{padding:28px;max-width:1100px;width:100%}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:20px;margin-bottom:18px}label{display:block;font-size:13px;color:#aab4c8;margin:8px 0}input,textarea,select{width:100%;margin-top:6px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:9px;padding:11px}textarea{min-height:115px;resize:vertical}button{background:#f5f7ff;color:#0b0f17;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;margin:5px 5px 5px 0}.project{padding:10px;border:1px solid #273047;border-radius:9px;margin:7px 0;cursor:pointer}.project:hover{background:#151d2d}.muted{color:#8791a7;font-size:12px}.revision,.snapshot,.audit-event{padding:10px 0;border-bottom:1px solid #273047}.revision button,.snapshot button{font-size:12px;padding:7px 9px}.data-panel{margin-top:18px;padding-top:14px;border-top:1px solid #273047}.user-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}.heading{display:flex;justify-content:space-between;gap:12px}.actions{margin:10px 0}pre{white-space:pre-wrap;background:#080b12;border:1px solid #273047;padding:14px;border-radius:10px;min-height:54px}a{color:#8bc4ff}@media(max-width:760px){#appShell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #263047}.workspace{padding:16px}}`;
 }
 
 export function customerConsoleJs() {
@@ -99,7 +104,9 @@ async function selectWorkspace(id){
   const data=await request("/v1/workspaces/"+encodeURIComponent(id)+"/projects");
   membership=data.membership; $("role").textContent=membership.role+" · "+data.workspace.name;
   $("createPanel").hidden=!canBuild(); $("builderControls").hidden=!canBuild(); $("adminControls").hidden=!canAdmin();
+  $("auditPanel").hidden=!canAdmin();
   renderProjects(data.projects);
+  if(canAdmin()) await refreshAudit();
 }
 
 function renderProjects(projects){
@@ -127,7 +134,7 @@ async function selectProject(id){
   $("projectPanel").hidden=false; $("projectName").textContent=project.name; $("selectedProject").textContent=id;
   $("builderControls").hidden=!canBuild(); $("adminControls").hidden=!canAdmin();
   renderRevisions();
-  await Promise.all([refreshPreview(), refreshData()]);
+  await Promise.all([refreshPreview(), refreshData(), canAdmin()?refreshAudit():Promise.resolve()]);
 }
 
 function renderRevisions(){
@@ -148,6 +155,23 @@ function renderRevisions(){
 
 function projectBase(){
   return "/v1/workspaces/"+encodeURIComponent(workspaceId)+"/projects/"+encodeURIComponent(selected);
+}
+
+async function refreshAudit(){
+  if(!workspaceId||!canAdmin())return;
+  let path="/v1/workspaces/"+encodeURIComponent(workspaceId)+"/audit?limit=25";
+  if(selected)path+="&projectId="+encodeURIComponent(selected);
+  const data=await request(path);
+  $("auditStatus").textContent=data.integrity?.verified?"Audit chain verified":"Audit verification unavailable";
+  $("auditEvents").innerHTML="";
+  for(const event of data.events){
+    const el=document.createElement("div"); el.className="audit-event";
+    const actor=event.actor?.kind==="user"?(event.actor.userId||"user"):event.actor?.kind||"system";
+    el.innerHTML="<strong>"+esc(event.type)+"</strong><div class=muted>"+
+      esc(event.timestamp)+" · "+esc(event.outcome)+" · "+esc(actor)+"</div>";
+    $("auditEvents").appendChild(el);
+  }
+  if(!data.events.length)$("auditEvents").textContent="No audit events for this scope.";
 }
 
 async function refreshData(){
@@ -242,6 +266,7 @@ $("preview").onclick=async()=>{try{if(!revisions.length)throw new Error("No revi
 $("publish").onclick=async()=>{try{if(!revisions.length)throw new Error("No revisions.");await publishRevision(revisions.at(-1).revisionId)}catch(error){status(error.message)}};
 $("stopPreview").onclick=async()=>{try{status(await request(projectBase()+"/preview",{method:"DELETE",csrf:true}));await refreshPreview()}catch(error){status(error.message)}};
 $("snapshot").onclick=async()=>{try{await createSnapshot()}catch(error){status(error.message)}};
+$("refreshAudit").onclick=async()=>{try{await refreshAudit()}catch(error){status(error.message)}};
 
 fetch("/health").then((r)=>r.json()).then((d)=>$("health").textContent=d.ok?"Forge online":"Forge unavailable").catch(()=>$("health").textContent="Forge unavailable");
 bootstrapSession().catch(()=>{});
