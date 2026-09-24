@@ -48,4 +48,4 @@ jobs:
         run: node scripts/hurc-check-solc-output.mjs /tmp/hurc-solc-output.json
 
       - name: Run HURC tests
-        run: node --test tests/hercules-hurc-source.test.mjs tests/hercules-hurc-deployment-plan.test.mjs tests/hercules-hurc-browser.test.mjs
+        run: node --test tests/hercules-hurc-source.test.mjs tests/hercules-hurc-deployment-plan.test.mjs tests/hercules-hurc-browser.test.mjs tests/hercules-hurc-rpc.test.mjs
