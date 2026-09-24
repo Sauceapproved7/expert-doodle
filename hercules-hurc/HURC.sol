@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.24;
+pragma solidity 0.8.24;
 
 /// @title Hercules Coin (HURC)
 /// @notice Dependency-free ERC-20-compatible utility token for the Hercules ecosystem.
