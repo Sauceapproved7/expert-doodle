@@ -78,7 +78,7 @@ const token = env.HERCULES_FORGE_STAGING_CONTROL_TOKEN;
 if (!token || token.length < 32) throw new Error("forge_staging_control_token_missing");
 
 const before = await waitForForge();
-if (!/^\\d+\\.\\d+$/.test(String(before.version))) throw new Error("unexpected_forge_version:" + before.version);
+if (!/^\d+\.\d+$/.test(String(before.version))) throw new Error("unexpected_forge_version:" + before.version);
 if (before.auditEvents !== true) throw new Error("forge_audit_events_unavailable");
 if (before.mode !== "production") throw new Error("forge_not_in_production_mode");
 if (before.publicOrigin !== "https://forge.staging.invalid") {
