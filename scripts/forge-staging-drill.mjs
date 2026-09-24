@@ -5,7 +5,6 @@ if (!process.argv.includes("--confirm-isolated-staging")) {
   throw new Error("pass --confirm-isolated-staging to run the Forge staging drill");
 }
 
-const root = new URL("../", import.meta.url);
 const staging = new URL("../staging-plane/", import.meta.url);
 const envFile = new URL(".env", staging);
 const compose = [
