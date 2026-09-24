@@ -769,9 +769,14 @@ export function createForgeControlService({
         if (req.method === "POST" && parts[3] === "data" && parts[4] === "snapshots" && parts.length === 5) {
           await store.getProject(projectId);
           await previews.stop(projectId);
-          return send(res, 201, {
-            snapshot: await runtimeData.createSnapshot(projectId),
+          const snapshot = await runtimeData.createSnapshot(projectId);
+          await audit.append({
+            type: "data.snapshot",
+            actor: {kind: "control"},
+            projectId,
+            details: {snapshotId: snapshot.snapshotId, totalBytes: snapshot.totalBytes},
           });
+          return send(res, 201, {snapshot});
         }
 
         if (
@@ -784,9 +789,14 @@ export function createForgeControlService({
         ) {
           await store.getProject(projectId);
           await previews.stop(projectId);
-          return send(res, 200, {
-            restore: await runtimeData.restoreSnapshot(projectId, parts[5]),
+          const restore = await runtimeData.restoreSnapshot(projectId, parts[5]);
+          await audit.append({
+            type: "data.restore",
+            actor: {kind: "control"},
+            projectId,
+            details: {snapshotId: parts[5]},
           });
+          return send(res, 200, {restore});
         }
 
         if (req.method === "POST" && parts[3] === "publish" && parts.length === 4) {
@@ -807,6 +817,15 @@ export function createForgeControlService({
             revision,
             artifactDir: artifact.artifactDir,
           });
+          await audit.append({
+            type: "project.publish",
+            actor: {kind: "control"},
+            projectId,
+            details: {
+              revisionId: revision.revisionId,
+              releaseId: release.releaseId ?? null,
+            },
+          });
 
           return send(res, 201, {release, artifact: artifact.manifest});
         }
@@ -825,10 +844,17 @@ export function createForgeControlService({
           if (!body.revisionId) {
             throw Object.assign(new Error("revisionId is required"), {statusCode: 400});
           }
-          return send(res, 200, await releases.rollback({
+          const rollback = await releases.rollback({
             projectId,
             revisionId: body.revisionId,
-          }));
+          });
+          await audit.append({
+            type: "project.rollback",
+            actor: {kind: "control"},
+            projectId,
+            details: {revisionId: body.revisionId},
+          });
+          return send(res, 200, rollback);
         }
       }
 
