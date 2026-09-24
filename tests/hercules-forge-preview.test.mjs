@@ -35,8 +35,12 @@ test("preview child environment strips Forge and credential variables", () => {
   assert.equal(env.OPENAI_API_KEY, undefined);
   assert.equal(env.HOST, "127.0.0.1");
   assert.equal(env.PORT, "0");
-  const withData = buildPreviewChildEnv({PATH: "/bin"}, {dataDir: "/tmp/forge-data"});
+  const withData = buildPreviewChildEnv(
+    {PATH: "/bin"},
+    {dataDir: "/tmp/forge-data", maxBytes: 4096},
+  );
   assert.equal(withData.FORGE_DATA_DIR, "/tmp/forge-data");
+  assert.equal(withData.FORGE_DATA_MAX_BYTES, "4096");
 });
 
 test("verified artifact starts a loopback preview with proxied CRUD API", async () => {
@@ -116,6 +120,47 @@ test("verified artifact starts a loopback preview with proxied CRUD API", async 
     const afterConcurrent = await fetch(preview.url + "/api/Item");
     assert.equal(afterConcurrent.status, 200);
     assert.equal((await afterConcurrent.json()).items.length, 13);
+  } finally {
+    if (preview) await preview.stop();
+    await rm(root, {recursive: true, force: true});
+  }
+});
+
+test("generated runtime enforces trusted project data quota without partial writes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-preview-quota-"));
+  let preview;
+  try {
+    const store = new ForgeWorkspaceStore(root);
+    const {revision} = await store.createProject(spec, {projectId: "quota-app"});
+    const artifact = await buildForgeArtifact({
+      workspaceRoot: root,
+      artifactRoot: join(root, "artifacts"),
+      projectId: "quota-app",
+      revisionId: revision.revisionId,
+    });
+
+    preview = await startForgePreview({
+      artifactDir: artifact.artifactDir,
+      runtimeDataDir: join(root, "runtime-data", "quota-app"),
+      runtimeDataMaxBytes: 1024,
+    });
+    assert.equal(preview.runtimeDataMaxBytes, 1024);
+
+    const health = await fetch(preview.url + "/health");
+    assert.equal(health.status, 200);
+    assert.equal((await health.json()).dataMaxBytes, 1024);
+
+    const tooLarge = await fetch(preview.url + "/api/Item", {
+      method: "POST",
+      headers: {"content-type": "application/json"},
+      body: JSON.stringify({name: "x".repeat(1500)}),
+    });
+    assert.equal(tooLarge.status, 413);
+    assert.match((await tooLarge.json()).error, /quota exceeded/);
+
+    const listed = await fetch(preview.url + "/api/Item");
+    assert.equal(listed.status, 200);
+    assert.equal((await listed.json()).items.length, 0);
   } finally {
     if (preview) await preview.stop();
     await rm(root, {recursive: true, force: true});

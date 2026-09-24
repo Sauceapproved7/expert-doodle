@@ -36,6 +36,7 @@ jobs:
             hercules-forge/identity.mjs \
             hercules-forge/artifact.mjs \
             hercules-forge/releases.mjs \
+            hercules-forge/runtime-data.mjs \
             hercules-forge/preview.mjs \
             hercules-forge/builder-console.mjs \
             hercules-forge/customer-console.mjs \

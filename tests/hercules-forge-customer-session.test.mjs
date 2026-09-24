@@ -190,6 +190,52 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
     );
     assert.equal(builderPreview.status, 201);
 
+    const builderSnapshot = await fetch(
+      base + "/v1/workspaces/workspace-a/projects/customer-project/data/snapshots",
+      {
+        method: "POST",
+        headers: {
+          cookie: builderLogin.cookie,
+          "x-forge-csrf": builderLogin.body.csrfToken,
+        },
+      },
+    );
+    assert.equal(builderSnapshot.status, 201);
+    const builderSnapshotBody = await builderSnapshot.json();
+    assert.equal(builderSnapshotBody.snapshot.verified, true);
+    const runtimeSnapshotId = builderSnapshotBody.snapshot.snapshotId;
+
+    const builderRestore = await fetch(
+      base +
+        "/v1/workspaces/workspace-a/projects/customer-project/data/snapshots/" +
+        encodeURIComponent(runtimeSnapshotId) +
+        "/restore",
+      {
+        method: "POST",
+        headers: {
+          cookie: builderLogin.cookie,
+          "x-forge-csrf": builderLogin.body.csrfToken,
+        },
+      },
+    );
+    assert.equal(builderRestore.status, 403);
+
+    const ownerRestore = await fetch(
+      base +
+        "/v1/workspaces/workspace-a/projects/customer-project/data/snapshots/" +
+        encodeURIComponent(runtimeSnapshotId) +
+        "/restore",
+      {
+        method: "POST",
+        headers: {
+          cookie: ownerLogin.cookie,
+          "x-forge-csrf": ownerCsrf,
+        },
+      },
+    );
+    assert.equal(ownerRestore.status, 200);
+    assert.equal((await ownerRestore.json()).restore.restored, true);
+
     const builderPublish = await fetch(
       base + "/v1/workspaces/workspace-a/projects/customer-project/publish",
       {

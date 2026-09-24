@@ -8,6 +8,7 @@ import {ForgePreviewManager} from "./preview.mjs";
 import {builderConsoleAsset} from "./builder-console.mjs";
 import {customerConsoleAsset} from "./customer-console.mjs";
 import {ForgeIdentityStore} from "./identity.mjs";
+import {DEFAULT_RUNTIME_DATA_MAX_BYTES, ForgeLocalRuntimeDataAdapter} from "./runtime-data.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const promptHash = (prompt) => createHash("sha256").update(prompt).digest("hex");
@@ -128,6 +129,7 @@ export function createForgeControlService({
   token,
   interpreter = null,
   secureSessionCookies = false,
+  runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
 }) {
   if (!root) throw new TypeError("root is required");
   if (typeof token !== "string" || token.length < 16) {
@@ -136,7 +138,10 @@ export function createForgeControlService({
 
   const store = new ForgeWorkspaceStore(root);
   const releases = new ForgeLocalReleaseAdapter(root);
-  const previews = new ForgePreviewManager(root);
+  const previews = new ForgePreviewManager(root, {runtimeDataMaxBytes});
+  const runtimeData = new ForgeLocalRuntimeDataAdapter(root, {
+    maxProjectBytes: runtimeDataMaxBytes,
+  });
   const identities = new ForgeIdentityStore(root);
   const artifactRoot = join(root, "artifacts");
 
@@ -162,10 +167,12 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "1.0",
+          version: "1.1",
           promptIngress: Boolean(interpreter),
           preview: true,
           persistentRuntime: true,
+          runtimeDataControl: true,
+          runtimeDataMaxBytes,
         });
       }
 
@@ -304,6 +311,59 @@ export function createForgeControlService({
             await requireProjectWorkspace(store, projectId, workspaceId);
             const stopped = await previews.stop(projectId);
             return send(res, stopped ? 200 : 404, {stopped});
+          }
+
+          if (req.method === "GET" && parts[5] === "data" && parts[6] === "usage" && parts.length === 7) {
+            await identities.requireWorkspace(sessionToken, workspaceId);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            return send(res, 200, {usage: await runtimeData.usage(projectId)});
+          }
+
+          if (req.method === "GET" && parts[5] === "data" && parts[6] === "snapshots" && parts.length === 7) {
+            await identities.requireWorkspace(sessionToken, workspaceId);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            return send(res, 200, {snapshots: await runtimeData.listSnapshots(projectId)});
+          }
+
+          if (
+            req.method === "GET" &&
+            parts[5] === "data" &&
+            parts[6] === "snapshots" &&
+            parts[7] &&
+            parts.length === 8
+          ) {
+            await identities.requireWorkspace(sessionToken, workspaceId);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            return send(res, 200, {
+              snapshot: await runtimeData.verifySnapshot(projectId, parts[7]),
+            });
+          }
+
+          if (req.method === "POST" && parts[5] === "data" && parts[6] === "snapshots" && parts.length === 7) {
+            await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin", "builder"]);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            await previews.stop(projectId);
+            return send(res, 201, {
+              snapshot: await runtimeData.createSnapshot(projectId),
+            });
+          }
+
+          if (
+            req.method === "POST" &&
+            parts[5] === "data" &&
+            parts[6] === "snapshots" &&
+            parts[7] &&
+            parts[8] === "restore" &&
+            parts.length === 9
+          ) {
+            await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+            await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            await previews.stop(projectId);
+            return send(res, 200, {
+              restore: await runtimeData.restoreSnapshot(projectId, parts[7]),
+            });
           }
 
           if (req.method === "POST" && parts[5] === "publish" && parts.length === 6) {
@@ -481,6 +541,52 @@ export function createForgeControlService({
           return send(res, stopped ? 200 : 404, {stopped});
         }
 
+        if (req.method === "GET" && parts[3] === "data" && parts[4] === "usage" && parts.length === 5) {
+          await store.getProject(projectId);
+          return send(res, 200, {usage: await runtimeData.usage(projectId)});
+        }
+
+        if (req.method === "GET" && parts[3] === "data" && parts[4] === "snapshots" && parts.length === 5) {
+          await store.getProject(projectId);
+          return send(res, 200, {snapshots: await runtimeData.listSnapshots(projectId)});
+        }
+
+        if (
+          req.method === "GET" &&
+          parts[3] === "data" &&
+          parts[4] === "snapshots" &&
+          parts[5] &&
+          parts.length === 6
+        ) {
+          await store.getProject(projectId);
+          return send(res, 200, {
+            snapshot: await runtimeData.verifySnapshot(projectId, parts[5]),
+          });
+        }
+
+        if (req.method === "POST" && parts[3] === "data" && parts[4] === "snapshots" && parts.length === 5) {
+          await store.getProject(projectId);
+          await previews.stop(projectId);
+          return send(res, 201, {
+            snapshot: await runtimeData.createSnapshot(projectId),
+          });
+        }
+
+        if (
+          req.method === "POST" &&
+          parts[3] === "data" &&
+          parts[4] === "snapshots" &&
+          parts[5] &&
+          parts[6] === "restore" &&
+          parts.length === 7
+        ) {
+          await store.getProject(projectId);
+          await previews.stop(projectId);
+          return send(res, 200, {
+            restore: await runtimeData.restoreSnapshot(projectId, parts[5]),
+          });
+        }
+
         if (req.method === "POST" && parts[3] === "publish" && parts.length === 4) {
           const body = await readBody(req);
           const revision = body.revisionId
@@ -545,6 +651,7 @@ export function listenForgeControlService({
   token,
   interpreter = null,
   secureSessionCookies = false,
+  runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
   host = "127.0.0.1",
   port = 38700,
 }) {
@@ -553,6 +660,7 @@ export function listenForgeControlService({
     token,
     interpreter,
     secureSessionCookies,
+    runtimeDataMaxBytes,
   });
   server.listen(port, host);
   return server;
