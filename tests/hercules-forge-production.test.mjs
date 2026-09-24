@@ -138,7 +138,7 @@ test("production session cookies are Secure and failed login throttling returns 
   try {
     const health = await fetch(base + "/health");
     const healthBody = await health.json();
-    assert.equal(healthBody.version, "1.2");
+    assert.equal(healthBody.version, "1.4");
     assert.equal(healthBody.mode, "production");
     assert.equal(healthBody.publicOrigin, "https://forge.example.test");
 
