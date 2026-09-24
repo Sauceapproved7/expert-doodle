@@ -51,8 +51,9 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
     assert.equal(health.body.persistentRuntime, true);
-    assert.equal(health.body.version, "1.2");
+    assert.equal(health.body.version, "1.4");
     assert.equal(health.body.runtimeDataControl, true);
+    assert.equal(health.body.auditEvents, true);
     assert.ok(health.body.runtimeDataMaxBytes > 0);
 
     const consoleResponse = await fetch(base + "/");
