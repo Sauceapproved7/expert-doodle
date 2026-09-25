@@ -39,7 +39,7 @@ Controls: no committed secrets, no secret-shaped audit fields, Vault custody for
 Controls: generated-template constraints, restrictive preview environment, bounded request bodies, explicit child-process allowlist. Hercules does not claim hardened arbitrary-code sandboxing.
 
 ### Supply-chain compromise
-Controls: SHA-pinned GitHub Actions, compiler checksum verification, owner-code verifier, provenance attestation checklist, immutable commit history. Signed release attestations/SBOM remain a future gate.
+Controls: SHA-pinned GitHub Actions, compiler checksum verification, owner-code verifier, provenance attestation checklist, immutable commit history, deterministic runtime-source packaging, SPDX SBOM generation, and GitHub-signed release attestations for tagged/manual release-evidence runs. An attestation is evidence only after the release workflow succeeds for the exact release commit.
 
 ### Cryptographic implementation defects
 Controls: Base Sepolia-only signer boundary, known-answer tests, low-s signatures, deterministic nonces, no mainnet authorization. Independent cryptographic review and differential/fuzz testing are required before real-value use.
