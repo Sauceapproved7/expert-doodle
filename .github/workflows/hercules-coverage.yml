@@ -1,0 +1,48 @@
+name: Hercules Core Coverage
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "hercules-forge/**"
+      - "hercules-hurc/**"
+      - "tests/hercules-forge*.test.mjs"
+      - "tests/hercules-hurc-*.test.mjs"
+      - ".github/workflows/hercules-coverage.yml"
+  pull_request:
+    paths:
+      - "hercules-forge/**"
+      - "hercules-hurc/**"
+      - "tests/hercules-forge*.test.mjs"
+      - "tests/hercules-hurc-*.test.mjs"
+      - ".github/workflows/hercules-coverage.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  core-coverage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Enforce owner-code and security baselines
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+
+      - name: Measure and enforce Forge/HURC coverage
+        run: |
+          node \
+            --experimental-test-coverage \
+            --test-coverage-include='hercules-forge/*.mjs' \
+            --test-coverage-include='hercules-hurc/*.mjs' \
+            --test-coverage-lines=60 \
+            --test-coverage-functions=60 \
+            --test-coverage-branches=50 \
+            --test \
+            tests/hercules-forge*.test.mjs \
+            tests/hercules-hurc-*.test.mjs
