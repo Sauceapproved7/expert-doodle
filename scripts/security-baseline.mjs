@@ -29,6 +29,10 @@ const signerSql = await read("hercules-hurc/sql/hurc-test-signer.sql");
 const threat = await read("docs/HERCULES-THREAT-MODEL.md");
 const securityPolicy = await read("SECURITY.md");
 const releaseEvidence = await read("scripts/release-evidence.mjs");
+const codeowners = await read(".github/CODEOWNERS");
+const contributing = await read("CONTRIBUTING.md");
+const openapi = await read("docs/openapi/hercules-forge-v1.yaml");
+const cryptoTests = await read("tests/hercules-hurc-testnet-crypto.test.mjs");
 
 const workflowFiles = await filesUnder(".github/workflows");
 const workflowText = Object.fromEntries(
@@ -60,6 +64,15 @@ const checks = {
   signerRequestBounded:
     /MAX_REQUEST_BYTES = 4096/.test(signer) &&
     /request_too_large/.test(signer),
+  signerTestnetOnly:
+    /network:\s*"base-sepolia"/.test(signer) &&
+    /chainId:\s*84532/.test(signer) &&
+    !/mainnetEnabled:\s*true/.test(signer),
+  cryptoKnownAnswerAndLowS:
+    /canonical empty-string vector/.test(cryptoTests) &&
+    /known Ethereum address/.test(cryptoTests) &&
+    /enforces low-s/.test(cryptoTests) &&
+    /only supports Base Sepolia/.test(cryptoTests),
   signerRegistryLocked:
     /force row level security/i.test(signerSql) &&
     /revoke all on table public\.hercules_hurc_test_signers from anon, authenticated/i.test(signerSql) &&
@@ -74,9 +87,24 @@ const checks = {
     /github\/codeql-action\/init@[0-9a-f]{40}/.test(workflowText[".github/workflows/hercules-codeql.yml"] ?? "") &&
     /github\/codeql-action\/analyze@[0-9a-f]{40}/.test(workflowText[".github/workflows/hercules-codeql.yml"] ?? ""),
   signedReleaseEvidenceGate:
-    /actions\/attest@[0-9a-f]{40}/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? "") &&
+    /actions\/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? "") &&
+    /artifact-metadata:\s*write/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? "") &&
     /sbom-path:/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? "") &&
     /SPDX-2\.3/.test(releaseEvidence),
+  deterministicReleaseBundle:
+    /--sort=name/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? "") &&
+    /--mtime='UTC 1970-01-01'/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? "") &&
+    /gzip -n/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? ""),
+  repositoryOwnership:
+    /^\*\s+@Sauceapproved7\s*$/m.test(codeowners),
+  contributionSecurityContract:
+    /Security-sensitive changes/.test(contributing) &&
+    /CodeQL/.test(contributing) &&
+    /THREAT-MODEL/.test(contributing),
+  forgeOpenApiContract:
+    /^openapi:\s*3\.2\.1$/m.test(openapi) &&
+    /controlBearer:/.test(openapi) &&
+    /x-forge-csrf/.test(openapi),
   noPullRequestTarget: Object.values(workflowText).every(
     (text) => !/^\s*pull_request_target\s*:/m.test(text),
   ),
