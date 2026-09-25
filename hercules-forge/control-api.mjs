@@ -22,20 +22,20 @@ function send(res, status, body, headers = {}) {
 
 function parseCookies(req) {
   const header = req.headers.cookie ?? "";
-  const result = {};
+  let forgeSession = null;
   for (const part of header.split(";")) {
     const index = part.indexOf("=");
     if (index < 0) continue;
     const key = part.slice(0, index).trim();
+    if (key !== "forge_session") continue;
     const value = part.slice(index + 1).trim();
-    if (!key) continue;
     try {
-      result[key] = decodeURIComponent(value);
+      forgeSession = decodeURIComponent(value);
     } catch (error) {
       if (!(error instanceof URIError)) throw error;
     }
   }
-  return result;
+  return {forge_session: forgeSession};
 }
 
 function sessionCookie(token, secure = false) {
