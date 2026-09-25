@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
 import {
   HURC_BASE_FUNDS_URL,
   HURC_QUICKNODE_FAUCET_URL,
@@ -126,4 +127,20 @@ test("QuickNode preparation rejects non-EVM public addresses", () => {
     () => buildHurcBrowserRequest({action:"prepare_quicknode", address:"not-an-address"}),
     /invalid HURC test signer address/,
   );
+});
+
+
+test("live HURC browser edge routes faucet preparation with public signer metadata only", async () => {
+  const edge = await readFile(
+    new URL("../hercules-hurc/browser-edge.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(edge, /QUICKNODE_FAUCET_URL/);
+  assert.match(edge, /prepare_quicknode/);
+  assert.match(edge, /hercules_hurc_test_signers/);
+  assert.match(edge, /select", "address,network,chain_id,status"/);
+  assert.match(edge, /#wallet/);
+  assert.match(edge, /step-one/);
+  assert.doesNotMatch(edge, /select", "[^"]*secret_ref/);
+  assert.doesNotMatch(edge, /hercules_get_secret[^\n]*hurc/i);
 });
