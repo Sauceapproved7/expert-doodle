@@ -23,7 +23,7 @@ node scripts/verify-owner-code-only.mjs
 node scripts/security-baseline.mjs
 ```
 
-Security-sensitive changes should also pass CodeQL and update the threat model when they introduce a new trust boundary.
+Security-sensitive changes should also pass CodeQL and update `docs/HERCULES-THREAT-MODEL.md` when they introduce a new trust boundary.
 
 ## High-risk changes
 
