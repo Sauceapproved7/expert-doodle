@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash, scryptSync} from "node:crypto";
-import {mkdtemp, readFile, readdir, rm, writeFile} from "node:fs/promises";
+import {mkdtemp, readFile, readdir, rm, stat, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {ForgeIdentityStore, SCRYPT_PROFILE} from "../hercules-forge/identity.mjs";
@@ -21,10 +21,9 @@ test("identity store hashes passwords and opaque session tokens", async () => {
     });
     assert.equal(user.email, "owner@example.com");
     assert.equal("passwordHash" in user, false);
-    const storedUser = JSON.parse(await readFile(
-      join(root, "identity", "users", "owner-user.json"),
-      "utf8",
-    ));
+    const userPath = join(root, "identity", "users", "owner-user.json");
+    const storedUser = JSON.parse(await readFile(userPath, "utf8"));
+    assert.equal((await stat(userPath)).mode & 0o777, 0o600);
     assert.match(
       storedUser.passwordHash,
       new RegExp("^scrypt-v2\\$" + SCRYPT_PROFILE.N + "\\$" + SCRYPT_PROFILE.r + "\\$" + SCRYPT_PROFILE.p + "\\$"),
@@ -64,10 +63,9 @@ test("identity store hashes passwords and opaque session tokens", async () => {
     const sessionFiles = await readdir(join(root, "identity", "sessions"));
     assert.equal(sessionFiles.length, 1);
     assert.equal(sessionFiles[0].includes(loggedIn.token), false);
-    const sessionContent = await readFile(
-      join(root, "identity", "sessions", sessionFiles[0]),
-      "utf8",
-    );
+    const sessionPath = join(root, "identity", "sessions", sessionFiles[0]);
+    const sessionContent = await readFile(sessionPath, "utf8");
+    assert.equal((await stat(sessionPath)).mode & 0o777, 0o600);
     assert.equal(sessionContent.includes(loggedIn.token), false);
     assert.equal(sessionContent.includes(fixtureCredential("correct", "horse", "battery", "staple")), false);
 

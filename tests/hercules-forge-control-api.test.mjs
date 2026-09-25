@@ -275,3 +275,24 @@ test("control API rejects malformed and oversized request bodies", async () => {
     await rm(root, {recursive: true, force: true});
   }
 });
+
+
+test("control API fails closed on malformed cookie and path encoding", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-encoding-"));
+  const {server, base} = await start(root);
+
+  try {
+    const malformedCookie = await fetch(base + "/v1/me", {
+      headers: {cookie: "forge_session=%ZZ"},
+    });
+    assert.equal(malformedCookie.status, 401);
+
+    const malformedPath = await fetch(base + "/v1/projects/%ZZ", {
+      headers: {authorization: "Bearer " + token},
+    });
+    assert.equal(malformedPath.status, 400);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive: true, force: true});
+  }
+});
