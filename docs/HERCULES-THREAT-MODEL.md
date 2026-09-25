@@ -59,6 +59,6 @@ Current Hercules evidence does not establish:
 - multi-region production failover;
 - continuous production SLO attainment;
 - external penetration-test assurance;
-- signed SBOM/provenance for every release.
+- proof that every historical release has a signed SBOM/provenance attestation; the current release-evidence workflow establishes this control for releases that pass through it.
 
 These non-claims are security boundaries, not documentation omissions.
