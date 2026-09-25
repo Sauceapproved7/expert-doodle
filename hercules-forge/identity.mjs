@@ -279,6 +279,7 @@ export class ForgeIdentityStore {
     // Upgrade legacy hashes only after a successful password verification.
     // This preserves compatibility while ensuring active accounts converge on
     // the hardened profile without a forced password reset.
+    // Upgrade legacy hashes only after a successful password verification.
     if (String(user.passwordHash).startsWith("scrypt-v1$")) {
       const passwordParts = await derivePassword(password);
       user = {
