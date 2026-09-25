@@ -98,3 +98,31 @@ test("HURC browser adapter never places the internal key in the request body", a
   });
   assert.equal(String(body).includes("do-not-leak"), false);
 });
+
+
+test("QuickNode address-only preparation is fixed to Base Sepolia and the public signer", async () => {
+  const {HURC_QUICKNODE_FAUCET_URL} = await import("../hercules-hurc/browser-adapter.mjs");
+  assert.equal(HURC_QUICKNODE_FAUCET_URL, "https://faucet.quicknode.com/base/sepolia");
+
+  const address = "0xa38586da920f3142932641d3fde825b10c6afca0";
+  const request = buildHurcBrowserRequest({
+    action: "prepare_quicknode",
+    address,
+  });
+
+  assert.equal(request.action, "interact");
+  assert.equal(request.url, HURC_QUICKNODE_FAUCET_URL);
+  assert.deepEqual(request.steps, [
+    {type:"type", selector:'input[placeholder="0x..."]', text:address},
+    {type:"wait", ms:750},
+  ]);
+  assert.equal(JSON.stringify(request).includes("privateKey"), false);
+  assert.equal(JSON.stringify(request).includes("mnemonic"), false);
+});
+
+test("QuickNode preparation rejects non-EVM public addresses", () => {
+  assert.throws(
+    () => buildHurcBrowserRequest({action:"prepare_quicknode", address:"not-an-address"}),
+    /invalid HURC test signer address/,
+  );
+});
