@@ -28,6 +28,7 @@ const signer = await read("hercules-hurc/testnet-signer-edge.ts");
 const signerSql = await read("hercules-hurc/sql/hurc-test-signer.sql");
 const threat = await read("docs/HERCULES-THREAT-MODEL.md");
 const securityPolicy = await read("SECURITY.md");
+const releaseEvidence = await read("scripts/release-evidence.mjs");
 
 const workflowFiles = await filesUnder(".github/workflows");
 const workflowText = Object.fromEntries(
@@ -43,6 +44,9 @@ const checks = {
   legacyPasswordCompatibility:
     /scheme === "scrypt-v1"/.test(identity) &&
     /New identities never use v1/.test(identity),
+  legacyPasswordAutoUpgrade:
+    /startsWith\("scrypt-v1\$"\)/.test(identity) &&
+    /Upgrade legacy hashes only after a successful password verification/.test(identity),
   forgeSecurityHeaders:
     /strict-transport-security/.test(control) &&
     /x-frame-options/.test(control) &&
@@ -66,6 +70,13 @@ const checks = {
   vulnerabilityPolicy:
     securityPolicy.includes("## Reporting a vulnerability") &&
     securityPolicy.includes("Do **not** publish exploitable details"),
+  codeqlGate:
+    /github\/codeql-action\/init@[0-9a-f]{40}/.test(workflowText[".github/workflows/hercules-codeql.yml"] ?? "") &&
+    /github\/codeql-action\/analyze@[0-9a-f]{40}/.test(workflowText[".github/workflows/hercules-codeql.yml"] ?? ""),
+  signedReleaseEvidenceGate:
+    /actions\/attest@[0-9a-f]{40}/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? "") &&
+    /sbom-path:/.test(workflowText[".github/workflows/hercules-release-evidence.yml"] ?? "") &&
+    /SPDX-2\.3/.test(releaseEvidence),
   noPullRequestTarget: Object.values(workflowText).every(
     (text) => !/^\s*pull_request_target\s*:/m.test(text),
   ),
