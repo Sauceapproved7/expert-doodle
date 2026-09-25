@@ -144,3 +144,17 @@ test("live HURC browser edge routes faucet preparation with public signer metada
   assert.doesNotMatch(edge, /select", "[^"]*secret_ref/);
   assert.doesNotMatch(edge, /hercules_get_secret[^\n]*hurc/i);
 });
+
+
+test("server-side faucet invoker is fixed to prepare_quicknode and browser-gateway custody", async () => {
+  const sql = await readFile(
+    new URL("../hercules-hurc/sql/hurc-browser-invoke.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /hercules_hurc_prepare_quicknode/);
+  assert.match(sql, /purpose = 'browser-gateway'/);
+  assert.match(sql, /hercules_get_secret/);
+  assert.match(sql, /"action":"prepare_quicknode"/);
+  assert.match(sql, /revoke all on function public\.hercules_hurc_prepare_quicknode\(\)/i);
+  assert.doesNotMatch(sql, /hercules_hurc_test_signers[\s\S]*secret_ref/i);
+});
