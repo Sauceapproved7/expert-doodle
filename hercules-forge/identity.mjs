@@ -1,5 +1,5 @@
 import {createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual} from "node:crypto";
-import {mkdir, readFile, readdir, rm, writeFile} from "node:fs/promises";
+import {chmod, mkdir, readFile, readdir, rm, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import {promisify} from "node:util";
 
@@ -48,7 +48,8 @@ async function readJson(path) {
 
 async function writeJson(path, value, options = {}) {
   await mkdir(dirname(path), {recursive: true});
-  await writeFile(path, json(value), {encoding: "utf8", ...options});
+  await writeFile(path, json(value), {encoding: "utf8", mode: 0o600, ...options});
+  await chmod(path, 0o600);
 }
 
 async function derivePassword(password, saltHex = null, profile = SCRYPT_PROFILE) {
