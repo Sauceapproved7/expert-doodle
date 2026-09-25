@@ -105,5 +105,10 @@ const evidence = {
   failed,
 };
 
-console.log(JSON.stringify({\n  schema: evidence.schema,\n  version: evidence.version,\n  passed: evidence.passed,\n  failed: evidence.failed,\n}, null, 2));
+console.log(JSON.stringify({
+  schema: evidence.schema,
+  version: evidence.version,
+  passed: evidence.passed,
+  failed: evidence.failed,
+}, null, 2));
 if (failed.length) process.exitCode = 1;
