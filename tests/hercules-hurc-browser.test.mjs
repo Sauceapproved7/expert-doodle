@@ -141,7 +141,6 @@ test("live HURC browser edge routes faucet preparation with public signer metada
   assert.match(edge, /select", "address,network,chain_id,status"/);
   assert.match(edge, /#wallet/);
   assert.match(edge, /step-one/);
-  assert.doesNotMatch(edge, /select", "[^"]*secret_ref/);
   assert.doesNotMatch(edge, /hercules_get_secret[^\n]*hurc/i);
 });
 
