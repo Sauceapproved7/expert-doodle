@@ -276,6 +276,25 @@ export class ForgeIdentityStore {
       throw Object.assign(new Error("invalid credentials"), {statusCode: 401});
     }
 
+    // Upgrade legacy hashes only after a successful password verification.
+    // This preserves compatibility while ensuring active accounts converge on
+    // the hardened profile without a forced password reset.
+    if (String(user.passwordHash).startsWith("scrypt-v1$")) {
+      const passwordParts = await derivePassword(password);
+      user = {
+        ...user,
+        passwordHash: [
+          SCRYPT_PROFILE.version,
+          SCRYPT_PROFILE.N,
+          SCRYPT_PROFILE.r,
+          SCRYPT_PROFILE.p,
+          passwordParts.salt,
+          passwordParts.hash,
+        ].join("$"),
+      };
+      await writeJson(this.userPath(user.userId), user);
+    }
+
     const token = randomBytes(32).toString("base64url");
     const csrfToken = randomBytes(24).toString("base64url");
     const now = Date.now();
