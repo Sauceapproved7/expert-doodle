@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash, scryptSync} from "node:crypto";
-import {scryptSync} from "node:crypto";
 import {mkdtemp, readFile, readdir, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
