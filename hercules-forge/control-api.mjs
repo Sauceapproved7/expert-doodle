@@ -152,6 +152,18 @@ export function createForgeControlService({
   const artifactRoot = join(root, "artifacts");
 
   const server = http.createServer(async (req, res) => {
+    // Defense-in-depth headers apply to every Forge response. TLS terminators
+    // may add stricter edge policy, but the application should fail safe when
+    // deployed behind a transparent proxy.
+    res.setHeader("cache-control", "no-store");
+    res.setHeader("x-content-type-options", "nosniff");
+    res.setHeader("referrer-policy", "no-referrer");
+    res.setHeader("x-frame-options", "DENY");
+    res.setHeader("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+    if (serviceMode === "production") {
+      res.setHeader("strict-transport-security", "max-age=31536000; includeSubDomains");
+    }
+
     try {
       const url = new URL(req.url, "http://localhost");
       const parts = routeParts(url);

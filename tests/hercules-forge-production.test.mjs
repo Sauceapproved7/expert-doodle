@@ -140,6 +140,14 @@ test("production session cookies are Secure and failed login throttling returns 
     const health = await fetch(base + "/health");
     const healthBody = await health.json();
     assert.equal(healthBody.version, "1.4");
+    assert.equal(health.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(health.headers.get("referrer-policy"), "no-referrer");
+    assert.equal(health.headers.get("x-frame-options"), "DENY");
+    assert.equal(
+      health.headers.get("strict-transport-security"),
+      "max-age=31536000; includeSubDomains",
+    );
+    assert.match(health.headers.get("permissions-policy") ?? "", /camera=\(\)/);
     assert.equal(healthBody.mode, "production");
     assert.equal(healthBody.publicOrigin, "https://forge.example.test");
 

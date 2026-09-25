@@ -11,6 +11,13 @@ create table if not exists public.hercules_hurc_test_signers (
 );
 
 alter table public.hercules_hurc_test_signers enable row level security;
+alter table public.hercules_hurc_test_signers force row level security;
+
+revoke all on table public.hercules_hurc_test_signers from anon, authenticated;
+
+create unique index if not exists hercules_hurc_one_active_signer_per_network
+  on public.hercules_hurc_test_signers (network)
+  where status = 'active';
 
 comment on table public.hercules_hurc_test_signers is
   'Server-only Base Sepolia HURC test signer metadata. Private keys live in Supabase Vault, never in this table.';

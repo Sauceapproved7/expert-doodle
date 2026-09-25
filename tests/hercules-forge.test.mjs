@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {compileForgeProject, compileFromInterpreter} from "../hercules-forge/compiler.mjs";
 import {StaticForgeInterpreter} from "../hercules-forge/interpreter.mjs";
-import {validateForgeSpec} from "../hercules-forge/schema.mjs";
+import {FORGE_SPEC_LIMITS, validateForgeSpec} from "../hercules-forge/schema.mjs";
 
 const spec = {
   version: "0.1",
@@ -30,6 +30,27 @@ test("validates an owned Forge project spec", () => {
   const result = validateForgeSpec(spec);
   assert.equal(result.ok, true);
   assert.deepEqual(result.errors, []);
+});
+
+test("fails closed on oversized or duplicate specs", () => {
+  const oversized = structuredClone(spec);
+  oversized.description = "x".repeat(FORGE_SPEC_LIMITS.descriptionChars + 1);
+  oversized.pages = Array.from(
+    {length: FORGE_SPEC_LIMITS.pages + 1},
+    (_, index) => ({name: "Page" + index, kind: "dashboard"}),
+  );
+  const oversizedResult = validateForgeSpec(oversized);
+  assert.equal(oversizedResult.ok, false);
+  assert.match(oversizedResult.errors.join("\n"), /description exceeds maximum length/);
+  assert.match(oversizedResult.errors.join("\n"), /too many pages/);
+
+  const duplicate = structuredClone(spec);
+  duplicate.pages.push({...duplicate.pages[0]});
+  duplicate.actions.push({...duplicate.actions[0]});
+  const duplicateResult = validateForgeSpec(duplicate);
+  assert.equal(duplicateResult.ok, false);
+  assert.match(duplicateResult.errors.join("\n"), /duplicate page/);
+  assert.match(duplicateResult.errors.join("\n"), /duplicate action/);
 });
 
 test("fails closed on invalid references", () => {

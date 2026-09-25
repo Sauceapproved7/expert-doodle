@@ -244,3 +244,34 @@ test("workspace rejects path-unsafe project identifiers", async () => {
     await rm(root, {recursive: true, force: true});
   }
 });
+
+
+test("control API rejects malformed and oversized request bodies", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-body-"));
+  const {server, base} = await start(root);
+
+  try {
+    const malformed = await fetch(base + "/v1/projects", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer " + token,
+      },
+      body: "{not-json",
+    });
+    assert.equal(malformed.status, 400);
+
+    const oversized = await fetch(base + "/v1/projects", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer " + token,
+      },
+      body: JSON.stringify({payload: "x".repeat(1024 * 1024 + 1)}),
+    });
+    assert.equal(oversized.status, 413);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive: true, force: true});
+  }
+});

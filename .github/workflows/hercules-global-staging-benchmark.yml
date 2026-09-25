@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Enforce repository-wide owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
@@ -39,7 +39,7 @@ jobs:
         run: node scripts/staging-plane.mjs verify
       - name: Save benchmark evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: staging-performance-${{ github.run_id }}-${{ github.run_attempt }}
           path: benchmarks/performance/staging-*.json
@@ -48,11 +48,13 @@ jobs:
       - name: Capture staging diagnostics
         if: failure()
         run: docker compose --env-file staging-plane/.env -f staging-plane/compose.yml logs --no-color migrate postgres postgrest api forge
+      - name: Verify evidence-derived benchmark scoring
+        run: node --test tests/global-infrastructure-benchmark.test.mjs
       - name: Recalculate global benchmark
         run: node scripts/recalculate-global-infrastructure.mjs
       - name: Publish job summary
         run: |
-          node -e 'const fs=require("fs");const x=require("./benchmarks/global-infrastructure-result-current.json");fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`# Hercules global benchmark\n\nInfrastructure: **${x.score}/100**\n\nAgentic capability: **${x.agenticCapabilityCoverage}%**\n\nStaging requests: **${x.stagingEvidence.requests}** with **${x.stagingEvidence.errorRate*100}%** errors.\n`)'
+          node -e 'const fs=require("fs");const x=require("./benchmarks/global-infrastructure-result-current.json");fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY,`# Hercules infrastructure evidence\n\nGlobal maturity score: **${x.score}/100** (evidence-derived).\n\nStaging requests: **${x.stagingEvidence.requests}** with **${x.stagingEvidence.errorRate*100}%** errors.\n\np95: **${x.stagingEvidence.p95LatencyMs.toFixed(2)} ms**; p99: **${x.stagingEvidence.p99LatencyMs.toFixed(2)} ms**.\n\nProduction-scale claim: **false**.\n`)'
       - name: Teardown
         if: always()
         run: node scripts/staging-plane.mjs down || true
