@@ -243,6 +243,7 @@ function renderServer(spec) {
     '  const allowed = new Map(fields.map((field) => [field.name, field]));',
     '  const clean = {};',
     '  for (const [key, value] of Object.entries(input)) {',
+    '    if (["id", "created_at", "updated_at"].includes(key)) continue;',
     '    const field = allowed.get(key);',
     '    if (!field) throw Object.assign(new Error("unknown field: " + key), {statusCode: 400});',
     '    clean[key] = validateValue(field, value);',
