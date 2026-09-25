@@ -10,6 +10,7 @@ permissions:
   contents: read
   id-token: write
   attestations: write
+  artifact-metadata: write
 
 jobs:
   attest-runtime:
@@ -36,7 +37,7 @@ jobs:
             --owner=0 \
             --group=0 \
             --numeric-owner \
-            -czf /tmp/hercules-release/hercules-runtime-source.tgz \
+            -cf - \
             hercules-forge \
             hercules-models \
             hercules-training \
@@ -46,15 +47,16 @@ jobs:
             scripts \
             staging-plane \
             governance/owner-code-policy.json \
-            LICENSE
+            LICENSE \
+          | gzip -n > /tmp/hercules-release/hercules-runtime-source.tgz
 
       - name: Attest runtime build provenance
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
         with:
           subject-path: /tmp/hercules-release/hercules-runtime-source.tgz
 
       - name: Attest runtime SBOM
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
         with:
           subject-path: /tmp/hercules-release/hercules-runtime-source.tgz
           sbom-path: /tmp/hercules-release/hercules-runtime.spdx.json
