@@ -113,8 +113,9 @@ test("QuickNode address-only preparation is fixed to Base Sepolia and the public
   assert.equal(request.action, "interact");
   assert.equal(request.url, HURC_QUICKNODE_FAUCET_URL);
   assert.deepEqual(request.steps, [
-    {type:"type", selector:'input[placeholder="0x..."]', text:address},
-    {type:"wait", ms:750},
+    {type:"type", selector:"#wallet", text:address},
+    {type:"click", selector:'button[name="_action"][value="step-one"]'},
+    {type:"wait", ms:1500},
   ]);
   assert.equal(JSON.stringify(request).includes("privateKey"), false);
   assert.equal(JSON.stringify(request).includes("mnemonic"), false);
