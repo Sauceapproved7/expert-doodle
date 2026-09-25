@@ -40,9 +40,9 @@ jobs:
             --experimental-test-coverage \
             --test-coverage-include='hercules-forge/*.mjs' \
             --test-coverage-include='hercules-hurc/*.mjs' \
-            --test-coverage-lines=60 \
-            --test-coverage-functions=60 \
-            --test-coverage-branches=50 \
+            --test-coverage-lines=80 \
+            --test-coverage-functions=85 \
+            --test-coverage-branches=70 \
             --test \
             tests/hercules-forge*.test.mjs \
             tests/hercules-hurc-*.test.mjs
