@@ -28,7 +28,12 @@ function parseCookies(req) {
     if (index < 0) continue;
     const key = part.slice(0, index).trim();
     const value = part.slice(index + 1).trim();
-    if (key) result[key] = decodeURIComponent(value);
+    if (!key) continue;
+    try {
+      result[key] = decodeURIComponent(value);
+    } catch (error) {
+      if (!(error instanceof URIError)) throw error;
+    }
   }
   return result;
 }
@@ -105,7 +110,14 @@ function requirePrompt(body) {
 }
 
 function routeParts(url) {
-  return url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  try {
+    return url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  } catch (error) {
+    if (error instanceof URIError) {
+      throw Object.assign(new Error("malformed path encoding"), {statusCode: 400});
+    }
+    throw error;
+  }
 }
 
 async function requireProjectWorkspace(store, projectId, workspaceId) {
