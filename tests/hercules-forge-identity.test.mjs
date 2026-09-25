@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {scryptSync} from "node:crypto";
 import {mkdtemp, readFile, readdir, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -125,6 +126,48 @@ test("workspace roles are explicit and enforced", async () => {
     await assert.rejects(
       identities.requireWorkspace(login.token, "missing-workspace"),
       /workspace access denied/,
+    );
+  } finally {
+    await rm(root, {recursive: true, force: true});
+  }
+});
+
+
+test("legacy scrypt-v1 password hashes upgrade after successful login", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-identity-upgrade-"));
+  try {
+    const identities = new ForgeIdentityStore(root);
+    const password = fixtureCredential("legacy", "fixture", "password", "long", "enough");
+    const user = await identities.createUser({
+      userId: "legacy-user",
+      email: "legacy@example.com",
+      password,
+    });
+
+    const salt = Buffer.from("00112233445566778899aabbccddeeff", "hex");
+    const hash = scryptSync(password, salt, 32, {
+      N: 2 ** 14,
+      r: 8,
+      p: 1,
+      maxmem: 32 * 1024 * 1024,
+    }).toString("hex");
+    const userPath = join(root, "identity", "users", user.userId + ".json");
+    const stored = JSON.parse(await readFile(userPath, "utf8"));
+    stored.passwordHash = "scrypt-v1$" + salt.toString("hex") + "$" + hash;
+    await import("node:fs/promises").then(({writeFile}) =>
+      writeFile(userPath, JSON.stringify(stored, null, 2) + "\n", "utf8"),
+    );
+
+    const session = await identities.createSession({
+      email: "legacy@example.com",
+      password,
+    });
+    assert.equal(session.user.userId, "legacy-user");
+
+    const upgraded = JSON.parse(await readFile(userPath, "utf8"));
+    assert.match(
+      upgraded.passwordHash,
+      new RegExp("^scrypt-v2\\$" + SCRYPT_PROFILE.N + "\\$" + SCRYPT_PROFILE.r + "\\$" + SCRYPT_PROFILE.p + "\\$"),
     );
   } finally {
     await rm(root, {recursive: true, force: true});
