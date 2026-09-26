@@ -102,6 +102,18 @@ function requireInterpreter(interpreter) {
   }
 }
 
+function requireIdentityLifecycle(notificationAdapter, publicOrigin) {
+  if (!notificationAdapter || typeof notificationAdapter.send !== "function" || !publicOrigin) {
+    throw Object.assign(new Error("identity lifecycle is not configured"), {statusCode: 503});
+  }
+}
+
+function lifecycleLink(publicOrigin, kind, token) {
+  const url = new URL("/", publicOrigin);
+  url.searchParams.set(kind, token);
+  return url.toString();
+}
+
 function requirePrompt(body) {
   if (typeof body.prompt !== "string" || !body.prompt.trim()) {
     throw Object.assign(new Error("prompt is required"), {statusCode: 400});
@@ -145,6 +157,8 @@ export function createForgeControlService({
   secureSessionCookies = false,
   runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
   loginRateLimiter = null,
+  recoveryRateLimiter = null,
+  notificationAdapter = null,
   serviceMode = "development",
   publicOrigin = null,
 }) {
@@ -197,7 +211,7 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "1.4",
+          version: "1.5",
           mode: serviceMode,
           publicOrigin,
           promptIngress: Boolean(interpreter),
@@ -205,7 +219,95 @@ export function createForgeControlService({
           persistentRuntime: true,
           runtimeDataControl: true,
           auditEvents: true,
+          identityLifecycle: Boolean(notificationAdapter && publicOrigin),
           runtimeDataMaxBytes,
+        });
+      }
+
+      if (req.method === "POST" && url.pathname === "/v1/invites/accept") {
+        const body = await readBody(req);
+        const accepted = await identities.consumeInvite({
+          token: body.token,
+          password: body.password,
+        });
+        await audit.append({
+          type: "identity.invite.accept",
+          actor: {kind: "user", userId: accepted.user.userId},
+          workspaceId: accepted.membership.workspaceId,
+          details: {
+            inviteId: accepted.inviteId,
+            role: accepted.membership.role,
+          },
+        });
+        return send(res, 201, {
+          accepted: true,
+          user: accepted.user,
+          membership: accepted.membership,
+        });
+      }
+
+      if (req.method === "POST" && url.pathname === "/v1/recovery/request") {
+        requireIdentityLifecycle(notificationAdapter, publicOrigin);
+        const body = await readBody(req);
+        const rateKey = typeof body.email === "string" ? body.email : "<unknown>";
+        const emailHash = emailAuditHash(rateKey);
+        try {
+          recoveryRateLimiter?.beforeAttempt(rateKey);
+        } catch (error) {
+          if (error?.statusCode === 429) {
+            await audit.append({
+              type: "identity.recovery.request",
+              outcome: "blocked",
+              actor: {kind: "system"},
+              details: {emailHash, reason: "rate_limit"},
+            });
+          }
+          throw error;
+        }
+
+        const issued = await identities.createRecovery({email: body.email});
+        recoveryRateLimiter?.recordFailure(rateKey);
+        let outcome = "success";
+        if (issued) {
+          try {
+            await notificationAdapter.send({
+              kind: "recovery",
+              to: issued.user.email,
+              link: lifecycleLink(publicOrigin, "recovery", issued.token),
+              expiresAt: issued.recovery.expiresAt,
+            });
+          } catch {
+            outcome = "failure";
+            await identities.revokeLifecycleToken("recovery", issued.token);
+          }
+        }
+        await audit.append({
+          type: "identity.recovery.request",
+          outcome,
+          actor: {kind: "system"},
+          details: {emailHash, accepted: true},
+        });
+        return send(res, 202, {accepted: true});
+      }
+
+      if (req.method === "POST" && url.pathname === "/v1/recovery/complete") {
+        const body = await readBody(req);
+        const completed = await identities.completeRecovery({
+          token: body.token,
+          password: body.password,
+        });
+        await audit.append({
+          type: "identity.recovery.complete",
+          actor: {kind: "user", userId: completed.user.userId},
+          details: {
+            recoveryId: completed.recoveryId,
+            revokedSessions: completed.revokedSessions,
+          },
+        });
+        return send(res, 200, {
+          reset: true,
+          user: completed.user,
+          revokedSessions: completed.revokedSessions,
         });
       }
 
@@ -299,6 +401,59 @@ export function createForgeControlService({
       if (parts[0] === "v1" && parts[1] === "workspaces" && parts[2]) {
         const workspaceId = parts[2];
         const sessionToken = parseCookies(req).forge_session;
+
+        if (req.method === "POST" && parts[3] === "invites" && parts.length === 4) {
+          requireIdentityLifecycle(notificationAdapter, publicOrigin);
+          await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
+          const auth = await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
+          const body = await readBody(req);
+          const issued = await identities.createInvite({
+            email: body.email,
+            workspaceId,
+            role: body.role ?? "viewer",
+          });
+          try {
+            await notificationAdapter.send({
+              kind: "invite",
+              to: issued.invite.email,
+              link: lifecycleLink(publicOrigin, "invite", issued.token),
+              expiresAt: issued.invite.expiresAt,
+            });
+          } catch {
+            await identities.revokeLifecycleToken("invites", issued.token);
+            await audit.append({
+              type: "identity.invite.create",
+              outcome: "failure",
+              actor: {kind: "user", userId: auth.user.userId},
+              workspaceId,
+              details: {
+                inviteId: issued.invite.inviteId,
+                emailHash: emailAuditHash(issued.invite.email),
+                role: issued.invite.role,
+                reason: "delivery_failed",
+              },
+            });
+            throw Object.assign(new Error("invite delivery failed"), {statusCode: 502});
+          }
+          await audit.append({
+            type: "identity.invite.create",
+            actor: {kind: "user", userId: auth.user.userId},
+            workspaceId,
+            details: {
+              inviteId: issued.invite.inviteId,
+              emailHash: emailAuditHash(issued.invite.email),
+              role: issued.invite.role,
+            },
+          });
+          return send(res, 201, {
+            invite: {
+              inviteId: issued.invite.inviteId,
+              email: issued.invite.email,
+              role: issued.invite.role,
+              expiresAt: issued.invite.expiresAt,
+            },
+          });
+        }
 
         if (req.method === "GET" && parts[3] === "audit" && parts.length === 4) {
           await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
@@ -563,6 +718,65 @@ export function createForgeControlService({
             projectId: url.searchParams.get("projectId"),
             type: url.searchParams.get("type"),
           }),
+        });
+      }
+
+      if (
+        req.method === "POST" &&
+        parts[0] === "v1" &&
+        parts[1] === "admin" &&
+        parts[2] === "workspaces" &&
+        parts[3] &&
+        parts[4] === "invites" &&
+        parts.length === 5
+      ) {
+        requireIdentityLifecycle(notificationAdapter, publicOrigin);
+        const body = await readBody(req);
+        const issued = await identities.createInvite({
+          email: body.email,
+          workspaceId: parts[3],
+          role: body.role ?? "viewer",
+        });
+        try {
+          await notificationAdapter.send({
+            kind: "invite",
+            to: issued.invite.email,
+            link: lifecycleLink(publicOrigin, "invite", issued.token),
+            expiresAt: issued.invite.expiresAt,
+          });
+        } catch {
+          await identities.revokeLifecycleToken("invites", issued.token);
+          await audit.append({
+            type: "identity.invite.create",
+            outcome: "failure",
+            actor: {kind: "control"},
+            workspaceId: parts[3],
+            details: {
+              inviteId: issued.invite.inviteId,
+              emailHash: emailAuditHash(issued.invite.email),
+              role: issued.invite.role,
+              reason: "delivery_failed",
+            },
+          });
+          throw Object.assign(new Error("invite delivery failed"), {statusCode: 502});
+        }
+        await audit.append({
+          type: "identity.invite.create",
+          actor: {kind: "control"},
+          workspaceId: parts[3],
+          details: {
+            inviteId: issued.invite.inviteId,
+            emailHash: emailAuditHash(issued.invite.email),
+            role: issued.invite.role,
+          },
+        });
+        return send(res, 201, {
+          invite: {
+            inviteId: issued.invite.inviteId,
+            email: issued.invite.email,
+            role: issued.invite.role,
+            expiresAt: issued.invite.expiresAt,
+          },
         });
       }
 
@@ -908,6 +1122,8 @@ export function listenForgeControlService({
   secureSessionCookies = false,
   runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
   loginRateLimiter = null,
+  recoveryRateLimiter = null,
+  notificationAdapter = null,
   serviceMode = "development",
   publicOrigin = null,
   host = "127.0.0.1",
@@ -920,6 +1136,8 @@ export function listenForgeControlService({
     secureSessionCookies,
     runtimeDataMaxBytes,
     loginRateLimiter,
+    recoveryRateLimiter,
+    notificationAdapter,
     serviceMode,
     publicOrigin,
   });
