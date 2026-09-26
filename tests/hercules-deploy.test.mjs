@@ -171,10 +171,12 @@ test("Forge bridge reads the actual verified active release", async () => {
 
 test("Deploy Plane HTTP service processes queued jobs in the background", async () => {
   const root = await mkdtemp(join(tmpdir(), "hercules-deploy-api-"));
+  const recoveryRoot = await mkdtemp(join(tmpdir(), "hercules-deploy-recovery-"));
   const controlToken = runtimeSecret();
   const adapters = new Map([["memory", new MemoryHerculesDeployTargetAdapter()]]);
   const service = createHerculesDeployService({
     root,
+    recoveryRoot,
     token: controlToken,
     adapters,
     pollIntervalMs: 100,
@@ -230,6 +232,7 @@ test("Deploy Plane HTTP service processes queued jobs in the background", async 
   } finally {
     await new Promise((resolve) => service.server.close(resolve));
     await rm(root, {recursive: true, force: true});
+    await rm(recoveryRoot, {recursive: true, force: true});
   }
 });
 
@@ -237,13 +240,15 @@ test("Deploy Plane production config keeps control credentials out of safe summa
   const controlToken = runtimeSecret();
   const config = readHerculesDeployConfig({
     HERCULES_DEPLOY_ROOT: "/tmp/hercules-deploy",
+    HERCULES_DEPLOY_RECOVERY_ROOT: "/tmp/hercules-recovery",
     HERCULES_DEPLOY_CONTROL_TOKEN: controlToken,
     HERCULES_DEPLOY_HOST: "127.0.0.1",
     HERCULES_DEPLOY_PORT: "38800",
     HERCULES_DEPLOY_POLL_MS: "750",
   });
   const safe = safeHerculesDeployConfig(config);
-  assert.equal(safe.pollIntervalMs, 750);\n  assert.equal(safe.recoveryRoot, "/tmp/hercules-recovery");
+  assert.equal(safe.pollIntervalMs, 750);
+  assert.equal(safe.recoveryRoot, "/tmp/hercules-recovery");
   assert.equal("token" in safe, false);
   assert.equal(JSON.stringify(safe).includes(controlToken), false);
 });
