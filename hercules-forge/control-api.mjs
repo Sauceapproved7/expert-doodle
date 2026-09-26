@@ -22,15 +22,20 @@ function send(res, status, body, headers = {}) {
 
 function parseCookies(req) {
   const header = req.headers.cookie ?? "";
-  const result = {};
+  let forgeSession = null;
   for (const part of header.split(";")) {
     const index = part.indexOf("=");
     if (index < 0) continue;
     const key = part.slice(0, index).trim();
+    if (key !== "forge_session") continue;
     const value = part.slice(index + 1).trim();
-    if (key) result[key] = decodeURIComponent(value);
+    try {
+      forgeSession = decodeURIComponent(value);
+    } catch (error) {
+      if (!(error instanceof URIError)) throw error;
+    }
   }
-  return result;
+  return {forge_session: forgeSession};
 }
 
 function sessionCookie(token, secure = false) {
@@ -105,7 +110,14 @@ function requirePrompt(body) {
 }
 
 function routeParts(url) {
-  return url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  try {
+    return url.pathname.split("/").filter(Boolean).map(decodeURIComponent);
+  } catch (error) {
+    if (error instanceof URIError) {
+      throw Object.assign(new Error("malformed path encoding"), {statusCode: 400});
+    }
+    throw error;
+  }
 }
 
 async function requireProjectWorkspace(store, projectId, workspaceId) {
@@ -152,6 +164,18 @@ export function createForgeControlService({
   const artifactRoot = join(root, "artifacts");
 
   const server = http.createServer(async (req, res) => {
+    // Defense-in-depth headers apply to every Forge response. TLS terminators
+    // may add stricter edge policy, but the application should fail safe when
+    // deployed behind a transparent proxy.
+    res.setHeader("cache-control", "no-store");
+    res.setHeader("x-content-type-options", "nosniff");
+    res.setHeader("referrer-policy", "no-referrer");
+    res.setHeader("x-frame-options", "DENY");
+    res.setHeader("permissions-policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
+    if (serviceMode === "production") {
+      res.setHeader("strict-transport-security", "max-age=31536000; includeSubDomains");
+    }
+
     try {
       const url = new URL(req.url, "http://localhost");
       const parts = routeParts(url);
