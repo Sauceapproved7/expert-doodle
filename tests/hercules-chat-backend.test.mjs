@@ -26,6 +26,11 @@ test("authenticated clients cannot forge assistant messages or private accountin
   assert.match(migration, /grant execute on function public\.hercules_chat_reserve_ai_request[\s\S]*to service_role/i);
 });
 
+test("AI reservation rejects sessions outside the supplied user boundary", () => {
+  assert.match(migration, /SESSION_NOT_OWNED_BY_USER/);
+  assert.match(migration, /where s\.id = p_session_id[\s\S]*s\.user_id = p_user_id/i);
+});
+
 test("semantic memory is owner-scoped and vector indexed", () => {
   assert.match(migration, /embedding extensions\.vector\(384\)/i);
   assert.match(migration, /using hnsw \(embedding vector_cosine_ops\)/i);
