@@ -60,6 +60,8 @@ This makes portability a build property instead of a future migration project.
 
 Implemented and evidenced:
 
+- Hercules Base Pulse realtime with durable PostgreSQL event replay, JWT-owned channels, cursor polling, and SSE streaming;
+
 - Hercules Base Storage with content-addressed blobs, private JWT-owned buckets, PostgreSQL metadata, persistent self-hosted storage, and download-time SHA-256 integrity verification;
 
 - Hercules Base Auth with scrypt password hashing, JWT access tokens, rotating opaque refresh tokens, server-only credential/session RPCs, and fixture-only staging identities;
@@ -74,7 +76,6 @@ Implemented and evidenced:
 
 Planned, not represented as complete:
 
-- Hercules Base Realtime;
 - Hercules Base Functions;
 - multi-project provisioning onto deployment targets;
 - production migration/cutover from managed Supabase.
