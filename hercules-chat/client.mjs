@@ -93,7 +93,7 @@ export function createHerculesChatClient({
   return Object.freeze({
     endpoint,
 
-    createSession({title, metadata: meta} = {}) {
+    async createSession({title, metadata: meta} = {}) {
       const payload = {action: "create_session"};
       if (title !== undefined) {
         const value = String(title).trim();
@@ -105,14 +105,14 @@ export function createHerculesChatClient({
       return post(payload);
     },
 
-    listSessions({limit} = {}) {
+    async listSessions({limit} = {}) {
       const payload = {action: "list_sessions"};
       const value = boundedInteger(limit, "limit", {min: 1, max: 100});
       if (value !== undefined) payload.limit = value;
       return post(payload);
     },
 
-    updateSession(sessionId, {title, status, metadata: meta} = {}) {
+    async updateSession(sessionId, {title, status, metadata: meta} = {}) {
       const payload = {
         action: "update_session",
         session_id: requiredString(sessionId, "session id"),
@@ -134,14 +134,14 @@ export function createHerculesChatClient({
       return post(payload);
     },
 
-    deleteSession(sessionId) {
+    async deleteSession(sessionId) {
       return post({
         action: "delete_session",
         session_id: requiredString(sessionId, "session id"),
       });
     },
 
-    sendMessage(sessionId, content, {
+    async sendMessage(sessionId, content, {
       clientMessageId,
       parentMessageId,
       metadata: meta,
@@ -162,7 +162,7 @@ export function createHerculesChatClient({
       return post(payload);
     },
 
-    getMessages(sessionId, {afterId, limit} = {}) {
+    async getMessages(sessionId, {afterId, limit} = {}) {
       const payload = {
         action: "get_messages",
         session_id: requiredString(sessionId, "session id"),
@@ -174,7 +174,7 @@ export function createHerculesChatClient({
       return post(payload);
     },
 
-    remember(content, {
+    async remember(content, {
       memoryType,
       sessionId,
       sourceMessageId,
@@ -198,7 +198,7 @@ export function createHerculesChatClient({
       return post(payload);
     },
 
-    searchMemory(query, {limit, threshold} = {}) {
+    async searchMemory(query, {limit, threshold} = {}) {
       const value = requiredString(query, "memory query");
       if (value.length > 8_000) throw new TypeError("memory query is too long");
       const payload = {action: "search_memory", query: value};
@@ -213,18 +213,18 @@ export function createHerculesChatClient({
       return post(payload);
     },
 
-    forgetMemory(memoryId) {
+    async forgetMemory(memoryId) {
       return post({
         action: "forget_memory",
         memory_id: requiredString(memoryId, "memory id"),
       });
     },
 
-    usage() {
+    async usage() {
       return post({action: "usage"});
     },
 
-    runChat(sessionId, prompt, {
+    async runChat(sessionId, prompt, {
       clientMessageId,
       metadata: meta,
     } = {}) {
