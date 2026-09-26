@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 2,
+  "version": 3,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -11,6 +11,10 @@
     {
       "path": "hercules-deploy",
       "role": "deployment-runtime"
+    },
+    {
+      "path": "hercules-chat",
+      "role": "chat-runtime"
     },
     {
       "path": "hercules-models",
@@ -192,6 +196,12 @@
       "id": "github-actions",
       "name": "GitHub Actions",
       "ownership": "third-party-ci-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase managed Postgres, Auth, Realtime, Edge Functions, and pgvector infrastructure",
+      "ownership": "third-party-infrastructure",
       "packagedAsHerculesCode": false
     },
     {
