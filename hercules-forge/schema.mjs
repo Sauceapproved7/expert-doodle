@@ -1,6 +1,13 @@
 export const FORGE_SPEC_VERSION = "0.1";
 
 const IDENT = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
+export const FORGE_SPEC_LIMITS = Object.freeze({
+  descriptionChars: 4096,
+  entities: 64,
+  fieldsPerEntity: 128,
+  pages: 64,
+  actions: 128,
+});
 
 export function normalizeForgeSpec(input = {}) {
   return {
@@ -20,6 +27,12 @@ export function validateForgeSpec(input) {
   if (spec.version !== FORGE_SPEC_VERSION) errors.push("unsupported spec version");
   if (!IDENT.test(spec.name)) errors.push("name must be a stable identifier");
   if (!spec.description) errors.push("description is required");
+  if (spec.description.length > FORGE_SPEC_LIMITS.descriptionChars) {
+    errors.push("description exceeds maximum length");
+  }
+  if (spec.entities.length > FORGE_SPEC_LIMITS.entities) errors.push("too many entities");
+  if (spec.pages.length > FORGE_SPEC_LIMITS.pages) errors.push("too many pages");
+  if (spec.actions.length > FORGE_SPEC_LIMITS.actions) errors.push("too many actions");
 
   const entityNames = new Set();
   for (const entity of spec.entities) {
@@ -30,6 +43,10 @@ export function validateForgeSpec(input) {
 
     if (!Array.isArray(entity?.fields) || entity.fields.length === 0) {
       errors.push("entity " + (name || "<empty>") + " must define fields");
+      continue;
+    }
+    if (entity.fields.length > FORGE_SPEC_LIMITS.fieldsPerEntity) {
+      errors.push("entity " + (name || "<empty>") + " defines too many fields");
       continue;
     }
 
@@ -45,8 +62,11 @@ export function validateForgeSpec(input) {
     }
   }
 
+  const pageNames = new Set();
   for (const page of spec.pages) {
     const pageName = String(page?.name ?? "");
+    if (pageNames.has(pageName)) errors.push("duplicate page: " + pageName);
+    pageNames.add(pageName);
     if (!IDENT.test(pageName)) errors.push("invalid page name: " + (pageName || "<empty>"));
     if (!["list", "detail", "form", "dashboard"].includes(page?.kind)) {
       errors.push("unsupported page kind: " + (pageName || "<empty>"));
@@ -56,8 +76,11 @@ export function validateForgeSpec(input) {
     }
   }
 
+  const actionNames = new Set();
   for (const action of spec.actions) {
     const actionName = String(action?.name ?? "");
+    if (actionNames.has(actionName)) errors.push("duplicate action: " + actionName);
+    actionNames.add(actionName);
     if (!IDENT.test(actionName)) errors.push("invalid action name: " + (actionName || "<empty>"));
     if (!["create", "read", "update", "delete", "custom"].includes(action?.kind)) {
       errors.push("unsupported action kind: " + (actionName || "<empty>"));

@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Enforce repository-wide owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
@@ -78,7 +78,7 @@ jobs:
           NODE
 
       - name: Upload agent checkpoint evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: hercules-agent-router-v0.1
           path: .hercules-training/bootstrap-agent-router/
@@ -121,7 +121,7 @@ jobs:
           NODE
 
       - name: Upload retrieval checkpoint evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: hercules-retrieval-v0.1
           path: .hercules-training/bootstrap-retrieval/
@@ -164,7 +164,7 @@ jobs:
           NODE
 
       - name: Upload Guard checkpoint evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: hercules-guard-v0.1
           path: .hercules-training/bootstrap-guard/
@@ -206,7 +206,7 @@ jobs:
           NODE
 
       - name: Upload five-family checkpoint evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: hercules-five-native-families-v0.1
           path: .hercules-training/five-native-families/
@@ -252,7 +252,7 @@ jobs:
           NODE
 
       - name: Upload Language Foundation candidate evidence
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: hercules-language-foundation-v0.2
           path: .hercules-training/language-foundation-v0.2/

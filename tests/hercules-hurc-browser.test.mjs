@@ -1,16 +1,41 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
 import {
   HURC_BASE_FUNDS_URL,
+  HURC_QUICKNODE_FAUCET_URL,
   buildHurcBrowserRequest,
+  buildHurcFaucetStepOneRequest,
   callHerculesBrowser,
 } from "../hercules-hurc/browser-adapter.mjs";
+
+const SIGNER = "0xa38586da920f3142932641d3fde825b10c6afca0";
 
 test("HURC browser request is pinned to official Base funds page", () => {
   const request = buildHurcBrowserRequest();
   assert.equal(request.action, "scrape");
   assert.equal(request.url, "https://docs.base.org/get-started/get-funds");
   assert.equal(request.steps.length, 0);
+});
+
+test("HURC faucet step one is pinned to QuickNode Base Sepolia and the signer address", () => {
+  const request = buildHurcFaucetStepOneRequest(SIGNER);
+  assert.equal(HURC_QUICKNODE_FAUCET_URL, "https://faucet.quicknode.com/base/sepolia");
+  assert.equal(request.action, "interact");
+  assert.equal(request.url, HURC_QUICKNODE_FAUCET_URL);
+  assert.deepEqual(request.steps, [
+    {type:"type", selector:"#wallet", text:SIGNER},
+    {type:"click", selector:'button[name="_action"][value="step-one"]'},
+    {type:"wait", ms:1500},
+  ]);
+});
+
+test("HURC faucet step one rejects arbitrary or zero addresses", () => {
+  assert.throws(() => buildHurcFaucetStepOneRequest("https://evil.example"), /address/i);
+  assert.throws(
+    () => buildHurcFaucetStepOneRequest("0x0000000000000000000000000000000000000000"),
+    /zero/i,
+  );
 });
 
 test("HURC browser adapter calls the owned Hercules browser gateway", async () => {
@@ -36,6 +61,28 @@ test("HURC browser adapter calls the owned Hercules browser gateway", async () =
   assert.equal(body.url, HURC_BASE_FUNDS_URL);
 });
 
+test("HURC browser adapter can route the pinned faucet request without changing the gateway", async () => {
+  let seen;
+  const request = buildHurcFaucetStepOneRequest(SIGNER);
+  const fetchImpl = async (url, init) => {
+    seen = {url, init};
+    return {
+      ok: true,
+      status: 200,
+      async text() { return JSON.stringify({ok:true, traceId:"faucet-test"}); },
+    };
+  };
+
+  await callHerculesBrowser(fetchImpl, {
+    supabaseUrl: "https://example.supabase.co",
+    internalKey: "server-only",
+    request,
+  });
+
+  assert.equal(seen.url, "https://example.supabase.co/functions/v1/hercules-browser");
+  assert.deepEqual(JSON.parse(seen.init.body), request);
+});
+
 test("HURC browser adapter never places the internal key in the request body", async () => {
   let body;
   const fetchImpl = async (_url, init) => {
@@ -51,4 +98,62 @@ test("HURC browser adapter never places the internal key in the request body", a
     internalKey: "do-not-leak",
   });
   assert.equal(String(body).includes("do-not-leak"), false);
+});
+
+
+test("QuickNode address-only preparation is fixed to Base Sepolia and the public signer", async () => {
+  const {HURC_QUICKNODE_FAUCET_URL} = await import("../hercules-hurc/browser-adapter.mjs");
+  assert.equal(HURC_QUICKNODE_FAUCET_URL, "https://faucet.quicknode.com/base/sepolia");
+
+  const address = "0xa38586da920f3142932641d3fde825b10c6afca0";
+  const request = buildHurcBrowserRequest({
+    action: "prepare_quicknode",
+    address,
+  });
+
+  assert.equal(request.action, "interact");
+  assert.equal(request.url, HURC_QUICKNODE_FAUCET_URL);
+  assert.deepEqual(request.steps, [
+    {type:"type", selector:"#wallet", text:address},
+    {type:"click", selector:'button[name="_action"][value="step-one"]'},
+    {type:"wait", ms:1500},
+  ]);
+  assert.equal(JSON.stringify(request).includes("privateKey"), false);
+  assert.equal(JSON.stringify(request).includes("mnemonic"), false);
+});
+
+test("QuickNode preparation rejects non-EVM public addresses", () => {
+  assert.throws(
+    () => buildHurcBrowserRequest({action:"prepare_quicknode", address:"not-an-address"}),
+    /invalid HURC test signer address/,
+  );
+});
+
+
+test("live HURC browser edge routes faucet preparation with public signer metadata only", async () => {
+  const edge = await readFile(
+    new URL("../hercules-hurc/browser-edge.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(edge, /QUICKNODE_FAUCET_URL/);
+  assert.match(edge, /prepare_quicknode/);
+  assert.match(edge, /hercules_hurc_test_signers/);
+  assert.match(edge, /select", "address,network,chain_id,status"/);
+  assert.match(edge, /#wallet/);
+  assert.match(edge, /step-one/);
+  assert.doesNotMatch(edge, /hercules_get_secret[^\n]*hurc/i);
+});
+
+
+test("server-side faucet invoker is fixed to prepare_quicknode and browser-gateway custody", async () => {
+  const sql = await readFile(
+    new URL("../hercules-hurc/sql/hurc-browser-invoke.sql", import.meta.url),
+    "utf8",
+  );
+  assert.match(sql, /hercules_hurc_prepare_quicknode/);
+  assert.match(sql, /purpose = 'browser-gateway'/);
+  assert.match(sql, /hercules_get_secret/);
+  assert.match(sql, /"action":"prepare_quicknode"/);
+  assert.match(sql, /revoke all on function public\.hercules_hurc_prepare_quicknode\(\)/i);
+  assert.doesNotMatch(sql, /hercules_hurc_test_signers[\s\S]*secret_ref/i);
 });

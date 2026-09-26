@@ -1,0 +1,39 @@
+{
+  "schema": "sauceapproved.hercules.hurc-browser-runtime",
+  "version": 1,
+  "status": "active",
+  "canonicalRepository": "Sauceapproved7/expert-doodle",
+  "canonicalCommit": "35c6654dba893cbc362691953ec4442481af2506",
+  "supabaseProject": "xbwuablxhhwsaoomsoco",
+  "edgeFunction": {
+    "name": "hercules-hurc-browser",
+    "functionId": "dfe646a8-d523-4f98-b4b8-43340ffb1be8",
+    "version": 1,
+    "status": "ACTIVE",
+    "sha256": "03d5c1a363709f2c6f52a00ff4687449ed3bc9e81e485c1767a2f4381ecc2a4f"
+  },
+  "browserGateway": "hercules-browser",
+  "networkTarget": {
+    "id": "base-sepolia",
+    "chainId": 84532
+  },
+  "capabilities": [
+    "discover_faucets"
+  ],
+  "safety": {
+    "privateKeyStored": false,
+    "seedPhraseStored": false,
+    "transactionSigning": false,
+    "transactionBroadcast": false,
+    "mainnetEnabled": false
+  },
+  "onchainDeployment": {
+    "status": "not-deployed",
+    "remaining": [
+      "authorized EVM signer",
+      "testnet treasury address",
+      "testnet ETH for gas",
+      "initial test supply"
+    ]
+  }
+}

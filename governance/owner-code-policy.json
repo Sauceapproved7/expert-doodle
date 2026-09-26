@@ -91,8 +91,11 @@
     ".onnx"
   ],
   "allowedWorkflowActions": [
-    "actions/checkout@11d5960a326750d5838078e36cf38b85af677262",
-    "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
+    "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+    "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+    "actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d",
+    "github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2",
+    "github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2"
   ],
   "allowedContainerImages": [
     "postgres:16.4-alpine",

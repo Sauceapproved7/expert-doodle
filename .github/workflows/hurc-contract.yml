@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Verify owner-code-only boundary
         run: node scripts/verify-owner-code-only.mjs
@@ -48,4 +48,4 @@ jobs:
         run: node scripts/hurc-check-solc-output.mjs /tmp/hurc-solc-output.json
 
       - name: Run HURC tests
-        run: node --test tests/hercules-hurc-source.test.mjs tests/hercules-hurc-deployment-plan.test.mjs tests/hercules-hurc-browser.test.mjs
+        run: node --test tests/hercules-hurc-source.test.mjs tests/hercules-hurc-deployment-plan.test.mjs tests/hercules-hurc-browser.test.mjs tests/hercules-hurc-rpc.test.mjs tests/hercules-hurc-testnet-crypto.test.mjs tests/hercules-hurc-testnet-signer-edge.test.mjs

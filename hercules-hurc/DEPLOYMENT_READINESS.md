@@ -28,3 +28,24 @@ After deployment, record the contract address and transaction hash, change statu
 node scripts/validate-hurc-deployment.mjs
 node --test tests/hercules-hurc-deployment.test.mjs
 ```
+
+## Current Base Sepolia testnet state
+
+Completed:
+
+- [x] Base Sepolia selected as the current test deployment target (chain ID `84532`).
+- [x] Owner-code-only gate passed for HURC.
+- [x] Provenance gate passed for HURC.
+- [x] Secret scan passed for HURC.
+- [x] HURC compiled successfully with the pinned Solidity compiler.
+- [x] Contract surface and HURC test suite passed.
+- [x] Hercules Browser integration deployed and recorded in `browser-runtime.json`.
+
+Still required for an actual on-chain testnet deployment:
+
+- [ ] Authorized EVM signer.
+- [ ] Testnet treasury address controlled by that signer.
+- [ ] Test ETH for Base Sepolia gas.
+- [ ] Initial test supply selection.
+
+No mainnet deployment is enabled by this state.
