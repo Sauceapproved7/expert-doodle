@@ -1,7 +1,7 @@
 import http from "node:http";
 import {timingSafeEqual} from "node:crypto";
 import {HerculesDeployStore} from "./store.mjs";
-import {HerculesDeployWorker} from "./worker.mjs";
+import {HerculesDeployWorker} from "./worker.mjs";\nimport {DeploymentFlightRecorder, HerculesReleaseAdmissionGate} from "./admission.mjs";
 
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -161,7 +161,7 @@ export function createHerculesDeployService({
   server.on("close", () => worker.stop());
   if (autoStartWorker) worker.start();
 
-  return {server, store, worker};
+  return {server, store, worker, flightRecorder, admissionGate};
 }
 
 export function listenHerculesDeployService({
