@@ -1,0 +1,66 @@
+{
+  "version": "0.1",
+  "candidateId": "hercules-research-neural-v02",
+  "modelId": "hercules-research",
+  "family": "hercules-research",
+  "capability": "neural-evidence-language-candidate",
+  "promotionStatus": "candidate",
+  "activeReplacement": false,
+  "algorithm": "context-embedding-softmax-sgd",
+  "framework": "hercules-native-js",
+  "checkpointSha256": "afd55d86f5c5d01b16cf36eb5e425ce556a2f35d3a2dc92c6b48b9849cdca203",
+  "checkpointBytes": 248911,
+  "sourceCommit": "cba5195565034fee2fc0c1ccd6aa5c8f3e87259b",
+  "workflowRunId": 36270636972,
+  "workflowArtifactId": 10915004232,
+  "workflowArtifactDigest": "sha256:c477079484309f3282735ebdb5363debec69abaf2e27b3f7f1cb39a618b90035",
+  "verificationRuns": {
+    "ownerCode": {
+      "runId": 36270636995,
+      "passed": true
+    },
+    "securityBaseline": {
+      "runId": 36270637046,
+      "passed": true
+    },
+    "codeql": {
+      "runId": 36270636999,
+      "passed": true
+    }
+  },
+  "trainingDataset": {
+    "path": "hercules-training/bootstrap/research-neural-v0.2-train.jsonl",
+    "records": 72,
+    "contentSha256": "397a3a30cb8f24a257bcbe9191cd222595c4c087f4977500c3b8fd945e3f76fe"
+  },
+  "evaluationDataset": {
+    "path": "hercules-training/bootstrap/research-neural-v0.2-eval.jsonl",
+    "records": 20,
+    "contentSha256": "141353cf474f8de443c24aa0bfe8030b870d19e6991ad61b453f4f4103bcfb8e"
+  },
+  "architecture": {
+    "contextLength": 3,
+    "embeddingDim": 12,
+    "vocabularySize": 242,
+    "trainingExamples": 1447,
+    "epochs": 32
+  },
+  "evaluation": {
+    "passed": true,
+    "metrics": {
+      "top1Accuracy": 0.5535714285714286,
+      "contentTop1Accuracy": 0.21739130434782608,
+      "unigramImprovement": 0.2892551731354318,
+      "backoffCrossEntropyRatio": 0.9741942716718722,
+      "tokenCoverage": 0.9408602150537635
+    },
+    "gate": {
+      "minimumTop1Accuracy": 0.4,
+      "minimumContentTop1Accuracy": 0.1,
+      "minimumUnigramImprovement": 0.1,
+      "maximumBackoffCrossEntropyRatio": 1.4,
+      "minimumTokenCoverage": 0.85
+    }
+  },
+  "provenance": "Repository-owned neural research-language architecture and Hercules-authored evidence corpus; no third-party text dataset, model weights, tokenizer package, or ML SDK is packaged."
+}
