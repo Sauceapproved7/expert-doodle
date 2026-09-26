@@ -48,7 +48,9 @@ async function login(base, email, password) {
 }
 
 function lifecycleToken(link, kind) {
-  return new URL(link).searchParams.get(kind);
+  const hash = new URL(link).hash.slice(1);
+  const prefix = kind + "=";
+  return hash.startsWith(prefix) ? decodeURIComponent(hash.slice(prefix.length)) : null;
 }
 
 test("workspace invite and recovery lifecycle is one-time, audited, and secret-safe", async () => {
