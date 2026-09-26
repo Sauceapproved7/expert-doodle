@@ -168,3 +168,25 @@ test("Storage rejects traversal and oversized objects before persistence", async
   assert.equal(oversized.status,413);
   assert.equal(writes,0);
 });
+
+
+test("self-hosted Storage uses a persistent blob volume and is reported implemented", async () => {
+  const {readFile}=await import("node:fs/promises");
+  const {BASE_CAPABILITIES}=await import("../hercules-base/core.mjs");
+  const compose=await readFile(new URL("../staging-plane/compose.yml",import.meta.url),"utf8");
+
+  assert.equal(BASE_CAPABILITIES.storage.status,"implemented");
+  assert.match(compose,/HERCULES_BASE_STORAGE_ROOT:\s*\/base-storage/);
+  assert.match(compose,/hercules_base_storage:\/base-storage/);
+  assert.match(compose,/\n  hercules_base_storage:\s*$/m);
+});
+
+test("storage lifecycle drill is part of staging CI", async () => {
+  const {readFile}=await import("node:fs/promises");
+  const workflow=await readFile(
+    new URL("../.github/workflows/hercules-forge-staging.yml",import.meta.url),
+    "utf8",
+  );
+  assert.match(workflow,/Prove Hercules Base Storage lifecycle/);
+  assert.match(workflow,/node scripts\/base-storage-staging-drill\.mjs/);
+});
