@@ -11,13 +11,27 @@ export function customerConsoleHtml() {
   <p>Access your Forge workspace.</p>
   <label>Email<input id="email" type="email" autocomplete="username"></label>
   <label>Password<input id="password" type="password" autocomplete="current-password"></label>
-  <button id="login">Sign in</button>
+  <div class="actions"><button id="login">Sign in</button><button id="forgot" class="secondary">Forgot password</button></div>
   <pre id="loginStatus"></pre>
+</section>
+<section id="lifecyclePanel" class="auth-card" hidden>
+  <h1 id="lifecycleTitle">Account access</h1>
+  <p id="lifecycleCopy"></p>
+  <label>New password<input id="lifecyclePassword" type="password" autocomplete="new-password"></label>
+  <div class="actions"><button id="lifecycleSubmit">Continue</button><button id="lifecycleCancel" class="secondary">Cancel</button></div>
+  <pre id="lifecycleStatus"></pre>
 </section>
 <section id="appShell" hidden>
   <aside>
     <div class="user-row"><div><strong id="userEmail"></strong><div class="muted" id="role"></div></div><button id="logout">Log out</button></div>
     <label>Workspace<select id="workspace"></select></label>
+    <section id="invitePanel" class="data-panel" hidden>
+      <h3>Invite member</h3>
+      <label>Email<input id="inviteEmail" type="email" autocomplete="off"></label>
+      <label>Role<select id="inviteRole"><option value="viewer">Viewer</option><option value="builder">Builder</option><option value="admin">Admin</option></select></label>
+      <button id="inviteMember">Send invite</button>
+      <div id="inviteStatus" class="muted"></div>
+    </section>
     <h2>Projects</h2><div id="projects"></div>
   </aside>
   <section class="workspace">
@@ -61,13 +75,14 @@ export function customerConsoleHtml() {
 }
 
 export function customerConsoleCss() {
-  return `:root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}*{box-sizing:border-box}body{margin:0}header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #263047;background:#0d111a}header span{margin-left:10px;color:#8791a7}.auth-card{max-width:430px;margin:9vh auto;padding:26px;background:#111724;border:1px solid #273047;border-radius:16px}.auth-card p{color:#aab4c8}#appShell{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 61px)}aside{padding:20px;border-right:1px solid #263047}.workspace{padding:28px;max-width:1100px;width:100%}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:20px;margin-bottom:18px}label{display:block;font-size:13px;color:#aab4c8;margin:8px 0}input,textarea,select{width:100%;margin-top:6px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:9px;padding:11px}textarea{min-height:115px;resize:vertical}button{background:#f5f7ff;color:#0b0f17;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;margin:5px 5px 5px 0}.project{padding:10px;border:1px solid #273047;border-radius:9px;margin:7px 0;cursor:pointer}.project:hover{background:#151d2d}.muted{color:#8791a7;font-size:12px}.revision,.snapshot,.audit-event{padding:10px 0;border-bottom:1px solid #273047}.revision button,.snapshot button{font-size:12px;padding:7px 9px}.data-panel{margin-top:18px;padding-top:14px;border-top:1px solid #273047}.user-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}.heading{display:flex;justify-content:space-between;gap:12px}.actions{margin:10px 0}pre{white-space:pre-wrap;background:#080b12;border:1px solid #273047;padding:14px;border-radius:10px;min-height:54px}a{color:#8bc4ff}@media(max-width:760px){#appShell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #263047}.workspace{padding:16px}}`;
+  return `:root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}*{box-sizing:border-box}body{margin:0}header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #263047;background:#0d111a}header span{margin-left:10px;color:#8791a7}.auth-card{max-width:430px;margin:9vh auto;padding:26px;background:#111724;border:1px solid #273047;border-radius:16px}.auth-card p{color:#aab4c8}#appShell{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 61px)}aside{padding:20px;border-right:1px solid #263047}.workspace{padding:28px;max-width:1100px;width:100%}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:20px;margin-bottom:18px}label{display:block;font-size:13px;color:#aab4c8;margin:8px 0}input,textarea,select{width:100%;margin-top:6px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:9px;padding:11px}textarea{min-height:115px;resize:vertical}button{background:#f5f7ff;color:#0b0f17;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;margin:5px 5px 5px 0}button.secondary{background:#20283a;color:#e8edff;border:1px solid #34415c}.project{padding:10px;border:1px solid #273047;border-radius:9px;margin:7px 0;cursor:pointer}.project:hover{background:#151d2d}.muted{color:#8791a7;font-size:12px}.revision,.snapshot,.audit-event{padding:10px 0;border-bottom:1px solid #273047}.revision button,.snapshot button{font-size:12px;padding:7px 9px}.data-panel{margin-top:18px;padding-top:14px;border-top:1px solid #273047}.user-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}.heading{display:flex;justify-content:space-between;gap:12px}.actions{margin:10px 0}pre{white-space:pre-wrap;background:#080b12;border:1px solid #273047;padding:14px;border-radius:10px;min-height:54px}a{color:#8bc4ff}@media(max-width:760px){#appShell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #263047}.workspace{padding:16px}}`;
 }
 
 export function customerConsoleJs() {
   return `(() => {
 const $=(id)=>document.getElementById(id);
 let csrf=""; let me=null; let workspaceId=null; let membership=null; let selected=null; let revisions=[];
+let lifecycleKind=null; let lifecycleTokenValue="";
 const esc=(v)=>String(v).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const status=(v)=>$("status").textContent=typeof v==="string"?v:JSON.stringify(v,null,2);
 const loginStatus=(v)=>$("loginStatus").textContent=typeof v==="string"?v:JSON.stringify(v,null,2);
@@ -104,7 +119,7 @@ async function selectWorkspace(id){
   const data=await request("/v1/workspaces/"+encodeURIComponent(id)+"/projects");
   membership=data.membership; $("role").textContent=membership.role+" · "+data.workspace.name;
   $("createPanel").hidden=!canBuild(); $("builderControls").hidden=!canBuild(); $("adminControls").hidden=!canAdmin();
-  $("auditPanel").hidden=!canAdmin();
+  $("auditPanel").hidden=!canAdmin(); $("invitePanel").hidden=!canAdmin();
   renderProjects(data.projects);
   if(canAdmin()) await refreshAudit();
 }
@@ -233,12 +248,73 @@ async function startPreview(revisionId){
 async function publishRevision(revisionId){status(await request(projectBase()+"/publish",{method:"POST",csrf:true,body:{revisionId}}))}
 async function rollbackRevision(revisionId){status(await request(projectBase()+"/rollback",{method:"POST",csrf:true,body:{revisionId}}))}
 
+function initLifecycle(){
+  const fragment=location.hash.startsWith("#")?location.hash.slice(1):"";
+  for(const kind of ["invite","recovery"]){
+    const prefix=kind+"=";
+    if(fragment.startsWith(prefix)){
+      lifecycleKind=kind;
+      try{lifecycleTokenValue=decodeURIComponent(fragment.slice(prefix.length))}catch{lifecycleTokenValue=""}
+      history.replaceState(null,"",location.pathname);
+      $("loginPanel").hidden=true; $("lifecyclePanel").hidden=false;
+      $("lifecycleTitle").textContent=kind==="invite"?"Accept invitation":"Reset password";
+      $("lifecycleCopy").textContent=kind==="invite"?"Set a password to join your Forge workspace.":"Set a new password for your Forge account.";
+      $("lifecycleSubmit").textContent=kind==="invite"?"Accept invite":"Reset password";
+      return true;
+    }
+  }
+  return false;
+}
+
+async function finishLifecycle(){
+  if(!lifecycleKind||!lifecycleTokenValue)throw new Error("This link is invalid or expired.");
+  const password=$("lifecyclePassword").value;
+  if(password.length<12)throw new Error("Password must be at least 12 characters.");
+  const path=lifecycleKind==="invite"?"/v1/invites/accept":"/v1/recovery/complete";
+  const body=lifecycleKind==="invite"?{token:lifecycleTokenValue,password}:{token:lifecycleTokenValue,password};
+  const completed=await request(path,{method:"POST",body});
+  const email=completed.user?.email;
+  lifecycleTokenValue="";
+  lifecycleKind=null;
+  $("lifecyclePassword").value="";
+  if(!email)throw new Error("Account lifecycle completed, but sign-in identity was unavailable.");
+  const signedIn=await request("/v1/session",{method:"POST",body:{email,password}});
+  csrf=signedIn.csrfToken;
+  $("lifecyclePanel").hidden=true;
+  await bootstrapSession();
+}
+
+async function sendInvite(){
+  if(!workspaceId||!canAdmin())throw new Error("Admin workspace access required.");
+  const email=$("inviteEmail").value.trim();
+  if(!email)throw new Error("Invite email is required.");
+  const data=await request("/v1/workspaces/"+encodeURIComponent(workspaceId)+"/invites",{
+    method:"POST",csrf:true,body:{email,role:$("inviteRole").value}
+  });
+  $("inviteEmail").value="";
+  $("inviteStatus").textContent="Invite sent to "+data.invite.email+".";
+  await refreshAudit();
+}
+
 $("login").onclick=async()=>{
   try{
     const data=await request("/v1/session",{method:"POST",body:{email:$("email").value.trim(),password:$("password").value}});
     csrf=data.csrfToken; await bootstrapSession(); loginStatus("");
   }catch(error){loginStatus(error.message)}
 };
+
+$("forgot").onclick=async()=>{
+  try{
+    const email=$("email").value.trim();
+    if(!email)throw new Error("Enter your email first.");
+    await request("/v1/recovery/request",{method:"POST",body:{email}});
+    loginStatus("If that account exists, a recovery link has been sent.");
+  }catch(error){loginStatus(error.message)}
+};
+
+$("lifecycleSubmit").onclick=async()=>{try{await finishLifecycle()}catch(error){$("lifecycleStatus").textContent=error.message}};
+$("lifecycleCancel").onclick=()=>{lifecycleTokenValue="";lifecycleKind=null;$("lifecyclePanel").hidden=true;$("loginPanel").hidden=false};
+$("inviteMember").onclick=async()=>{try{await sendInvite()}catch(error){$("inviteStatus").textContent=error.message}};
 
 $("logout").onclick=async()=>{
   try{await request("/v1/session",{method:"DELETE",csrf:true}); location.reload()}catch(error){status(error.message)}
@@ -268,8 +344,12 @@ $("stopPreview").onclick=async()=>{try{status(await request(projectBase()+"/prev
 $("snapshot").onclick=async()=>{try{await createSnapshot()}catch(error){status(error.message)}};
 $("refreshAudit").onclick=async()=>{try{await refreshAudit()}catch(error){status(error.message)}};
 
-fetch("/health").then((r)=>r.json()).then((d)=>$("health").textContent=d.ok?"Forge online":"Forge unavailable").catch(()=>$("health").textContent="Forge unavailable");
-bootstrapSession().catch(()=>{});
+const hasLifecycleLink=initLifecycle();
+fetch("/health").then((r)=>r.json()).then((d)=>{
+  $("health").textContent=d.ok?"Forge online":"Forge unavailable";
+  $("forgot").hidden=!d.identityLifecycle;
+}).catch(()=>$("health").textContent="Forge unavailable");
+if(!hasLifecycleLink)bootstrapSession().catch(()=>{});
 })();`;
 }
 
