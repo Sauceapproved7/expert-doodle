@@ -59,9 +59,9 @@ security definer
 set search_path=''
 as $$
 begin
-  insert into staging_api.storage_buckets(id,owner_id,name)
+  insert into staging_api.storage_buckets as b(id,owner_id,name)
   values(p_id,p_owner_id,p_name)
-  on conflict(owner_id,name) do nothing;
+  on conflict on constraint storage_buckets_owner_id_name_key do nothing;
 
   return query
   select b.id,b.owner_id,b.name,b.created_at
