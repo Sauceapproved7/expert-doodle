@@ -103,12 +103,12 @@ begin
     raise exception 'BUCKET_NOT_FOUND';
   end if;
 
-  insert into staging_api.storage_objects(
+  insert into staging_api.storage_objects as o(
     id,bucket_id,owner_id,object_key,sha256,size_bytes,content_type
   ) values (
     p_id,v_bucket_id,p_owner_id,p_object_key,p_sha256,p_size_bytes,p_content_type
   )
-  on conflict(bucket_id,object_key) do update
+  on conflict on constraint storage_objects_bucket_id_object_key_key do update
     set sha256=excluded.sha256,
         size_bytes=excluded.size_bytes,
         content_type=excluded.content_type,
