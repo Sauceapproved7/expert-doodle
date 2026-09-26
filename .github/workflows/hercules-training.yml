@@ -44,7 +44,8 @@ jobs:
             tests/hercules-native-retrieval.test.mjs \
             tests/hercules-native-guard.test.mjs \
             tests/hercules-native-five-families.test.mjs \
-            tests/hercules-native-language-foundation.test.mjs
+            tests/hercules-native-language-foundation.test.mjs \
+            tests/hercules-native-core-neural-v0.3.test.mjs
 
       - name: Train and evaluate Hercules Agent Router
         env:
@@ -256,5 +257,57 @@ jobs:
         with:
           name: hercules-language-foundation-v0.2
           path: .hercules-training/language-foundation-v0.2/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Train and evaluate Hercules Core Neural v0.3
+        env:
+          HERCULES_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          HERCULES_CREATED_AT: "2026-09-26T20:00:00Z"
+        run: node hercules-training/bootstrap-core-neural-v0.3.mjs
+
+      - name: Verify Core Neural v0.3 candidate evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .hercules-training/core-neural-v0.3/checkpoint.json
+          test -s .hercules-training/core-neural-v0.3/training-evidence.json
+          node --input-type=module <<'NODE'
+          import {readFile} from "node:fs/promises";
+          const evidence = JSON.parse(await readFile(
+            ".hercules-training/core-neural-v0.3/training-evidence.json",
+            "utf8"
+          ));
+          const metrics = evidence.evaluation?.result?.metrics ?? {};
+          if (evidence.candidateReady !== true) {
+            throw new Error("Core neural v0.3 did not clear candidate gate");
+          }
+          if (metrics["top1-accuracy"] < 0.30) {
+            throw new Error("Core neural v0.3 missed overall top-1 gate");
+          }
+          if (metrics["content-top1-accuracy"] < 0.08) {
+            throw new Error("Core neural v0.3 missed content-token top-1 gate");
+          }
+          if (metrics["unigram-improvement"] < 0.05) {
+            throw new Error("Core neural v0.3 did not beat unigram loss enough");
+          }
+          if (metrics["backoff-cross-entropy-ratio"] > 1.35) {
+            throw new Error("Core neural v0.3 drifted too far behind v0.2 backoff loss");
+          }
+          if (metrics["token-coverage"] < 0.80) {
+            throw new Error("Core neural v0.3 missed token coverage gate");
+          }
+          console.log(JSON.stringify({
+            checkpoint: evidence.checkpoint.checkpoint.artifactSha256,
+            checkpointBytes: evidence.checkpoint.checkpoint.bytes,
+            metrics,
+          }, null, 2));
+          NODE
+
+      - name: Upload Core Neural v0.3 candidate evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: hercules-core-neural-v0.3
+          path: .hercules-training/core-neural-v0.3/
           if-no-files-found: error
           retention-days: 30
