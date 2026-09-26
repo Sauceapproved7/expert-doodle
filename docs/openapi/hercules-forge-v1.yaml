@@ -1,7 +1,7 @@
 openapi: 3.2.1
 info:
   title: Hercules Forge API
-  version: 1.5.0
+  version: 1.6.0
   description: Machine-readable contract for Hercules Forge control and customer-session surfaces.
 servers:
   - url: https://forge.example.invalid
@@ -13,6 +13,14 @@ paths:
       responses:
         "200":
           description: Forge health summary.
+  /ready:
+    get:
+      operationId: getReadiness
+      responses:
+        "200":
+          description: Forge readiness backed by audit verification and production storage probe.
+        "500":
+          description: Forge is not ready.
   /v1/invites/accept:
     post:
       operationId: acceptInvite
