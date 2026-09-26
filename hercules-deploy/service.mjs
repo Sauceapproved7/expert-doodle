@@ -1,5 +1,7 @@
 import {resolve} from "node:path";
 import {listenHerculesDeployService} from "./control-api.mjs";
+import {SupabaseEdgeFunctionAdapter} from "./supabase-edge-adapter.mjs";
+import {createFileSystemSupabaseArtifactLoader} from "./supabase-artifacts.mjs";
 
 function required(env, name) {
   const value = env[name];
@@ -51,10 +53,22 @@ export async function startHerculesDeployService({
   adapters = new Map(),
 } = {}) {
   const config = readHerculesDeployConfig(env);
+  const configuredAdapters = new Map(adapters);
+  const supabaseToken = String(env.HERCULES_SUPABASE_MANAGEMENT_TOKEN ?? "").trim();
+  const supabaseArtifactRoot = String(env.HERCULES_SUPABASE_ARTIFACT_ROOT ?? "").trim();
+  if (Boolean(supabaseToken) !== Boolean(supabaseArtifactRoot)) {
+    throw new Error("HERCULES_SUPABASE_MANAGEMENT_TOKEN and HERCULES_SUPABASE_ARTIFACT_ROOT must be configured together");
+  }
+  if (supabaseToken) {
+    configuredAdapters.set("supabase_edge_function", new SupabaseEdgeFunctionAdapter({
+      accessToken: supabaseToken,
+      artifactLoader: createFileSystemSupabaseArtifactLoader({root: supabaseArtifactRoot}),
+    }));
+  }
   const service = listenHerculesDeployService({
     root: config.root,
     token: config.token,
-    adapters,
+    adapters: configuredAdapters,
     pollIntervalMs: config.pollIntervalMs,
     host: config.host,
     port: config.port,
