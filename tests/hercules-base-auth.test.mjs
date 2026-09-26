@@ -138,5 +138,13 @@ test("Base Auth HTTP surface is bounded and does not expose password or refresh 
 
 test("Base capabilities do not call Auth implemented until persistence and HTTP wiring exist", async () => {
   const {BASE_CAPABILITIES}=await import("../hercules-base/core.mjs");
-  assert.equal(["planned","implemented"].includes(BASE_CAPABILITIES.auth.status),true);
+  assert.equal(BASE_CAPABILITIES.auth.status,"implemented");
+});
+
+
+test("self-hosted Base injects its JWT signing key and fixture-only auth mode", async () => {
+  const {readFile}=await import("node:fs/promises");
+  const compose=await readFile(new URL("../staging-plane/compose.yml",import.meta.url),"utf8");
+  assert.match(compose,/HERCULES_BASE_JWT_SECRET:\s*\$\{HERCULES_STAGING_JWT_SECRET\}/);
+  assert.match(compose,/HERCULES_BASE_FIXTURE_ONLY:\s*"true"/);
 });
