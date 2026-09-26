@@ -177,3 +177,29 @@ test("verification rejects a JWT policy mismatch", async () => {
   });
   await assert.rejects(adapter.verify({request: request()}), /JWT policy mismatch/);
 });
+
+test("rollback fails closed when a previous function exists but no source snapshot is available", async () => {
+  let deleted = false;
+  const adapter = new SupabaseEdgeFunctionTargetAdapter({
+    deployFunction: async () => {},
+    getFunction: async () => ({
+      slug: bundle.slug,
+      status: "ACTIVE",
+      version: 7,
+      verify_jwt: true,
+      entrypoint_path: "index.ts",
+    }),
+    deleteFunction: async () => { deleted = true; },
+  });
+
+  const deployment = {deploymentId: "deploy-existing", request: request()};
+  const deployEvidence = await adapter.deploy(deployment);
+  assert.equal(deployEvidence.previousVersion, 7);
+  deployment.state = {deployEvidence};
+
+  await assert.rejects(
+    adapter.rollback(deployment),
+    /previous function source snapshot is unavailable/,
+  );
+  assert.equal(deleted, false);
+});
