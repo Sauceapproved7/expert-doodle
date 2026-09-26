@@ -101,6 +101,8 @@ jobs:
           const candidateAttestations = {
             "hercules-core-neural-v03":
               "hercules-models/candidate-attestations/hercules-core-neural-v0.3.json",
+            "hercules-coder-neural-v02":
+              "hercules-models/candidate-attestations/hercules-coder-neural-v0.2.json",
           };
 
           for (const candidate of HERCULES_MODEL_CANDIDATES) {
