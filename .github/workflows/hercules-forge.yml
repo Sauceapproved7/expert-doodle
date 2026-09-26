@@ -41,6 +41,7 @@ jobs:
             hercules-forge/production-cli.mjs \
             hercules-forge/artifact.mjs \
             hercules-forge/releases.mjs \
+            hercules-forge/deployment.mjs \
             hercules-forge/runtime-data.mjs \
             hercules-forge/preview.mjs \
             hercules-forge/builder-console.mjs \
