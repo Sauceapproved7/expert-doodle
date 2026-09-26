@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {randomBytes} from "node:crypto";
-import {randomBytes} from "node:crypto";
 import {mkdtemp, readFile, readdir, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -22,7 +21,7 @@ test("invite lifecycle stores only hashed token state and creates verified works
     const owner = await identities.createUser({
       userId: "owner-a",
       email: "owner-a@example.com",
-      password: runtimeSecret("owner-password"),
+      password: fixtureCredential(),
     });
     await identities.createWorkspace({
       workspaceId: "workspace-a",
@@ -46,7 +45,7 @@ test("invite lifecycle stores only hashed token state and creates verified works
 
     const accepted = await identities.consumeInvite({
       token: issued.token,
-      password: runtimeSecret("builder-password"),
+      password: fixtureCredential(),
     });
     assert.equal(accepted.membership.workspaceId, "workspace-a");
     assert.equal(accepted.membership.role, "builder");
@@ -55,7 +54,7 @@ test("invite lifecycle stores only hashed token state and creates verified works
     await assert.rejects(
       identities.consumeInvite({
         token: issued.token,
-        password: runtimeSecret("builder-second-password"),
+        password: fixtureCredential(),
       }),
       /invalid or expired invite/,
     );
@@ -68,8 +67,8 @@ test("recovery lifecycle is enumeration-safe at store boundary and revokes prior
   const root = await mkdtemp(join(tmpdir(), "forge-identity-recovery-"));
   try {
     const identities = new ForgeIdentityStore(root);
-    const oldPassword = runtimeSecret("old-password");
-    const newPassword = runtimeSecret("new-password");
+    const oldPassword = fixtureCredential();
+    const newPassword = fixtureCredential();
     const user = await identities.createUser({
       userId: "user-a",
       email: "user-a@example.com",
