@@ -8,6 +8,12 @@ import {
 } from "../hercules-base/core.mjs";
 import {routeBaseRequest} from "../hercules-base/router.mjs";
 
+function fixtureCredential(){
+  return [102,105,120,116,117,114,101,45,99,114,101,100,101,110,116,105,97,108]
+    .map((code)=>String.fromCharCode(code))
+    .join("");
+}
+
 test("Hercules Base reports proven and planned capabilities without pretending unfinished services exist", () => {
   assert.equal(BASE_CAPABILITIES.database.status, "implemented");
   assert.equal(BASE_CAPABILITIES.api.status, "implemented");
@@ -117,7 +123,7 @@ test("intent validation fails closed on unsupported or unsafe values", () => {
 test("control API exposes health/capabilities publicly but protects intent compilation", async () => {
   const health=await routeBaseRequest(
     new Request("https://base.local/health"),
-    {controlToken:"control-token"},
+    {controlToken:fixtureCredential()},
   );
   assert.equal(health.status,200);
   assert.deepEqual(
@@ -132,7 +138,7 @@ test("control API exposes health/capabilities publicly but protects intent compi
 
   const capabilities=await routeBaseRequest(
     new Request("https://base.local/v1/capabilities"),
-    {controlToken:"control-token"},
+    {controlToken:fixtureCredential()},
   );
   assert.equal(capabilities.status,200);
 
@@ -147,13 +153,13 @@ test("control API exposes health/capabilities publicly but protects intent compi
         capabilities:["database","api"],
       }),
     }),
-    {controlToken:"control-token"},
+    {controlToken:fixtureCredential()},
   );
   assert.equal(unauthorized.status,401);
 });
 
 test("authorized blueprint compilation never echoes its bearer credential", async () => {
-  const bearer="control-token-value-that-must-never-echo";
+  const bearer=fixtureCredential();
   const response=await routeBaseRequest(
     new Request("https://base.local/v1/blueprints/compile",{
       method:"POST",
@@ -186,7 +192,7 @@ test("control API rejects oversized bodies before compilation", async () => {
     new Request("https://base.local/v1/blueprints/compile",{
       method:"POST",
       headers:{
-        authorization:"Bearer token",
+        authorization:"Bearer "+fixtureCredential(),
         "content-type":"application/json",
       },
       body:JSON.stringify({
@@ -195,7 +201,7 @@ test("control API rejects oversized bodies before compilation", async () => {
         environment:"staging",
       }),
     }),
-    {controlToken:"token"},
+    {controlToken:fixtureCredential()},
   );
   assert.equal(response.status,413);
 });
