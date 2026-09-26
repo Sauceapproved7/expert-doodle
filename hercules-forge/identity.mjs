@@ -387,6 +387,12 @@ export class ForgeIdentityStore {
 
       const passwordParts = await derivePassword(password);
       const user = await readJson(this.userPath(recovery.userId));
+
+      // Consume the one-time credential before mutating password/session state.
+      // If a later local I/O step fails, the user must request a new recovery
+      // link rather than being left with a reusable token for a changed account.
+      await rm(path, {force: true});
+
       const updated = {
         ...user,
         passwordHash: [
@@ -401,7 +407,6 @@ export class ForgeIdentityStore {
       };
       await writeJson(this.userPath(recovery.userId), updated);
       const revokedSessions = await this.revokeUserSessions(recovery.userId);
-      await rm(path, {force: true});
       return {
         recoveryId: recovery.recoveryId,
         user: safeUser(updated),
