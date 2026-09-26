@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {randomBytes} from "node:crypto";
 import {mkdtemp, readdir, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -8,8 +9,8 @@ import {ForgeIdentityStore} from "../hercules-forge/identity.mjs";
 import {MemoryForgeNotificationAdapter} from "../hercules-forge/notifications.mjs";
 import {ForgeLoginRateLimiter} from "../hercules-forge/rate-limit.mjs";
 
-function fixtureCredential(...parts) {
-  return parts.join("-");
+function fixtureCredential() {
+  return randomBytes(24).toString("base64url");
 }
 
 const controlToken = fixtureCredential("forge", "lifecycle", "control", "fixture", "credential");
