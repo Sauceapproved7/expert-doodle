@@ -159,6 +159,7 @@ export function createForgeControlService({
   loginRateLimiter = null,
   recoveryRateLimiter = null,
   notificationAdapter = null,
+  readinessCheck = null,
   serviceMode = "development",
   publicOrigin = null,
 }) {
@@ -211,7 +212,7 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "1.5",
+          version: "1.6",
           mode: serviceMode,
           publicOrigin,
           promptIngress: Boolean(interpreter),
@@ -221,6 +222,20 @@ export function createForgeControlService({
           auditEvents: true,
           identityLifecycle: Boolean(notificationAdapter && publicOrigin),
           runtimeDataMaxBytes,
+        });
+      }
+
+      if (req.method === "GET" && url.pathname === "/ready") {
+        const integrity = await audit.verify();
+        const storage = readinessCheck ? await readinessCheck() : null;
+        return send(res, 200, {
+          ready: true,
+          service: "hercules-forge-control-api",
+          version: "1.6",
+          mode: serviceMode,
+          publicOrigin,
+          auditVerified: integrity.verified === true,
+          storage,
         });
       }
 
@@ -1124,6 +1139,7 @@ export function listenForgeControlService({
   loginRateLimiter = null,
   recoveryRateLimiter = null,
   notificationAdapter = null,
+  readinessCheck = null,
   serviceMode = "development",
   publicOrigin = null,
   host = "127.0.0.1",
@@ -1138,6 +1154,7 @@ export function listenForgeControlService({
     loginRateLimiter,
     recoveryRateLimiter,
     notificationAdapter,
+    readinessCheck,
     serviceMode,
     publicOrigin,
   });
