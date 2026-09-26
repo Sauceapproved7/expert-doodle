@@ -7,15 +7,19 @@ on:
       - main
     paths:
       - "hercules-forge/**"
+      - "hercules-deploy/**"
       - "hercules-hurc/**"
       - "tests/hercules-forge*.test.mjs"
+      - "tests/hercules-deploy*.test.mjs"
       - "tests/hercules-hurc-*.test.mjs"
       - ".github/workflows/hercules-coverage.yml"
   pull_request:
     paths:
       - "hercules-forge/**"
+      - "hercules-deploy/**"
       - "hercules-hurc/**"
       - "tests/hercules-forge*.test.mjs"
+      - "tests/hercules-deploy*.test.mjs"
       - "tests/hercules-hurc-*.test.mjs"
       - ".github/workflows/hercules-coverage.yml"
 
@@ -39,10 +43,12 @@ jobs:
           node \
             --experimental-test-coverage \
             --test-coverage-include='hercules-forge/*.mjs' \
+            --test-coverage-include='hercules-deploy/*.mjs' \
             --test-coverage-include='hercules-hurc/*.mjs' \
             --test-coverage-lines=80 \
             --test-coverage-functions=85 \
             --test-coverage-branches=70 \
             --test \
             tests/hercules-forge*.test.mjs \
+            tests/hercules-deploy*.test.mjs \
             tests/hercules-hurc-*.test.mjs

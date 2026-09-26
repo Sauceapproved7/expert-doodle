@@ -9,6 +9,10 @@
       "role": "product-runtime"
     },
     {
+      "path": "hercules-deploy",
+      "role": "deployment-runtime"
+    },
+    {
       "path": "hercules-models",
       "role": "model-runtime"
     },

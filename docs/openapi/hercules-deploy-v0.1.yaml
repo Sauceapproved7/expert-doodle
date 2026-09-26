@@ -1,0 +1,134 @@
+openapi: 3.2.1
+info:
+  title: Hercules Deploy Plane API
+  version: 0.1.0
+  description: Provider-neutral background deployment control plane for Hercules.
+servers:
+  - url: https://deploy.example.invalid
+paths:
+  /health:
+    get:
+      operationId: getDeployHealth
+      responses:
+        "200": {description: Deploy Plane process health.}
+  /ready:
+    get:
+      operationId: getDeployReadiness
+      responses:
+        "200": {description: Background worker is running.}
+        "503": {description: Background worker is stopped.}
+  /v1/deployments:
+    post:
+      operationId: createDeployment
+      security: [{controlBearer: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/DeploymentRequest"
+                - type: object
+                  required: [request]
+                  properties:
+                    deploymentId: {$ref: "#/components/schemas/Identifier"}
+                    request: {$ref: "#/components/schemas/DeploymentRequest"}
+      responses:
+        "201": {description: Deployment queued.}
+        "400": {description: Invalid deployment request.}
+        "401": {description: Control authentication failed.}
+    get:
+      operationId: listDeployments
+      security: [{controlBearer: []}]
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [queued, running, verifying, verified, failed, rolling_back, rolled_back]
+        - in: query
+          name: limit
+          schema: {type: integer, minimum: 1, maximum: 1000}
+      responses:
+        "200": {description: Deployment jobs.}
+        "401": {description: Control authentication failed.}
+  /v1/deployments/{deploymentId}:
+    get:
+      operationId: getDeployment
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/DeploymentId"
+      responses:
+        "200": {description: Deployment request and state.}
+        "404": {description: Deployment not found.}
+  /v1/deployments/{deploymentId}/retry:
+    post:
+      operationId: retryDeployment
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/DeploymentId"
+      responses:
+        "200": {description: Failed deployment requeued.}
+        "409": {description: Deployment state does not permit retry.}
+  /v1/deployments/{deploymentId}/rollback:
+    post:
+      operationId: rollbackDeployment
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/DeploymentId"
+      responses:
+        "200": {description: Verified deployment rolled back.}
+        "409": {description: Deployment state does not permit rollback.}
+  /v1/worker/run-once:
+    post:
+      operationId: runDeployWorkerOnce
+      security: [{controlBearer: []}]
+      responses:
+        "200": {description: One queued deployment processed, if available.}
+components:
+  securitySchemes:
+    controlBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  parameters:
+    DeploymentId:
+      in: path
+      name: deploymentId
+      required: true
+      schema: {$ref: "#/components/schemas/Identifier"}
+  schemas:
+    Identifier:
+      type: string
+      pattern: "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"
+    DeploymentRequest:
+      type: object
+      required:
+        - serviceId
+        - releaseId
+        - sourceCommit
+        - artifactFingerprint
+        - publicOrigin
+        - target
+      properties:
+        serviceId: {$ref: "#/components/schemas/Identifier"}
+        releaseId: {$ref: "#/components/schemas/Identifier"}
+        sourceCommit:
+          type: string
+          pattern: "^[a-f0-9]{40}$"
+        artifactFingerprint:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+        publicOrigin:
+          type: string
+          format: uri
+          pattern: "^https://"
+        target:
+          type: object
+          required: [kind, reference]
+          properties:
+            kind: {$ref: "#/components/schemas/Identifier"}
+            reference: {type: string, maxLength: 512}
+        metadata:
+          type: object
+          additionalProperties: true
