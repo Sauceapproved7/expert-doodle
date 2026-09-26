@@ -76,7 +76,7 @@ test("workspace invite and recovery lifecycle is one-time, audited, and secret-s
     const health = await fetch(base + "/health");
     assert.equal(health.status, 200);
     const healthBody = await health.json();
-    assert.equal(healthBody.version, "1.5");
+    assert.equal(healthBody.version, "1.6");
     assert.equal(healthBody.identityLifecycle, true);
 
     const ownerLogin = await login(base, owner.email, ownerPassword);
