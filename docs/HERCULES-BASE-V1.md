@@ -60,6 +60,8 @@ This makes portability a build property instead of a future migration project.
 
 Implemented and evidenced:
 
+- Hercules Base Sparks control plane for owner-scoped function manifests, version fingerprints, resource/network policy, and explicit fail-closed invocation while isolated execution remains unavailable;
+
 - Hercules Base Pulse realtime with durable PostgreSQL event replay, JWT-owned channels, cursor polling, and SSE streaming;
 
 - Hercules Base Storage with content-addressed blobs, private JWT-owned buckets, PostgreSQL metadata, persistent self-hosted storage, and download-time SHA-256 integrity verification;
@@ -76,7 +78,7 @@ Implemented and evidenced:
 
 Planned, not represented as complete:
 
-- Hercules Base Functions;
+- Hercules Base Functions execution: Sparks registration/control is implemented, but arbitrary function execution remains blocked until a hardened isolated executor is built and benchmarked;
 - multi-project provisioning onto deployment targets;
 - production migration/cutover from managed Supabase.
 
