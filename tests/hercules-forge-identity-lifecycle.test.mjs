@@ -10,6 +10,14 @@ import {
   MemoryForgeNotificationAdapter,
 } from "../hercules-forge/notifications.mjs";
 
+const runtimeSecrets = new Map();
+function runtimeSecret(label) {
+  if (!runtimeSecrets.has(label)) {
+    runtimeSecrets.set(label, randomBytes(24).toString("base64url"));
+  }
+  return runtimeSecrets.get(label);
+}
+
 function fixtureCredential() {
   return randomBytes(24).toString("base64url");
 }
