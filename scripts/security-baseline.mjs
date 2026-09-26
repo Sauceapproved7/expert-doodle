@@ -40,6 +40,7 @@ const releaseEvidence = await read("scripts/release-evidence.mjs");
 const codeowners = await read(".github/CODEOWNERS");
 const contributing = await read("CONTRIBUTING.md");
 const openapi = await read("docs/openapi/hercules-forge-v1.yaml");
+const deployOpenapi = await read("docs/openapi/hercules-deploy-v0.1.yaml");
 const cryptoTests = await read("tests/hercules-hurc-testnet-crypto.test.mjs");
 
 const workflowFiles = await filesUnder(".github/workflows");
@@ -160,6 +161,11 @@ const checks = {
     /^openapi:\s*3\.2\.1$/m.test(openapi) &&
     /controlBearer:/.test(openapi) &&
     /x-forge-csrf/.test(openapi),
+  deployPlaneOpenApiContract:
+    /^openapi:\s*3\.2\.1$/m.test(deployOpenapi) &&
+    /controlBearer:/.test(deployOpenapi) &&
+    /\/v1\/deployments/.test(deployOpenapi) &&
+    /artifactFingerprint:/.test(deployOpenapi),
   noPullRequestTarget: Object.values(workflowText).every(
     (text) => !/^\s*pull_request_target\s*:/m.test(text),
   ),
