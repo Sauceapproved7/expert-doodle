@@ -167,6 +167,16 @@ export function createForgeControlService({
   if (typeof token !== "string" || token.length < 16) {
     throw new TypeError("control token must be at least 16 characters");
   }
+  if (
+    releaseAdapter &&
+    (
+      typeof releaseAdapter.publish !== "function" ||
+      typeof releaseAdapter.rollback !== "function" ||
+      typeof releaseAdapter.getActive !== "function"
+    )
+  ) {
+    throw new TypeError("releaseAdapter must implement publish, rollback, and getActive");
+  }
 
   const store = new ForgeWorkspaceStore(root);
   const releases = releaseAdapter ?? new ForgeLocalReleaseAdapter(root);
@@ -212,7 +222,7 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "1.5",
+          version: "1.6",
           mode: serviceMode,
           publicOrigin,
           promptIngress: Boolean(interpreter),
