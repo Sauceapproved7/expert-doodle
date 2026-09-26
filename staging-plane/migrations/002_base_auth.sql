@@ -167,11 +167,11 @@ begin
     raise exception 'INVALID_REFRESH_TOKEN';
   end if;
 
-  update staging_api.auth_sessions
+  update staging_api.auth_sessions as s
   set refresh_token_hash=p_new_refresh_token_hash,
       last_used_at=now(),
       expires_at=p_new_expires_at
-  where id=v_session_id;
+  where s.id=v_session_id;
 
   return query
   select s.id,s.user_id,u.email,s.expires_at
