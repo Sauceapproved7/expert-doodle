@@ -40,12 +40,10 @@ function normalizeEmail(value) {
 }
 
 function safeUser(user) {
-  const {
-    passwordHash,
-    passwordVersion: _passwordVersion,
-    createdFromInviteId: _createdFromInviteId,
-    ...publicUser
-  } = user;
+  const publicUser = {...user};
+  delete publicUser.passwordHash;
+  delete publicUser.passwordVersion;
+  delete publicUser.createdFromInviteId;
   return publicUser;
 }
 
@@ -458,7 +456,7 @@ export class ForgeIdentityStore {
         throw Object.assign(new Error("invalid or expired recovery"), {statusCode: 400});
       }
 
-      return this.withLifecycleLock("recovery-user:" + recovery.userId, async () => {
+      return this.withLifecycleLock("credential-user:" + recovery.userId, async () => {
         const user = await readJson(this.userPath(recovery.userId));
         if (passwordVersion(user) !== recovery.passwordVersion) {
           await rm(path, {force: true});
@@ -479,8 +477,8 @@ export class ForgeIdentityStore {
           passwordUpdatedAt: new Date().toISOString(),
           passwordVersion: passwordVersion(user) + 1,
         };
-        await writeJson(this.userPath(recovery.userId), updated);
         const revokedSessions = await this.revokeUserSessions(recovery.userId);
+        await writeJson(this.userPath(recovery.userId), updated);
         await rm(path, {force: true});
         return {
           recoveryId: recovery.recoveryId,
@@ -565,42 +563,44 @@ export class ForgeIdentityStore {
       }
       throw error;
     }
-    if (!(await verifyPassword(password, user.passwordHash))) {
-      throw Object.assign(new Error("invalid credentials"), {statusCode: 401});
-    }
+    return this.withLifecycleLock("credential-user:" + user.userId, async () => {
+      user = await readJson(this.userPath(user.userId));
+      if (!(await verifyPassword(password, user.passwordHash))) {
+        throw Object.assign(new Error("invalid credentials"), {statusCode: 401});
+      }
 
-    // Upgrade legacy hashes only after a successful password verification.
-    // This preserves compatibility while ensuring active accounts converge on
-    // the hardened profile without a forced password reset.
-    // Upgrade legacy hashes only after a successful password verification.
-    if (String(user.passwordHash).startsWith("scrypt-v1$")) {
-      const passwordParts = await derivePassword(password);
-      user = {
-        ...user,
-        passwordHash: [
-          SCRYPT_PROFILE.version,
-          SCRYPT_PROFILE.N,
-          SCRYPT_PROFILE.r,
-          SCRYPT_PROFILE.p,
-          passwordParts.salt,
-          passwordParts.hash,
-        ].join("$"),
+      // Upgrade legacy hashes only after a successful password verification.
+      // This preserves compatibility while ensuring active accounts converge on
+      // the hardened profile without a forced password reset.
+      if (String(user.passwordHash).startsWith("scrypt-v1$")) {
+        const passwordParts = await derivePassword(password);
+        user = {
+          ...user,
+          passwordHash: [
+            SCRYPT_PROFILE.version,
+            SCRYPT_PROFILE.N,
+            SCRYPT_PROFILE.r,
+            SCRYPT_PROFILE.p,
+            passwordParts.salt,
+            passwordParts.hash,
+          ].join("$"),
+        };
+        await writeJson(this.userPath(user.userId), user);
+      }
+
+      const token = randomBytes(32).toString("base64url");
+      const csrfToken = randomBytes(24).toString("base64url");
+      const now = Date.now();
+      const session = {
+        sessionId: randomUUID(),
+        userId: user.userId,
+        createdAt: new Date(now).toISOString(),
+        expiresAt: new Date(now + ttlMs).toISOString(),
+        csrfSha256: hashToken(csrfToken),
       };
-      await writeJson(this.userPath(user.userId), user);
-    }
-
-    const token = randomBytes(32).toString("base64url");
-    const csrfToken = randomBytes(24).toString("base64url");
-    const now = Date.now();
-    const session = {
-      sessionId: randomUUID(),
-      userId: user.userId,
-      createdAt: new Date(now).toISOString(),
-      expiresAt: new Date(now + ttlMs).toISOString(),
-      csrfSha256: hashToken(csrfToken),
-    };
-    await writeJson(this.sessionPath(token), session, {flag: "wx"});
-    return {token, csrfToken, session, user: safeUser(user)};
+      await writeJson(this.sessionPath(token), session, {flag: "wx"});
+      return {token, csrfToken, session, user: safeUser(user)};
+    });
   }
 
   async getSession(token) {
