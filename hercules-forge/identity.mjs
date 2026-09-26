@@ -187,12 +187,12 @@ export class ForgeIdentityStore {
 
   async withLifecycleLock(key, operation) {
     const lockPath = this.lockPath(key);
-    await mkdir(dirname(lockPath), {recursive: true});
+    await mkdir(dirname(lockPath), {recursive: true, mode: 0o700});
     const deadline = Date.now() + this.lockTimeoutMs;
 
     for (;;) {
       try {
-        await mkdir(lockPath);
+        await mkdir(lockPath, {mode: 0o700});
         break;
       } catch (error) {
         if (error?.code !== "EEXIST") throw error;
@@ -322,7 +322,6 @@ export class ForgeIdentityStore {
       role,
       createdAt: new Date(now).toISOString(),
       expiresAt: new Date(now + ttlMs).toISOString(),
-      passwordVersion: passwordVersion(user),
     };
     await writeJson(this.lifecyclePath("invites", token), invite, {flag: "wx"});
     return {token, invite};
@@ -401,6 +400,7 @@ export class ForgeIdentityStore {
       userId: user.userId,
       createdAt: new Date(now).toISOString(),
       expiresAt: new Date(now + ttlMs).toISOString(),
+      passwordVersion: passwordVersion(user),
     };
     await writeJson(this.lifecyclePath("recovery", token), recovery, {flag: "wx"});
     return {token, recovery, user: safeUser(user)};
