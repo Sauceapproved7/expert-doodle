@@ -6,12 +6,16 @@ function safeErrorCode(error, fallback) {
 export class HerculesDeployWorker {
   constructor({store, adapters = new Map(), admissionGate = null, pollIntervalMs = 1000} = {}) {
     if (!store) throw new TypeError("store is required");
-    if (!(adapters instanceof Map)) throw new TypeError("adapters must be a Map");\n    if (admissionGate != null && typeof admissionGate.admit !== "function") {\n      throw new TypeError("admissionGate must expose admit()");\n    }
+    if (!(adapters instanceof Map)) throw new TypeError("adapters must be a Map");
+    if (admissionGate != null && typeof admissionGate.admit !== "function") {
+      throw new TypeError("admissionGate must expose admit()");
+    }
     if (!Number.isFinite(pollIntervalMs) || pollIntervalMs < 100 || pollIntervalMs > 60000) {
       throw new TypeError("pollIntervalMs must be between 100 and 60000");
     }
     this.store = store;
     this.adapters = adapters;
+    this.admissionGate = admissionGate;
     this.pollIntervalMs = pollIntervalMs;
     this.timer = null;
     this.stopped = true;
@@ -39,6 +43,7 @@ export class HerculesDeployWorker {
     let adapter;
     try {
       adapter = this.adapterFor(deployment.request);
+      if (this.admissionGate) await this.admissionGate.admit(deployment);
       const deployEvidence = await adapter.deploy(deployment);
       await this.store.transition(deploymentId, "verifying", {deployEvidence});
 
