@@ -1,0 +1,72 @@
+{"text":"export function assertString(value, name) {\n  if (typeof value !== \"string\" || !value.trim()) {\n    throw new TypeError(name + \" must be a non-empty string\");\n  }\n  return value.trim();\n}"}
+{"text":"export function assertArray(value, name) {\n  if (!Array.isArray(value)) {\n    throw new TypeError(name + \" must be an array\");\n  }\n  return value;\n}"}
+{"text":"export function sha256Text(value) {\n  return createHash(\"sha256\").update(String(value)).digest(\"hex\");\n}"}
+{"text":"export function stableClone(value) {\n  return structuredClone(value);\n}"}
+{"text":"export function toJson(value) {\n  return JSON.stringify(value, null, 2) + \"\\n\";\n}"}
+{"text":"export function parseJson(text) {\n  try {\n    return JSON.parse(text);\n  } catch {\n    throw new Error(\"invalid JSON\");\n  }\n}"}
+{"text":"export function unique(values) {\n  return [...new Set(values)];\n}"}
+{"text":"export function sortById(items) {\n  return [...items].sort((a, b) => a.id.localeCompare(b.id));\n}"}
+{"text":"export function requireItem(map, id) {\n  const item = map.get(id);\n  if (!item) throw new Error(\"unknown item: \" + id);\n  return item;\n}"}
+{"text":"export class Registry {\n  #items = new Map();\n\n  register(item) {\n    if (this.#items.has(item.id)) throw new Error(\"duplicate id: \" + item.id);\n    this.#items.set(item.id, Object.freeze(structuredClone(item)));\n  }\n}"}
+{"text":"export class Registry {\n  get(id) {\n    const item = this.#items.get(id);\n    return item ? structuredClone(item) : null;\n  }\n}"}
+{"text":"export class Registry {\n  list() {\n    return [...this.#items.values()].map((item) => structuredClone(item));\n  }\n}"}
+{"text":"export function normalizePort(value) {\n  const port = Number(value);\n  if (!Number.isInteger(port) || port < 1 || port > 65535) {\n    throw new TypeError(\"invalid port\");\n  }\n  return port;\n}"}
+{"text":"export function normalizeBoolean(value, fallback = false) {\n  if (value == null) return fallback;\n  if (typeof value !== \"boolean\") throw new TypeError(\"boolean required\");\n  return value;\n}"}
+{"text":"export async function readJson(path) {\n  const text = await readFile(path, \"utf8\");\n  return JSON.parse(text);\n}"}
+{"text":"export async function writeJson(path, value) {\n  await writeFile(path, JSON.stringify(value, null, 2) + \"\\n\");\n}"}
+{"text":"export async function ensureDirectory(path) {\n  await mkdir(path, {recursive: true});\n}"}
+{"text":"export function sendJson(res, status, body) {\n  res.writeHead(status, {\"content-type\": \"application/json; charset=utf-8\"});\n  res.end(JSON.stringify(body));\n}"}
+{"text":"export async function readBody(req, limit) {\n  let body = \"\";\n  for await (const chunk of req) {\n    body += chunk;\n    if (Buffer.byteLength(body) > limit) throw new Error(\"body too large\");\n  }\n  return body ? JSON.parse(body) : {};\n}"}
+{"text":"export function requireBearer(req, expected) {\n  const header = req.headers.authorization ?? \"\";\n  if (!header.startsWith(\"Bearer \")) throw new Error(\"unauthorized\");\n  const supplied = header.slice(7);\n  if (supplied !== expected) throw new Error(\"unauthorized\");\n}"}
+{"text":"export function routeByPath(req, pathname) {\n  return req.method + \" \" + pathname;\n}"}
+{"text":"export function notFound(res) {\n  return sendJson(res, 404, {error: \"not_found\"});\n}"}
+{"text":"export function badRequest(res, message) {\n  return sendJson(res, 400, {error: message});\n}"}
+{"text":"export function ok(res, body) {\n  return sendJson(res, 200, body);\n}"}
+{"text":"export function selectActive(items) {\n  return items.filter((item) => item.state === \"active\");\n}"}
+{"text":"export function selectCandidate(items) {\n  return items.filter((item) => item.state === \"candidate\");\n}"}
+{"text":"export function verifySha256(value) {\n  return /^[a-f0-9]{64}$/.test(value);\n}"}
+{"text":"export function checkpointRef(hash) {\n  if (!verifySha256(hash)) throw new TypeError(\"invalid checkpoint hash\");\n  return \"sha256:\" + hash;\n}"}
+{"text":"export function parseCheckpoint(ref) {\n  if (!String(ref).startsWith(\"sha256:\")) throw new Error(\"invalid checkpoint\");\n  return String(ref).slice(\"sha256:\".length);\n}"}
+{"text":"export function compareCheckpoint(expected, actual) {\n  if (expected !== actual) throw new Error(\"checkpoint mismatch\");\n  return true;\n}"}
+{"text":"export function scoreThreshold(value, minimum) {\n  return Number.isFinite(value) && value >= minimum;\n}"}
+{"text":"export function enforceMaximum(value, maximum) {\n  return Number.isFinite(value) && value <= maximum;\n}"}
+{"text":"export function evaluateGate(metrics) {\n  return metrics.accuracy >= 0.8 && metrics.errorRate <= 0.2;\n}"}
+{"text":"export function failClosed(message) {\n  const error = new Error(message);\n  error.statusCode = 503;\n  throw error;\n}"}
+{"text":"export function makeRuntime(infer) {\n  if (typeof infer !== \"function\") throw new TypeError(\"infer must be a function\");\n  return Object.freeze({infer});\n}"}
+{"text":"export async function listen(server, port, host = \"127.0.0.1\") {\n  await new Promise((resolve) => server.listen(port, host, resolve));\n  return server;\n}"}
+{"text":"export async function close(server) {\n  await new Promise((resolve, reject) => {\n    server.close((error) => error ? reject(error) : resolve());\n  });\n}"}
+{"text":"export function createUrl(path, base = \"http://localhost\") {\n  return new URL(path, base);\n}"}
+{"text":"export function normalizeTask(task) {\n  if (typeof task !== \"string\" || !task) throw new TypeError(\"task required\");\n  return task;\n}"}
+{"text":"export function supportsTask(model, task) {\n  return Array.isArray(model.tasks) && model.tasks.includes(task);\n}"}
+{"text":"export function chooseByPriority(models) {\n  return [...models].sort((a, b) => b.priority - a.priority)[0] ?? null;\n}"}
+{"text":"export function nativeOnly(models) {\n  return models.filter((model) => model.origin === \"hercules-native\");\n}"}
+{"text":"export function requireRuntime(model) {\n  if (!model.runtime) throw new Error(\"runtime required\");\n  return model.runtime;\n}"}
+{"text":"export function buildManifest({id, task, checkpoint}) {\n  return {\n    version: \"0.1\",\n    id,\n    task,\n    checkpoint,\n  };\n}"}
+{"text":"export function freezeManifest(manifest) {\n  return Object.freeze(structuredClone(manifest));\n}"}
+{"text":"export function tokenCount(text) {\n  return String(text).trim().split(/\\s+/).filter(Boolean).length;\n}"}
+{"text":"export function clamp(value, min, max) {\n  return Math.max(min, Math.min(max, value));\n}"}
+{"text":"export function mean(values) {\n  if (!values.length) return 0;\n  return values.reduce((sum, value) => sum + value, 0) / values.length;\n}"}
+{"text":"export function accuracy(correct, total) {\n  return total ? correct / total : 0;\n}"}
+{"text":"export function errorRate(correct, total) {\n  return total ? 1 - correct / total : 1;\n}"}
+{"text":"test(\"registry rejects duplicate ids\", () => {\n  const registry = new Registry();\n  registry.register({id: \"one\"});\n  assert.throws(() => registry.register({id: \"one\"}), /duplicate/);\n});"}
+{"text":"test(\"checkpoint helper validates sha256\", () => {\n  const hash = \"a\".repeat(64);\n  assert.equal(checkpointRef(hash), \"sha256:\" + hash);\n});"}
+{"text":"test(\"threshold gate passes valid metrics\", () => {\n  assert.equal(evaluateGate({accuracy: 0.9, errorRate: 0.1}), true);\n});"}
+{"text":"test(\"threshold gate fails invalid metrics\", () => {\n  assert.equal(evaluateGate({accuracy: 0.7, errorRate: 0.3}), false);\n});"}
+{"text":"test(\"native filter removes external models\", () => {\n  const result = nativeOnly([\n    {origin: \"external\"},\n    {origin: \"hercules-native\"},\n  ]);\n  assert.equal(result.length, 1);\n});"}
+{"text":"test(\"task support checks declared tasks\", () => {\n  assert.equal(supportsTask({tasks: [\"code\"]}, \"code\"), true);\n  assert.equal(supportsTask({tasks: [\"code\"]}, \"vision\"), false);\n});"}
+{"text":"export async function fetchJson(url, options = {}) {\n  const response = await fetch(url, options);\n  if (!response.ok) throw new Error(\"request failed: \" + response.status);\n  return response.json();\n}"}
+{"text":"export function authorization(token) {\n  return {authorization: \"Bearer \" + token};\n}"}
+{"text":"export function jsonHeaders(token) {\n  return {\n    ...authorization(token),\n    \"content-type\": \"application/json\",\n  };\n}"}
+{"text":"export async function postJson(url, token, body) {\n  return fetchJson(url, {\n    method: \"POST\",\n    headers: jsonHeaders(token),\n    body: JSON.stringify(body),\n  });\n}"}
+{"text":"export function env(name, fallback = null) {\n  const value = process.env[name];\n  return value == null || value === \"\" ? fallback : value;\n}"}
+{"text":"export function requiredEnv(name) {\n  const value = env(name);\n  if (!value) throw new Error(\"missing environment variable: \" + name);\n  return value;\n}"}
+{"text":"export function redact(value) {\n  if (!value) return null;\n  return \"[redacted]\";\n}"}
+{"text":"export function logEvent(event) {\n  console.log(JSON.stringify({\n    time: new Date().toISOString(),\n    ...event,\n  }));\n}"}
+{"text":"export function safeError(error) {\n  return {\n    name: error?.name ?? \"Error\",\n    message: error?.message ?? \"unknown error\",\n  };\n}"}
+{"text":"export function assertOwnerCode(origin) {\n  if (origin !== \"hercules-native\") {\n    throw new Error(\"owner code required\");\n  }\n}"}
+{"text":"export function candidateEnabled(value) {\n  return value === \"true\";\n}"}
+{"text":"export function productionModel(models, task) {\n  return models.find((model) =>\n    model.state === \"active\" && model.tasks.includes(task)\n  ) ?? null;\n}"}
+{"text":"export function candidateModel(candidates, id) {\n  return candidates.find((model) =>\n    model.state === \"candidate\" && model.id === id\n  ) ?? null;\n}"}
+{"text":"export function immutableCopy(value) {\n  return Object.freeze(structuredClone(value));\n}"}
+{"text":"export function serializeEvidence(evidence) {\n  return JSON.stringify(evidence, null, 2) + \"\\n\";\n}"}
+{"text":"export function verifyEvidence(evidence) {\n  if (!evidence?.evaluation?.passed) throw new Error(\"evaluation failed\");\n  if (!verifySha256(evidence.checkpointSha256)) throw new Error(\"invalid hash\");\n  return true;\n}"}
