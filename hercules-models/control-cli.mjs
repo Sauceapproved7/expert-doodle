@@ -5,7 +5,8 @@ import {HerculesEmbeddedAgentRouter} from "./embedded-agent-router.mjs";
 import {HerculesEmbeddedRetrieval} from "./embedded-retrieval.mjs";
 import {HerculesEmbeddedGuard} from "./embedded-guard.mjs";
 import {HerculesEmbeddedFamilyClassifier} from "./embedded-family-classifier.mjs";
-import {HerculesEmbeddedCoreNeuralV03} from "./embedded-core-neural-v0.3.mjs";\nimport {HerculesEmbeddedCoderNeuralV02} from "./embedded-coder-neural-v0.2.mjs";
+import {HerculesEmbeddedCoreNeuralV03} from "./embedded-core-neural-v0.3.mjs";
+import {HerculesEmbeddedCoderNeuralV02} from "./embedded-coder-neural-v0.2.mjs";
 import {listenModelPlaneService} from "./service.mjs";
 
 const configuredToken = process.env.HERCULES_MODEL_TOKEN;
