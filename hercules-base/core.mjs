@@ -54,7 +54,13 @@ export const BASE_CAPABILITIES=Object.freeze({
     substrate:"hercules-owned-sse-over-postgres-event-log",
     evidence:"hercules-base/realtime-router.mjs",
   }),
-  functions:Object.freeze({status:"planned"}),
+  functions:Object.freeze({
+    status:"planned",
+    product:"Hercules Base Sparks",
+    controlPlaneStatus:"implemented",
+    executionStatus:"blocked-pending-isolated-executor",
+    evidence:"hercules-base/functions-router.mjs",
+  }),
 });
 
 function requiredText(value,label,{max=200}={}){
