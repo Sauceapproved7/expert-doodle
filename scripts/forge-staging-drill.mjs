@@ -57,6 +57,15 @@ async function waitForForge(timeoutMs = 45000) {
   throw new Error("forge_health_timeout:" + lastError);
 }
 
+async function readReadiness() {
+  const response = await fetch(base + "/ready");
+  const body = await response.json();
+  if (!response.ok) {
+    throw new Error("forge_readiness_failed:" + response.status + ":" + (body.error ?? "unknown"));
+  }
+  return body;
+}
+
 async function operatorRequest(path, token, options = {}) {
   const response = await fetch(base + path, {
     method: options.method ?? "GET",
@@ -83,6 +92,10 @@ if (before.auditEvents !== true) throw new Error("forge_audit_events_unavailable
 if (before.mode !== "production") throw new Error("forge_not_in_production_mode");
 if (before.publicOrigin !== "https://forge.staging.invalid") {
   throw new Error("unexpected_forge_public_origin");
+}
+const beforeReady = await readReadiness();
+if (!beforeReady.ready || !beforeReady.auditVerified || !beforeReady.storage?.writable) {
+  throw new Error("forge_not_ready_before_restart");
 }
 
 const projectId = "forge-staging-" + Date.now().toString(36);
@@ -121,6 +134,10 @@ const snapshotId = snapshot.snapshot.snapshotId;
 docker("restart", "forge");
 const after = await waitForForge();
 if (after.mode !== "production") throw new Error("forge_mode_changed_after_restart");
+const afterReady = await readReadiness();
+if (!afterReady.ready || !afterReady.auditVerified || !afterReady.storage?.writable) {
+  throw new Error("forge_not_ready_after_restart");
+}
 
 const projects = await operatorRequest("/v1/projects", token);
 if (!projects.projects.some((project) => project.projectId === projectId)) {
@@ -159,6 +176,11 @@ const evidence = {
   runtimeDataControl: after.runtimeDataControl === true,
   persistentRuntime: after.persistentRuntime === true,
   auditEvents: after.auditEvents === true,
+  readyBeforeRestart: beforeReady.ready === true,
+  storageWritableBeforeRestart: beforeReady.storage?.writable === true,
+  readyAfterRestart: afterReady.ready === true,
+  storageWritableAfterRestart: afterReady.storage?.writable === true,
+  readinessAuditVerifiedAfterRestart: afterReady.auditVerified === true,
   auditChainVerifiedAfterRestart: auditIntegrity.integrity.verified === true,
   projectAuditPersistedAfterRestart: auditTypes.has("project.create"),
   snapshotAuditPersistedAfterRestart: auditTypes.has("data.snapshot"),
