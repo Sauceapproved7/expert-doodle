@@ -31,6 +31,10 @@ function productionEnv(root) {
     FORGE_DATA_MAX_BYTES: "1048576",
     FORGE_LOGIN_MAX_FAILURES: "3",
     FORGE_LOGIN_WINDOW_MS: "60000",
+    FORGE_RECOVERY_MAX_REQUESTS: "4",
+    FORGE_RECOVERY_WINDOW_MS: "120000",
+    FORGE_NOTIFICATION_URL: "https://notify.example.test/send",
+    FORGE_NOTIFICATION_TOKEN: fixtureCredential("notify", "fixture", "credential", "long"),
   };
 }
 
@@ -43,11 +47,16 @@ test("production config is fail-closed and safe summary omits credentials", () =
   assert.equal(config.runtimeDataMaxBytes, 1048576);
   assert.equal(config.loginMaxFailures, 3);
   assert.equal(config.loginWindowMs, 60000);
+  assert.equal(config.recoveryMaxRequests, 4);
+  assert.equal(config.recoveryWindowMs, 120000);
+  assert.equal(config.notificationUrl, "https://notify.example.test/send");
 
   const summary = safeForgeProductionSummary(config);
   assert.equal(summary.secureSessionCookies, true);
+  assert.equal(summary.identityLifecycle, true);
   assert.equal("token" in summary, false);
   assert.equal("interpreterToken" in summary, false);
+  assert.equal("notificationToken" in summary, false);
   assert.equal(JSON.stringify(summary).includes(env.FORGE_CONTROL_TOKEN), false);
 
   assert.throws(
@@ -75,6 +84,20 @@ test("production config is fail-closed and safe summary omits credentials", () =
       FORGE_INTERPRETER_URL: "http://127.0.0.1:39000/interpret",
     }).interpreterUrl,
     "http://127.0.0.1:39000/interpret",
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_NOTIFICATION_URL: "http://notify.example.test/send",
+    }),
+    /must use https unless it is loopback/,
+  );
+  assert.equal(
+    readForgeProductionConfig({
+      ...env,
+      FORGE_NOTIFICATION_URL: "http://127.0.0.1:39001/send",
+    }).notificationUrl,
+    "http://127.0.0.1:39001/send",
   );
 });
 
@@ -139,9 +162,18 @@ test("production session cookies are Secure and failed login throttling returns 
   try {
     const health = await fetch(base + "/health");
     const healthBody = await health.json();
-    assert.equal(healthBody.version, "1.4");
+    assert.equal(healthBody.version, "1.5");
+    assert.equal(health.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(health.headers.get("referrer-policy"), "no-referrer");
+    assert.equal(health.headers.get("x-frame-options"), "DENY");
+    assert.equal(
+      health.headers.get("strict-transport-security"),
+      "max-age=31536000; includeSubDomains",
+    );
+    assert.match(health.headers.get("permissions-policy") ?? "", /camera=\(\)/);
     assert.equal(healthBody.mode, "production");
     assert.equal(healthBody.publicOrigin, "https://forge.example.test");
+    assert.equal(healthBody.identityLifecycle, false);
 
     assert.equal((await signIn(fixtureCredential("wrong", "one", "credential", "long", "enough"))).status, 401);
     assert.equal((await signIn(fixtureCredential("wrong", "two", "credential", "long", "enough"))).status, 401);
