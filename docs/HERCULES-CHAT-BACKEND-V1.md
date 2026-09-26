@@ -94,3 +94,32 @@ The live Supabase deployment was verified with rollback-only integration checks 
 - monthly Hercules AI-run rollup.
 
 The deployed Edge Function is `hercules-chat` with JWT verification enabled.
+
+
+## Client SDK
+
+`hercules-chat/client.mjs` is a dependency-free browser/server JavaScript client for the authenticated Edge Function.
+
+It requires:
+
+- the Supabase project HTTPS origin;
+- the public/anon project key;
+- a current user access token, supplied as a string or async token provider.
+
+The client never accepts a service-role key or Hercules internal AI key. Credentials are sent only in request headers and are never placed in the request URL.
+
+Supported methods:
+
+- `createSession`
+- `listSessions`
+- `updateSession`
+- `deleteSession`
+- `sendMessage`
+- `getMessages`
+- `remember`
+- `searchMemory`
+- `forgetMemory`
+- `usage`
+- `runChat`
+
+The SDK validates common bounds before network I/O, including chat prompts, explicit memories, list limits, titles, status values, and semantic-search thresholds.
