@@ -77,7 +77,7 @@ test("Portability Capsule records owned source and external infrastructure witho
   assert.equal(plan.portability.format,"hercules-base-portability-v1");
   assert.equal(plan.portability.vendorLockInAllowed,false);
   assert.deepEqual(plan.portability.dataExport,["postgres-custom","sql"]);
-  assert.deepEqual(plan.portability.externalInfrastructure.sort(),["docker","postgres","postgrest"].sort());
+  assert.deepEqual([...plan.portability.externalInfrastructure].sort(),["docker","postgres","postgrest"].sort());
   assert.equal(plan.portability.ownedControlPlane,"hercules-base");
 });
 
