@@ -9,6 +9,7 @@ export {ForgeAuditStore} from "./audit.mjs";
 export {ForgeLoginRateLimiter} from "./rate-limit.mjs";
 export {buildForgeArtifact, verifyForgeArtifact} from "./artifact.mjs";
 export {ForgeDeploymentAdapter, ForgeLocalReleaseAdapter} from "./releases.mjs";
+export {DEFAULT_DEPLOYMENT_MAX_BUNDLE_BYTES, createForgeDeploymentBundle, ForgeDeploymentTransport, HttpForgeDeploymentTransport, ForgeRemoteReleaseAdapter} from "./deployment.mjs";
 export {DEFAULT_RUNTIME_DATA_MAX_BYTES, ForgeRuntimeDataAdapter, ForgeLocalRuntimeDataAdapter} from "./runtime-data.mjs";
 export {buildPreviewChildEnv, startForgePreview, ForgePreviewManager} from "./preview.mjs";
 export {builderConsoleHtml, builderConsoleCss, builderConsoleJs, builderConsoleAsset} from "./builder-console.mjs";
