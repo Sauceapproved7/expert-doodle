@@ -26,6 +26,8 @@ const identity = await read("hercules-forge/identity.mjs");
 const control = await read("hercules-forge/control-api.mjs");
 const notifications = await read("hercules-forge/notifications.mjs");
 const production = await read("hercules-forge/production.mjs");
+const deployment = await read("hercules-forge/deployment.mjs");
+const ownerCodePolicy = await read("governance/owner-code-policy.json");
 const signer = await read("hercules-hurc/testnet-signer-edge.ts");
 const signerSql = await read("hercules-hurc/sql/hurc-test-signer.sql");
 const threat = await read("docs/HERCULES-THREAT-MODEL.md");
@@ -71,6 +73,24 @@ const checks = {
     /redirect: "error"/.test(notifications) &&
     /notification endpoint must not embed credentials/.test(notifications) &&
     /FORGE_NOTIFICATION_URL must use https unless it is loopback/.test(production),
+  forgeProductionReadiness:
+    /url\.pathname === "\/ready"/.test(control) &&
+    /probeForgeProductionStorage/.test(production) &&
+    /FORGE_MIN_FREE_BYTES/.test(production) &&
+    /mode: 0o600/.test(production),
+  forgePublicDeploymentVerification:
+    /verifyForgePublicDeployment/.test(deployment) &&
+    /deployment origin must use https/.test(deployment) &&
+    /redirect: "error"/.test(deployment) &&
+    /auditVerified/.test(deployment) &&
+    /storageWritable/.test(deployment),
+  forgeSystemdHardening:
+    /Restart=on-failure/.test(deployment) &&
+    /NoNewPrivileges=true/.test(deployment) &&
+    /ProtectSystem=strict/.test(deployment) &&
+    /CapabilityBoundingSet=/.test(deployment) &&
+    /ReadWritePaths=/.test(deployment) &&
+    /"id": "systemd"/.test(ownerCodePolicy),
   signerAuthenticated:
     /HURC_SIGNER_CONTROL_TOKEN/.test(signer) &&
     /CONTROL\.length < 32/.test(signer) &&

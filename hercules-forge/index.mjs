@@ -15,3 +15,4 @@ export {builderConsoleHtml, builderConsoleCss, builderConsoleJs, builderConsoleA
 export {customerConsoleHtml, customerConsoleCss, customerConsoleJs, customerConsoleAsset} from "./customer-console.mjs";
 export {createForgeControlService, listenForgeControlService} from "./control-api.mjs";
 export {readForgeProductionConfig, safeForgeProductionSummary, startForgeProductionService} from "./production.mjs";
+export {verifyForgePublicDeployment, renderForgeSystemdUnit} from "./deployment.mjs";
