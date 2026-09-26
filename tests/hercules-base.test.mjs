@@ -220,3 +220,16 @@ test("owner-code governance treats Hercules Base as an owned runtime root", asyn
   const roots=new Map(policy.runtimeRoots.map((entry)=>[entry.path,entry.role]));
   assert.equal(roots.get("hercules-base"),"backend-platform-runtime");
 });
+
+
+test("Blueprint Engine does not trust caller-frozen intent objects", () => {
+  const forged=Object.freeze({
+    name:"Forged",
+    slug:"BAD SPACE",
+    environment:"staging",
+    tenancy:"single-tenant",
+    dataClasses:Object.freeze(["operational"]),
+    capabilities:Object.freeze(["database","api"]),
+  });
+  assert.throws(()=>compileBackendIntent(forged),/slug/i);
+});
