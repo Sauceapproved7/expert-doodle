@@ -35,6 +35,8 @@ function productionEnv(root) {
     FORGE_RECOVERY_MAX_REQUESTS: "4",
     FORGE_RECOVERY_WINDOW_MS: "120000",
     FORGE_NOTIFICATION_URL: "https://notify.example.test/send",
+    FORGE_DEPLOYMENT_URL: "https://deploy.example.test/forge",
+    FORGE_DEPLOYMENT_MAX_BUNDLE_BYTES: "2097152",
   };
 }
 
@@ -50,13 +52,18 @@ test("production config is fail-closed and safe summary omits credentials", () =
   assert.equal(config.recoveryMaxRequests, 4);
   assert.equal(config.recoveryWindowMs, 120000);
   assert.equal(config.notificationUrl, "https://notify.example.test/send");
+  assert.equal(config.deploymentUrl, "https://deploy.example.test/forge");
+  assert.equal(config.deploymentMaxBundleBytes, 2097152);
 
   const summary = safeForgeProductionSummary(config);
   assert.equal(summary.secureSessionCookies, true);
   assert.equal(summary.identityLifecycle, true);
+  assert.equal(summary.remoteDeployment, true);
+  assert.equal(summary.deploymentMaxBundleBytes, 2097152);
   assert.equal("token" in summary, false);
   assert.equal("interpreterToken" in summary, false);
   assert.equal("notificationToken" in summary, false);
+  assert.equal("deploymentToken" in summary, false);
   assert.equal(JSON.stringify(summary).includes(env.FORGE_CONTROL_TOKEN), false);
 
   assert.throws(
@@ -98,6 +105,27 @@ test("production config is fail-closed and safe summary omits credentials", () =
       FORGE_NOTIFICATION_URL: "http://127.0.0.1:39001/send",
     }).notificationUrl,
     "http://127.0.0.1:39001/send",
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_DEPLOYMENT_URL: "http://deploy.example.test/forge",
+    }),
+    /must use https unless it is loopback/,
+  );
+  assert.equal(
+    readForgeProductionConfig({
+      ...env,
+      FORGE_DEPLOYMENT_URL: "http://127.0.0.1:39002/deploy",
+    }).deploymentUrl,
+    "http://127.0.0.1:39002/deploy",
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_DEPLOYMENT_MAX_BUNDLE_BYTES: "100",
+    }),
+    /FORGE_DEPLOYMENT_MAX_BUNDLE_BYTES/,
   );
 });
 
@@ -162,7 +190,7 @@ test("production session cookies are Secure and failed login throttling returns 
   try {
     const health = await fetch(base + "/health");
     const healthBody = await health.json();
-    assert.equal(healthBody.version, "1.5");
+    assert.equal(healthBody.version, "1.6");
     assert.equal(health.headers.get("x-content-type-options"), "nosniff");
     assert.equal(health.headers.get("referrer-policy"), "no-referrer");
     assert.equal(health.headers.get("x-frame-options"), "DENY");
@@ -174,6 +202,7 @@ test("production session cookies are Secure and failed login throttling returns 
     assert.equal(healthBody.mode, "production");
     assert.equal(healthBody.publicOrigin, "https://forge.example.test");
     assert.equal(healthBody.identityLifecycle, false);
+    assert.equal(healthBody.remoteDeployment, false);
 
     assert.equal((await signIn(fixtureCredential("wrong", "one", "credential", "long", "enough"))).status, 401);
     assert.equal((await signIn(fixtureCredential("wrong", "two", "credential", "long", "enough"))).status, 401);
