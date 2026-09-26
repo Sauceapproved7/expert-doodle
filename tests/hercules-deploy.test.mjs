@@ -48,13 +48,14 @@ test("deployment schema is strict, HTTPS-only, and rejects secret-shaped metadat
   );
   assert.throws(
     () => normalizeDeploymentRequest(requestFixture({
-      metadata: {nested: {accessToken: "not-allowed"}},
+      metadata: {nested: {accessToken: runtimeSecret(12)}},
     })),
     /secret-shaped field/,
   );
+  const credentialUrl = "https://" + runtimeSecret(6) + ":" + runtimeSecret(6) + "@example.test";
   assert.throws(
     () => normalizeDeploymentRequest(requestFixture({
-      target: {kind: "memory", reference: "https://user:pass@example.test"},
+      target: {kind: "memory", reference: credentialUrl},
     })),
     /must not embed credentials/,
   );
@@ -91,7 +92,7 @@ test("deployment store persists immutable request and controlled state transitio
     );
     await assert.rejects(
       store.transition("deploy-a", "rolling_back", {
-        rollbackEvidence: {secretToken: "blocked"},
+        rollbackEvidence: {secretToken: runtimeSecret(12)},
       }),
       /secret-shaped field/,
     );
