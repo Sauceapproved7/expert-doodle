@@ -95,3 +95,68 @@ test("adapter deploys, verifies, and restores the previous function on rollback"
   assert.equal(current.verify_jwt, false);
   assert.deepEqual(current.files, [{name: "index.ts", content: "old source"}]);
 });
+
+
+test("adapter rejects malformed target and artifact metadata before provider calls", async () => {
+  let calls = 0;
+  const adapter = new SupabaseEdgeFunctionTargetAdapter({
+    deployFunction: async () => { calls += 1; },
+    getFunction: async () => null,
+    deleteFunction: async () => {},
+  });
+  await assert.rejects(
+    adapter.deploy({request: {...request(), target: {kind: "memory", reference: "x"}}}),
+    /target.kind must be supabase_edge_function/,
+  );
+  await assert.rejects(
+    adapter.deploy({request: {...request(), target: {kind: "supabase_edge_function", reference: "bad"}}}),
+    /target.reference must be/,
+  );
+  const invalidBundle = structuredClone(bundle);
+  invalidBundle.files[0].name = "../index.ts";
+  assert.throws(() => fingerprintEdgeFunctionBundle(invalidBundle), /file name is invalid/);
+  assert.equal(calls, 0);
+});
+
+test("verification fails closed for missing, inactive, mismatched, or drifted functions", async () => {
+  let current = null;
+  const adapter = new SupabaseEdgeFunctionTargetAdapter({
+    deployFunction: async () => {},
+    getFunction: async () => current,
+    deleteFunction: async () => {},
+  });
+  const deployment = {request: request()};
+
+  await assert.rejects(adapter.verify(deployment), /not found/);
+
+  current = {slug: bundle.slug, status: "FAILED", verify_jwt: true, files: bundle.files, entrypoint_path: "index.ts"};
+  await assert.rejects(adapter.verify(deployment), /not active/);
+
+  current = {slug: "other-function", status: "ACTIVE", verify_jwt: true, files: bundle.files, entrypoint_path: "index.ts"};
+  await assert.rejects(adapter.verify(deployment), /slug mismatch/);
+
+  current = {
+    slug: bundle.slug,
+    status: "ACTIVE",
+    verify_jwt: true,
+    entrypoint_path: "index.ts",
+    files: [{name: "index.ts", content: "changed"}],
+  };
+  await assert.rejects(adapter.verify(deployment), /artifact mismatch/);
+});
+
+test("rollback deletes a function when the deployment created it from scratch", async () => {
+  let deleted = false;
+  const adapter = new SupabaseEdgeFunctionTargetAdapter({
+    deployFunction: async () => {},
+    getFunction: async () => null,
+    deleteFunction: async ({projectRef, slug}) => {
+      assert.equal(projectRef, "xbwuablxhhwsaoomsoco");
+      assert.equal(slug, "hercules-revenue-rescue");
+      deleted = true;
+    },
+  });
+  const result = await adapter.rollback({request: request(), state: {deployEvidence: {previousFunction: null}}});
+  assert.equal(result.mode, "delete_new");
+  assert.equal(deleted, true);
+});
