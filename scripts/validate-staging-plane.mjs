@@ -15,8 +15,8 @@ const checks={
   forgePersistent:/hercules_forge_state:\/forge-state/.test(content["compose.yml"])&&/hercules_forge_state:/.test(content["compose.yml"]),
   forgeReadOnlySource:/\.\.\/hercules-forge:\/repo\/hercules-forge:ro/.test(content["compose.yml"]),
   forgeSecretInjected:/HERCULES_FORGE_STAGING_CONTROL_TOKEN/.test(content["compose.yml"]),
-  baseControl:/\/repo\/hercules-base\/server\\.mjs/.test(content["compose.yml"])&&/HERCULES_BASE_POSTGREST_URL/.test(content["compose.yml"]),
-  baseReadOnlySource:/\\.\\.\/hercules-base:\/repo\/hercules-base:ro/.test(content["compose.yml"]),
+  baseControl:/\/repo\/hercules-base\/server\.mjs/.test(content["compose.yml"])&&/HERCULES_BASE_POSTGREST_URL/.test(content["compose.yml"]),
+  baseReadOnlySource:/\.\.\/hercules-base:\/repo\/hercules-base:ro/.test(content["compose.yml"]),
   baseSecretInjected:/HERCULES_BASE_CONTROL_TOKEN/.test(content["compose.yml"])
 };
 console.log(JSON.stringify({ok:Object.values(checks).every(Boolean),checks},null,2));
