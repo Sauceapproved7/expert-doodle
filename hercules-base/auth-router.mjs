@@ -66,9 +66,10 @@ function accessToken(userId,jwtSecret){
 }
 
 function sessionPayload(user,refreshToken,jwtSecret){
+  const userId=user.userId??user.user_id??user.id;
   return {
-    user:{id:user.id,email:user.email},
-    access_token:accessToken(user.id,jwtSecret),
+    user:{id:userId,email:user.email},
+    access_token:accessToken(userId,jwtSecret),
     token_type:"bearer",
     expires_in:ACCESS_TTL_SECONDS,
     refresh_token:refreshToken,
