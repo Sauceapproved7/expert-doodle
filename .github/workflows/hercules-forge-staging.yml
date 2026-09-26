@@ -9,6 +9,7 @@ on:
       - "staging-plane/**"
       - "scripts/forge-staging-drill.mjs"
       - "scripts/base-auth-staging-drill.mjs"
+      - "scripts/base-storage-staging-drill.mjs"
       - "scripts/staging-plane.mjs"
       - "scripts/validate-staging-plane.mjs"
       - "governance/owner-code-policy.json"
@@ -42,6 +43,9 @@ jobs:
 
       - name: Prove Hercules Base Auth lifecycle
         run: node scripts/base-auth-staging-drill.mjs
+
+      - name: Prove Hercules Base Storage lifecycle
+        run: node scripts/base-storage-staging-drill.mjs
 
       - name: Prove Forge restart and persistence
         run: node scripts/forge-staging-drill.mjs --confirm-isolated-staging
