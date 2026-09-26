@@ -1,13 +1,22 @@
 import {createServer} from "node:http";
 import {routeBaseRequest} from "./router.mjs";
+import {routeAuthRequest} from "./auth-router.mjs";
+import {createPostgrestAuthStore} from "./auth-store.mjs";
 
 const host=process.env.HERCULES_BASE_HOST||"0.0.0.0";
 const port=Number(process.env.HERCULES_BASE_PORT||38800);
 const controlToken=process.env.HERCULES_BASE_CONTROL_TOKEN||"";
+const jwtSecret=process.env.HERCULES_BASE_JWT_SECRET||"";
+const postgrestUrl=process.env.HERCULES_BASE_POSTGREST_URL||"http://postgrest:3000";
+const fixtureOnly=process.env.HERCULES_BASE_FIXTURE_ONLY==="true";
 
 if(!controlToken){
   throw new Error("HERCULES_BASE_CONTROL_TOKEN is required");
 }
+if(!jwtSecret||Buffer.byteLength(jwtSecret)<32){
+  throw new Error("HERCULES_BASE_JWT_SECRET must be at least 32 bytes");
+}
+const authStore=createPostgrestAuthStore({postgrestUrl,jwtSecret});
 
 function nodeRequestToFetch(request){
   const origin="http://hercules-base.local";
@@ -42,7 +51,11 @@ function nodeRequestToFetch(request){
 
 createServer(async(request,response)=>{
   try{
-    const routed=await routeBaseRequest(nodeRequestToFetch(request),{controlToken});
+    const fetchRequest=nodeRequestToFetch(request);
+    const pathname=new URL(fetchRequest.url).pathname;
+    const routed=pathname.startsWith("/v1/auth/")
+      ?await routeAuthRequest(fetchRequest,{store:authStore,jwtSecret,fixtureOnly})
+      :await routeBaseRequest(fetchRequest,{controlToken});
     response.statusCode=routed.status;
     for(const [name,value] of routed.headers){
       response.setHeader(name,value);

@@ -5,8 +5,10 @@ on:
   pull_request:
     paths:
       - "hercules-forge/**"
+      - "hercules-base/**"
       - "staging-plane/**"
       - "scripts/forge-staging-drill.mjs"
+      - "scripts/base-auth-staging-drill.mjs"
       - "scripts/staging-plane.mjs"
       - "scripts/validate-staging-plane.mjs"
       - "governance/owner-code-policy.json"
@@ -38,6 +40,9 @@ jobs:
       - name: Start isolated staging
         run: node scripts/staging-plane.mjs up
 
+      - name: Prove Hercules Base Auth lifecycle
+        run: node scripts/base-auth-staging-drill.mjs
+
       - name: Prove Forge restart and persistence
         run: node scripts/forge-staging-drill.mjs --confirm-isolated-staging
 
@@ -52,7 +57,7 @@ jobs:
 
       - name: Capture Forge diagnostics
         if: failure()
-        run: docker compose --env-file staging-plane/.env -f staging-plane/compose.yml logs --no-color forge
+        run: docker compose --env-file staging-plane/.env -f staging-plane/compose.yml logs --no-color base postgrest postgres forge
 
       - name: Remove isolated staging
         if: always()

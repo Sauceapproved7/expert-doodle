@@ -38,7 +38,11 @@ export const BASE_CAPABILITIES=Object.freeze({
     substrate:"hercules-owned",
     evidence:"hercules-base/core.mjs",
   }),
-  auth:Object.freeze({status:"planned"}),
+  auth:Object.freeze({
+    status:"implemented",
+    substrate:"hercules-owned-over-postgres",
+    evidence:"hercules-base/auth-router.mjs",
+  }),
   storage:Object.freeze({status:"planned"}),
   realtime:Object.freeze({status:"planned"}),
   functions:Object.freeze({status:"planned"}),
