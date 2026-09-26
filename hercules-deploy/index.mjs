@@ -3,5 +3,6 @@ export {HerculesDeployStore} from "./store.mjs";
 export {HerculesDeployTargetAdapter, MemoryHerculesDeployTargetAdapter} from "./adapters.mjs";
 export {HerculesDeployWorker} from "./worker.mjs";
 export {deploymentRequestFromActiveForgeRelease} from "./forge-bridge.mjs";
+export {HttpHerculesDeployClient} from "./client.mjs";
 export {createHerculesDeployService, listenHerculesDeployService} from "./control-api.mjs";
 export {readHerculesDeployConfig, safeHerculesDeployConfig, startHerculesDeployService} from "./service.mjs";
