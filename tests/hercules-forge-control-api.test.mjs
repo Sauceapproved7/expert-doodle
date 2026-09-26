@@ -57,6 +57,13 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(health.body.identityLifecycle, false);
     assert.ok(health.body.runtimeDataMaxBytes > 0);
 
+    const readiness = await request(base, "/ready", {authorized: false});
+    assert.equal(readiness.status, 200);
+    assert.equal(readiness.body.ready, true);
+    assert.equal(readiness.body.version, "1.6");
+    assert.equal(readiness.body.auditVerified, true);
+    assert.equal(readiness.body.storage, null);
+
     const consoleResponse = await fetch(base + "/");
     assert.equal(consoleResponse.status, 200);
     assert.match(consoleResponse.headers.get("content-type"), /text\/html/);
