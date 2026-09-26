@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {mkdtemp, readFile, rm, writeFile} from "node:fs/promises";
+import {mkdtemp, readFile, rm, stat, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {
@@ -45,6 +45,9 @@ test("recovery flight recorder persists a verified append-only hash chain", asyn
     assert.equal(second.sequence, 2);
     assert.equal(second.previousHash, first.hash);
     assert.match(second.hash, /^[a-f0-9]{64}$/);
+
+    assert.equal((await stat(recorder.path)).mode & 0o777, 0o600);
+    assert.equal((await stat(recorder.headPath)).mode & 0o777, 0o600);
 
     const verified = await recorder.verify();
     assert.equal(verified.verified, true);
