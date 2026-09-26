@@ -12,4 +12,17 @@ export const HERCULES_MODEL_CANDIDATES = Object.freeze([
     checkpoint: "sha256:223aebb35f003ff5e144e29bfd8a613206802b7cdc70da35be31f067c0b08b9f",
     provenance: "Attested in hercules-models/candidate-attestations/hercules-core-neural-v0.3.json.",
   },
+  {
+    version: "0.1",
+    id: "hercules-coder-neural-v02",
+    family: "hercules-coder",
+    description: "Candidate neural software-language checkpoint for the Hercules Coder family.",
+    tasks: ["code"],
+    state: "candidate",
+    origin: "hercules-native",
+    priority: 950,
+    runtime: null,
+    checkpoint: "sha256:7ffb1ec7f2fa70349db6711f101d45fedd5b6440fb9d9e0d72a559fe7ebf2bae",
+    provenance: "Attested in hercules-models/candidate-attestations/hercules-coder-neural-v0.2.json.",
+  },
 ]);

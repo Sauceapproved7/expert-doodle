@@ -1,0 +1,66 @@
+{
+  "version": "0.1",
+  "candidateId": "hercules-coder-neural-v02",
+  "modelId": "hercules-coder",
+  "family": "hercules-coder",
+  "capability": "neural-software-language-candidate",
+  "promotionStatus": "candidate",
+  "activeReplacement": false,
+  "algorithm": "context-embedding-softmax-sgd",
+  "framework": "hercules-native-js",
+  "checkpointSha256": "7ffb1ec7f2fa70349db6711f101d45fedd5b6440fb9d9e0d72a559fe7ebf2bae",
+  "checkpointBytes": 274449,
+  "sourceCommit": "62f7b7c2b05573de5dab00e7fd19979732441ece",
+  "workflowRunId": 36269766120,
+  "workflowArtifactId": 10914843461,
+  "workflowArtifactDigest": "sha256:57f9cd651519e8ad09d865fb11d483002a79a30473326385e47ad7fd1caa3e75",
+  "verificationRuns": {
+    "ownerCode": {
+      "runId": 36269766145,
+      "passed": true
+    },
+    "securityBaseline": {
+      "runId": 36269766117,
+      "passed": true
+    },
+    "codeql": {
+      "runId": 36269766085,
+      "passed": true
+    }
+  },
+  "trainingDataset": {
+    "path": "hercules-training/bootstrap/coder-neural-v0.2-train.jsonl",
+    "records": 72,
+    "contentSha256": "c40e2d92f3a09ba91c1c225d62db027d2513623d2c52073845cc88e9fd6e1b4c"
+  },
+  "evaluationDataset": {
+    "path": "hercules-training/bootstrap/coder-neural-v0.2-eval.jsonl",
+    "records": 20,
+    "contentSha256": "66bdd4bc29a98a05f8ed04ae1cb4bb11f9632f5a85e5f52e5492c6a3b780a29e"
+  },
+  "architecture": {
+    "contextLength": 3,
+    "embeddingDim": 10,
+    "vocabularySize": 322,
+    "trainingExamples": 3691,
+    "epochs": 28
+  },
+  "evaluation": {
+    "passed": true,
+    "metrics": {
+      "top1Accuracy": 0.6098579782790309,
+      "contentTop1Accuracy": 0.579415501905972,
+      "unigramImprovement": 0.43636950139085173,
+      "backoffCrossEntropyRatio": 1.1264600382131675,
+      "tokenCoverage": 0.9490229396771452
+    },
+    "gate": {
+      "minimumTop1Accuracy": 0.42,
+      "minimumContentTop1Accuracy": 0.08,
+      "minimumUnigramImprovement": 0.08,
+      "maximumBackoffCrossEntropyRatio": 1.45,
+      "minimumTokenCoverage": 0.8
+    }
+  },
+  "provenance": "Repository-owned neural code-language architecture and Hercules-authored JavaScript corpus; no third-party source-code dataset, model weights, tokenizer package, or ML SDK is packaged."
+}

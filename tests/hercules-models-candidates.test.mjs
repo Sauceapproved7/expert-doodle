@@ -11,22 +11,38 @@ async function listen(server) {
   return "http://127.0.0.1:" + server.address().port;
 }
 
-test("Core neural v0.3 is registered as a non-routable candidate", () => {
-  assert.equal(HERCULES_MODEL_CANDIDATES.length, 1);
-  const candidate = HERCULES_MODEL_CANDIDATES[0];
-  assert.equal(candidate.id, "hercules-core-neural-v03");
-  assert.equal(candidate.family, "hercules-core");
-  assert.equal(candidate.state, "candidate");
-  assert.equal(candidate.origin, "hercules-native");
-  assert.equal(candidate.runtime, null);
-  assert.match(candidate.checkpoint, /^sha256:[a-f0-9]{64}$/);
+test("Core and Coder neural checkpoints are registered as non-routable candidates", () => {
+  assert.equal(HERCULES_MODEL_CANDIDATES.length, 2);
 
-  const activeCore = HERCULES_MODEL_SLOTS.find((model) => model.id === "hercules-core");
-  assert.equal(activeCore.state, "active");
-  assert.notEqual(activeCore.checkpoint, candidate.checkpoint);
+  const byId = Object.fromEntries(
+    HERCULES_MODEL_CANDIDATES.map((candidate) => [candidate.id, candidate]),
+  );
+  assert.deepEqual(Object.keys(byId).sort(), [
+    "hercules-coder-neural-v02",
+    "hercules-core-neural-v03",
+  ]);
+
+  for (const candidate of HERCULES_MODEL_CANDIDATES) {
+    assert.equal(candidate.state, "candidate");
+    assert.equal(candidate.origin, "hercules-native");
+    assert.equal(candidate.runtime, null);
+    assert.match(candidate.checkpoint, /^sha256:[a-f0-9]{64}$/);
+
+    const active = HERCULES_MODEL_SLOTS.find(
+      (model) => model.id === candidate.family,
+    );
+    assert.ok(active);
+    assert.equal(active.state, "active");
+    assert.notEqual(active.checkpoint, candidate.checkpoint);
+  }
+
+  assert.equal(byId["hercules-core-neural-v03"].family, "hercules-core");
+  assert.deepEqual(byId["hercules-core-neural-v03"].tasks, ["general"]);
+  assert.equal(byId["hercules-coder-neural-v02"].family, "hercules-coder");
+  assert.deepEqual(byId["hercules-coder-neural-v02"].tasks, ["code"]);
 });
 
-test("model plane exposes candidate inventory without routing through candidates", async () => {
+test("model plane exposes candidates without routing production traffic through them", async () => {
   const server = createModelPlaneService({
     models: HERCULES_MODEL_SLOTS,
     candidates: HERCULES_MODEL_CANDIDATES,
@@ -41,17 +57,20 @@ test("model plane exposes candidate inventory without routing through candidates
     const healthBody = await health.json();
     assert.equal(healthBody.models, 8);
     assert.equal(healthBody.active, 8);
-    assert.equal(healthBody.candidates, 1);
+    assert.equal(healthBody.candidates, 2);
 
     const candidates = await fetch(base + "/v1/candidates", {
       headers: {authorization: "Bearer " + token},
     });
     assert.equal(candidates.status, 200);
     const candidateBody = await candidates.json();
-    assert.equal(candidateBody.candidates.length, 1);
-    assert.equal(candidateBody.candidates[0].id, "hercules-core-neural-v03");
+    assert.equal(candidateBody.candidates.length, 2);
 
-    const route = await fetch(base + "/v1/route", {
+    const byId = Object.fromEntries(
+      candidateBody.candidates.map((candidate) => [candidate.id, candidate]),
+    );
+
+    const generalRoute = await fetch(base + "/v1/route", {
       method: "POST",
       headers: {
         authorization: "Bearer " + token,
@@ -59,10 +78,29 @@ test("model plane exposes candidate inventory without routing through candidates
       },
       body: JSON.stringify({task: "general"}),
     });
-    assert.equal(route.status, 200);
-    const routeBody = await route.json();
-    assert.equal(routeBody.model.id, "hercules-core");
-    assert.notEqual(routeBody.model.checkpoint, candidateBody.candidates[0].checkpoint);
+    assert.equal(generalRoute.status, 200);
+    const generalBody = await generalRoute.json();
+    assert.equal(generalBody.model.id, "hercules-core");
+    assert.notEqual(
+      generalBody.model.checkpoint,
+      byId["hercules-core-neural-v03"].checkpoint,
+    );
+
+    const codeRoute = await fetch(base + "/v1/route", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + token,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({task: "code"}),
+    });
+    assert.equal(codeRoute.status, 200);
+    const codeBody = await codeRoute.json();
+    assert.equal(codeBody.model.id, "hercules-coder");
+    assert.notEqual(
+      codeBody.model.checkpoint,
+      byId["hercules-coder-neural-v02"].checkpoint,
+    );
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
