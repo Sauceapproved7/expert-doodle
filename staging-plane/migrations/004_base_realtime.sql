@@ -95,9 +95,9 @@ begin
     raise exception 'CHANNEL_NOT_FOUND';
   end if;
 
-  insert into staging_api.realtime_events(channel_id,owner_id,event_name,payload)
+  insert into staging_api.realtime_events as e(channel_id,owner_id,event_name,payload)
   values(v_channel_id,p_owner_id,p_event_name,p_payload)
-  returning staging_api.realtime_events.id into v_event_id;
+  returning e.id into v_event_id;
 
   return query
   select e.id,c.name,e.event_name,e.payload,e.created_at
