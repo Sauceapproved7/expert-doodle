@@ -5,6 +5,9 @@ import {createPostgrestAuthStore} from "./auth-store.mjs";
 import {routeStorageRequest} from "./storage-router.mjs";
 import {createPostgrestStorageStore} from "./storage-store.mjs";
 import {createFilesystemBlobStore} from "./storage-core.mjs";
+import {routeRealtimeRequest} from "./realtime-router.mjs";
+import {createPostgrestRealtimeStore} from "./realtime-store.mjs";
+import {writeFetchResponse} from "./response-bridge.mjs";
 
 const host=process.env.HERCULES_BASE_HOST||"0.0.0.0";
 const port=Number(process.env.HERCULES_BASE_PORT||38800);
@@ -23,8 +26,9 @@ if(!jwtSecret||Buffer.byteLength(jwtSecret)<32){
 const authStore=createPostgrestAuthStore({postgrestUrl,jwtSecret});
 const storageStore=createPostgrestStorageStore({postgrestUrl,jwtSecret});
 const blobs=createFilesystemBlobStore({root:storageRoot});
+const realtimeStore=createPostgrestRealtimeStore({postgrestUrl,jwtSecret});
 
-function nodeRequestToFetch(request){
+function nodeRequestToFetch(request,{signal}={}){
   const origin="http://hercules-base.local";
   const target=new URL(request.url||"/",origin);
   const headers=new Headers();
@@ -52,28 +56,35 @@ function nodeRequestToFetch(request){
     headers,
     body,
     duplex:body?"half":undefined,
+    signal,
   });
 }
 
 createServer(async(request,response)=>{
+  const abortController=new AbortController();
+  request.once("aborted",()=>abortController.abort());
+  response.once("close",()=>abortController.abort());
+
   try{
-    const fetchRequest=nodeRequestToFetch(request);
+    const fetchRequest=nodeRequestToFetch(request,{signal:abortController.signal});
     const pathname=new URL(fetchRequest.url).pathname;
     const routed=pathname.startsWith("/v1/auth/")
       ?await routeAuthRequest(fetchRequest,{store:authStore,jwtSecret,fixtureOnly})
       :pathname.startsWith("/v1/storage/")
         ?await routeStorageRequest(fetchRequest,{store:storageStore,blobs,jwtSecret})
-        :await routeBaseRequest(fetchRequest,{controlToken});
-    response.statusCode=routed.status;
-    for(const [name,value] of routed.headers){
-      response.setHeader(name,value);
-    }
-    response.end(Buffer.from(await routed.arrayBuffer()));
+        :pathname.startsWith("/v1/realtime/")
+          ?await routeRealtimeRequest(fetchRequest,{store:realtimeStore,jwtSecret})
+          :await routeBaseRequest(fetchRequest,{controlToken});
+    await writeFetchResponse(response,routed);
   }catch{
-    response.statusCode=500;
-    response.setHeader("content-type","application/json");
-    response.setHeader("cache-control","no-store");
-    response.end(JSON.stringify({ok:false,error:"internal_error"}));
+    if(!response.headersSent){
+      response.statusCode=500;
+      response.setHeader("content-type","application/json");
+      response.setHeader("cache-control","no-store");
+      response.end(JSON.stringify({ok:false,error:"internal_error"}));
+    }else{
+      response.destroy();
+    }
   }
 }).listen(port,host,()=>{
   console.log("hercules_base_ready:"+port);
