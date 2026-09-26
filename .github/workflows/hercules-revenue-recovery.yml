@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Check recovery source syntax
-        run: node --check hercules-recovery/recovery-core.mjs
+        run: |\n          node --check hercules-recovery/recovery-core.mjs\n          node --check hercules-recovery/recovery-graph.mjs
 
       - name: Verify recovery decision contract
-        run: node --test tests/hercules-recovery.test.mjs
+        run: node --test tests/hercules-recovery*.test.mjs
