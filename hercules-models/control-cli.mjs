@@ -7,6 +7,7 @@ import {HerculesEmbeddedGuard} from "./embedded-guard.mjs";
 import {HerculesEmbeddedFamilyClassifier} from "./embedded-family-classifier.mjs";
 import {HerculesEmbeddedCoreNeuralV03} from "./embedded-core-neural-v0.3.mjs";
 import {HerculesEmbeddedCoderNeuralV02} from "./embedded-coder-neural-v0.2.mjs";
+import {HerculesEmbeddedResearchNeuralV02} from "./embedded-research-neural-v0.2.mjs";
 import {listenModelPlaneService} from "./service.mjs";
 
 const configuredToken = process.env.HERCULES_MODEL_TOKEN;
@@ -39,12 +40,14 @@ const [
 
 const candidateRuntimes = {};
 if (candidateEvaluationEnabled) {
-  const [coreNeural, coderNeural] = await Promise.all([
+  const [coreNeural, coderNeural, researchNeural] = await Promise.all([
     HerculesEmbeddedCoreNeuralV03.load(),
     HerculesEmbeddedCoderNeuralV02.load(),
+    HerculesEmbeddedResearchNeuralV02.load(),
   ]);
   candidateRuntimes["hercules-core-neural-v03"] = coreNeural;
   candidateRuntimes["hercules-coder-neural-v02"] = coderNeural;
+  candidateRuntimes["hercules-research-neural-v02"] = researchNeural;
 }
 
 listenModelPlaneService({

@@ -35,3 +35,7 @@ export {
   HERCULES_CODER_NEURAL_V02_CHECKPOINT_SHA256,
   HerculesEmbeddedCoderNeuralV02,
 } from "./embedded-coder-neural-v0.2.mjs";
+export {
+  HERCULES_RESEARCH_NEURAL_V02_CHECKPOINT_SHA256,
+  HerculesEmbeddedResearchNeuralV02,
+} from "./embedded-research-neural-v0.2.mjs";
