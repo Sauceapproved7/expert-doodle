@@ -1,5 +1,5 @@
 import {createHash,randomBytes} from "node:crypto";
-import {lstat,mkdir,readFile,writeFile} from "node:fs/promises";
+import {mkdir,open,writeFile} from "node:fs/promises";
 import {resolve,join} from "node:path";
 
 export function normalizeBucketName(value){
@@ -56,14 +56,19 @@ export function createFilesystemBlobStore({root}={}){
         throw new TypeError("blob digest is invalid");
       }
       const path=join(canonicalRoot,digest.slice(0,2),digest);
-      const info=await lstat(path);
-      if(!info.isFile()||info.isSymbolicLink())throw new Error("blob integrity check failed");
-      const bytes=await readFile(path);
-      if(Number.isInteger(expectedSize)&&expectedSize>=0&&bytes.byteLength!==expectedSize){
-        throw new Error("blob integrity check failed");
+      const handle=await open(path,"r");
+      try{
+        const info=await handle.stat();
+        if(!info.isFile())throw new Error("blob integrity check failed");
+        const bytes=await handle.readFile();
+        if(Number.isInteger(expectedSize)&&expectedSize>=0&&bytes.byteLength!==expectedSize){
+          throw new Error("blob integrity check failed");
+        }
+        if(sha256Hex(bytes)!==digest)throw new Error("blob integrity check failed");
+        return bytes;
+      }finally{
+        await handle.close();
       }
-      if(sha256Hex(bytes)!==digest)throw new Error("blob integrity check failed");
-      return bytes;
     },
     pathForDigest(digest){
       if(typeof digest!=="string"||!/^[a-f0-9]{64}$/.test(digest)){
