@@ -28,7 +28,7 @@ Hercules must protect:
 ## Primary threats and required controls
 
 ### Authentication and session compromise
-Controls: memory-hard salted password hashing with explicit parameters, secure HttpOnly cookies, SameSite=Strict, CSRF tokens, login throttling, constant-time secret comparison, bounded sessions, audit events, hashed one-time invite/recovery tokens, generic recovery responses, recovery throttling, and revocation of existing sessions after password recovery.
+Controls: memory-hard salted password hashing with explicit parameters, secure HttpOnly cookies, SameSite=Strict, CSRF tokens, login throttling, constant-time secret comparison, bounded sessions, audit events, hashed one-time invite/recovery tokens, generic recovery responses, recovery throttling, shared-volume atomic lifecycle locks, password-version invalidation of older recovery links, and revocation of existing sessions after password recovery.
 
 ### Broken tenant authorization
 Controls: server-side workspace membership checks, role allowlists, project/workspace binding, no trust in client-supplied ownership.
@@ -61,6 +61,7 @@ Current Hercules evidence does not establish:
 - continuous production SLO attainment;
 - external penetration-test assurance;
 - proof that every historical release has a signed SBOM/provenance attestation; the current release-evidence workflow establishes this control for releases that pass through it;
-- multi-factor authentication or externally anchored lifecycle-token issuance/revocation evidence.
+- multi-factor authentication or externally anchored lifecycle-token issuance/revocation evidence;
+- proof that every network/distributed filesystem used for Forge state provides the same atomic directory-creation and rename semantics as the validated local/shared-volume staging boundary.
 
 These non-claims are security boundaries, not documentation omissions.
