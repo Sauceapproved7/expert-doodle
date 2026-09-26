@@ -51,9 +51,10 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
     assert.equal(health.body.persistentRuntime, true);
-    assert.equal(health.body.version, "1.4");
+    assert.equal(health.body.version, "1.5");
     assert.equal(health.body.runtimeDataControl, true);
     assert.equal(health.body.auditEvents, true);
+    assert.equal(health.body.identityLifecycle, false);
     assert.ok(health.body.runtimeDataMaxBytes > 0);
 
     const consoleResponse = await fetch(base + "/");
@@ -65,6 +66,8 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.match(consoleHtml, /Runtime data/);
     assert.match(consoleHtml, /Create snapshot/);
     assert.match(consoleHtml, /Security audit/);
+    assert.match(consoleHtml, /Forgot password/);
+    assert.match(consoleHtml, /Invite member/);
     assert.equal(consoleHtml.includes("Control token"), false);
     assert.equal(consoleHtml.includes(token), false);
 
@@ -239,6 +242,58 @@ test("workspace rejects path-unsafe project identifiers", async () => {
     });
     assert.equal(result.status, 400);
     assert.match(result.body.error, /path-safe identifier/);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive: true, force: true});
+  }
+});
+
+
+test("control API rejects malformed and oversized request bodies", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-body-"));
+  const {server, base} = await start(root);
+
+  try {
+    const malformed = await fetch(base + "/v1/projects", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer " + token,
+      },
+      body: "{not-json",
+    });
+    assert.equal(malformed.status, 400);
+
+    const oversized = await fetch(base + "/v1/projects", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: "Bearer " + token,
+      },
+      body: JSON.stringify({payload: "x".repeat(1024 * 1024 + 1)}),
+    });
+    assert.equal(oversized.status, 413);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive: true, force: true});
+  }
+});
+
+
+test("control API fails closed on malformed cookie and path encoding", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-encoding-"));
+  const {server, base} = await start(root);
+
+  try {
+    const malformedCookie = await fetch(base + "/v1/me", {
+      headers: {cookie: "forge_session=%ZZ"},
+    });
+    assert.equal(malformedCookie.status, 401);
+
+    const malformedPath = await fetch(base + "/v1/projects/%ZZ", {
+      headers: {authorization: "Bearer " + token},
+    });
+    assert.equal(malformedPath.status, 400);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(root, {recursive: true, force: true});
