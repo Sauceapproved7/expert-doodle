@@ -8,6 +8,7 @@ Canonical source: `Sauceapproved7/expert-doodle`.
 
 - `hercules-forge/` — builder, control plane, identity, audit, preview, release and runtime-data services.
 - `hercules-chat/` — authenticated chat, RLS, semantic memory, usage metering and AI-router gateway.
+- `hercules-base/` — backend operating system: Blueprint Engine, Guardian policy compiler, portability manifests and self-hosted control API.
 - `hercules-models/` — model plane and embedded native runtimes.
 - `hercules-training/` — training, evaluation, checkpoint and activation pipeline.
 - `hercules-video/` — video planning, rendering, quality and execution coordination.
@@ -29,6 +30,7 @@ node scripts/security-baseline.mjs
 node --test tests/hercules-forge*.test.mjs
 node --test tests/hercules-hurc-*.test.mjs
 node --test tests/hercules-chat*.test.mjs
+node --test tests/hercules-base*.test.mjs
 ```
 
 Docker-capable staging:
