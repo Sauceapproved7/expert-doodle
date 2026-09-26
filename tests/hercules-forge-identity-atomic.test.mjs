@@ -197,3 +197,41 @@ test("stale shared-volume lifecycle locks are reclaimed", async () => {
     await rm(root, {recursive: true, force: true});
   }
 });
+
+test("concurrent old-password login cannot leave a valid session after recovery", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-identity-login-reset-race-"));
+  try {
+    const setup = new ForgeIdentityStore(root);
+    const oldPassword = fixtureValue("race", "old", "password", "long", "enough");
+    const newPassword = fixtureValue("race", "new", "password", "long", "enough");
+    const user = await setup.createUser({
+      userId: "race-user",
+      email: "race@example.com",
+      password: oldPassword,
+    });
+    const recovery = await setup.createRecovery({email: user.email});
+
+    const loginProcess = new ForgeIdentityStore(root);
+    const recoveryProcess = new ForgeIdentityStore(root);
+    const [loginResult, recoveryResult] = await Promise.allSettled([
+      loginProcess.createSession({email: user.email, password: oldPassword}),
+      recoveryProcess.completeRecovery({token: recovery.token, password: newPassword}),
+    ]);
+
+    assert.equal(recoveryResult.status, "fulfilled");
+    if (loginResult.status === "fulfilled") {
+      await assert.rejects(setup.getSession(loginResult.value.token), /unauthorized/);
+    } else {
+      assert.match(loginResult.reason.message, /invalid credentials/);
+    }
+
+    await assert.rejects(
+      setup.createSession({email: user.email, password: oldPassword}),
+      /invalid credentials/,
+    );
+    const current = await setup.createSession({email: user.email, password: newPassword});
+    assert.equal(current.user.userId, "race-user");
+  } finally {
+    await rm(root, {recursive: true, force: true});
+  }
+});
