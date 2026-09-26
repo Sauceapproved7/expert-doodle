@@ -190,3 +190,20 @@ test("storage lifecycle drill is part of staging CI", async () => {
   assert.match(workflow,/Prove Hercules Base Storage lifecycle/);
   assert.match(workflow,/node scripts\/base-storage-staging-drill\.mjs/);
 });
+
+
+test("blob store detects tampering before download", async () => {
+  const {writeFile}=await import("node:fs/promises");
+  const root=await mkdtemp(join(tmpdir(),"hercules-base-storage-integrity-"));
+  const blobs=createFilesystemBlobStore({root});
+  const original=Buffer.from("integrity fixture");
+  const saved=await blobs.put(original);
+
+  assert.deepEqual(await blobs.get(saved.sha256,{expectedSize:original.byteLength}),original);
+
+  await writeFile(saved.path,Buffer.from("tampered"));
+  await assert.rejects(
+    blobs.get(saved.sha256,{expectedSize:original.byteLength}),
+    /integrity/i,
+  );
+});
