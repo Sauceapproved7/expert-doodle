@@ -199,3 +199,24 @@ test("control API rejects oversized bodies before compilation", async () => {
   );
   assert.equal(response.status,413);
 });
+
+
+test("self-hosted staging runs Hercules Base from owned read-only source", async () => {
+  const {readFile}=await import("node:fs/promises");
+  const compose=await readFile(new URL("../staging-plane/compose.yml",import.meta.url),"utf8");
+  assert.match(compose,/\n  base:\n/);
+  assert.match(compose,/\.\.\/hercules-base:\/repo\/hercules-base:ro/);
+  assert.match(compose,/\/repo\/hercules-base\/server\.mjs/);
+  assert.match(compose,/127\.0\.0\.1:38800:38800/);
+  assert.match(compose,/HERCULES_BASE_CONTROL_TOKEN/);
+});
+
+test("owner-code governance treats Hercules Base as an owned runtime root", async () => {
+  const {readFile}=await import("node:fs/promises");
+  const policy=JSON.parse(await readFile(
+    new URL("../governance/owner-code-policy.json",import.meta.url),
+    "utf8",
+  ));
+  const roots=new Map(policy.runtimeRoots.map((entry)=>[entry.path,entry.role]));
+  assert.equal(roots.get("hercules-base"),"backend-platform-runtime");
+});
