@@ -143,7 +143,13 @@ export class SupabaseEdgeFunctionTargetAdapter extends HerculesDeployTargetAdapt
   async rollback(deployment) {
     const {projectRef, slug} = parseTarget(deployment.request);
     const previous = deployment?.state?.deployEvidence?.previousFunction ?? null;
-    if (previous?.files?.length) {
+    if (previous) {
+      if (!previous.files?.length) {
+        throw Object.assign(
+          new Error("previous function source snapshot is unavailable"),
+          {code: "supabase_rollback_snapshot_unavailable"},
+        );
+      }
       const restored = await this.deployFunction({
         projectRef,
         slug,
