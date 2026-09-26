@@ -5,5 +5,6 @@ export {HerculesDeployWorker} from "./worker.mjs";
 export {deploymentRequestFromActiveForgeRelease} from "./forge-bridge.mjs";
 export {HttpHerculesDeployClient} from "./client.mjs";
 export {createHerculesDeployService, listenHerculesDeployService} from "./control-api.mjs";
-export {readHerculesDeployConfig, safeHerculesDeployConfig, startHerculesDeployService} from "./service.mjs";
+export {readHerculesDeployConfig, safeHerculesDeployConfig, buildHerculesDeployAdapters, startHerculesDeployService} from "./service.mjs";
 export {SupabaseEdgeFunctionTargetAdapter, fingerprintEdgeFunctionBundle, normalizeEdgeFunctionBundle} from "./supabase-edge.mjs";
+export {SupabaseManagementEdgeClient, createSupabaseManagementTargetAdapter} from "./supabase-management.mjs";
