@@ -28,4 +28,6 @@ Provider authorization remains outside the deployment request. No Supabase acces
 
 ## Current provider mode
 
-The production deployment capability remains `assistant_managed` until Hercules receives a scoped Supabase Management API credential with Edge Functions read/write permission. The connected assistant may execute the provider step while Hercules owns the source commit, request, fingerprint, verification evidence, and rollback evidence. Once a scoped credential is installed in the trusted deploy runtime, this same adapter can become `backend_autonomous` without changing the release format.
+Hercules Deploy now supports a managed Supabase runtime adapter. When `HERCULES_SUPABASE_MANAGEMENT_TOKEN` is present in the trusted Deploy Plane runtime, the `supabase_edge_function` target is registered automatically and provider mutation runs through the Hercules worker. The token must carry Edge Functions read/write permission and is never stored in a deployment request or returned in deployment evidence.
+
+If that credential is absent, the target is intentionally unavailable rather than silently falling back to an out-of-band provider deployment.
