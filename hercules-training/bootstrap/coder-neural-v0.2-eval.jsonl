@@ -1,0 +1,20 @@
+{"text":"export function normalizeHost(value) {\n  if (typeof value !== \"string\" || !value.trim()) {\n    throw new TypeError(\"host must be a non-empty string\");\n  }\n  return value.trim();\n}"}
+{"text":"export function requireCandidate(candidates, id) {\n  const candidate = candidates.find((item) => item.id === id);\n  if (!candidate) throw new Error(\"unknown candidate: \" + id);\n  return candidate;\n}"}
+{"text":"export function requireActive(model) {\n  if (model.state !== \"active\") throw new Error(\"active model required\");\n  return model;\n}"}
+{"text":"export function verifyCheckpointRef(ref) {\n  if (!/^sha256:[a-f0-9]{64}$/.test(ref)) {\n    throw new Error(\"invalid checkpoint reference\");\n  }\n  return ref;\n}"}
+{"text":"export async function loadJson(path) {\n  const content = await readFile(path, \"utf8\");\n  return JSON.parse(content);\n}"}
+{"text":"export async function saveJson(path, data) {\n  await writeFile(path, JSON.stringify(data, null, 2) + \"\\n\");\n}"}
+{"text":"export function jsonResponse(res, body) {\n  res.writeHead(200, {\"content-type\": \"application/json; charset=utf-8\"});\n  res.end(JSON.stringify(body));\n}"}
+{"text":"export function routeTask(models, task) {\n  const eligible = models.filter((model) =>\n    model.state === \"active\" && model.tasks.includes(task)\n  );\n  return chooseByPriority(eligible);\n}"}
+{"text":"export function verifyOrigin(model) {\n  if (model.origin !== \"hercules-native\") {\n    throw new Error(\"external model rejected\");\n  }\n  return model;\n}"}
+{"text":"export function safeInteger(value, fallback) {\n  const number = Number(value);\n  return Number.isInteger(number) ? number : fallback;\n}"}
+{"text":"export function percentage(part, total) {\n  return total ? part / total : 0;\n}"}
+{"text":"export function minimumGate(value, threshold) {\n  if (value < threshold) throw new Error(\"minimum threshold missed\");\n  return value;\n}"}
+{"text":"test(\"candidate remains separate from active model\", () => {\n  assert.notEqual(candidate.checkpoint, active.checkpoint);\n  assert.equal(candidate.state, \"candidate\");\n  assert.equal(active.state, \"active\");\n});"}
+{"text":"test(\"unauthorized request is rejected\", async () => {\n  const response = await fetch(base + \"/v1/models\");\n  assert.equal(response.status, 401);\n});"}
+{"text":"test(\"health reports active model count\", async () => {\n  const response = await fetch(base + \"/health\");\n  const body = await response.json();\n  assert.equal(body.active, 8);\n});"}
+{"text":"export function sourceCommit(value) {\n  if (!/^[a-f0-9]{40}$/.test(value)) {\n    throw new TypeError(\"source commit must be a git sha\");\n  }\n  return value;\n}"}
+{"text":"export function artifactDigest(bytes) {\n  return createHash(\"sha256\").update(bytes).digest(\"hex\");\n}"}
+{"text":"export function runtimeMap(entries) {\n  return Object.fromEntries(entries.map(([id, runtime]) => [id, runtime]));\n}"}
+{"text":"export function ensureCandidateMode(enabled) {\n  if (!enabled) {\n    const error = new Error(\"candidate evaluation is disabled\");\n    error.statusCode = 403;\n    throw error;\n  }\n}"}
+{"text":"export async function withServer(server, work) {\n  await new Promise((resolve) => server.listen(0, \"127.0.0.1\", resolve));\n  try {\n    return await work(server.address());\n  } finally {\n    await new Promise((resolve) => server.close(resolve));\n  }\n}"}
