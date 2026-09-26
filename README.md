@@ -7,6 +7,7 @@ Canonical source: `Sauceapproved7/expert-doodle`.
 ## Runtime surfaces
 
 - `hercules-forge/` — builder, control plane, identity, audit, preview, release and runtime-data services.
+- `hercules-chat/` — authenticated chat, RLS, semantic memory, usage metering and AI-router gateway.
 - `hercules-models/` — model plane and embedded native runtimes.
 - `hercules-training/` — training, evaluation, checkpoint and activation pipeline.
 - `hercules-video/` — video planning, rendering, quality and execution coordination.
