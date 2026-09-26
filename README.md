@@ -27,6 +27,7 @@ node scripts/verify-owner-code-only.mjs
 node scripts/security-baseline.mjs
 node --test tests/hercules-forge*.test.mjs
 node --test tests/hercules-hurc-*.test.mjs
+node --test tests/hercules-chat*.test.mjs
 ```
 
 Docker-capable staging:
