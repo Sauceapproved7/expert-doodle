@@ -27,6 +27,10 @@ const control = await read("hercules-forge/control-api.mjs");
 const notifications = await read("hercules-forge/notifications.mjs");
 const production = await read("hercules-forge/production.mjs");
 const deployment = await read("hercules-forge/deployment.mjs");
+const deploySchema = await read("hercules-deploy/schema.mjs");
+const deployControl = await read("hercules-deploy/control-api.mjs");
+const deployClient = await read("hercules-deploy/client.mjs");
+const deployWorker = await read("hercules-deploy/worker.mjs");
 const ownerCodePolicy = await read("governance/owner-code-policy.json");
 const signer = await read("hercules-hurc/testnet-signer-edge.ts");
 const signerSql = await read("hercules-hurc/sql/hurc-test-signer.sql");
@@ -91,6 +95,22 @@ const checks = {
     /CapabilityBoundingSet=/.test(deployment) &&
     /ReadWritePaths=/.test(deployment) &&
     /"id": "systemd"/.test(ownerCodePolicy),
+  deployPlaneOwnedRuntime:
+    /"path": "hercules-deploy"/.test(ownerCodePolicy) &&
+    /"role": "deployment-runtime"/.test(ownerCodePolicy),
+  deployPlaneSecretBoundary:
+    /SECRET_KEY/.test(deploySchema) &&
+    /secret-shaped field/.test(deploySchema) &&
+    /timingSafeEqual/.test(deployControl) &&
+    /MAX_BODY_BYTES = 256 \* 1024/.test(deployControl),
+  deployPlaneClientBoundary:
+    /deploy endpoint must use https unless it is loopback/.test(deployClient) &&
+    /redirect: "error"/.test(deployClient) &&
+    /maxResponseBytes/.test(deployClient),
+  deployPlaneWorkerLifecycle:
+    /target_adapter_unavailable/.test(deployWorker) &&
+    /target_verification_failed/.test(deployWorker) &&
+    /target_rollback_failed/.test(deployWorker),
   signerAuthenticated:
     /HURC_SIGNER_CONTROL_TOKEN/.test(signer) &&
     /CONTROL\.length < 32/.test(signer) &&
