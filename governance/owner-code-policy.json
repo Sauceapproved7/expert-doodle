@@ -51,6 +51,10 @@
     {
       "path": "hercules-proof",
       "role": "proof-runtime"
+    },
+    {
+      "path": "hercules-consequence",
+      "role": "consequence-evidence-runtime"
     }
   ],
   "allowedModuleSpecifierPrefixes": [
