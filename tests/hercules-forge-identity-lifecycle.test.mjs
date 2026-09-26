@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {randomBytes} from "node:crypto";
 import {mkdtemp, readFile, readdir, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -9,8 +10,8 @@ import {
   MemoryForgeNotificationAdapter,
 } from "../hercules-forge/notifications.mjs";
 
-function fixtureCredential(...parts) {
-  return parts.join("-");
+function fixtureCredential() {
+  return randomBytes(24).toString("base64url");
 }
 
 test("invite lifecycle stores only hashed token state and creates verified workspace member once", async () => {
