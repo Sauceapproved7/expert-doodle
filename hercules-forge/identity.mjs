@@ -14,7 +14,7 @@ const DEFAULT_RECOVERY_TTL_MS = 30 * 60 * 1000;
 const INVITE_ROLES = new Set(["admin", "builder", "viewer"]);
 const LIFECYCLE_KINDS = new Set(["invites", "recovery"]);
 const DEFAULT_LOCK_TIMEOUT_MS = 15_000;
-const DEFAULT_LOCK_STALE_MS = 5 * 60 * 1000;
+const DEFAULT_LOCK_STALE_MS = 15 * 60 * 1000;
 
 // OWASP Password Storage Cheat Sheet (2026): one accepted scrypt profile is
 // N=2^15, r=8, p=3. Keep the parameters encoded with each password hash so
@@ -40,7 +40,12 @@ function normalizeEmail(value) {
 }
 
 function safeUser(user) {
-  const {passwordHash, ...publicUser} = user;
+  const {
+    passwordHash,
+    passwordVersion: _passwordVersion,
+    createdFromInviteId: _createdFromInviteId,
+    ...publicUser
+  } = user;
   return publicUser;
 }
 
