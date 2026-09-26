@@ -160,3 +160,20 @@ test("rollback deletes a function when the deployment created it from scratch", 
   assert.equal(result.mode, "delete_new");
   assert.equal(deleted, true);
 });
+
+
+test("verification rejects a JWT policy mismatch", async () => {
+  const adapter = new SupabaseEdgeFunctionTargetAdapter({
+    deployFunction: async () => {},
+    getFunction: async () => ({
+      slug: bundle.slug,
+      status: "ACTIVE",
+      version: 9,
+      verify_jwt: false,
+      entrypoint_path: "index.ts",
+      files: bundle.files,
+    }),
+    deleteFunction: async () => {},
+  });
+  await assert.rejects(adapter.verify({request: request()}), /JWT policy mismatch/);
+});
