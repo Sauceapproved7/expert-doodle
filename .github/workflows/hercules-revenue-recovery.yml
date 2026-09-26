@@ -21,6 +21,7 @@ jobs:
 
       - name: Check recovery source syntax
         run: |\n          node --check hercules-recovery/recovery-core.mjs\n          node --check hercules-recovery/recovery-graph.mjs
+          node --check hercules-recovery/recovery-route.mjs
 
       - name: Verify recovery decision contract
         run: node --test tests/hercules-recovery*.test.mjs
