@@ -9,7 +9,12 @@ function required(env, name) {
   return value.trim();
 }
 
-function nestedOrSame(parent, child) {\n  const path = relative(parent, child);\n  return path === "" || (!path.startsWith("..") && !isAbsolute(path));\n}\n\nfunction integer(name, value, min, max) {
+function nestedOrSame(parent, child) {
+  const path = relative(parent, child);
+  return path === "" || (!path.startsWith("..") && !isAbsolute(path));
+}
+
+function integer(name, value, min, max) {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
     throw new Error(name + " must be an integer between " + min + " and " + max);
@@ -19,12 +24,17 @@ function nestedOrSame(parent, child) {\n  const path = relative(parent, child);\
 
 export function readHerculesDeployConfig(env = process.env) {
   const root = resolve(required(env, "HERCULES_DEPLOY_ROOT"));
+  const recoveryRoot = resolve(required(env, "HERCULES_DEPLOY_RECOVERY_ROOT"));
+  if (nestedOrSame(root, recoveryRoot) || nestedOrSame(recoveryRoot, root)) {
+    throw new Error("HERCULES_DEPLOY_RECOVERY_ROOT must be independent from HERCULES_DEPLOY_ROOT");
+  }
   const token = required(env, "HERCULES_DEPLOY_CONTROL_TOKEN");
   if (token.length < 32) {
     throw new Error("HERCULES_DEPLOY_CONTROL_TOKEN must be at least 32 characters");
   }
   return {
     root,
+    recoveryRoot,
     token,
     host: String(env.HERCULES_DEPLOY_HOST ?? "127.0.0.1").trim(),
     port: integer("HERCULES_DEPLOY_PORT", env.HERCULES_DEPLOY_PORT ?? 38800, 1, 65535),
@@ -40,6 +50,7 @@ export function readHerculesDeployConfig(env = process.env) {
 export function safeHerculesDeployConfig(config) {
   return {
     root: config.root,
+    recoveryRoot: config.recoveryRoot,
     host: config.host,
     port: config.port,
     pollIntervalMs: config.pollIntervalMs,
@@ -53,6 +64,7 @@ export async function startHerculesDeployService({
   const config = readHerculesDeployConfig(env);
   const service = listenHerculesDeployService({
     root: config.root,
+    recoveryRoot: config.recoveryRoot,
     token: config.token,
     adapters,
     pollIntervalMs: config.pollIntervalMs,
