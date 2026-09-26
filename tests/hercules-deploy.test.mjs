@@ -243,7 +243,7 @@ test("Deploy Plane production config keeps control credentials out of safe summa
     HERCULES_DEPLOY_POLL_MS: "750",
   });
   const safe = safeHerculesDeployConfig(config);
-  assert.equal(safe.pollIntervalMs, 750);
+  assert.equal(safe.pollIntervalMs, 750);\n  assert.equal(safe.recoveryRoot, "/tmp/hercules-recovery");
   assert.equal("token" in safe, false);
   assert.equal(JSON.stringify(safe).includes(controlToken), false);
 });
