@@ -21,7 +21,13 @@ export class ForgeLocalReleaseAdapter extends ForgeDeploymentAdapter {
     this.root = root;
   }
 
-  async publish({projectId, revision, artifactDir}) {
+  async publish({
+    projectId,
+    revision,
+    artifactDir,
+    target = "local-owned-release",
+    deployment = null,
+  }) {
     const artifact = await verifyForgeArtifact(artifactDir);
 
     if (artifact.projectId !== projectId) {
@@ -43,7 +49,8 @@ export class ForgeLocalReleaseAdapter extends ForgeDeploymentAdapter {
       fingerprint: revision.fingerprint,
       artifactFingerprint: artifact.artifactFingerprint,
       publishedAt: new Date().toISOString(),
-      target: "local-owned-release",
+      target,
+      deployment,
       verified: true,
     };
 
@@ -60,15 +67,20 @@ export class ForgeLocalReleaseAdapter extends ForgeDeploymentAdapter {
     return release;
   }
 
-  async rollback({projectId, revisionId}) {
+  async getRelease(projectId, revisionId) {
+    return readJson(join(this.root, "releases", projectId, revisionId + ".json"));
+  }
+
+  async rollback({projectId, revisionId, deployment = undefined}) {
     const releaseDir = join(this.root, "releases", projectId);
-    const release = await readJson(join(releaseDir, revisionId + ".json"));
+    const release = await this.getRelease(projectId, revisionId);
     if (release.verified !== true || !release.artifactFingerprint) {
       throw new Error("cannot activate an unverified release");
     }
 
     const rollback = {
       ...release,
+      ...(deployment === undefined ? {} : {deployment}),
       activatedAt: new Date().toISOString(),
       rollback: true,
     };
