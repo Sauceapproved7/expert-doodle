@@ -1,0 +1,22 @@
+name: Hercules Proof Object
+
+on:
+  pull_request:
+    paths:
+      - "hercules-proof/**"
+      - "tests/hercules-proof-object.test.mjs"
+      - ".github/workflows/hercules-proof-object.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  proof-object:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --check hercules-proof/proof-object.mjs
+      - run: node --test tests/hercules-proof-object.test.mjs
