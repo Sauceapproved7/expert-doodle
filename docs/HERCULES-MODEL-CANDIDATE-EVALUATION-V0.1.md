@@ -4,7 +4,7 @@
 
 The candidate-evaluation lane lets Hercules execute an evidence-backed model candidate for controlled testing **without changing production routing**.
 
-The first supported candidate is `hercules-core-neural-v03`.
+Supported candidates are `hercules-core-neural-v03` and `hercules-coder-neural-v02`.
 
 ## Production isolation
 
@@ -13,6 +13,7 @@ Production behavior remains unchanged:
 - `POST /v1/route` uses only the active model catalog.
 - `POST /v1/infer` uses only active model runtimes.
 - Core production traffic continues to resolve to active `hercules-core` v0.1.
+- Code production traffic continues to resolve to active `hercules-coder` v0.1.
 - Candidate entries remain in `state: "candidate"` with `runtime: null` in the candidate registry.
 - A candidate cannot become active through the evaluation endpoint.
 
@@ -47,6 +48,17 @@ Example request body:
 
 The response identifies the candidate separately from active models and includes its immutable checkpoint hash.
 
+Coder example:
+
+    {
+      "candidateId": "hercules-coder-neural-v02",
+      "task": "code",
+      "input": {
+        "prompt": "export function ",
+        "maxTokens": 24
+      }
+    }
+
 ## Core Neural v0.3 reconstruction
 
 The embedded candidate runtime:
@@ -61,6 +73,16 @@ Canonical checkpoint:
 
     sha256:223aebb35f003ff5e144e29bfd8a613206802b7cdc70da35be31f067c0b08b9f
 
+## Coder Neural v0.2 reconstruction
+
+The Coder candidate runtime follows the same fail-closed pattern using the canonical Hercules-owned software corpus and fixed v0.2 hyperparameters.
+
+Canonical checkpoint:
+
+    sha256:7ffb1ec7f2fa70349db6711f101d45fedd5b6440fb9d9e0d72a559fe7ebf2bae
+
+The runtime accepts only the `code` task.
+
 ## Control-token handling
 
 If `HERCULES_MODEL_TOKEN` is supplied, the launcher uses it.
@@ -73,4 +95,4 @@ For an externally operated service, supply the control token through an authoriz
 
 Candidate evaluation is not promotion.
 
-Promoting Core Neural v0.3 to the active `hercules-core` slot requires a separate change that updates the active catalog/runtime and passes the applicable training, model-plane, provenance, owner-code, security, and code-scanning gates.
+Promoting either neural candidate requires a separate change that updates the corresponding active catalog/runtime and passes the applicable training, model-plane, provenance, owner-code, security, and code-scanning gates. Candidate evaluation cannot perform promotion.
