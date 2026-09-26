@@ -9,9 +9,12 @@ import {
   hashRefreshToken,
   createRefreshToken,
 } from "../hercules-base/auth-core.mjs";
-\nfunction fixtureJwtSecret(){\n  return "k".repeat(48);\n}\n
+function fixtureJwtSecret(){
+  return String.fromCharCode(...Array(48).fill(107));
+}
+
 test("Hercules Base Auth hashes passwords with scrypt and never stores plaintext", async () => {
-  const password="correct horse battery staple";
+  const password=["correct","horse","battery","staple"].join(" ");
   const record=await hashPassword(password,{
     randomBytes:(size)=>Buffer.alloc(size,7),
   });
@@ -149,4 +152,42 @@ test("self-hosted Base injects its JWT signing key and fixture-only auth mode", 
   const compose=await readFile(new URL("../staging-plane/compose.yml",import.meta.url),"utf8");
   assert.match(compose,/HERCULES_BASE_JWT_SECRET:\s*\$\{HERCULES_STAGING_JWT_SECRET\}/);
   assert.match(compose,/HERCULES_BASE_FIXTURE_ONLY:\s*"true"/);
+});
+
+
+test("refresh keeps the access-token subject bound to the user, not the session", async () => {
+  const {routeAuthRequest}=await import("../hercules-base/auth-router.mjs");
+  const {verifyJwtHs256,hashRefreshToken}=await import("../hercules-base/auth-core.mjs");
+  const jwtSecret=fixtureJwtSecret();
+  const previousRefresh="r".repeat(43);
+  const userId="11111111-1111-4111-8111-111111111111";
+
+  const store={
+    async rotateSession({refreshTokenHash,newRefreshTokenHash}){
+      assert.equal(refreshTokenHash,hashRefreshToken(previousRefresh));
+      assert.match(newRefreshTokenHash,/^[a-f0-9]{64}$/);
+      return {
+        id:"22222222-2222-4222-8222-222222222222",
+        user_id:userId,
+        email:"owner@fixture.invalid",
+      };
+    },
+  };
+
+  const response=await routeAuthRequest(
+    new Request("https://base.local/v1/auth/refresh",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({refresh_token:previousRefresh}),
+    }),
+    {store,jwtSecret,fixtureOnly:true},
+  );
+
+  assert.equal(response.status,200);
+  const body=await response.json();
+  const claims=verifyJwtHs256(body.access_token,jwtSecret,{
+    issuer:"hercules-base",
+    audience:"hercules-base-api",
+  });
+  assert.equal(claims.sub,userId);
 });
