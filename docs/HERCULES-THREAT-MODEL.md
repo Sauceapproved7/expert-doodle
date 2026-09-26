@@ -24,6 +24,8 @@ Hercules must protect:
 6. **CI -> repository/release artifacts**: workflow permissions, action pinning and provenance determine supply-chain trust.
 7. **Staging -> production**: isolated fixture evidence must never be represented as production operating history.
 8. **Forge -> notification transport**: invite/recovery delivery is an external service boundary; one-time lifecycle links are the only credential material intentionally sent to that provider.
+9. **Forge/operator -> Deploy Plane**: deployment requests cross a separate authenticated control boundary; jobs may reference deployment targets but must not carry deployment credentials.
+10. **Deploy Plane -> target adapter**: target adapters are replaceable infrastructure boundaries; adapters may hold provider/host credentials outside persisted deployment jobs.
 
 ## Primary threats and required controls
 
@@ -47,6 +49,9 @@ Controls: Base Sepolia-only signer boundary, known-answer tests, low-s signature
 
 ### Availability/resource exhaustion
 Controls: request-size limits, login throttling, recovery-request throttling, runtime-data quotas, bounded benchmark targets, recovery drills. Broader per-route abuse controls and production capacity evidence remain incomplete.
+
+### Deployment-plane compromise
+Controls: constant-time Deploy Plane control-token checks, bounded request bodies, secret-shaped job-field rejection, immutable deployment requests, explicit state transitions, persistent verification/rollback evidence, HTTPS-or-loopback internal client transport, and adapter isolation. Provider/host credentials are not stored in deployment jobs.
 
 ### Audit tampering
 Controls: hash-chained audit events and retained head checkpoint. This is tamper-evident application storage, not an independent hardware/external trust anchor.
