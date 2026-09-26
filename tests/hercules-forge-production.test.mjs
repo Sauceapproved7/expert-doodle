@@ -33,6 +33,7 @@ function productionEnv(root) {
     FORGE_LOGIN_WINDOW_MS: "60000",
     FORGE_RECOVERY_MAX_REQUESTS: "4",
     FORGE_RECOVERY_WINDOW_MS: "120000",
+    FORGE_MIN_FREE_BYTES: "1048576",
     FORGE_NOTIFICATION_URL: "https://notify.example.test/send",
   };
 }
@@ -48,11 +49,13 @@ test("production config is fail-closed and safe summary omits credentials", () =
   assert.equal(config.loginWindowMs, 60000);
   assert.equal(config.recoveryMaxRequests, 4);
   assert.equal(config.recoveryWindowMs, 120000);
+  assert.equal(config.minFreeBytes, 1048576);
   assert.equal(config.notificationUrl, "https://notify.example.test/send");
 
   const summary = safeForgeProductionSummary(config);
   assert.equal(summary.secureSessionCookies, true);
   assert.equal(summary.identityLifecycle, true);
+  assert.equal(summary.minFreeBytes, 1048576);
   assert.equal("token" in summary, false);
   assert.equal("interpreterToken" in summary, false);
   assert.equal("notificationToken" in summary, false);
