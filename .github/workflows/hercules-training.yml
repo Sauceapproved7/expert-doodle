@@ -47,7 +47,8 @@ jobs:
             tests/hercules-native-language-foundation.test.mjs \
             tests/hercules-native-core-neural-v0.3.test.mjs \
             tests/hercules-native-coder-neural-v0.2.test.mjs \
-            tests/hercules-native-research-neural-v0.2.test.mjs
+            tests/hercules-native-research-neural-v0.2.test.mjs \
+            tests/hercules-native-vision-pixel-v0.2.test.mjs
 
       - name: Train and evaluate Hercules Agent Router
         env:
@@ -415,5 +416,51 @@ jobs:
         with:
           name: hercules-research-neural-v0.2
           path: .hercules-training/research-neural-v0.2/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Train and evaluate Hercules Vision Pixel v0.2
+        env:
+          HERCULES_SOURCE_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+          HERCULES_CREATED_AT: "2026-09-26T21:30:00Z"
+        run: node hercules-training/bootstrap-vision-pixel-v0.2.mjs
+
+      - name: Verify Vision Pixel v0.2 candidate evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .hercules-training/vision-pixel-v0.2/checkpoint.json
+          test -s .hercules-training/vision-pixel-v0.2/training-evidence.json
+          node --input-type=module <<'NODE'
+          import {readFile} from "node:fs/promises";
+          const evidence = JSON.parse(await readFile(
+            ".hercules-training/vision-pixel-v0.2/training-evidence.json",
+            "utf8"
+          ));
+          const metrics = evidence.evaluation?.result?.metrics ?? {};
+          if (evidence.candidateReady !== true) {
+            throw new Error("Vision Pixel v0.2 did not clear candidate gate");
+          }
+          if (metrics.accuracy < 0.90) {
+            throw new Error("Vision Pixel v0.2 missed accuracy gate");
+          }
+          if (metrics["min-class-recall"] < 0.80) {
+            throw new Error("Vision Pixel v0.2 missed per-class recall gate");
+          }
+          if (metrics["baseline-improvement"] < 0.65) {
+            throw new Error("Vision Pixel v0.2 missed baseline-improvement gate");
+          }
+          console.log(JSON.stringify({
+            checkpoint: evidence.checkpoint.checkpoint.artifactSha256,
+            checkpointBytes: evidence.checkpoint.checkpoint.bytes,
+            metrics,
+          }, null, 2));
+          NODE
+
+      - name: Upload Vision Pixel v0.2 candidate evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: hercules-vision-pixel-v0.2
+          path: .hercules-training/vision-pixel-v0.2/
           if-no-files-found: error
           retention-days: 30
