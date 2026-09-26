@@ -69,6 +69,13 @@ function unique(values) {
   return [...new Set(values)];
 }
 
+export function isImmutableContainerImage(image) {
+  const value = String(image ?? "").trim();
+  const match = value.match(/^(.+):([^:@/\s]+)@sha256:([0-9a-f]{64})$/i);
+  if (!match) return false;
+  return match[2].toLowerCase() !== "latest";
+}
+
 export async function verifyOwnerCodePolicy() {
   const policy = JSON.parse(await readFile(policyPath, "utf8"));
   const errors = [];
@@ -230,11 +237,19 @@ export async function verifyOwnerCodePolicy() {
   }
 
   const allowedImages = new Set(policy.allowedContainerImages ?? []);
+  for (const image of allowedImages) {
+    if (!isImmutableContainerImage(image)) {
+      errors.push("allowed container image is not digest-pinned: " + image);
+    }
+  }
   for (const relativePath of runtimeFiles.filter((item) => /\.ya?ml$/.test(item))) {
     const content = await readFile(path.join(repoRoot, relativePath), "utf8");
     for (const match of content.matchAll(/^\s*image:\s*["']?([^"'#\s]+)["']?/gm)) {
       const image = match[1];
       evidence.containerImagesVerified.push(image);
+      if (!isImmutableContainerImage(image)) {
+        errors.push("mutable container image is forbidden: " + relativePath + " -> " + image);
+      }
       if (!allowedImages.has(image)) {
         errors.push("undeclared external container image: " + relativePath + " -> " + image);
       }

@@ -1,7 +1,7 @@
 name: hercules-staging
 services:
   postgres:
-    image: postgres:16.4-alpine
+    image: postgres:16.4-alpine@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
     environment:
       POSTGRES_DB: hercules_staging
       POSTGRES_USER: hercules_admin
@@ -20,7 +20,7 @@ services:
     networks: [staging]
 
   migrate:
-    image: postgres:16.4-alpine
+    image: postgres:16.4-alpine@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
     depends_on:
       postgres: {condition: service_healthy}
     environment:
@@ -33,7 +33,7 @@ services:
     networks: [staging]
 
   postgrest:
-    image: postgrest/postgrest:v12.2.3
+    image: postgrest/postgrest:v12.2.3@sha256:729bf65c733b73f5b52777f0e4b853f22ed73aa67a22d38269d289779b0a8401
     depends_on:
       migrate: {condition: service_completed_successfully}
     environment:
@@ -45,7 +45,7 @@ services:
     networks: [staging]
 
   forge:
-    image: node:22.12.0-alpine
+    image: node:22.12.0-alpine@sha256:51eff88af6dff26f59316b6e356188ffa2c422bd3c3b76f2556a2e7e89d080bd
     environment:
       FORGE_ROOT: /forge-state
       FORGE_CONTROL_TOKEN: ${HERCULES_FORGE_STAGING_CONTROL_TOKEN}
@@ -69,7 +69,7 @@ services:
     networks: [edge]
 
   api:
-    image: node:22.12.0-alpine
+    image: node:22.12.0-alpine@sha256:51eff88af6dff26f59316b6e356188ffa2c422bd3c3b76f2556a2e7e89d080bd
     depends_on:
       postgrest: {condition: service_started}
     environment:

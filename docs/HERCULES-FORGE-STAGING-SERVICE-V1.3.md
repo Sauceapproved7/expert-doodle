@@ -8,7 +8,7 @@ This milestone does not claim public production hosting. It verifies that the pr
 
 ## Staging service
 
-The existing `staging-plane/compose.yml` now includes a `forge` service using the policy-approved `node:22.12.0-alpine` infrastructure image.
+The existing `staging-plane/compose.yml` now includes a `forge` service using the policy-approved `node:22.12.0-alpine` infrastructure image pinned to its Docker Hub multi-platform `sha256` index digest.
 
 Forge runs:
 
@@ -91,7 +91,7 @@ The existing global staging and SLO workflows also include Forge logs in failure
 
 The Forge product source remains under `hercules-forge/` and is mounted read-only.
 
-Docker, Docker Compose, the Node.js image, networking, and the staging host remain declared external infrastructure. The new Docker invocation in `scripts/forge-staging-drill.mjs` is explicitly registered in `governance/owner-code-policy.json`.
+Docker, Docker Compose, the Node.js image, networking, and the staging host remain declared external infrastructure. All staging container references are tag-plus-digest pinned; mutable tag-only images are rejected by the owner-code verifier. The new Docker invocation in `scripts/forge-staging-drill.mjs` is explicitly registered in `governance/owner-code-policy.json`.
 
 No Dockerfile, package dependency, hosted builder, or third-party application runtime is added to the Hercules-owned source boundary.
 
