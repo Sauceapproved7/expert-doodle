@@ -9,9 +9,10 @@ const contract = await readFile(
 
 test("Forge OpenAPI contract covers security-critical public and operator surfaces", () => {
   assert.match(contract, /^openapi:\s*3\.2\.1/m);
-  assert.match(contract, /^\s*version:\s*1\.5\.0\s*$/m);
+  assert.match(contract, /^\s*version:\s*1\.6\.0\s*$/m);
   for (const path of [
     "/health:",
+    "/ready:",
     "/v1/invites/accept:",
     "/v1/recovery/request:",
     "/v1/recovery/complete:",
