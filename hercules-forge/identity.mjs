@@ -227,6 +227,12 @@ export class ForgeIdentityStore {
     return readJson(this.userPath(index.userId));
   }
 
+  async revokeLifecycleToken(kind, token) {
+    if (typeof token !== "string" || token.length < 32) return false;
+    await rm(this.lifecyclePath(kind, token), {force: true});
+    return true;
+  }
+
   async createInvite({
     email,
     workspaceId,
