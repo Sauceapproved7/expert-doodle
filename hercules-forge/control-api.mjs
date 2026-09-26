@@ -110,7 +110,7 @@ function requireIdentityLifecycle(notificationAdapter, publicOrigin) {
 
 function lifecycleLink(publicOrigin, kind, token) {
   const url = new URL("/", publicOrigin);
-  url.searchParams.set(kind, token);
+  url.hash = kind + "=" + encodeURIComponent(token);
   return url.toString();
 }
 
