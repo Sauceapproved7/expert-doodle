@@ -60,6 +60,8 @@ This makes portability a build property instead of a future migration project.
 
 Implemented and evidenced:
 
+- Hercules Base Storage with content-addressed blobs, private JWT-owned buckets, PostgreSQL metadata, persistent self-hosted storage, and download-time SHA-256 integrity verification;
+
 - Hercules Base Auth with scrypt password hashing, JWT access tokens, rotating opaque refresh tokens, server-only credential/session RPCs, and fixture-only staging identities;
 
 - PostgreSQL database substrate in isolated Hercules staging;
@@ -72,7 +74,6 @@ Implemented and evidenced:
 
 Planned, not represented as complete:
 
-- Hercules Base Storage;
 - Hercules Base Realtime;
 - Hercules Base Functions;
 - multi-project provisioning onto deployment targets;
