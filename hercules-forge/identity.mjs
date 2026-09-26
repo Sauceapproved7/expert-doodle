@@ -1,5 +1,5 @@
 import {createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual} from "node:crypto";
-import {chmod, mkdir, readFile, readdir, rm, writeFile} from "node:fs/promises";
+import {chmod, mkdir, readFile, readdir, rename, rm, stat, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import {promisify} from "node:util";
 
@@ -13,6 +13,8 @@ const DEFAULT_INVITE_TTL_MS = 72 * 60 * 60 * 1000;
 const DEFAULT_RECOVERY_TTL_MS = 30 * 60 * 1000;
 const INVITE_ROLES = new Set(["admin", "builder", "viewer"]);
 const LIFECYCLE_KINDS = new Set(["invites", "recovery"]);
+const DEFAULT_LOCK_TIMEOUT_MS = 15_000;
+const DEFAULT_LOCK_STALE_MS = 5 * 60 * 1000;
 
 // OWASP Password Storage Cheat Sheet (2026): one accepted scrypt profile is
 // N=2^15, r=8, p=3. Keep the parameters encoded with each password hash so
@@ -45,6 +47,14 @@ function safeUser(user) {
 function hashToken(value) {
   return createHash("sha256").update(value).digest("hex");
 }
+
+function passwordVersion(user) {
+  return Number.isSafeInteger(user?.passwordVersion) && user.passwordVersion >= 1
+    ? user.passwordVersion
+    : 1;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
@@ -126,9 +136,19 @@ async function verifyPassword(password, encoded) {
 }
 
 export class ForgeIdentityStore {
-  constructor(root) {
+  constructor(root, {
+    lockTimeoutMs = DEFAULT_LOCK_TIMEOUT_MS,
+    lockStaleMs = DEFAULT_LOCK_STALE_MS,
+  } = {}) {
     this.root = join(root, "identity");
-    this.lifecycleQueue = Promise.resolve();
+    if (!Number.isSafeInteger(lockTimeoutMs) || lockTimeoutMs < 100 || lockTimeoutMs > 60_000) {
+      throw new TypeError("lockTimeoutMs must be an integer between 100 and 60000");
+    }
+    if (!Number.isSafeInteger(lockStaleMs) || lockStaleMs < 10_000 || lockStaleMs > 60 * 60 * 1000) {
+      throw new TypeError("lockStaleMs must be an integer between 10000 and 3600000");
+    }
+    this.lockTimeoutMs = lockTimeoutMs;
+    this.lockStaleMs = lockStaleMs;
   }
 
   userPath(userId) {
@@ -161,14 +181,50 @@ export class ForgeIdentityStore {
     return join(this.root, "lifecycle", kind, hashToken(token) + ".json");
   }
 
-  async withLifecycleLock(operation) {
-    const previous = this.lifecycleQueue.catch(() => {});
-    const current = previous.then(operation);
-    this.lifecycleQueue = current;
+  lockPath(key) {
+    return join(this.root, "locks", hashToken(String(key)) + ".lock");
+  }
+
+  async withLifecycleLock(key, operation) {
+    const lockPath = this.lockPath(key);
+    await mkdir(dirname(lockPath), {recursive: true});
+    const deadline = Date.now() + this.lockTimeoutMs;
+
+    for (;;) {
+      try {
+        await mkdir(lockPath);
+        break;
+      } catch (error) {
+        if (error?.code !== "EEXIST") throw error;
+
+        try {
+          const info = await stat(lockPath);
+          if (Date.now() - info.mtimeMs > this.lockStaleMs) {
+            const stalePath = lockPath + ".stale-" + randomUUID();
+            try {
+              await rename(lockPath, stalePath);
+              await rm(stalePath, {recursive: true, force: true});
+              continue;
+            } catch (reclaimError) {
+              if (!["ENOENT", "EEXIST"].includes(reclaimError?.code)) throw reclaimError;
+            }
+          }
+        } catch (statError) {
+          if (statError?.code === "ENOENT") continue;
+          throw statError;
+        }
+
+        if (Date.now() >= deadline) {
+          throw Object.assign(new Error("identity lifecycle busy"), {statusCode: 503});
+        }
+        await sleep(25);
+      }
+    }
+
     try {
-      return await current;
+      return await operation();
     } finally {
-      if (this.lifecycleQueue === current) this.lifecycleQueue = Promise.resolve();
+      await rm(lockPath, {recursive: true, force: true});
     }
   }
 
@@ -177,6 +233,7 @@ export class ForgeIdentityStore {
     password,
     userId = randomUUID(),
     emailVerifiedAt = new Date().toISOString(),
+    createdFromInviteId = null,
   }) {
     email = normalizeEmail(email);
     userId = assertId("userId", userId);
@@ -196,6 +253,8 @@ export class ForgeIdentityStore {
       createdAt: now,
       emailVerifiedAt,
       passwordUpdatedAt: now,
+      passwordVersion: 1,
+      ...(createdFromInviteId ? {createdFromInviteId: assertId("createdFromInviteId", createdFromInviteId)} : {}),
     };
 
     const indexPath = this.emailIndexPath(email);
@@ -263,6 +322,7 @@ export class ForgeIdentityStore {
       role,
       createdAt: new Date(now).toISOString(),
       expiresAt: new Date(now + ttlMs).toISOString(),
+      passwordVersion: passwordVersion(user),
     };
     await writeJson(this.lifecyclePath("invites", token), invite, {flag: "wx"});
     return {token, invite};
@@ -272,7 +332,7 @@ export class ForgeIdentityStore {
     if (typeof token !== "string" || token.length < 32) {
       throw Object.assign(new Error("invalid or expired invite"), {statusCode: 400});
     }
-    return this.withLifecycleLock(async () => {
+    return this.withLifecycleLock("invite-token:" + hashToken(token), async () => {
       const path = this.lifecyclePath("invites", token);
       let invite;
       try {
@@ -290,12 +350,26 @@ export class ForgeIdentityStore {
       await this.getWorkspace(invite.workspaceId);
       await derivePassword(password);
 
-      const user = await this.createUser({
-        email: invite.email,
-        password,
-        emailVerifiedAt: new Date().toISOString(),
-      });
-      try {
+      return this.withLifecycleLock("invite-email:" + hashToken(invite.email), async () => {
+        let user;
+        try {
+          const existing = await this.getUserByEmail(invite.email);
+          if (existing.createdFromInviteId !== invite.inviteId) {
+            await rm(path, {force: true});
+            throw Object.assign(new Error("invalid or expired invite"), {statusCode: 400});
+          }
+          user = safeUser(existing);
+        } catch (error) {
+          if (error?.statusCode === 400) throw error;
+          if (error?.code !== "ENOENT") throw error;
+          user = await this.createUser({
+            email: invite.email,
+            password,
+            emailVerifiedAt: new Date().toISOString(),
+            createdFromInviteId: invite.inviteId,
+          });
+        }
+
         const membership = await this.addMember({
           workspaceId: invite.workspaceId,
           userId: user.userId,
@@ -303,13 +377,7 @@ export class ForgeIdentityStore {
         });
         await rm(path, {force: true});
         return {inviteId: invite.inviteId, user, membership};
-      } catch (error) {
-        await Promise.all([
-          rm(this.userPath(user.userId), {force: true}),
-          rm(this.emailIndexPath(invite.email), {force: true}),
-        ]);
-        throw error;
-      }
+      });
     });
   }
 
@@ -369,7 +437,7 @@ export class ForgeIdentityStore {
     if (typeof token !== "string" || token.length < 32) {
       throw Object.assign(new Error("invalid or expired recovery"), {statusCode: 400});
     }
-    return this.withLifecycleLock(async () => {
+    return this.withLifecycleLock("recovery-token:" + hashToken(token), async () => {
       const path = this.lifecyclePath("recovery", token);
       let recovery;
       try {
@@ -385,28 +453,36 @@ export class ForgeIdentityStore {
         throw Object.assign(new Error("invalid or expired recovery"), {statusCode: 400});
       }
 
-      const passwordParts = await derivePassword(password);
-      const user = await readJson(this.userPath(recovery.userId));
-      const updated = {
-        ...user,
-        passwordHash: [
-          SCRYPT_PROFILE.version,
-          SCRYPT_PROFILE.N,
-          SCRYPT_PROFILE.r,
-          SCRYPT_PROFILE.p,
-          passwordParts.salt,
-          passwordParts.hash,
-        ].join("$"),
-        passwordUpdatedAt: new Date().toISOString(),
-      };
-      await writeJson(this.userPath(recovery.userId), updated);
-      const revokedSessions = await this.revokeUserSessions(recovery.userId);
-      await rm(path, {force: true});
-      return {
-        recoveryId: recovery.recoveryId,
-        user: safeUser(updated),
-        revokedSessions,
-      };
+      return this.withLifecycleLock("recovery-user:" + recovery.userId, async () => {
+        const user = await readJson(this.userPath(recovery.userId));
+        if (passwordVersion(user) !== recovery.passwordVersion) {
+          await rm(path, {force: true});
+          throw Object.assign(new Error("invalid or expired recovery"), {statusCode: 400});
+        }
+
+        const passwordParts = await derivePassword(password);
+        const updated = {
+          ...user,
+          passwordHash: [
+            SCRYPT_PROFILE.version,
+            SCRYPT_PROFILE.N,
+            SCRYPT_PROFILE.r,
+            SCRYPT_PROFILE.p,
+            passwordParts.salt,
+            passwordParts.hash,
+          ].join("$"),
+          passwordUpdatedAt: new Date().toISOString(),
+          passwordVersion: passwordVersion(user) + 1,
+        };
+        await writeJson(this.userPath(recovery.userId), updated);
+        const revokedSessions = await this.revokeUserSessions(recovery.userId);
+        await rm(path, {force: true});
+        return {
+          recoveryId: recovery.recoveryId,
+          user: safeUser(updated),
+          revokedSessions,
+        };
+      });
     });
   }
 
