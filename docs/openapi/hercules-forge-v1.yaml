@@ -1,0 +1,303 @@
+openapi: 3.2.1
+info:
+  title: Hercules Forge API
+  version: 1.5.0
+  description: Machine-readable contract for Hercules Forge control and customer-session surfaces.
+servers:
+  - url: https://forge.example.invalid
+    description: Placeholder deployment origin.
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      responses:
+        "200":
+          description: Forge health summary.
+  /v1/invites/accept:
+    post:
+      operationId: acceptInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: {type: string, minLength: 32}
+                password: {type: string, minLength: 12, maxLength: 1024}
+      responses:
+        "201": {description: Invite accepted and workspace membership created.}
+        "400": {description: Invite is invalid, expired, or already consumed.}
+  /v1/recovery/request:
+    post:
+      operationId: requestRecovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+      responses:
+        "202": {description: Recovery request accepted without revealing account existence.}
+        "429": {description: Recovery requests temporarily throttled.}
+        "503": {description: Identity lifecycle notification transport unavailable.}
+  /v1/recovery/complete:
+    post:
+      operationId: completeRecovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: {type: string, minLength: 32}
+                password: {type: string, minLength: 12, maxLength: 1024}
+      responses:
+        "200": {description: Password reset completed and prior sessions revoked.}
+        "400": {description: Recovery token is invalid, expired, or already consumed.}
+  /v1/session:
+    post:
+      operationId: createSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+                password: {type: string, minLength: 12, maxLength: 1024}
+      responses:
+        "201": {description: Session created.}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "429": {description: Login temporarily throttled.}
+    delete:
+      operationId: revokeSession
+      parameters:
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "200": {description: Session revoked.}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /v1/session/csrf:
+    get:
+      operationId: rotateCsrf
+      responses:
+        "200": {description: Rotated CSRF token for authenticated session.}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /v1/me:
+    get:
+      operationId: getCurrentUser
+      responses:
+        "200": {description: Current user and authorized workspaces.}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /v1/workspaces/{workspaceId}:
+    get:
+      operationId: getWorkspace
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200": {description: Workspace and membership.}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /v1/workspaces/{workspaceId}/invites:
+    post:
+      operationId: createWorkspaceInvite
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+                role: {$ref: "#/components/schemas/InviteRole"}
+      responses:
+        "201": {description: One-time invite created and delivered without returning its token.}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "502": {description: Invite delivery failed and the one-time token was revoked.}
+        "503": {description: Identity lifecycle notification transport unavailable.}
+  /v1/workspaces/{workspaceId}/audit:
+    get:
+      operationId: listWorkspaceAudit
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200": {description: Hash-chain-verified audit events.}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /v1/workspaces/{workspaceId}/projects:
+    get:
+      operationId: listWorkspaceProjects
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      responses:
+        "200": {description: Workspace projects.}
+  /v1/workspaces/{workspaceId}/projects/from-prompt:
+    post:
+      operationId: createWorkspaceProjectFromPrompt
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/CsrfHeader"
+      responses:
+        "201": {description: Project and first revision created.}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "503": {description: Prompt interpreter unavailable.}
+  /v1/workspaces/{workspaceId}/projects/{projectId}:
+    get:
+      operationId: getWorkspaceProject
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": {description: Workspace-bound project.}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /v1/workspaces/{workspaceId}/projects/{projectId}/revisions:
+    get:
+      operationId: listWorkspaceProjectRevisions
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": {description: Immutable revisions.}
+  /v1/admin/workspaces/{workspaceId}/invites:
+    post:
+      operationId: operatorCreateWorkspaceInvite
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+                role: {$ref: "#/components/schemas/InviteRole"}
+      responses:
+        "201": {description: Owner-control invite created and delivered.}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "502": {description: Invite delivery failed and the one-time token was revoked.}
+        "503": {description: Identity lifecycle notification transport unavailable.}
+  /v1/projects:
+    post:
+      operationId: operatorCreateProject
+      security: [{controlBearer: []}]
+      responses:
+        "201": {description: Operator-created project.}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+  /v1/projects/{projectId}:
+    get:
+      operationId: operatorGetProject
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": {description: Operator project state.}
+  /v1/projects/{projectId}/revisions:
+    get:
+      operationId: operatorListRevisions
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": {description: Project revisions.}
+    post:
+      operationId: operatorCreateRevision
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "201": {description: New immutable revision.}
+  /v1/projects/{projectId}/revisions/{revisionId}:
+    get:
+      operationId: operatorGetRevision
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/RevisionId"
+      responses:
+        "200": {description: Specific revision.}
+  /v1/projects/{projectId}/revisions/{revisionId}/artifact:
+    post:
+      operationId: operatorBuildArtifact
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/RevisionId"
+      responses:
+        "201": {description: Verified artifact built.}
+  /v1/projects/{projectId}/publish:
+    post:
+      operationId: operatorPublishProject
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "201": {description: Verified release published.}
+  /v1/projects/{projectId}/releases/active:
+    get:
+      operationId: operatorGetActiveRelease
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": {description: Active verified release.}
+  /v1/projects/{projectId}/rollback:
+    post:
+      operationId: operatorRollbackProject
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+      responses:
+        "200": {description: Verified revision activated.}
+components:
+  securitySchemes:
+    controlBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+  parameters:
+    WorkspaceId:
+      in: path
+      name: workspaceId
+      required: true
+      schema: {$ref: "#/components/schemas/Identifier"}
+    ProjectId:
+      in: path
+      name: projectId
+      required: true
+      schema: {$ref: "#/components/schemas/Identifier"}
+    RevisionId:
+      in: path
+      name: revisionId
+      required: true
+      schema: {$ref: "#/components/schemas/Identifier"}
+    CsrfHeader:
+      in: header
+      name: x-forge-csrf
+      required: true
+      schema: {type: string, minLength: 24}
+  schemas:
+    Identifier:
+      type: string
+      pattern: "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"
+    InviteRole:
+      type: string
+      enum: [admin, builder, viewer]
+  responses:
+    Unauthorized:
+      description: Authentication failed or is missing.
+    Forbidden:
+      description: Principal lacks required authorization.
