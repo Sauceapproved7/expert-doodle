@@ -211,7 +211,7 @@ export function createForgeControlService({
         return send(res, 200, {
           ok: true,
           service: "hercules-forge-control-api",
-          version: "1.5",
+          version: "1.6",
           mode: serviceMode,
           publicOrigin,
           promptIngress: Boolean(interpreter),
