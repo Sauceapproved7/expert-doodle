@@ -4,9 +4,9 @@ function safeErrorCode(error, fallback) {
 }
 
 export class HerculesDeployWorker {
-  constructor({store, adapters = new Map(), pollIntervalMs = 1000} = {}) {
+  constructor({store, adapters = new Map(), admissionGate = null, pollIntervalMs = 1000} = {}) {
     if (!store) throw new TypeError("store is required");
-    if (!(adapters instanceof Map)) throw new TypeError("adapters must be a Map");
+    if (!(adapters instanceof Map)) throw new TypeError("adapters must be a Map");\n    if (admissionGate != null && typeof admissionGate.admit !== "function") {\n      throw new TypeError("admissionGate must expose admit()");\n    }
     if (!Number.isFinite(pollIntervalMs) || pollIntervalMs < 100 || pollIntervalMs > 60000) {
       throw new TypeError("pollIntervalMs must be between 100 and 60000");
     }
