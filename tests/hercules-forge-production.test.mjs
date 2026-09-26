@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {randomBytes} from "node:crypto";
 import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -11,8 +12,8 @@ import {
   safeForgeProductionSummary,
 } from "../hercules-forge/production.mjs";
 
-function fixtureCredential(...parts) {
-  return parts.join("-");
+function fixtureCredential() {
+  return randomBytes(24).toString("base64url");
 }
 
 function productionEnv(root) {
