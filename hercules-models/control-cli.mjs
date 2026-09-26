@@ -1,5 +1,6 @@
 import {randomBytes} from "node:crypto";
 import {HERCULES_MODEL_SLOTS} from "./catalog.mjs";
+import {HERCULES_MODEL_CANDIDATES} from "./candidates.mjs";
 import {HerculesEmbeddedAgentRouter} from "./embedded-agent-router.mjs";
 import {HerculesEmbeddedRetrieval} from "./embedded-retrieval.mjs";
 import {HerculesEmbeddedGuard} from "./embedded-guard.mjs";
@@ -35,6 +36,7 @@ listenModelPlaneService({
   models: HERCULES_MODEL_SLOTS,
   token,
   nativeOnly,
+  candidates: HERCULES_MODEL_CANDIDATES,
   embeddedRuntimes: {
     "hercules-agent": agentRouter,
     "hercules-retrieval": retrieval,
@@ -59,6 +61,7 @@ console.log(JSON.stringify({
   modelSlots: HERCULES_MODEL_SLOTS.length,
   activeModels: HERCULES_MODEL_SLOTS.filter((model) => model.state === "active").length,
   embeddedRuntimes: 8,
+  candidateModels: HERCULES_MODEL_CANDIDATES.length,
   tokenGenerated: !process.env.HERCULES_MODEL_TOKEN,
   controlToken: !process.env.HERCULES_MODEL_TOKEN ? token : undefined,
 }, null, 2));
