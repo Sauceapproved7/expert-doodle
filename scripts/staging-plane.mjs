@@ -31,6 +31,7 @@ async function ensureEnv(){
     "HERCULES_STAGING_API_PASSWORD",
     "HERCULES_STAGING_JWT_SECRET",
     "HERCULES_FORGE_STAGING_CONTROL_TOKEN",
+    "HERCULES_BASE_CONTROL_TOKEN",
   ];
   let changed=!existsSync(envFile);
   for(const name of required){

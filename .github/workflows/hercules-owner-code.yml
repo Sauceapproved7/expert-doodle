@@ -26,6 +26,9 @@ jobs:
       - name: Verify Hercules chat runtime
         run: node --test tests/hercules-chat*.test.mjs
 
+      - name: Verify Hercules Base runtime
+        run: node --test tests/hercules-base*.test.mjs
+
       - name: Verify HURC owner-code token source
         run: node --test tests/hercules-hurc-source.test.mjs
 

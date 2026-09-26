@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 3,
+  "version": 4,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -11,6 +11,10 @@
     {
       "path": "hercules-deploy",
       "role": "deployment-runtime"
+    },
+    {
+      "path": "hercules-base",
+      "role": "backend-platform-runtime"
     },
     {
       "path": "hercules-chat",

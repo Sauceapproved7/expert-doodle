@@ -44,6 +44,27 @@ services:
       PGRST_DB_CHANNEL_ENABLED: "false"
     networks: [staging]
 
+  base:
+    image: node:22.12.0-alpine
+    depends_on:
+      postgrest: {condition: service_started}
+    environment:
+      HERCULES_BASE_CONTROL_TOKEN: ${HERCULES_BASE_CONTROL_TOKEN}
+      HERCULES_BASE_HOST: 0.0.0.0
+      HERCULES_BASE_PORT: "38800"
+      HERCULES_BASE_POSTGREST_URL: http://postgrest:3000
+    command: ["node", "/repo/hercules-base/server.mjs"]
+    volumes:
+      - ../hercules-base:/repo/hercules-base:ro
+    ports:
+      - "127.0.0.1:38800:38800"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:38800/health"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks: [staging, edge]
+
   forge:
     image: node:22.12.0-alpine
     environment:

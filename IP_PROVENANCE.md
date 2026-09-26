@@ -27,7 +27,7 @@ If project ownership is later assigned to an LLC, corporation, or other entity, 
 
 ### Repository-wide owner-code-only runtime boundary
 
-The owner-code-only boundary applies to the complete canonical Hercules runtime surface, not only Forge. The enforced runtime roots are declared in `governance/owner-code-policy.json` and currently cover Forge, Deploy, Chat, Model Plane, Training, Video, HURC, observability policy data, operator scripts, and the staging plane.
+The owner-code-only boundary applies to the complete canonical Hercules runtime surface, not only Forge. The enforced runtime roots are declared in `governance/owner-code-policy.json` and currently cover Forge, Deploy, Chat, Hercules Base, Model Plane, Training, Video, HURC, observability policy data, operator scripts, and the staging plane.
 
 Within those roots:
 
@@ -39,7 +39,7 @@ Within those roots:
 - external CI actions must be allowlisted;
 - runtime source may import only repository-owned runtime source or Node built-ins.
 
-External infrastructure remains external. Node.js, GitHub Actions, Supabase, Docker, PostgreSQL/PostgREST, FFmpeg/ffprobe, NVIDIA/CUDA tooling, Python, and Wan2.2 are not claimed as Hercules-owned code. Supabase is external infrastructure even when Hercules-owned SQL, Edge Function source, RLS policies, and routing logic run on it. Where used, they must remain behind an explicit boundary recorded in the policy and must not be packaged or represented as SauceApproved-owned source.
+Hercules Base is project-owned control-plane source that orchestrates declared external infrastructure; its ownership claim does not extend to PostgreSQL, PostgREST, Docker, or other separately licensed infrastructure. External infrastructure remains external. Node.js, GitHub Actions, Supabase, Docker, PostgreSQL/PostgREST, FFmpeg/ffprobe, NVIDIA/CUDA tooling, Python, and Wan2.2 are not claimed as Hercules-owned code. Supabase is external infrastructure even when Hercules-owned SQL, Edge Function source, RLS policies, and routing logic run on it. Where used, they must remain behind an explicit boundary recorded in the policy and must not be packaged or represented as SauceApproved-owned source.
 
 The repository-wide verifier is `scripts/verify-owner-code-only.mjs`. Hercules build/test workflows must execute it before subsystem work. A violation is a failed build condition.
 

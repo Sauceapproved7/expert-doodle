@@ -18,15 +18,16 @@ Hercules must protect:
 
 1. **Browser/customer -> Forge**: untrusted HTTP input crosses authentication, CSRF, role and schema boundaries.
 2. **Browser/customer -> Chat Edge -> AI router**: untrusted prompts, message history, metadata and recalled memory cross JWT, RLS, prompt-composition and internal-router boundaries. Service-role and internal AI credentials must remain server-side.
-3. **Forge -> interpreter/model plane**: remote interpreters are external services even when Hercules-controlled.
-4. **Forge preview -> host**: preview processes are controlled child processes, not a hardened sandbox for arbitrary hostile server code.
-5. **HURC signer -> Vault/database/RPC**: signing authority is high impact; testnet-only restrictions are mandatory.
-6. **Training/video -> external runtime**: Python, Wan2.2, FFmpeg, CUDA and other external infrastructure remain outside the owned-core trust boundary.
-7. **CI -> repository/release artifacts**: workflow permissions, action pinning and provenance determine supply-chain trust.
-8. **Staging -> production**: isolated fixture evidence must never be represented as production operating history.
-9. **Forge -> notification transport**: invite/recovery delivery is an external service boundary; one-time lifecycle links are the only credential material intentionally sent to that provider.
-10. **Forge/operator -> Deploy Plane**: deployment requests cross a separate authenticated control boundary; jobs may reference deployment targets but must not carry deployment credentials.
-11. **Deploy Plane -> target adapter**: target adapters are replaceable infrastructure boundaries; adapters may hold provider/host credentials outside persisted deployment jobs.
+3. **Operator/app builder -> Hercules Base control -> database/API substrate**: backend intent crosses control-token, blueprint compilation, policy generation and provisioning boundaries; generated plans must never contain runtime credentials, and external PostgreSQL/PostgREST/Docker infrastructure remains outside the owned-code trust boundary.
+4. **Forge -> interpreter/model plane**: remote interpreters are external services even when Hercules-controlled.
+5. **Forge preview -> host**: preview processes are controlled child processes, not a hardened sandbox for arbitrary hostile server code.
+6. **HURC signer -> Vault/database/RPC**: signing authority is high impact; testnet-only restrictions are mandatory.
+7. **Training/video -> external runtime**: Python, Wan2.2, FFmpeg, CUDA and other external infrastructure remain outside the owned-core trust boundary.
+8. **CI -> repository/release artifacts**: workflow permissions, action pinning and provenance determine supply-chain trust.
+9. **Staging -> production**: isolated fixture evidence must never be represented as production operating history.
+10. **Forge -> notification transport**: invite/recovery delivery is an external service boundary; one-time lifecycle links are the only credential material intentionally sent to that provider.
+11. **Forge/operator -> Deploy Plane**: deployment requests cross a separate authenticated control boundary; jobs may reference deployment targets but must not carry deployment credentials.
+12. **Deploy Plane -> target adapter**: target adapters are replaceable infrastructure boundaries; adapters may hold provider/host credentials outside persisted deployment jobs.
 
 ## Primary threats and required controls
 
@@ -53,6 +54,9 @@ Controls: Base Sepolia-only signer boundary, known-answer tests, low-s signature
 
 ### Availability/resource exhaustion
 Controls: request-size limits, login throttling, recovery-request throttling, runtime-data quotas, bounded benchmark targets, recovery drills. Broader per-route abuse controls and production capacity evidence remain incomplete.
+
+### Backend blueprint or policy weakening
+Controls: fail-closed intent validation, deterministic project identifiers, mandatory Guardian RLS/audit/backup rules, no public database ports in compiled plans, credential-free blueprints, explicit external-infrastructure declarations, vendor-lock-in prohibition in portability manifests, and CI tests that prevent Hercules Base from claiming unfinished capabilities as implemented.
 
 ### Deployment-plane compromise
 Controls: constant-time Deploy Plane control-token checks, bounded request bodies, secret-shaped job-field rejection, immutable deployment requests, explicit state transitions, persistent verification/rollback evidence, HTTPS-or-loopback internal client transport, and adapter isolation. Provider/host credentials are not stored in deployment jobs.
