@@ -1,5 +1,6 @@
 import {resolve} from "node:path";
 import {listenHerculesDeployService} from "./control-api.mjs";
+import {createSupabaseEdgeFunctionAdapterFromEnv} from "./supabase-management.mjs";
 
 function required(env, name) {
   const value = env[name];
@@ -46,15 +47,27 @@ export function safeHerculesDeployConfig(config) {
   };
 }
 
+export function createHerculesDeployAdaptersFromEnv(
+  env = process.env,
+  {fetchImpl = globalThis.fetch} = {},
+) {
+  const adapters = new Map();
+  const supabase = createSupabaseEdgeFunctionAdapterFromEnv(env, {fetchImpl});
+  if (supabase) adapters.set("supabase_edge_function", supabase);
+  return adapters;
+}
+
 export async function startHerculesDeployService({
   env = process.env,
-  adapters = new Map(),
+  adapters,
+  fetchImpl = globalThis.fetch,
 } = {}) {
   const config = readHerculesDeployConfig(env);
+  const resolvedAdapters = adapters ?? createHerculesDeployAdaptersFromEnv(env, {fetchImpl});
   const service = listenHerculesDeployService({
     root: config.root,
     token: config.token,
-    adapters,
+    adapters: resolvedAdapters,
     pollIntervalMs: config.pollIntervalMs,
     host: config.host,
     port: config.port,
