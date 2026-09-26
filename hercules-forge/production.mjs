@@ -2,6 +2,11 @@ import {resolve} from "node:path";
 import {listenForgeControlService} from "./control-api.mjs";
 import {HttpForgeInterpreter} from "./interpreter.mjs";
 import {HttpForgeNotificationAdapter} from "./notifications.mjs";
+import {
+  DEFAULT_DEPLOYMENT_MAX_BUNDLE_BYTES,
+  ForgeRemoteReleaseAdapter,
+  HttpForgeDeploymentTransport,
+} from "./deployment.mjs";
 import {ForgeLoginRateLimiter} from "./rate-limit.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES} from "./runtime-data.mjs";
 
@@ -68,6 +73,23 @@ function validateNotificationUrl(value) {
   return url.toString();
 }
 
+function validateDeploymentUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("FORGE_DEPLOYMENT_URL must be a valid URL");
+  }
+  const loopback = ["127.0.0.1", "::1", "localhost"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new Error("FORGE_DEPLOYMENT_URL must use https unless it is loopback");
+  }
+  if (url.username || url.password) {
+    throw new Error("FORGE_DEPLOYMENT_URL must not embed credentials");
+  }
+  return url.toString();
+}
+
 export function readForgeProductionConfig(env = process.env) {
   const root = resolve(requireString(env, "FORGE_ROOT"));
   const token = requireString(env, "FORGE_CONTROL_TOKEN");
@@ -116,6 +138,14 @@ export function readForgeProductionConfig(env = process.env) {
   const notificationUrl = env.FORGE_NOTIFICATION_URL
     ? validateNotificationUrl(env.FORGE_NOTIFICATION_URL)
     : null;
+  const deploymentUrl = env.FORGE_DEPLOYMENT_URL
+    ? validateDeploymentUrl(env.FORGE_DEPLOYMENT_URL)
+    : null;
+  const deploymentMaxBundleBytes = parseInteger(
+    "FORGE_DEPLOYMENT_MAX_BUNDLE_BYTES",
+    env.FORGE_DEPLOYMENT_MAX_BUNDLE_BYTES ?? DEFAULT_DEPLOYMENT_MAX_BUNDLE_BYTES,
+    {min: 1024, max: 128 * 1024 * 1024},
+  );
 
   return {
     root,
@@ -132,6 +162,9 @@ export function readForgeProductionConfig(env = process.env) {
     interpreterToken: interpreterUrl ? (env.FORGE_INTERPRETER_TOKEN ?? null) : null,
     notificationUrl,
     notificationToken: notificationUrl ? (env.FORGE_NOTIFICATION_TOKEN ?? null) : null,
+    deploymentUrl,
+    deploymentToken: deploymentUrl ? (env.FORGE_DEPLOYMENT_TOKEN ?? null) : null,
+    deploymentMaxBundleBytes,
   };
 }
 
@@ -148,6 +181,8 @@ export function safeForgeProductionSummary(config) {
     recoveryWindowMs: config.recoveryWindowMs,
     promptIngress: Boolean(config.interpreterUrl),
     identityLifecycle: Boolean(config.notificationUrl),
+    remoteDeployment: Boolean(config.deploymentUrl),
+    deploymentMaxBundleBytes: config.deploymentMaxBundleBytes,
     secureSessionCookies: true,
   };
 }
@@ -174,6 +209,15 @@ export async function startForgeProductionService({env = process.env} = {}) {
         token: config.notificationToken,
       })
     : null;
+  const releaseAdapter = config.deploymentUrl
+    ? new ForgeRemoteReleaseAdapter(config.root, {
+        transport: new HttpForgeDeploymentTransport({
+          endpoint: config.deploymentUrl,
+          token: config.deploymentToken,
+        }),
+        maxBundleBytes: config.deploymentMaxBundleBytes,
+      })
+    : null;
 
   const server = listenForgeControlService({
     root: config.root,
@@ -184,6 +228,7 @@ export async function startForgeProductionService({env = process.env} = {}) {
     loginRateLimiter,
     recoveryRateLimiter,
     notificationAdapter,
+    releaseAdapter,
     serviceMode: "production",
     publicOrigin: config.publicOrigin,
     host: config.host,
