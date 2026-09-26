@@ -221,3 +221,16 @@ test("storage bucket creation conflict target is constraint-qualified", async ()
     /on conflict on constraint storage_buckets_owner_id_name_key do nothing/i,
   );
 });
+
+
+test("storage object upsert conflict target is constraint-qualified", async () => {
+  const {readFile}=await import("node:fs/promises");
+  const sql=await readFile(
+    new URL("../staging-plane/migrations/003_base_storage.sql",import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    sql,
+    /on conflict on constraint storage_objects_bucket_id_object_key_key do update/i,
+  );
+});
