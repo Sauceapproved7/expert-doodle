@@ -4,6 +4,7 @@ import {
   SupabaseManagementEdgeFunctionClient,
   createSupabaseEdgeFunctionAdapterFromEnv,
 } from "../hercules-deploy/supabase-management.mjs";
+import {createHerculesDeployAdaptersFromEnv} from "../hercules-deploy/service.mjs";
 
 const projectRef = "abcdefghijklmnopqrst";
 const slug = "hercules-revenue-rescue";
@@ -116,4 +117,10 @@ test("adapter auto-wiring is disabled without a credential and enabled only with
   assert.equal(typeof adapter.deploy, "function");
   assert.equal(typeof adapter.verify, "function");
   assert.equal(typeof adapter.rollback, "function");
+
+  const adapters = createHerculesDeployAdaptersFromEnv({
+    HERCULES_SUPABASE_ACCESS_TOKEN: "sbp_fc_test_token_for_hercules_deploy_123456",
+    HERCULES_SUPABASE_PROJECT_REFS: projectRef,
+  }, {fetchImpl: async () => Response.json({})});
+  assert.equal(adapters.has("supabase_edge_function"), true);
 });
