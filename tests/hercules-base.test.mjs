@@ -21,7 +21,7 @@ test("Hercules Base reports proven and planned capabilities without pretending u
   assert.equal(BASE_CAPABILITIES.guardian.status, "implemented");
   assert.equal(BASE_CAPABILITIES.portability.status, "implemented");
   assert.equal(BASE_CAPABILITIES.auth.status, "implemented");
-  assert.equal(BASE_CAPABILITIES.storage.status, "planned");
+  assert.equal(BASE_CAPABILITIES.storage.status, "implemented");
   assert.equal(BASE_CAPABILITIES.realtime.status, "planned");
   assert.equal(BASE_CAPABILITIES.functions.status, "planned");
 });
