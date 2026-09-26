@@ -97,8 +97,10 @@ test("Base Auth HTTP surface is bounded and does not expose password or refresh 
     async lookup(){
       return null;
     },
-    async createSession(){
-      throw new Error("not expected");
+    async createSession({userId,refreshTokenHash}){
+      assert.equal(userId,"11111111-1111-4111-8111-111111111111");
+      assert.match(refreshTokenHash,/^[a-f0-9]{64}$/);
+      return {id:"22222222-2222-4222-8222-222222222222",user_id:userId};
     },
   };
 
