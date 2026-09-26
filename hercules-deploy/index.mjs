@@ -6,3 +6,4 @@ export {deploymentRequestFromActiveForgeRelease} from "./forge-bridge.mjs";
 export {HttpHerculesDeployClient} from "./client.mjs";
 export {createHerculesDeployService, listenHerculesDeployService} from "./control-api.mjs";
 export {readHerculesDeployConfig, safeHerculesDeployConfig, startHerculesDeployService} from "./service.mjs";
+export {SupabaseEdgeFunctionTargetAdapter, fingerprintEdgeFunctionBundle, normalizeEdgeFunctionBundle} from "./supabase-edge.mjs";
