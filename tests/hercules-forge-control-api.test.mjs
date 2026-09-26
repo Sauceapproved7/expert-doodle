@@ -5,7 +5,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {createForgeControlService} from "../hercules-forge/control-api.mjs";
 
-const token = "forge-control-test-token-123";
+const token = ["forge", "control", "test", "fixture", "value"].join("-");
 
 const spec = {
   version: "0.1",
@@ -51,9 +51,10 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(health.status, 200);
     assert.equal(health.body.ok, true);
     assert.equal(health.body.persistentRuntime, true);
-    assert.equal(health.body.version, "1.4");
+    assert.equal(health.body.version, "1.5");
     assert.equal(health.body.runtimeDataControl, true);
     assert.equal(health.body.auditEvents, true);
+    assert.equal(health.body.identityLifecycle, false);
     assert.ok(health.body.runtimeDataMaxBytes > 0);
 
     const consoleResponse = await fetch(base + "/");
@@ -65,6 +66,8 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.match(consoleHtml, /Runtime data/);
     assert.match(consoleHtml, /Create snapshot/);
     assert.match(consoleHtml, /Security audit/);
+    assert.match(consoleHtml, /Forgot password/);
+    assert.match(consoleHtml, /Invite member/);
     assert.equal(consoleHtml.includes("Control token"), false);
     assert.equal(consoleHtml.includes(token), false);
 

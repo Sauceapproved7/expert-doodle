@@ -24,6 +24,8 @@ async function filesUnder(path) {
 
 const identity = await read("hercules-forge/identity.mjs");
 const control = await read("hercules-forge/control-api.mjs");
+const notifications = await read("hercules-forge/notifications.mjs");
+const production = await read("hercules-forge/production.mjs");
 const signer = await read("hercules-hurc/testnet-signer-edge.ts");
 const signerSql = await read("hercules-hurc/sql/hurc-test-signer.sql");
 const threat = await read("docs/HERCULES-THREAT-MODEL.md");
@@ -56,6 +58,19 @@ const checks = {
     /x-frame-options/.test(control) &&
     /permissions-policy/.test(control) &&
     /x-content-type-options/.test(control),
+  forgeLifecycleTokenSecurity:
+    /lifecyclePath\(kind, token\)/.test(identity) &&
+    /hashToken\(token\)/.test(identity) &&
+    /revokeUserSessions/.test(identity) &&
+    /identity\.recovery\.complete/.test(control),
+  forgeRecoveryEnumerationResistance:
+    /identity\.recovery\.request/.test(control) &&
+    /return send\(res, 202, \{accepted: true\}\)/.test(control) &&
+    /FORGE_RECOVERY_MAX_REQUESTS/.test(production),
+  forgeNotificationBoundary:
+    /redirect: "error"/.test(notifications) &&
+    /notification endpoint must not embed credentials/.test(notifications) &&
+    /FORGE_NOTIFICATION_URL must use https unless it is loopback/.test(production),
   signerAuthenticated:
     /HURC_SIGNER_CONTROL_TOKEN/.test(signer) &&
     /CONTROL\.length < 32/.test(signer) &&

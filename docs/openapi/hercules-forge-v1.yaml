@@ -1,7 +1,7 @@
 openapi: 3.2.1
 info:
   title: Hercules Forge API
-  version: 1.4.0
+  version: 1.5.0
   description: Machine-readable contract for Hercules Forge control and customer-session surfaces.
 servers:
   - url: https://forge.example.invalid
@@ -13,6 +13,54 @@ paths:
       responses:
         "200":
           description: Forge health summary.
+  /v1/invites/accept:
+    post:
+      operationId: acceptInvite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: {type: string, minLength: 32}
+                password: {type: string, minLength: 12, maxLength: 1024}
+      responses:
+        "201": {description: Invite accepted and workspace membership created.}
+        "400": {description: Invite is invalid, expired, or already consumed.}
+  /v1/recovery/request:
+    post:
+      operationId: requestRecovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+      responses:
+        "202": {description: Recovery request accepted without revealing account existence.}
+        "429": {description: Recovery requests temporarily throttled.}
+        "503": {description: Identity lifecycle notification transport unavailable.}
+  /v1/recovery/complete:
+    post:
+      operationId: completeRecovery
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: {type: string, minLength: 32}
+                password: {type: string, minLength: 12, maxLength: 1024}
+      responses:
+        "200": {description: Password reset completed and prior sessions revoked.}
+        "400": {description: Recovery token is invalid, expired, or already consumed.}
   /v1/session:
     post:
       operationId: createSession
@@ -58,6 +106,27 @@ paths:
       responses:
         "200": {description: Workspace and membership.}
         "403": {$ref: "#/components/responses/Forbidden"}
+  /v1/workspaces/{workspaceId}/invites:
+    post:
+      operationId: createWorkspaceInvite
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/CsrfHeader"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+                role: {$ref: "#/components/schemas/InviteRole"}
+      responses:
+        "201": {description: One-time invite created and delivered without returning its token.}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "502": {description: Invite delivery failed and the one-time token was revoked.}
+        "503": {description: Identity lifecycle notification transport unavailable.}
   /v1/workspaces/{workspaceId}/audit:
     get:
       operationId: listWorkspaceAudit
@@ -100,6 +169,27 @@ paths:
         - $ref: "#/components/parameters/ProjectId"
       responses:
         "200": {description: Immutable revisions.}
+  /v1/admin/workspaces/{workspaceId}/invites:
+    post:
+      operationId: operatorCreateWorkspaceInvite
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: {type: string, format: email, maxLength: 254}
+                role: {$ref: "#/components/schemas/InviteRole"}
+      responses:
+        "201": {description: Owner-control invite created and delivered.}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "502": {description: Invite delivery failed and the one-time token was revoked.}
+        "503": {description: Identity lifecycle notification transport unavailable.}
   /v1/projects:
     post:
       operationId: operatorCreateProject
@@ -203,6 +293,9 @@ components:
     Identifier:
       type: string
       pattern: "^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$"
+    InviteRole:
+      type: string
+      enum: [admin, builder, viewer]
   responses:
     Unauthorized:
       description: Authentication failed or is missing.

@@ -1,6 +1,7 @@
 import {resolve} from "node:path";
 import {listenForgeControlService} from "./control-api.mjs";
 import {HttpForgeInterpreter} from "./interpreter.mjs";
+import {HttpForgeNotificationAdapter} from "./notifications.mjs";
 import {ForgeLoginRateLimiter} from "./rate-limit.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES} from "./runtime-data.mjs";
 
@@ -50,6 +51,23 @@ function validateInterpreterUrl(value) {
   return url.toString();
 }
 
+function validateNotificationUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("FORGE_NOTIFICATION_URL must be a valid URL");
+  }
+  const loopback = ["127.0.0.1", "::1", "localhost"].includes(url.hostname);
+  if (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) {
+    throw new Error("FORGE_NOTIFICATION_URL must use https unless it is loopback");
+  }
+  if (url.username || url.password) {
+    throw new Error("FORGE_NOTIFICATION_URL must not embed credentials");
+  }
+  return url.toString();
+}
+
 export function readForgeProductionConfig(env = process.env) {
   const root = resolve(requireString(env, "FORGE_ROOT"));
   const token = requireString(env, "FORGE_CONTROL_TOKEN");
@@ -81,9 +99,22 @@ export function readForgeProductionConfig(env = process.env) {
     env.FORGE_LOGIN_WINDOW_MS ?? 5 * 60 * 1000,
     {min: 1000, max: 24 * 60 * 60 * 1000},
   );
+  const recoveryMaxRequests = parseInteger(
+    "FORGE_RECOVERY_MAX_REQUESTS",
+    env.FORGE_RECOVERY_MAX_REQUESTS ?? 3,
+    {min: 1, max: 1000},
+  );
+  const recoveryWindowMs = parseInteger(
+    "FORGE_RECOVERY_WINDOW_MS",
+    env.FORGE_RECOVERY_WINDOW_MS ?? 60 * 60 * 1000,
+    {min: 1000, max: 7 * 24 * 60 * 60 * 1000},
+  );
 
   const interpreterUrl = env.FORGE_INTERPRETER_URL
     ? validateInterpreterUrl(env.FORGE_INTERPRETER_URL)
+    : null;
+  const notificationUrl = env.FORGE_NOTIFICATION_URL
+    ? validateNotificationUrl(env.FORGE_NOTIFICATION_URL)
     : null;
 
   return {
@@ -95,8 +126,12 @@ export function readForgeProductionConfig(env = process.env) {
     runtimeDataMaxBytes,
     loginMaxFailures,
     loginWindowMs,
+    recoveryMaxRequests,
+    recoveryWindowMs,
     interpreterUrl,
     interpreterToken: interpreterUrl ? (env.FORGE_INTERPRETER_TOKEN ?? null) : null,
+    notificationUrl,
+    notificationToken: notificationUrl ? (env.FORGE_NOTIFICATION_TOKEN ?? null) : null,
   };
 }
 
@@ -109,7 +144,10 @@ export function safeForgeProductionSummary(config) {
     runtimeDataMaxBytes: config.runtimeDataMaxBytes,
     loginMaxFailures: config.loginMaxFailures,
     loginWindowMs: config.loginWindowMs,
+    recoveryMaxRequests: config.recoveryMaxRequests,
+    recoveryWindowMs: config.recoveryWindowMs,
     promptIngress: Boolean(config.interpreterUrl),
+    identityLifecycle: Boolean(config.notificationUrl),
     secureSessionCookies: true,
   };
 }
@@ -126,6 +164,16 @@ export async function startForgeProductionService({env = process.env} = {}) {
     maxFailures: config.loginMaxFailures,
     windowMs: config.loginWindowMs,
   });
+  const recoveryRateLimiter = new ForgeLoginRateLimiter({
+    maxFailures: config.recoveryMaxRequests,
+    windowMs: config.recoveryWindowMs,
+  });
+  const notificationAdapter = config.notificationUrl
+    ? new HttpForgeNotificationAdapter({
+        endpoint: config.notificationUrl,
+        token: config.notificationToken,
+      })
+    : null;
 
   const server = listenForgeControlService({
     root: config.root,
@@ -134,6 +182,8 @@ export async function startForgeProductionService({env = process.env} = {}) {
     secureSessionCookies: true,
     runtimeDataMaxBytes: config.runtimeDataMaxBytes,
     loginRateLimiter,
+    recoveryRateLimiter,
+    notificationAdapter,
     serviceMode: "production",
     publicOrigin: config.publicOrigin,
     host: config.host,
