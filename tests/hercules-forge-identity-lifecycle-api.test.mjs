@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {randomBytes} from "node:crypto";
+import {randomBytes} from "node:crypto";
 import {mkdtemp, readdir, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -57,9 +58,9 @@ function lifecycleToken(link, kind) {
 test("workspace invite and recovery lifecycle is one-time, audited, and secret-safe", async () => {
   const root = await mkdtemp(join(tmpdir(), "forge-lifecycle-api-"));
   const identities = new ForgeIdentityStore(root);
-  const ownerPassword = fixtureCredential("owner", "lifecycle", "password", "long", "enough");
-  const invitedPassword = fixtureCredential("invited", "initial", "password", "long", "enough");
-  const recoveredPassword = fixtureCredential("invited", "recovered", "password", "long", "enough");
+  const ownerPassword = runtimeSecret("owner-password");
+  const invitedPassword = runtimeSecret("initial-password");
+  const recoveredPassword = runtimeSecret("recovered-password");
 
   const owner = await identities.createUser({
     userId: "owner-a",
@@ -231,7 +232,7 @@ test("recovery request limiter blocks excess requests without exposing account s
 test("failed invite delivery removes the one-time invite token", async () => {
   const root = await mkdtemp(join(tmpdir(), "forge-lifecycle-delivery-"));
   const identities = new ForgeIdentityStore(root);
-  const ownerPassword = fixtureCredential("owner", "delivery", "password", "long", "enough");
+  const ownerPassword = runtimeSecret("delivery-password");
   const owner = await identities.createUser({
     userId: "owner-a",
     email: "owner-a@example.com",
