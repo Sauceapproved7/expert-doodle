@@ -43,6 +43,7 @@ jobs:
           node --input-type=module <<'NODE'
           import {readFile} from "node:fs/promises";
           import {HERCULES_MODEL_SLOTS} from "./hercules-models/catalog.mjs";
+          import {HERCULES_MODEL_CANDIDATES} from "./hercules-models/candidates.mjs";
 
           const attestations = {
             "hercules-core": "hercules-models/attestations/hercules-core-v0.1.json",
@@ -97,5 +98,47 @@ jobs:
             }
           }
 
-          console.log("Hercules catalog is native, fail-closed, and evidence-backed.");
+          const candidateAttestations = {
+            "hercules-core-neural-v03":
+              "hercules-models/candidate-attestations/hercules-core-neural-v0.3.json",
+          };
+
+          for (const candidate of HERCULES_MODEL_CANDIDATES) {
+            if (candidate.state !== "candidate") {
+              throw new Error("candidate registry contains non-candidate state: " + candidate.id);
+            }
+            if (candidate.origin !== "hercules-native") {
+              throw new Error("candidate is not Hercules-native: " + candidate.id);
+            }
+            if (candidate.runtime !== null) {
+              throw new Error("candidate must remain non-routable until promotion: " + candidate.id);
+            }
+            if (!/^sha256:[a-f0-9]{64}$/.test(candidate.checkpoint ?? "")) {
+              throw new Error("candidate lacks immutable checkpoint hash: " + candidate.id);
+            }
+
+            const attestationPath = candidateAttestations[candidate.id];
+            if (!attestationPath) {
+              throw new Error("candidate has no attestation verifier: " + candidate.id);
+            }
+
+            const attestation = JSON.parse(await readFile(attestationPath, "utf8"));
+            if (attestation.candidateId !== candidate.id) {
+              throw new Error("candidate attestation id mismatch: " + candidate.id);
+            }
+            if (attestation.modelId !== candidate.family) {
+              throw new Error("candidate attestation family mismatch: " + candidate.id);
+            }
+            if (attestation.checkpointSha256 !== candidate.checkpoint.slice("sha256:".length)) {
+              throw new Error("candidate attestation checkpoint mismatch: " + candidate.id);
+            }
+            if (attestation.promotionStatus !== "candidate" || attestation.activeReplacement !== false) {
+              throw new Error("candidate attestation improperly claims promotion: " + candidate.id);
+            }
+            if (attestation.evaluation?.passed !== true) {
+              throw new Error("candidate attestation did not pass evaluation: " + candidate.id);
+            }
+          }
+
+          console.log("Hercules catalog and candidate registry are native, fail-closed, and evidence-backed.");
           NODE

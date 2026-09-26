@@ -26,3 +26,4 @@ export {
   HERCULES_FAMILY_CLASSIFIER_CHECKPOINTS,
   HerculesEmbeddedFamilyClassifier,
 } from "./embedded-family-classifier.mjs";
+export {HERCULES_MODEL_CANDIDATES} from "./candidates.mjs";

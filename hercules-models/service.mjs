@@ -41,6 +41,7 @@ export function createModelPlaneService({
   token,
   nativeOnly = true,
   embeddedRuntimes = {},
+  candidates = [],
 }) {
   if (!Array.isArray(models)) throw new TypeError("models array is required");
   if (typeof token !== "string" || token.length < 16) {
@@ -49,8 +50,10 @@ export function createModelPlaneService({
   if (!embeddedRuntimes || typeof embeddedRuntimes !== "object") {
     throw new TypeError("embeddedRuntimes must be an object");
   }
+  if (!Array.isArray(candidates)) throw new TypeError("candidates must be an array");
 
   const registry = new HerculesModelRegistry(models);
+  const candidateRegistry = new HerculesModelRegistry(candidates);
   const router = new HerculesModelRouter(registry, {nativeOnly});
 
   return http.createServer(async (req, res) => {
@@ -67,6 +70,7 @@ export function createModelPlaneService({
           models: all.length,
           active: all.filter((model) => model.state === "active").length,
           embeddedRuntimes: Object.keys(embeddedRuntimes).length,
+          candidates: candidateRegistry.list().length,
         });
       }
 
@@ -74,6 +78,10 @@ export function createModelPlaneService({
 
       if (req.method === "GET" && url.pathname === "/v1/models") {
         return send(res, 200, {models: registry.list()});
+      }
+
+      if (req.method === "GET" && url.pathname === "/v1/candidates") {
+        return send(res, 200, {candidates: candidateRegistry.list()});
       }
 
       if (req.method === "POST" && url.pathname === "/v1/route") {
@@ -129,6 +137,7 @@ export function listenModelPlaneService({
   token,
   nativeOnly = true,
   embeddedRuntimes = {},
+  candidates = [],
   host = "127.0.0.1",
   port = 38900,
 }) {
@@ -137,6 +146,7 @@ export function listenModelPlaneService({
     token,
     nativeOnly,
     embeddedRuntimes,
+    candidates,
   });
   server.listen(port, host);
   return server;

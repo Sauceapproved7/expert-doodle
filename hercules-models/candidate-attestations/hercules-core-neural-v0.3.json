@@ -1,0 +1,56 @@
+{
+  "version": "0.1",
+  "candidateId": "hercules-core-neural-v03",
+  "modelId": "hercules-core",
+  "family": "hercules-core",
+  "capability": "neural-next-token-language-candidate",
+  "promotionStatus": "candidate",
+  "activeReplacement": false,
+  "algorithm": "context-embedding-softmax-sgd",
+  "framework": "hercules-native-js",
+  "checkpointSha256": "223aebb35f003ff5e144e29bfd8a613206802b7cdc70da35be31f067c0b08b9f",
+  "checkpointBytes": 288479,
+  "sourceCommit": "d253f0a215a33be7c5b9deca82a80d63e9ec3c85",
+  "workflowRunId": 36268223353,
+  "workflowArtifactId": 10913899182,
+  "workflowArtifactDigest": "sha256:38afa4a4cd6ba0a225e92f7e30768b43a66d59efbd7a0fdd1ecb0ac71ed37ac3",
+  "verificationRuns": {
+    "ownerCode": {
+      "runId": 36268223335,
+      "passed": true
+    },
+    "securityBaseline": {
+      "runId": 36268223332,
+      "passed": true
+    },
+    "codeql": {
+      "runId": 36268223326,
+      "passed": true
+    }
+  },
+  "architecture": {
+    "contextLength": 2,
+    "embeddingDim": 12,
+    "vocabularySize": 369,
+    "trainingExamples": 1852,
+    "epochs": 36
+  },
+  "evaluation": {
+    "passed": true,
+    "metrics": {
+      "top1Accuracy": 0.5523560209424084,
+      "contentTop1Accuracy": 0.1631578947368421,
+      "unigramImprovement": 0.32240209740685166,
+      "backoffCrossEntropyRatio": 0.9859109205559691,
+      "tokenCoverage": 0.9696132596685083
+    },
+    "gate": {
+      "minimumTop1Accuracy": 0.3,
+      "minimumContentTop1Accuracy": 0.08,
+      "minimumUnigramImprovement": 0.05,
+      "maximumBackoffCrossEntropyRatio": 1.35,
+      "minimumTokenCoverage": 0.8
+    }
+  },
+  "provenance": "Repository-owned neural architecture and training code using the existing Hercules-authored language corpus; no third-party model weights, tokenizer package, external language dataset, or ML SDK is packaged."
+}
