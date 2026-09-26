@@ -204,9 +204,7 @@ function portabilityFor(){
 }
 
 export function compileBackendIntent(intentInput){
-  const intent=Object.isFrozen(intentInput)
-    ? intentInput
-    : normalizeBackendIntent(intentInput);
+  const intent=normalizeBackendIntent(intentInput);
   const digest=createHash("sha256")
     .update(stableIntentString(intent))
     .digest("hex")
