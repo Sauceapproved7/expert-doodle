@@ -1,4 +1,6 @@
-import {resolve} from "node:path";
+import {randomBytes} from "node:crypto";
+import {mkdir, realpath, rm, stat, statfs, writeFile} from "node:fs/promises";
+import {join, resolve} from "node:path";
 import {listenForgeControlService} from "./control-api.mjs";
 import {HttpForgeInterpreter} from "./interpreter.mjs";
 import {HttpForgeNotificationAdapter} from "./notifications.mjs";
@@ -109,6 +111,11 @@ export function readForgeProductionConfig(env = process.env) {
     env.FORGE_RECOVERY_WINDOW_MS ?? 60 * 60 * 1000,
     {min: 1000, max: 7 * 24 * 60 * 60 * 1000},
   );
+  const minFreeBytes = parseInteger(
+    "FORGE_MIN_FREE_BYTES",
+    env.FORGE_MIN_FREE_BYTES ?? 256 * 1024 * 1024,
+    {min: 1024 * 1024, max: Number.MAX_SAFE_INTEGER},
+  );
 
   const interpreterUrl = env.FORGE_INTERPRETER_URL
     ? validateInterpreterUrl(env.FORGE_INTERPRETER_URL)
@@ -128,6 +135,7 @@ export function readForgeProductionConfig(env = process.env) {
     loginWindowMs,
     recoveryMaxRequests,
     recoveryWindowMs,
+    minFreeBytes,
     interpreterUrl,
     interpreterToken: interpreterUrl ? (env.FORGE_INTERPRETER_TOKEN ?? null) : null,
     notificationUrl,
@@ -146,14 +154,75 @@ export function safeForgeProductionSummary(config) {
     loginWindowMs: config.loginWindowMs,
     recoveryMaxRequests: config.recoveryMaxRequests,
     recoveryWindowMs: config.recoveryWindowMs,
+    minFreeBytes: config.minFreeBytes,
     promptIngress: Boolean(config.interpreterUrl),
     identityLifecycle: Boolean(config.notificationUrl),
     secureSessionCookies: true,
   };
 }
 
-export async function startForgeProductionService({env = process.env} = {}) {
+export async function probeForgeProductionStorage(root, {minFreeBytes = 256 * 1024 * 1024} = {}) {
+  if (typeof root !== "string" || !root) throw new TypeError("root is required");
+  if (!Number.isSafeInteger(minFreeBytes) || minFreeBytes < 1024 * 1024) {
+    throw new TypeError("minFreeBytes must be at least 1048576");
+  }
+
+  await mkdir(root, {recursive: true});
+  const info = await stat(root);
+  if (!info.isDirectory()) throw new Error("FORGE_ROOT must resolve to a directory");
+
+  const canonicalRoot = await realpath(root);
+  const probeName = ".forge-storage-probe-" + process.pid + "-" + randomBytes(8).toString("hex");
+  const probePath = join(canonicalRoot, probeName);
+  try {
+    await writeFile(probePath, "forge-storage-probe\n", {
+      encoding: "utf8",
+      flag: "wx",
+      mode: 0o600,
+    });
+    const probeInfo = await stat(probePath);
+    if ((probeInfo.mode & 0o777) !== 0o600) {
+      throw new Error("Forge storage probe file permissions are not 0600");
+    }
+    const fs = await statfs(canonicalRoot);
+    const freeBytes = fs.bavail * fs.bsize;
+    if (!Number.isSafeInteger(freeBytes) || freeBytes < minFreeBytes) {
+      throw new Error("Forge storage does not meet the minimum free-space requirement");
+    }
+    return {
+      writable: true,
+      canonicalRoot,
+      freeBytes,
+      minFreeBytes,
+    };
+  } finally {
+    await rm(probePath, {force: true});
+  }
+}
+
+export async function preflightForgeProduction({env = process.env} = {}) {
   const config = readForgeProductionConfig(env);
+  const storage = await probeForgeProductionStorage(config.root, {
+    minFreeBytes: config.minFreeBytes,
+  });
+  return {
+    config,
+    storage,
+    summary: {
+      ...safeForgeProductionSummary(config),
+      storage: {
+        writable: storage.writable,
+        canonicalRoot: storage.canonicalRoot,
+        freeBytes: storage.freeBytes,
+        minFreeBytes: storage.minFreeBytes,
+      },
+    },
+  };
+}
+
+export async function startForgeProductionService({env = process.env} = {}) {
+  const preflight = await preflightForgeProduction({env});
+  const config = preflight.config;
   const interpreter = config.interpreterUrl
     ? new HttpForgeInterpreter({
         endpoint: config.interpreterUrl,
@@ -184,6 +253,9 @@ export async function startForgeProductionService({env = process.env} = {}) {
     loginRateLimiter,
     recoveryRateLimiter,
     notificationAdapter,
+    readinessCheck: () => probeForgeProductionStorage(config.root, {
+      minFreeBytes: config.minFreeBytes,
+    }),
     serviceMode: "production",
     publicOrigin: config.publicOrigin,
     host: config.host,
@@ -215,7 +287,7 @@ export async function startForgeProductionService({env = process.env} = {}) {
 
   return {
     server,
-    config: safeForgeProductionSummary(config),
+    config: preflight.summary,
     shutdown,
   };
 }
