@@ -55,7 +55,7 @@ If a retry encounters the account created by the same invite, Forge can continue
 Password recovery uses two locks in a fixed order:
 
 1. recovery-token lock
-2. user recovery lock
+2. user credential lock
 
 Every user password record has an internal password version.
 
@@ -71,13 +71,16 @@ current user password version == recovery token password version
 
 Only a matching token can proceed.
 
-Successful recovery:
+Successful recovery, while holding the credential-user lock:
 
-- writes a new scrypt-v2 password hash
+- derives the next scrypt-v2 password hash
+- revokes all existing sessions
+- writes the new password hash
 - increments the password version
 - updates `passwordUpdatedAt`
-- revokes all existing sessions
 - consumes the successful recovery token
+
+Login for that same user acquires the same credential-user lock. Therefore an old-password login that wins the lock first creates a session which recovery subsequently revokes; if recovery wins first, the old-password login re-reads the changed password and fails.
 
 A second older recovery link then fails and is removed because its recorded password version no longer matches.
 
@@ -116,7 +119,7 @@ The Hercules security baseline now requires:
 - invite-token lock
 - invite-email lock
 - recovery-token lock
-- recovery-user lock
+- credential-user lock
 - password-version invalidation
 
 ## Filesystem boundary
