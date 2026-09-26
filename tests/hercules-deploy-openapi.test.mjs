@@ -24,5 +24,5 @@ test("Deploy Plane OpenAPI covers background deployment control surfaces", () =>
   assert.match(contract, /controlBearer:/);
   assert.match(contract, /artifactFingerprint:/);
   assert.match(contract, /sourceCommit:/);
-  assert.match(contract, /pattern: "\^https:\/\/"|pattern: "\^https:\/\//);
+  assert.ok(contract.includes('pattern: "^https://"'));
 });
