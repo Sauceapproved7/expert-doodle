@@ -27,3 +27,7 @@ export {
   HerculesEmbeddedFamilyClassifier,
 } from "./embedded-family-classifier.mjs";
 export {HERCULES_MODEL_CANDIDATES} from "./candidates.mjs";
+export {
+  HERCULES_CORE_NEURAL_V03_CHECKPOINT_SHA256,
+  HerculesEmbeddedCoreNeuralV03,
+} from "./embedded-core-neural-v0.3.mjs";

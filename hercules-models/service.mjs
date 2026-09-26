@@ -42,6 +42,8 @@ export function createModelPlaneService({
   nativeOnly = true,
   embeddedRuntimes = {},
   candidates = [],
+  candidateRuntimes = {},
+  candidateEvaluationEnabled = false,
 }) {
   if (!Array.isArray(models)) throw new TypeError("models array is required");
   if (typeof token !== "string" || token.length < 16) {
@@ -51,6 +53,12 @@ export function createModelPlaneService({
     throw new TypeError("embeddedRuntimes must be an object");
   }
   if (!Array.isArray(candidates)) throw new TypeError("candidates must be an array");
+  if (!candidateRuntimes || typeof candidateRuntimes !== "object") {
+    throw new TypeError("candidateRuntimes must be an object");
+  }
+  if (typeof candidateEvaluationEnabled !== "boolean") {
+    throw new TypeError("candidateEvaluationEnabled must be boolean");
+  }
 
   const registry = new HerculesModelRegistry(models);
   const candidateRegistry = new HerculesModelRegistry(candidates);
@@ -71,6 +79,8 @@ export function createModelPlaneService({
           active: all.filter((model) => model.state === "active").length,
           embeddedRuntimes: Object.keys(embeddedRuntimes).length,
           candidates: candidateRegistry.list().length,
+          candidateEvaluationEnabled,
+          candidateRuntimes: Object.keys(candidateRuntimes).length,
         });
       }
 
@@ -82,6 +92,65 @@ export function createModelPlaneService({
 
       if (req.method === "GET" && url.pathname === "/v1/candidates") {
         return send(res, 200, {candidates: candidateRegistry.list()});
+      }
+
+      if (req.method === "POST" && url.pathname === "/v1/candidates/infer") {
+        if (!candidateEvaluationEnabled) {
+          throw Object.assign(
+            new Error("candidate evaluation is disabled"),
+            {statusCode: 403},
+          );
+        }
+
+        const body = await readBody(req);
+        if (!body.candidateId) {
+          throw Object.assign(new Error("candidateId is required"), {statusCode: 400});
+        }
+
+        let candidate;
+        try {
+          candidate = candidateRegistry.require(body.candidateId);
+        } catch {
+          throw Object.assign(
+            new Error("unknown candidate: " + body.candidateId),
+            {statusCode: 404},
+          );
+        }
+
+        if (candidate.state !== "candidate") {
+          throw Object.assign(
+            new Error("candidate registry entry is not in candidate state"),
+            {statusCode: 409},
+          );
+        }
+
+        const task = body.task ?? candidate.tasks[0];
+        if (!candidate.tasks.includes(task)) {
+          throw Object.assign(
+            new Error("candidate does not support task: " + task),
+            {statusCode: 400},
+          );
+        }
+
+        const runtime = candidateRuntimes[candidate.id];
+        if (!runtime || typeof runtime.infer !== "function") {
+          throw Object.assign(
+            new Error("candidate runtime is not loaded: " + candidate.id),
+            {statusCode: 503},
+          );
+        }
+
+        const output = await runtime.infer(body.input, {task, candidate});
+        return send(res, 200, {
+          candidate: {
+            id: candidate.id,
+            family: candidate.family,
+            checkpoint: candidate.checkpoint,
+            origin: candidate.origin,
+            state: candidate.state,
+          },
+          output,
+        });
       }
 
       if (req.method === "POST" && url.pathname === "/v1/route") {
@@ -138,6 +207,8 @@ export function listenModelPlaneService({
   nativeOnly = true,
   embeddedRuntimes = {},
   candidates = [],
+  candidateRuntimes = {},
+  candidateEvaluationEnabled = false,
   host = "127.0.0.1",
   port = 38900,
 }) {
@@ -147,6 +218,8 @@ export function listenModelPlaneService({
     nativeOnly,
     embeddedRuntimes,
     candidates,
+    candidateRuntimes,
+    candidateEvaluationEnabled,
   });
   server.listen(port, host);
   return server;
