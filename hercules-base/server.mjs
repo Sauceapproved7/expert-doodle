@@ -8,6 +8,8 @@ import {createFilesystemBlobStore} from "./storage-core.mjs";
 import {routeRealtimeRequest} from "./realtime-router.mjs";
 import {createPostgrestRealtimeStore} from "./realtime-store.mjs";
 import {writeFetchResponse} from "./response-bridge.mjs";
+import {routeFunctionsRequest} from "./functions-router.mjs";
+import {createPostgrestFunctionsStore} from "./functions-store.mjs";
 
 const host=process.env.HERCULES_BASE_HOST||"0.0.0.0";
 const port=Number(process.env.HERCULES_BASE_PORT||38800);
@@ -27,6 +29,7 @@ const authStore=createPostgrestAuthStore({postgrestUrl,jwtSecret});
 const storageStore=createPostgrestStorageStore({postgrestUrl,jwtSecret});
 const blobs=createFilesystemBlobStore({root:storageRoot});
 const realtimeStore=createPostgrestRealtimeStore({postgrestUrl,jwtSecret});
+const functionsStore=createPostgrestFunctionsStore({postgrestUrl,jwtSecret});
 
 function nodeRequestToFetch(request,{signal}={}){
   const origin="http://hercules-base.local";
@@ -74,7 +77,9 @@ createServer(async(request,response)=>{
         ?await routeStorageRequest(fetchRequest,{store:storageStore,blobs,jwtSecret})
         :pathname.startsWith("/v1/realtime/")
           ?await routeRealtimeRequest(fetchRequest,{store:realtimeStore,jwtSecret})
-          :await routeBaseRequest(fetchRequest,{controlToken});
+          :pathname.startsWith("/v1/functions")
+            ?await routeFunctionsRequest(fetchRequest,{store:functionsStore,jwtSecret,executor:null})
+            :await routeBaseRequest(fetchRequest,{controlToken});
     await writeFetchResponse(response,routed);
   }catch{
     if(!response.headersSent){
