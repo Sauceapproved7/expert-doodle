@@ -133,7 +133,7 @@ test("Base Auth HTTP surface is bounded and does not expose password or refresh 
     new Request("https://base.local/v1/auth/signup",{
       method:"POST",
       headers:{"content-type":"application/json"},
-      body:JSON.stringify({email:"x@fixture.invalid",password:"x".repeat(5000)}),
+      body:JSON.stringify({email:"x@fixture.invalid",password:"x".repeat(10000)}),
     }),
     {store,jwtSecret:fixtureJwtSecret(),fixtureOnly:true},
   );
