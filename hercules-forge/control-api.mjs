@@ -159,6 +159,7 @@ export function createForgeControlService({
   loginRateLimiter = null,
   recoveryRateLimiter = null,
   notificationAdapter = null,
+  releaseAdapter = null,
   serviceMode = "development",
   publicOrigin = null,
 }) {
@@ -168,7 +169,7 @@ export function createForgeControlService({
   }
 
   const store = new ForgeWorkspaceStore(root);
-  const releases = new ForgeLocalReleaseAdapter(root);
+  const releases = releaseAdapter ?? new ForgeLocalReleaseAdapter(root);
   const previews = new ForgePreviewManager(root, {runtimeDataMaxBytes});
   const runtimeData = new ForgeLocalRuntimeDataAdapter(root, {
     maxProjectBytes: runtimeDataMaxBytes,
@@ -220,6 +221,7 @@ export function createForgeControlService({
           runtimeDataControl: true,
           auditEvents: true,
           identityLifecycle: Boolean(notificationAdapter && publicOrigin),
+          remoteDeployment: Boolean(releaseAdapter),
           runtimeDataMaxBytes,
         });
       }
@@ -1124,6 +1126,7 @@ export function listenForgeControlService({
   loginRateLimiter = null,
   recoveryRateLimiter = null,
   notificationAdapter = null,
+  releaseAdapter = null,
   serviceMode = "development",
   publicOrigin = null,
   host = "127.0.0.1",
@@ -1138,6 +1141,7 @@ export function listenForgeControlService({
     loginRateLimiter,
     recoveryRateLimiter,
     notificationAdapter,
+    releaseAdapter,
     serviceMode,
     publicOrigin,
   });
