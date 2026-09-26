@@ -1,4 +1,4 @@
-import {resolve} from "node:path";
+import {isAbsolute, relative, resolve} from "node:path";
 import {listenHerculesDeployService} from "./control-api.mjs";
 
 function required(env, name) {
@@ -9,7 +9,7 @@ function required(env, name) {
   return value.trim();
 }
 
-function integer(name, value, min, max) {
+function nestedOrSame(parent, child) {\n  const path = relative(parent, child);\n  return path === "" || (!path.startsWith("..") && !isAbsolute(path));\n}\n\nfunction integer(name, value, min, max) {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
     throw new Error(name + " must be an integer between " + min + " and " + max);
