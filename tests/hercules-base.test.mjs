@@ -24,6 +24,8 @@ test("Hercules Base reports proven and planned capabilities without pretending u
   assert.equal(BASE_CAPABILITIES.storage.status, "implemented");
   assert.equal(BASE_CAPABILITIES.realtime.status, "implemented");
   assert.equal(BASE_CAPABILITIES.functions.status, "planned");
+  assert.equal(BASE_CAPABILITIES.functions.controlPlaneStatus, "implemented");
+  assert.equal(BASE_CAPABILITIES.functions.executionStatus, "blocked-pending-isolated-executor");
 });
 
 test("Blueprint Engine compiles deterministic backend intent with no Supabase dependency", () => {
