@@ -124,3 +124,151 @@ test("adapter auto-wiring is disabled without a credential and enabled only with
   }, {fetchImpl: async () => Response.json({})});
   assert.equal(adapters.has("supabase_edge_function"), true);
 });
+
+
+test("management client constructor and target validation fail closed", async () => {
+  assert.throws(
+    () => new SupabaseManagementEdgeFunctionClient({
+      accessToken: "short",
+      allowedProjectRefs: [projectRef],
+      fetchImpl: async () => Response.json({}),
+    }),
+    /access token is invalid/,
+  );
+  assert.throws(
+    () => new SupabaseManagementEdgeFunctionClient({
+      accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+      allowedProjectRefs: [],
+      fetchImpl: async () => Response.json({}),
+    }),
+    /at least one Supabase project ref is required/,
+  );
+  assert.throws(
+    () => new SupabaseManagementEdgeFunctionClient({
+      accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+      allowedProjectRefs: ["bad-ref"],
+      fetchImpl: async () => Response.json({}),
+    }),
+    /project ref is invalid/,
+  );
+  assert.throws(
+    () => new SupabaseManagementEdgeFunctionClient({
+      accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+      allowedProjectRefs: [projectRef],
+      baseUrl: "http://api.supabase.com",
+      fetchImpl: async () => Response.json({}),
+    }),
+    /credential-free HTTPS URL/,
+  );
+
+  const client = new SupabaseManagementEdgeFunctionClient({
+    accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+    allowedProjectRefs: [projectRef],
+    fetchImpl: async () => Response.json({}),
+  });
+  await assert.rejects(
+    client.getFunction({projectRef: "bad", slug}),
+    /project ref is invalid/,
+  );
+  await assert.rejects(
+    client.getFunction({projectRef, slug: "../bad"}),
+    /slug is invalid/,
+  );
+});
+
+test("management client reports provider read failures without mutating anything", async () => {
+  const token = "sbp_fc_test_token_for_hercules_deploy_123456";
+  let mode = "metadata-500";
+  const client = new SupabaseManagementEdgeFunctionClient({
+    accessToken: token,
+    allowedProjectRefs: [projectRef],
+    fetchImpl: async (url) => {
+      const path = new URL(String(url)).pathname;
+      if (mode === "metadata-404") return new Response("", {status: 404});
+      if (mode === "metadata-500") return new Response("nope", {status: 500});
+      if (path.endsWith("/body")) {
+        if (mode === "body-500") return new Response("nope", {status: 500});
+        if (mode === "bad-body-metadata") {
+          const form = new FormData();
+          form.append("metadata", "{");
+          form.append("file", new Blob(["x"]), `supabase/functions/${slug}/index.ts`);
+          return new Response(form, {status: 200});
+        }
+        if (mode === "no-files") {
+          const form = new FormData();
+          form.append("metadata", JSON.stringify({entrypoint_path: `supabase/functions/${slug}/index.ts`}));
+          return new Response(form, {status: 200});
+        }
+      }
+      return Response.json({slug, status: "ACTIVE", verify_jwt: true});
+    },
+  });
+
+  await assert.rejects(client.getFunction({projectRef, slug}), /metadata request failed/);
+  mode = "metadata-404";
+  assert.equal(await client.getFunction({projectRef, slug}), null);
+  mode = "body-500";
+  await assert.rejects(client.getFunction({projectRef, slug}), /source download failed/);
+  mode = "bad-body-metadata";
+  await assert.rejects(client.getFunction({projectRef, slug}), /source metadata was invalid JSON/);
+  mode = "no-files";
+  await assert.rejects(client.getFunction({projectRef, slug}), /returned no files/);
+});
+
+test("management client validates deploy bundles and provider write statuses", async () => {
+  let status = 500;
+  const client = new SupabaseManagementEdgeFunctionClient({
+    accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+    allowedProjectRefs: [projectRef],
+    fetchImpl: async (_url, options = {}) => {
+      if (options.method === "DELETE") return new Response("", {status});
+      return new Response("{}", {status});
+    },
+  });
+
+  await assert.rejects(
+    client.deployFunction({projectRef, slug, files: []}),
+    /files are required/,
+  );
+  await assert.rejects(
+    client.deployFunction({
+      projectRef,
+      slug,
+      entrypointPath: "index.ts",
+      files: [{name: "../outside.ts", content: "x"}],
+    }),
+    /outside the function root/,
+  );
+  await assert.rejects(
+    client.deployFunction({
+      projectRef,
+      slug,
+      entrypointPath: "index.ts",
+      files: [
+        {name: "index.ts", content: "a"},
+        {name: "index.ts", content: "b"},
+      ],
+    }),
+    /file names must be unique/,
+  );
+  await assert.rejects(
+    client.deployFunction({
+      projectRef,
+      slug,
+      entrypointPath: "index.ts",
+      files: [{name: "core.ts", content: "x"}],
+    }),
+    /entrypoint is missing/,
+  );
+  await assert.rejects(
+    client.deployFunction({
+      projectRef,
+      slug,
+      files: [{name: "index.ts", content: "x"}],
+    }),
+    /deploy failed with status 500/,
+  );
+  await assert.rejects(client.deleteFunction({projectRef, slug}), /delete failed with status 500/);
+  status = 404;
+  assert.deepEqual(await client.deleteFunction({projectRef, slug}), {deleted: false});
+});
