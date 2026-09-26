@@ -2,6 +2,7 @@ import http from "node:http";
 import {timingSafeEqual} from "node:crypto";
 import {HerculesDeployStore} from "./store.mjs";
 import {HerculesDeployWorker} from "./worker.mjs";
+import {DeploymentFlightRecorder, HerculesReleaseAdmissionGate} from "./admission.mjs";
 
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -63,18 +64,22 @@ function errorStatus(error) {
 
 export function createHerculesDeployService({
   root,
+  recoveryRoot,
   token,
   adapters = new Map(),
   pollIntervalMs = 1000,
   autoStartWorker = true,
 } = {}) {
   if (!root) throw new TypeError("root is required");
+  if (!recoveryRoot) throw new TypeError("recoveryRoot is required");
   if (typeof token !== "string" || token.length < 16) {
     throw new TypeError("control token must be at least 16 characters");
   }
 
   const store = new HerculesDeployStore(root);
-  const worker = new HerculesDeployWorker({store, adapters, pollIntervalMs});
+  const flightRecorder = new DeploymentFlightRecorder(recoveryRoot);
+  const admissionGate = new HerculesReleaseAdmissionGate({recorder: flightRecorder});
+  const worker = new HerculesDeployWorker({store, adapters, admissionGate, pollIntervalMs});
 
   const server = http.createServer(async (req, res) => {
     res.setHeader("referrer-policy", "no-referrer");
@@ -161,11 +166,12 @@ export function createHerculesDeployService({
   server.on("close", () => worker.stop());
   if (autoStartWorker) worker.start();
 
-  return {server, store, worker};
+  return {server, store, worker, flightRecorder, admissionGate};
 }
 
 export function listenHerculesDeployService({
   root,
+  recoveryRoot,
   token,
   adapters = new Map(),
   pollIntervalMs = 1000,
@@ -174,6 +180,7 @@ export function listenHerculesDeployService({
 } = {}) {
   const service = createHerculesDeployService({
     root,
+    recoveryRoot,
     token,
     adapters,
     pollIntervalMs,
