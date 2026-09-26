@@ -6,6 +6,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {ForgeWorkspaceStore} from "../hercules-forge/workspace.mjs";
 import {buildForgeArtifact} from "../hercules-forge/artifact.mjs";
+import {createForgeControlService} from "../hercules-forge/control-api.mjs";
 import {
   ForgeDeploymentTransport,
   ForgeRemoteReleaseAdapter,
@@ -262,4 +263,74 @@ test("HTTP deployment transport rejects redirect/error and oversized response", 
     }),
   });
   await assert.rejects(oversized.publish({bundle}), /response too large/);
+});
+
+
+test("control API publish and rollback routes use injected remote release adapter", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-remote-control-"));
+  const transport = new MemoryDeploymentTransport();
+  const releases = new ForgeRemoteReleaseAdapter(root, {transport});
+  const token = randomBytes(24).toString("base64url");
+  const server = createForgeControlService({
+    root,
+    token,
+    releaseAdapter: releases,
+  });
+
+  try {
+    const store = new ForgeWorkspaceStore(root);
+    const created = await store.createProject(spec, {projectId: "remote-control"});
+    const nextSpec = structuredClone(spec);
+    nextSpec.description = "Remote control release v2.";
+    const next = await store.saveRevision("remote-control", nextSpec);
+
+    await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const base = "http://127.0.0.1:" + server.address().port;
+    const request = async (path, options = {}) => {
+      const response = await fetch(base + path, {
+        method: options.method ?? "GET",
+        headers: {
+          authorization: "Bearer " + token,
+          "content-type": "application/json",
+        },
+        body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      });
+      return {status: response.status, body: await response.json()};
+    };
+
+    const health = await request("/health");
+    assert.equal(health.status, 200);
+    assert.equal(health.body.version, "1.6");
+    assert.equal(health.body.remoteDeployment, true);
+
+    const first = await request("/v1/projects/remote-control/publish", {
+      method: "POST",
+      body: {revisionId: created.revision.revisionId},
+    });
+    assert.equal(first.status, 201);
+    assert.equal(first.body.release.target, "remote-verified-deployment");
+    assert.equal(first.body.release.deployment.deploymentId, "deployment-1");
+
+    const second = await request("/v1/projects/remote-control/publish", {
+      method: "POST",
+      body: {revisionId: next.revisionId},
+    });
+    assert.equal(second.status, 201);
+    assert.equal(second.body.release.deployment.deploymentId, "deployment-2");
+
+    const rollback = await request("/v1/projects/remote-control/rollback", {
+      method: "POST",
+      body: {revisionId: created.revision.revisionId},
+    });
+    assert.equal(rollback.status, 200);
+    assert.equal(rollback.body.rollback, true);
+    assert.equal(transport.activated.length, 1);
+    assert.equal(
+      transport.activated[0].deploymentId,
+      first.body.release.deployment.deploymentId,
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive: true, force: true});
+  }
 });
