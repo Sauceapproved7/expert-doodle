@@ -9,7 +9,7 @@ import {
   hashRefreshToken,
   createRefreshToken,
 } from "../hercules-base/auth-core.mjs";
-
+\nfunction fixtureJwtSecret(){\n  return "k".repeat(48);\n}\n
 test("Hercules Base Auth hashes passwords with scrypt and never stores plaintext", async () => {
   const password="correct horse battery staple";
   const record=await hashPassword(password,{
@@ -24,7 +24,7 @@ test("Hercules Base Auth hashes passwords with scrypt and never stores plaintext
 });
 
 test("Hercules Base Auth issues and verifies bounded HS256 access tokens", () => {
-  const secret="fixture-jwt-signing-key-that-is-long-enough";
+  const secret=fixtureJwtSecret();
   const token=signJwtHs256({
     sub:"11111111-1111-4111-8111-111111111111",
     role:"staging_user",
@@ -115,7 +115,7 @@ test("Base Auth HTTP surface is bounded and does not expose password or refresh 
     }),
     {
       store,
-      jwtSecret:"fixture-jwt-signing-key-that-is-long-enough",
+      jwtSecret:fixtureJwtSecret(),
       fixtureOnly:true,
     },
   );
@@ -133,7 +133,7 @@ test("Base Auth HTTP surface is bounded and does not expose password or refresh 
       headers:{"content-type":"application/json"},
       body:JSON.stringify({email:"x@fixture.invalid",password:"x".repeat(5000)}),
     }),
-    {store,jwtSecret:"fixture-jwt-signing-key-that-is-long-enough",fixtureOnly:true},
+    {store,jwtSecret:fixtureJwtSecret(),fixtureOnly:true},
   );
   assert.equal(oversized.status,400);
 });
