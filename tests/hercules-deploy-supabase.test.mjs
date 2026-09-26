@@ -136,3 +136,46 @@ test("Supabase adapter rollback redeploys the previous owned artifact when suppl
   assert.equal(rolledBack.status, "ACTIVE");
   assert.equal(calls.length, 1);
 });
+
+test("filesystem artifact loader reads only the requested Hercules release directory", async () => {
+  const {mkdtemp, mkdir, writeFile, rm} = await import("node:fs/promises");
+  const {tmpdir} = await import("node:os");
+  const {join} = await import("node:path");
+  const {createFileSystemSupabaseArtifactLoader} = await import("../hercules-deploy/supabase-artifacts.mjs");
+  const root = await mkdtemp(join(tmpdir(), "hercules-supabase-artifacts-"));
+  try {
+    const release = join(root, "hercules-revenue-rescue", "revenue-rescue-v1");
+    await mkdir(release, {recursive: true});
+    await writeFile(join(release, "manifest.json"), JSON.stringify({
+      entrypointPath: "index.ts",
+      verifyJwt: true,
+      files: ["index.ts", "core.ts"],
+      rollbackReleaseId: "revenue-rescue-v0",
+    }));
+    await writeFile(join(release, "index.ts"), "export const version = 1;");
+    await writeFile(join(release, "core.ts"), "export const core = true;");
+
+    const previous = join(root, "hercules-revenue-rescue", "revenue-rescue-v0");
+    await mkdir(previous, {recursive: true});
+    await writeFile(join(previous, "manifest.json"), JSON.stringify({
+      entrypointPath: "index.ts",
+      verifyJwt: true,
+      files: ["index.ts"],
+    }));
+    await writeFile(join(previous, "index.ts"), "export const version = 0;");
+
+    const load = createFileSystemSupabaseArtifactLoader({root});
+    const deployment = deploymentFixture();
+    const current = await load(deployment, "deploy");
+    const rollback = await load(deployment, "rollback");
+    assert.equal(current.files[0].content, "export const version = 1;");
+    assert.equal(rollback.files[0].content, "export const version = 0;");
+
+    await assert.rejects(
+      load(deploymentFixture({serviceId: "../escape"}), "deploy"),
+      /path-safe identifier/,
+    );
+  } finally {
+    await rm(root, {recursive: true, force: true});
+  }
+});
