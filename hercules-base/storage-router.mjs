@@ -1,5 +1,4 @@
 import {randomUUID} from "node:crypto";
-import {readFile} from "node:fs/promises";
 import {verifyJwtHs256} from "./auth-core.mjs";
 import {normalizeBucketName,normalizeObjectKey} from "./storage-core.mjs";
 
@@ -95,7 +94,12 @@ export async function routeStorageRequest(request,{
     }
   }
 
-  const parsed=parseObjectPath(url.pathname);
+  let parsed;
+  try{
+    parsed=parseObjectPath(url.pathname);
+  }catch{
+    return json({ok:false,error:"invalid_storage_path"},400);
+  }
   if(parsed){
     if(request.method==="PUT"){
       try{
@@ -125,7 +129,7 @@ export async function routeStorageRequest(request,{
           objectKey:parsed.objectKey,
         });
         if(!object)return json({ok:false,error:"object_not_found"},404);
-        const bytes=await readFile(blobs.pathForDigest(object.sha256));
+        const bytes=await blobs.get(object.sha256,{expectedSize:Number(object.size_bytes)});
         return new Response(bytes,{
           status:200,
           headers:{
