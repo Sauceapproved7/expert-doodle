@@ -132,6 +132,12 @@ export async function collectBenchmark() {
     scoreDomain("Platform control plane and deployment", 15, [
       control("forge-control-api", await exists("hercules-forge/control-api.mjs"), "hercules-forge/control-api.mjs"),
       control("production-entrypoint", await exists("hercules-forge/production.mjs"), "hercules-forge/production.mjs"),
+      control(
+        "verified-remote-deployment-bridge",
+        await exists("hercules-forge/deployment.mjs") &&
+          await exists("tests/hercules-forge-deployment.test.mjs"),
+        "hercules-forge/deployment.mjs + tests/hercules-forge-deployment.test.mjs",
+      ),
       control("release-and-rollback-tests", await exists("tests/hercules-forge-production.test.mjs"), "tests/hercules-forge-production.test.mjs"),
       control("isolated-staging-plane", await exists("staging-plane/compose.yml"), "staging-plane/compose.yml"),
       control("machine-readable-public-api-contract", await exists("docs/openapi/hercules-forge-v1.yaml"), "docs/openapi/hercules-forge-v1.yaml"),
