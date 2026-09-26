@@ -1,0 +1,72 @@
+{"text":"Research starts by identifying the exact claim that needs evidence."}
+{"text":"Research starts by identifying the exact question that needs evidence."}
+{"text":"Research starts by identifying the exact date that needs verification."}
+{"text":"Research starts by identifying the exact source that can answer the question."}
+{"text":"Use the official source when the claim depends on a product specification."}
+{"text":"Use the official source when the claim depends on a government rule."}
+{"text":"Use the official source when the claim depends on a company filing."}
+{"text":"Use the official source when the claim depends on a platform policy."}
+{"text":"Use the primary source to confirm the original wording."}
+{"text":"Use the primary source to confirm the reported number."}
+{"text":"Use the primary source to confirm the release date."}
+{"text":"Use the primary source to confirm the documented requirement."}
+{"text":"Current research checks the newest official update first."}
+{"text":"Current research checks the newest dated source first."}
+{"text":"Current research checks whether the situation changed today."}
+{"text":"Current research checks whether a newer release changed the answer."}
+{"text":"Recent claims require recent evidence."}
+{"text":"Recent claims require a clearly stated publication date."}
+{"text":"Recent claims require the current status to be separated from historical context."}
+{"text":"Recent claims require fresh sources when conditions can change quickly."}
+{"text":"Every factual claim should point to supporting evidence."}
+{"text":"Every factual number should point to the source that reports it."}
+{"text":"Every factual date should point to the record that establishes it."}
+{"text":"Every factual comparison should point to matched evidence for each side."}
+{"text":"Citations should support the sentence they are attached to."}
+{"text":"Citations should identify the evidence actually used in the answer."}
+{"text":"Citations should not be added when the source does not support the claim."}
+{"text":"Citations should remain close to the factual statement they support."}
+{"text":"Verification checks whether the source actually supports the claim."}
+{"text":"Verification checks whether the quoted number matches the source."}
+{"text":"Verification checks whether the reported date matches the original record."}
+{"text":"Verification checks whether independent evidence contradicts the claim."}
+{"text":"Corroborate important claims with an independent source when possible."}
+{"text":"Corroborate disputed claims with evidence from more than one reliable source."}
+{"text":"Corroborate a major factual conclusion before presenting it as established."}
+{"text":"Corroborate a surprising result before relying on it."}
+{"text":"Comparison research uses the same criteria for every option."}
+{"text":"Comparison research uses the same time period for every option."}
+{"text":"Comparison research uses matched evidence instead of unrelated examples."}
+{"text":"Comparison research separates documented differences from subjective judgment."}
+{"text":"Compare price with price, capability with capability, and policy with policy."}
+{"text":"Compare current evidence with current evidence when the question is time sensitive."}
+{"text":"Compare primary records before relying on summaries of those records."}
+{"text":"Compare source quality when different sources disagree."}
+{"text":"Separate confirmed facts from interpretation."}
+{"text":"Separate confirmed facts from prediction."}
+{"text":"Separate source claims from the researcher's analysis."}
+{"text":"Separate historical context from the current state."}
+{"text":"State uncertainty when the available evidence is incomplete."}
+{"text":"State uncertainty when sources disagree on a material fact."}
+{"text":"State uncertainty when a current status cannot be verified."}
+{"text":"State uncertainty instead of inventing a missing detail."}
+{"text":"Do not infer a fact that the evidence does not establish."}
+{"text":"Do not convert an allegation into a confirmed fact."}
+{"text":"Do not treat an old source as proof of a current condition."}
+{"text":"Do not present a comparison as a ranking when the evidence only shows differences."}
+{"text":"Record the source title, publisher, date, and relevant evidence."}
+{"text":"Record the exact source used for a major claim."}
+{"text":"Record when a source is historical background rather than current evidence."}
+{"text":"Record whether a source is primary, secondary, or commentary."}
+{"text":"Prefer authoritative documentation for technical behavior."}
+{"text":"Prefer official records for legal requirements."}
+{"text":"Prefer original papers for scientific methods and results."}
+{"text":"Prefer direct filings for reported company figures."}
+{"text":"Use secondary reporting to add context around a primary source."}
+{"text":"Use recent reporting to understand fast moving events."}
+{"text":"Use background sources to explain established history and terminology."}
+{"text":"Use multiple source types when the question needs both current status and context."}
+{"text":"A research answer should say what is known and how it is known."}
+{"text":"A research answer should say what remains uncertain when evidence is incomplete."}
+{"text":"A research answer should distinguish evidence from interpretation."}
+{"text":"A research answer should preserve the time period that each source actually covers."}
