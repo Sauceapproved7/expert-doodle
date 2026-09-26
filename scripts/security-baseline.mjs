@@ -25,6 +25,7 @@ async function filesUnder(path) {
 const identity = await read("hercules-forge/identity.mjs");
 const control = await read("hercules-forge/control-api.mjs");
 const notifications = await read("hercules-forge/notifications.mjs");
+const deployment = await read("hercules-forge/deployment.mjs");
 const production = await read("hercules-forge/production.mjs");
 const signer = await read("hercules-hurc/testnet-signer-edge.ts");
 const signerSql = await read("hercules-hurc/sql/hurc-test-signer.sql");
@@ -71,6 +72,13 @@ const checks = {
     /redirect: "error"/.test(notifications) &&
     /notification endpoint must not embed credentials/.test(notifications) &&
     /FORGE_NOTIFICATION_URL must use https unless it is loopback/.test(production),
+  forgeRemoteDeploymentBoundary:
+    /verifyForgeArtifact/.test(deployment) &&
+    /hercules-forge-deployment-bundle\/0\.1/.test(deployment) &&
+    /redirect: "error"/.test(deployment) &&
+    /deployment endpoint must not embed credentials/.test(deployment) &&
+    /verified artifact exceeds deployment bundle byte limit/.test(deployment) &&
+    /FORGE_DEPLOYMENT_URL must use https unless it is loopback/.test(production),
   signerAuthenticated:
     /HURC_SIGNER_CONTROL_TOKEN/.test(signer) &&
     /CONTROL\.length < 32/.test(signer) &&
