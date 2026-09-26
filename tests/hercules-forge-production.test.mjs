@@ -34,7 +34,6 @@ function productionEnv(root) {
     FORGE_RECOVERY_MAX_REQUESTS: "4",
     FORGE_RECOVERY_WINDOW_MS: "120000",
     FORGE_NOTIFICATION_URL: "https://notify.example.test/send",
-    FORGE_NOTIFICATION_TOKEN: fixtureCredential("notify", "fixture", "credential", "long"),
   };
 }
 
