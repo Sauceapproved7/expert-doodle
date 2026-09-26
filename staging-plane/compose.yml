@@ -55,9 +55,11 @@ services:
       HERCULES_BASE_POSTGREST_URL: http://postgrest:3000
       HERCULES_BASE_JWT_SECRET: ${HERCULES_STAGING_JWT_SECRET}
       HERCULES_BASE_FIXTURE_ONLY: "true"
+      HERCULES_BASE_STORAGE_ROOT: /base-storage
     command: ["node", "/repo/hercules-base/server.mjs"]
     volumes:
       - ../hercules-base:/repo/hercules-base:ro
+      - hercules_base_storage:/base-storage
     ports:
       - "127.0.0.1:38800:38800"
     healthcheck:
@@ -119,3 +121,4 @@ networks:
 volumes:
   hercules_staging_pg:
   hercules_forge_state:
+  hercules_base_storage:
