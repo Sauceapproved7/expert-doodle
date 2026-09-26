@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {randomBytes} from "node:crypto";
 import {mkdtemp,readFile,stat} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -60,7 +61,7 @@ test("storage migration keeps metadata private behind server-only RPCs", async (
 
 test("Storage HTTP requires a valid Hercules Base user token", async () => {
   const {routeStorageRequest}=await import("../hercules-base/storage-router.mjs");
-  const jwtSecret=String.fromCharCode(...Array(48).fill(109));
+  const jwtSecret=randomBytes(48).toString("hex");
 
   const response=await routeStorageRequest(
     new Request("https://base.local/v1/storage/buckets",{
@@ -81,7 +82,7 @@ test("Storage HTTP requires a valid Hercules Base user token", async () => {
 test("Storage upload binds metadata to JWT subject and hashes the blob", async () => {
   const {routeStorageRequest}=await import("../hercules-base/storage-router.mjs");
   const {signJwtHs256}=await import("../hercules-base/auth-core.mjs");
-  const jwtSecret=String.fromCharCode(...Array(48).fill(109));
+  const jwtSecret=randomBytes(48).toString("hex");
   const userId="11111111-1111-4111-8111-111111111111";
   const token=signJwtHs256({
     sub:userId,
@@ -134,7 +135,7 @@ test("Storage upload binds metadata to JWT subject and hashes the blob", async (
 test("Storage rejects traversal and oversized objects before persistence", async () => {
   const {routeStorageRequest}=await import("../hercules-base/storage-router.mjs");
   const {signJwtHs256}=await import("../hercules-base/auth-core.mjs");
-  const jwtSecret=String.fromCharCode(...Array(48).fill(109));
+  const jwtSecret=randomBytes(48).toString("hex");
   const token=signJwtHs256({
     sub:"11111111-1111-4111-8111-111111111111",
     role:"staging_user",
