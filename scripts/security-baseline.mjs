@@ -63,6 +63,13 @@ const checks = {
     /hashToken\(token\)/.test(identity) &&
     /revokeUserSessions/.test(identity) &&
     /identity\.recovery\.complete/.test(control),
+  forgeLifecycleSharedVolumeAtomicity:
+    /await mkdir\(lockPath, \{mode: 0o700\}\)/.test(identity) &&
+    /invite-token:/.test(identity) &&
+    /invite-email:/.test(identity) &&
+    /recovery-token:/.test(identity) &&
+    /recovery-user:/.test(identity) &&
+    /passwordVersion/.test(identity),
   forgeRecoveryEnumerationResistance:
     /identity\.recovery\.request/.test(control) &&
     /return send\(res, 202, \{accepted: true\}\)/.test(control) &&
