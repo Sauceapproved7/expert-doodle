@@ -38,6 +38,7 @@ jobs:
             hercules-forge/audit.mjs \
             hercules-forge/rate-limit.mjs \
             hercules-forge/production.mjs \
+            hercules-forge/deployment.mjs \
             hercules-forge/production-cli.mjs \
             hercules-forge/artifact.mjs \
             hercules-forge/releases.mjs \
