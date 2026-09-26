@@ -1,5 +1,5 @@
 import {createHash, randomBytes, randomUUID, scrypt as scryptCallback, timingSafeEqual} from "node:crypto";
-import {mkdir, readFile, readdir, rm, writeFile} from "node:fs/promises";
+import {chmod, mkdir, readFile, readdir, rm, writeFile} from "node:fs/promises";
 import {dirname, join} from "node:path";
 import {promisify} from "node:util";
 
@@ -13,6 +13,18 @@ const DEFAULT_INVITE_TTL_MS = 72 * 60 * 60 * 1000;
 const DEFAULT_RECOVERY_TTL_MS = 30 * 60 * 1000;
 const INVITE_ROLES = new Set(["admin", "builder", "viewer"]);
 const LIFECYCLE_KINDS = new Set(["invites", "recovery"]);
+
+// OWASP Password Storage Cheat Sheet (2026): one accepted scrypt profile is
+// N=2^15, r=8, p=3. Keep the parameters encoded with each password hash so
+// future upgrades remain backward compatible.
+export const SCRYPT_PROFILE = Object.freeze({
+  version: "scrypt-v2",
+  N: 2 ** 15,
+  r: 8,
+  p: 3,
+  keylen: 32,
+  maxmem: 64 * 1024 * 1024,
+});
 
 function assertId(label, value) {
   if (!ID.test(String(value ?? ""))) throw new Error(label + " must be a path-safe identifier");
@@ -40,15 +52,21 @@ async function readJson(path) {
 
 async function writeJson(path, value, options = {}) {
   await mkdir(dirname(path), {recursive: true});
-  await writeFile(path, json(value), {encoding: "utf8", ...options});
+  await writeFile(path, json(value), {encoding: "utf8", mode: 0o600, ...options});
+  await chmod(path, 0o600);
 }
 
-async function derivePassword(password, saltHex = null) {
+async function derivePassword(password, saltHex = null, profile = SCRYPT_PROFILE) {
   if (typeof password !== "string" || password.length < 12 || password.length > 1024) {
     throw new TypeError("password must be between 12 and 1024 characters");
   }
   const salt = saltHex ? Buffer.from(saltHex, "hex") : randomBytes(16);
-  const key = await scrypt(password, salt, 32);
+  const key = await scrypt(password, salt, profile.keylen, {
+    N: profile.N,
+    r: profile.r,
+    p: profile.p,
+    maxmem: profile.maxmem,
+  });
   return {
     salt: salt.toString("hex"),
     hash: Buffer.from(key).toString("hex"),
@@ -56,9 +74,52 @@ async function derivePassword(password, saltHex = null) {
 }
 
 async function verifyPassword(password, encoded) {
-  const [scheme, salt, expectedHex] = String(encoded ?? "").split("$");
-  if (scheme !== "scrypt-v1" || !salt || !expectedHex) return false;
-  const derived = await derivePassword(password, salt);
+  const parts = String(encoded ?? "").split("$");
+  const scheme = parts[0];
+
+  let profile;
+  let salt;
+  let expectedHex;
+
+  if (scheme === "scrypt-v2" && parts.length === 6) {
+    const N = Number(parts[1]);
+    const r = Number(parts[2]);
+    const p = Number(parts[3]);
+    salt = parts[4];
+    expectedHex = parts[5];
+    if (
+      !Number.isSafeInteger(N) || N < 2 ** 14 || N > 2 ** 20 ||
+      !Number.isSafeInteger(r) || r < 1 || r > 32 ||
+      !Number.isSafeInteger(p) || p < 1 || p > 16 ||
+      !salt || !expectedHex
+    ) return false;
+    profile = {
+      version: "scrypt-v2",
+      N,
+      r,
+      p,
+      keylen: expectedHex.length / 2,
+      maxmem: Math.max(64 * 1024 * 1024, 128 * N * r + 8 * 1024 * 1024),
+    };
+  } else if (scheme === "scrypt-v1" && parts.length === 3) {
+    // Backward compatibility for existing Hercules identities created before
+    // the explicit work-factor hardening. New identities never use v1.
+    salt = parts[1];
+    expectedHex = parts[2];
+    profile = {
+      version: "scrypt-v1",
+      N: 2 ** 14,
+      r: 8,
+      p: 1,
+      keylen: expectedHex.length / 2,
+      maxmem: 32 * 1024 * 1024,
+    };
+  } else {
+    return false;
+  }
+
+  if (!Number.isSafeInteger(profile.keylen) || profile.keylen < 16 || profile.keylen > 64) return false;
+  const derived = await derivePassword(password, salt, profile);
   const actual = Buffer.from(derived.hash, "hex");
   const expected = Buffer.from(expectedHex, "hex");
   return actual.length === expected.length && timingSafeEqual(actual, expected);
@@ -111,7 +172,12 @@ export class ForgeIdentityStore {
     }
   }
 
-  async createUser({email, password, userId = randomUUID(), emailVerifiedAt = new Date().toISOString()}) {
+  async createUser({
+    email,
+    password,
+    userId = randomUUID(),
+    emailVerifiedAt = new Date().toISOString(),
+  }) {
     email = normalizeEmail(email);
     userId = assertId("userId", userId);
     const passwordParts = await derivePassword(password);
@@ -119,7 +185,14 @@ export class ForgeIdentityStore {
     const user = {
       userId,
       email,
-      passwordHash: "scrypt-v1$" + passwordParts.salt + "$" + passwordParts.hash,
+      passwordHash: [
+        SCRYPT_PROFILE.version,
+        SCRYPT_PROFILE.N,
+        SCRYPT_PROFILE.r,
+        SCRYPT_PROFILE.p,
+        passwordParts.salt,
+        passwordParts.hash,
+      ].join("$"),
       createdAt: now,
       emailVerifiedAt,
       passwordUpdatedAt: now,
@@ -210,7 +283,6 @@ export class ForgeIdentityStore {
       }
       await this.getWorkspace(invite.workspaceId);
       await derivePassword(password);
-      await rm(path, {force: true});
 
       const user = await this.createUser({
         email: invite.email,
@@ -223,6 +295,7 @@ export class ForgeIdentityStore {
           userId: user.userId,
           role: invite.role,
         });
+        await rm(path, {force: true});
         return {inviteId: invite.inviteId, user, membership};
       } catch (error) {
         await Promise.all([
@@ -307,15 +380,22 @@ export class ForgeIdentityStore {
       }
 
       const passwordParts = await derivePassword(password);
-      await rm(path, {force: true});
       const user = await readJson(this.userPath(recovery.userId));
       const updated = {
         ...user,
-        passwordHash: "scrypt-v1$" + passwordParts.salt + "$" + passwordParts.hash,
+        passwordHash: [
+          SCRYPT_PROFILE.version,
+          SCRYPT_PROFILE.N,
+          SCRYPT_PROFILE.r,
+          SCRYPT_PROFILE.p,
+          passwordParts.salt,
+          passwordParts.hash,
+        ].join("$"),
         passwordUpdatedAt: new Date().toISOString(),
       };
       await writeJson(this.userPath(recovery.userId), updated);
       const revokedSessions = await this.revokeUserSessions(recovery.userId);
+      await rm(path, {force: true});
       return {
         recoveryId: recovery.recoveryId,
         user: safeUser(updated),
@@ -400,6 +480,26 @@ export class ForgeIdentityStore {
     }
     if (!(await verifyPassword(password, user.passwordHash))) {
       throw Object.assign(new Error("invalid credentials"), {statusCode: 401});
+    }
+
+    // Upgrade legacy hashes only after a successful password verification.
+    // This preserves compatibility while ensuring active accounts converge on
+    // the hardened profile without a forced password reset.
+    // Upgrade legacy hashes only after a successful password verification.
+    if (String(user.passwordHash).startsWith("scrypt-v1$")) {
+      const passwordParts = await derivePassword(password);
+      user = {
+        ...user,
+        passwordHash: [
+          SCRYPT_PROFILE.version,
+          SCRYPT_PROFILE.N,
+          SCRYPT_PROFILE.r,
+          SCRYPT_PROFILE.p,
+          passwordParts.salt,
+          passwordParts.hash,
+        ].join("$"),
+      };
+      await writeJson(this.userPath(user.userId), user);
     }
 
     const token = randomBytes(32).toString("base64url");
