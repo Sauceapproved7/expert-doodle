@@ -68,7 +68,7 @@ const checks = {
     /invite-token:/.test(identity) &&
     /invite-email:/.test(identity) &&
     /recovery-token:/.test(identity) &&
-    /recovery-user:/.test(identity) &&
+    /credential-user:/.test(identity) &&
     /passwordVersion/.test(identity),
   forgeRecoveryEnumerationResistance:
     /identity\.recovery\.request/.test(control) &&
