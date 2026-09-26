@@ -24,6 +24,7 @@ Hercules must protect:
 6. **CI -> repository/release artifacts**: workflow permissions, action pinning and provenance determine supply-chain trust.
 7. **Staging -> production**: isolated fixture evidence must never be represented as production operating history.
 8. **Forge -> notification transport**: invite/recovery delivery is an external service boundary; one-time lifecycle links are the only credential material intentionally sent to that provider.
+9. **Forge -> deployment transport**: verified artifact bundles may cross into replaceable hosting infrastructure, but canonical source, revision, artifact, release, and rollback state remain inside Hercules.
 
 ## Primary threats and required controls
 
@@ -40,13 +41,13 @@ Controls: no committed secrets, no secret-shaped audit fields, Vault custody for
 Controls: generated-template constraints, restrictive preview environment, bounded request bodies, explicit child-process allowlist. Hercules does not claim hardened arbitrary-code sandboxing.
 
 ### Supply-chain compromise
-Controls: SHA-pinned GitHub Actions, compiler checksum verification, owner-code verifier, provenance attestation checklist, immutable commit history, deterministic runtime-source packaging, SPDX SBOM generation, and GitHub-signed release attestations for tagged/manual release-evidence runs. An attestation is evidence only after the release workflow succeeds for the exact release commit.
+Controls: SHA-pinned GitHub Actions, compiler checksum verification, owner-code verifier, provenance attestation checklist, immutable commit history, deterministic runtime-source packaging, SPDX SBOM generation, and GitHub-signed release attestations for tagged/manual release-evidence runs. Remote deployment accepts only a previously verified Forge artifact bundle, uses bounded transfer, disables redirects, and keeps the local release ledger authoritative. An attestation is evidence only after the release workflow succeeds for the exact release commit.
 
 ### Cryptographic implementation defects
 Controls: Base Sepolia-only signer boundary, known-answer tests, low-s signatures, deterministic nonces, no mainnet authorization. Independent cryptographic review and differential/fuzz testing are required before real-value use.
 
 ### Availability/resource exhaustion
-Controls: request-size limits, login throttling, recovery-request throttling, runtime-data quotas, bounded benchmark targets, recovery drills. Broader per-route abuse controls and production capacity evidence remain incomplete.
+Controls: request-size limits, login throttling, recovery-request throttling, runtime-data quotas, bounded deployment bundle/response sizes, bounded benchmark targets, recovery drills. Broader per-route abuse controls and production capacity evidence remain incomplete.
 
 ### Audit tampering
 Controls: hash-chained audit events and retained head checkpoint. This is tamper-evident application storage, not an independent hardware/external trust anchor.
