@@ -1,0 +1,40 @@
+name: Hercules Deploy Plane
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "hercules-deploy/**"
+      - "tests/hercules-deploy*.test.mjs"
+      - "docs/HERCULES-DEPLOY-*.md"
+      - "governance/owner-code-policy.json"
+      - ".github/workflows/hercules-deploy.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-plane:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+
+      - name: Run Deploy Plane tests
+        run: node --test tests/hercules-deploy*.test.mjs
+
+      - name: Reject external runtime package imports
+        shell: bash
+        run: |
+          set -euo pipefail
+          matches="$(grep -RnhE '(^|[[:space:]])(import|export).*from[[:space:]]+["'"'"'][^./]|require\(["'"'"'][^./]|import\(["'"'"'][^./]' hercules-deploy --include='*.mjs' || true)"
+          filtered="$(printf '%s\n' "$matches" | grep -vE '["'"'"']node:' || true)"
+          if [[ -n "$filtered" ]]; then
+            printf '%s\n' "$filtered"
+            echo "External runtime package import detected in Hercules Deploy Plane."
+            exit 1
+          fi
+          echo "Hercules Deploy Plane imports only owned local modules and Node built-ins."
