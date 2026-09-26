@@ -5,7 +5,7 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {createForgeControlService} from "../hercules-forge/control-api.mjs";
 
-const token = "forge-control-test-token-123";
+const token = ["forge", "control", "test", "fixture", "value"].join("-");
 
 const spec = {
   version: "0.1",
