@@ -1,5 +1,6 @@
 import {resolve} from "node:path";
 import {listenHerculesDeployService} from "./control-api.mjs";
+import {createSupabaseManagementTargetAdapter} from "./supabase-management.mjs";
 
 function required(env, name) {
   const value = env[name];
@@ -46,15 +47,35 @@ export function safeHerculesDeployConfig(config) {
   };
 }
 
+
+export function buildHerculesDeployAdapters({
+  env = process.env,
+  adapters = new Map(),
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  if (!(adapters instanceof Map)) throw new TypeError("adapters must be a Map");
+  const configured = new Map(adapters);
+  const token = String(env.HERCULES_SUPABASE_MANAGEMENT_TOKEN ?? "").trim();
+  if (token && !configured.has("supabase_edge_function")) {
+    configured.set("supabase_edge_function", createSupabaseManagementTargetAdapter({
+      accessToken: token,
+      fetchImpl,
+      apiOrigin: env.HERCULES_SUPABASE_MANAGEMENT_ORIGIN,
+    }));
+  }
+  return configured;
+}
+
 export async function startHerculesDeployService({
   env = process.env,
   adapters = new Map(),
 } = {}) {
   const config = readHerculesDeployConfig(env);
+  const configuredAdapters = buildHerculesDeployAdapters({env, adapters});
   const service = listenHerculesDeployService({
     root: config.root,
     token: config.token,
-    adapters,
+    adapters: configuredAdapters,
     pollIntervalMs: config.pollIntervalMs,
     host: config.host,
     port: config.port,
