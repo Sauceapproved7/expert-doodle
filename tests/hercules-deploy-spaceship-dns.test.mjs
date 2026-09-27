@@ -110,3 +110,33 @@ test("unknown record ownership group fails closed", () => {
   assert.equal(plan.blockingConflicts.length, 1);
   assert.equal(plan.blockingConflicts[0].group, "unknown");
 });
+
+
+test("record listing paginates until the provider total is complete", async () => {
+  const seen = [];
+  const first = Array.from({length:500}, (_, i) => ({
+    type:"TXT", name:"r" + i, value:"v", group:{type:"custom"},
+  }));
+  const second = [
+    {type:"A", name:"@", address:"23.227.38.65", group:{type:"custom"}},
+  ];
+  const fetchImpl = async (url) => {
+    seen.push(url);
+    const skip = Number(new URL(url).searchParams.get("skip"));
+    return new Response(JSON.stringify({
+      items:skip === 0 ? first : second,
+      total:501,
+    }), {status:200});
+  };
+  const client = new SpaceshipDnsClient({
+    apiKey:"key_test",
+    apiSecret:"secret_test",
+    allowedDomains:["sauceapproved.com"],
+    fetchImpl,
+  });
+  const records = await client.listRecords("sauceapproved.com");
+  assert.equal(records.length, 501);
+  assert.equal(seen.length, 2);
+  assert.match(seen[0], /take=500/);
+  assert.match(seen[1], /skip=500/);
+});
