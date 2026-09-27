@@ -81,3 +81,13 @@ test("network policy blocks private and credential-bearing targets", () => {
   assert.match(server, /unsupported_protocol/);
   assert.match(server, /networkAllowed/);
 });
+
+
+test("owner bootstrap keeps the secret out of request URLs", () => {
+  assert.match(server, /\/api\/claim/);
+  assert.match(app, /location\.hash/);
+  assert.match(app, /history\.replaceState/);
+  assert.match(app, /fetch\(["']\/api\/claim/);
+  assert.doesNotMatch(server, /searchParams\.get\(["']access["']\)/);
+  assert.doesNotMatch(server, /pathname===["']\/claim["']/);
+});
