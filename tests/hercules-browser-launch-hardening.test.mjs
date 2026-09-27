@@ -66,3 +66,12 @@ test("browser agent re-checks goal completion after each action before planning 
   assert.match(agent,/post_action_observation_complete/);
   assert.match(agent,/decision:"finish"[\s\S]*observationSource:"post_action"/);
 });
+
+test("browser agent deterministically completes a followed-link title goal after the click",async()=>{
+  const agent=await readFile(new URL("../supabase/functions/hercules-browser-agent/index.ts",import.meta.url),"utf8");
+  assert.match(agent,/function postActionSatisfaction\(goal:string,before:any,after:any,decision:string\)/);
+  assert.match(agent,/follow(?:ed|ing)?|learn more|destination/i);
+  assert.match(agent,/destination_title_satisfied/);
+  assert.match(agent,/const postAction=postActionSatisfaction\(goal,page,after,plan\.decision\)/);
+  assert.match(agent,/if\(postAction\)/);
+});
