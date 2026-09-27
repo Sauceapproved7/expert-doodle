@@ -88,3 +88,20 @@ test("dynamic registration accepts safe field-name variants without exposing sec
   assert.doesNotMatch(mcp,/JSON\.stringify\(reg\)/);
   assert.doesNotMatch(mcp,/clientSecret[^\n]*throw new Error/);
 });
+
+
+test("Spaceship public OAuth clients work without a client secret",()=>{
+  assert.match(mcp,/token_endpoint_auth_method/);
+  assert.match(mcp,/authMethod==="none"/);
+  assert.match(mcp,/client_secret_secret_ref\?await secret/);
+  assert.match(mcp,/if\(clientSecret\)params\.set\("client_secret",clientSecret\)/);
+  assert.match(mcp,/p_client_secret:clientSecret/);
+});
+
+test("public-client migration allows an empty registration secret and clears stale secret refs",async()=>{
+  const publicClientMigration=await readFile(new URL("../supabase/migrations/20260927105800_hercules_spaceship_mcp_public_client_v1.sql",import.meta.url),"utf8");
+  assert.match(publicClientMigration,/length\(trim\(coalesce\(p_client_secret,''\)\)\) > 0/);
+  assert.match(publicClientMigration,/v_ref := null/);
+  assert.match(publicClientMigration,/client_secret_secret_ref=v_ref/);
+  assert.doesNotMatch(publicClientMigration,/length\(trim\(coalesce\(p_client_secret,''\)\)\) < 8/);
+});
