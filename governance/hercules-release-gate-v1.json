@@ -1,0 +1,90 @@
+{
+  "schema": "sauceapproved.hercules.release-gate",
+  "version": 1,
+  "canonicalRepository": "Sauceapproved7/expert-doodle",
+  "mode": "read-only-evaluator",
+  "mutatesProduction": false,
+  "publicRegistrationMutationAllowed": false,
+  "phases": [
+    {
+      "id": "build",
+      "ownerOnly": false,
+      "checks": [
+        {"id": "ownerCode", "evidencePath": "build.ownerCode", "source": "Hercules Owner Code Gate"},
+        {"id": "provenance", "evidencePath": "build.provenance", "source": "Provenance Gate"},
+        {"id": "workflowSyntax", "evidencePath": "build.workflowSyntax", "source": "Hercules Workflow Syntax Gate"},
+        {"id": "tests", "evidencePath": "build.tests", "source": "release-target test suite"}
+      ]
+    },
+    {
+      "id": "security",
+      "ownerOnly": false,
+      "checks": [
+        {"id": "securityBaseline", "evidencePath": "security.securityBaseline", "source": "Hercules Security Baseline"},
+        {"id": "codeql", "evidencePath": "security.codeql", "source": "Hercules CodeQL"},
+        {"id": "authHardening", "evidencePath": "security.authHardening", "source": "production security advisor"}
+      ]
+    },
+    {
+      "id": "deployment",
+      "ownerOnly": false,
+      "checks": [
+        {"id": "signedRelease", "evidencePath": "deployment.signedRelease", "source": "release attestation"},
+        {"id": "verifiedDeployment", "evidencePath": "deployment.verifiedDeployment", "source": "deployment verification"},
+        {"id": "criticalHealth", "evidencePath": "deployment.criticalHealth", "source": "critical service health"},
+        {"id": "noOpenCriticalIncidents", "evidencePath": "deployment.noOpenCriticalIncidents", "source": "incident registry"}
+      ]
+    },
+    {
+      "id": "rollback",
+      "ownerOnly": false,
+      "checks": [
+        {"id": "rollbackReady", "evidencePath": "rollback.rollbackReady", "source": "release rollout rollback evidence"}
+      ]
+    },
+    {
+      "id": "smoke",
+      "ownerOnly": false,
+      "checks": [
+        {"id": "storefrontSmoke", "evidencePath": "smoke.storefrontSmoke", "source": "Hercules Browser storefront smoke"},
+        {"id": "checkoutSmoke", "evidencePath": "smoke.checkoutSmoke", "source": "Hercules Browser checkout-path smoke"},
+        {"id": "finalCustomerSmoke", "evidencePath": "smoke.finalCustomerSmoke", "source": "final first-customer journey"}
+      ]
+    },
+    {
+      "id": "domain",
+      "ownerOnly": false,
+      "checks": [
+        {"id": "customDomainComplete", "evidencePath": "domain.customDomainComplete", "source": "production domain readiness"}
+      ]
+    },
+    {
+      "id": "commercial",
+      "ownerOnly": true,
+      "checks": [
+        {"id": "pricing", "evidencePath": "commercial.pricing", "source": "owner launch decision"},
+        {"id": "terms", "evidencePath": "commercial.terms", "source": "owner launch decision"},
+        {"id": "privacy", "evidencePath": "commercial.privacy", "source": "owner launch decision"}
+      ]
+    },
+    {
+      "id": "release",
+      "ownerOnly": true,
+      "checks": [
+        {"id": "ownerPublicReleaseApproval", "evidencePath": "release.ownerPublicReleaseApproval", "source": "explicit owner release authorization"}
+      ]
+    }
+  ],
+  "localArtifacts": [
+    "governance/owner-code-policy.json",
+    "scripts/verify-owner-code-only.mjs",
+    "scripts/security-baseline.mjs",
+    "scripts/release-evidence.mjs",
+    ".github/workflows/provenance-gate.yml",
+    ".github/workflows/hercules-owner-code.yml",
+    ".github/workflows/hercules-security-baseline.yml",
+    ".github/workflows/hercules-codeql.yml",
+    ".github/workflows/hercules-workflow-syntax-gate.yml",
+    ".github/workflows/hercules-release-evidence.yml"
+  ]
+}
