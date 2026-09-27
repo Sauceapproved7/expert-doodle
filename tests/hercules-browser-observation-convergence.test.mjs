@@ -8,7 +8,7 @@ const agent=await readFile(
 );
 
 test("browser agent exposes navigation-observation convergence version",()=>{
-  assert.match(agent,/version:"0\.8\.0"/);
+  assert.match(agent,/version:"0\.9\.0"/);
   assert.match(agent,/observationOnlyGoal/);
   assert.match(agent,/navigate_observation/);
 });
@@ -30,14 +30,24 @@ test("navigation evidence is evaluated before separate scrape",()=>{
   assert.ok(nav>=0 && observed>nav && scrape>observed);
 });
 
-test("navigation convergence never executes a planner click/type decision",()=>{
+test("navigate-first observation uses a dedicated non-action evaluator",()=>{
+  const start=agent.indexOf('async function aiObserve');
+  const end=agent.indexOf('async function updateRun',start);
+  const block=agent.slice(start,end);
+  assert.match(block,/Hercules Browser Observation Evaluator/);
+  assert.match(block,/complete must be true only if every requested fact/);
+  assert.match(block,/Never request or suggest clicks, typing, extraction, login, purchase/);
+  assert.doesNotMatch(block,/decision must be one of finish, click, type, extract, wait/);
+});
+
+test("observation convergence requires complete answer and otherwise falls back",()=>{
   const start=agent.indexOf('if(observationOnlyGoal(goal,inputKeys))');
   const end=agent.indexOf('for(let i=0;i<maxSteps;i++){',start);
   const block=agent.slice(start,end);
-  assert.match(block,/if\(observedPlan\.plan\.decision==="finish"\)/);
+  assert.match(block,/observed\.observation\.complete&&observed\.observation\.answer/);
+  assert.match(block,/convergence:"navigate_observation_complete"/);
+  assert.match(block,/decision:"observation_fallback"/);
   assert.doesNotMatch(block,/action:"interact"/);
-  assert.doesNotMatch(block,/decision==="click"/);
-  assert.doesNotMatch(block,/decision==="type"/);
 });
 
 test("existing browser safety guardrails remain",()=>{
@@ -56,4 +66,16 @@ test("title shortcut is strict and cannot truncate a composite observation goal"
   assert.match(block,/what\(\?:'s\| is\)/);
   assert.doesNotMatch(block,/asksTitle/);
   assert.doesNotMatch(block,/asksNavigation/);
+});
+
+test("observation evaluator parser rejects action-shaped output by schema omission",()=>{
+  assert.match(agent,/function parseObservation/);
+  assert.match(agent,/complete:p\.complete===true/);
+  assert.match(agent,/answer:typeof p\.answer==="string"/);
+  const start=agent.indexOf("function parseObservation");
+  const end=agent.indexOf("async function browserCall",start);
+  const block=agent.slice(start,end);
+  assert.doesNotMatch(block,/selector:/);
+  assert.doesNotMatch(block,/inputKey:/);
+  assert.doesNotMatch(block,/ms:/);
 });
