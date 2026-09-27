@@ -19,6 +19,8 @@ test("Edge control surface is fixed to SauceApproved and never exposes raw crede
   assert.match(edge, /allowedDomains:\[DOMAIN\]/);
   assert.match(edge, /inspect_shopify_dns/);
   assert.match(edge, /reconcile_shopify_dns/);
+  assert.match(edge, /inspect_resend_mail_dns/);
+  assert.match(edge, /reconcile_resend_mail_dns/);
   assert.match(edge, /replaceCustomConflicts/);
   assert.match(edge, /rawCredentialExposure:false/);
   assert.doesNotMatch(edge, /console\.(?:log|debug|info).*api(?:Key|Secret)/i);
@@ -56,5 +58,5 @@ test("internal Edge authentication is generated and kept in Vault", () => {
 test("reconcile requires explicit custom-conflict replacement", () => {
   assert.match(edge, /custom_conflict_requires_explicit_replacement/);
   assert.match(edge, /preflight\.blockingConflicts\.length/);
-  assert.match(edge, /replaceCustomConflicts\}/);
+  assert.match(edge, /preflight\.deleteRecords\.length && !replaceCustomConflicts/);
 });
