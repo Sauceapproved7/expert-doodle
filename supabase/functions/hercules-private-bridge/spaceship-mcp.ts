@@ -9,7 +9,7 @@ const RESOURCE_META="https://mcp.spaceship.com/.well-known/oauth-protected-resou
 const AUTH_META="https://id.service.spaceship.com/.well-known/oauth-authorization-server";
 const MCP_URL="https://mcp.spaceship.com/mcp";
 const SCOPE="openid offline_access mcp.spaceship.com";
-const CALLBACK=U+"/functions/v1/hercules-spaceship-mcp?oauth_callback=1";
+const CALLBACK=U+"/functions/v1/hercules-private-bridge?spaceship_mcp_oauth_callback=1";
 const DOMAIN="sauceapproved.com";
 const H={"content-type":"application/json; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer"};
 
@@ -236,9 +236,19 @@ function safeDnsArgs(action:string,args:any){
   return {domainName:DOMAIN,records};
 }
 
-Deno.serve(async(req:Request)=>{
+export function isSpaceshipMcpAction(action:string){
+  return [
+    "spaceship_mcp_status",
+    "spaceship_mcp_begin",
+    "spaceship_mcp_dns_records_get",
+    "spaceship_mcp_dns_records_save",
+    "spaceship_mcp_dns_records_delete"
+  ].includes(action);
+}
+
+export async function handleSpaceshipMcpRequest(req:Request){
   const url=new URL(req.url);
-  if(req.method==="GET"&&url.searchParams.get("oauth_callback")==="1"){
+  if(req.method==="GET"&&url.searchParams.get("spaceship_mcp_oauth_callback")==="1"){
     try{
       const result=await completeCallback(url);
       if(url.searchParams.get("format")==="json")return json(result);
@@ -257,12 +267,18 @@ Deno.serve(async(req:Request)=>{
   const body=await req.json().catch(()=>({})),action=String(body?.action||"status");
 
   try{
-    if(action==="status")return json(await status());
-    if(action==="begin")return json({ok:true,...await beginAuthorization()});
-    if(["dns_records_get","dns_records_save","dns_records_delete"].includes(action)){
+    if(action==="spaceship_mcp_status")return json(await status());
+    if(action==="spaceship_mcp_begin")return json({ok:true,...await beginAuthorization()});
+    const toolMap:Record<string,string>={
+      spaceship_mcp_dns_records_get:"dns_records_get",
+      spaceship_mcp_dns_records_save:"dns_records_save",
+      spaceship_mcp_dns_records_delete:"dns_records_delete"
+    };
+    const tool=toolMap[action];
+    if(tool){
       if(!internal)return json({error:"internal_dns_control_required"},403);
-      const args=safeDnsArgs(action,body?.arguments||{});
-      return json({ok:true,provider:"spaceship-mcp",tool:action,result:await callTool(action,args)});
+      const args=safeDnsArgs(tool,body?.arguments||{});
+      return json({ok:true,provider:"spaceship-mcp",tool,result:await callTool(tool,args)});
     }
     return json({error:"unsupported_action"},400);
   }catch(e){
@@ -270,4 +286,4 @@ Deno.serve(async(req:Request)=>{
     const statusCode=detail==="spaceship_mcp_authorization_required"?409:502;
     return json({ok:false,error:detail},statusCode);
   }
-});
+}

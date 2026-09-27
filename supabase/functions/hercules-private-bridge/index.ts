@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleSpaceshipDnsRequest } from './spaceship-dns-control.ts';
+import { handleSpaceshipMcpRequest, isSpaceshipMcpAction } from './spaceship-mcp.ts';
 
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}').default||Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -132,6 +133,15 @@ async function refreshLaunchGate(){
 }
 
 Deno.serve(async(req:Request)=>{
+  const requestUrl=new URL(req.url);
+  if(req.method==='GET' && requestUrl.searchParams.get('spaceship_mcp_oauth_callback')==='1'){
+    return handleSpaceshipMcpRequest(req);
+  }
+  if(req.method==='POST'){
+    const probe=await req.clone().json().catch(()=>({}));
+    const probeAction=String(probe?.action||'');
+    if(isSpaceshipMcpAction(probeAction))return handleSpaceshipMcpRequest(req);
+  }
   if(req.method==='POST' && req.headers.get('x-hercules-internal-key')){
     return handleSpaceshipDnsRequest(req);
   }
