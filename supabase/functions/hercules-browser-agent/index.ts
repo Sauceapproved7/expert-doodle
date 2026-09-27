@@ -277,7 +277,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.9.0",
+    ok:true,service:"hercules-browser-agent",version:"0.10.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,securityChallengeDetection:true,highImpactAutonomy:false
@@ -568,6 +568,41 @@ Deno.serve(async(req:Request)=>{
         await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
         return out({ok:false,runId,status:"blocked",error:"top_level_domain_not_allowed",page:after,steps:history});
       }
+
+      try{
+        const observed=await aiObserve(goal,after,history);
+        provider=observed.provider;
+        model=observed.model;
+        if(observed.observation.complete&&observed.observation.answer){
+          finalAnswer=observed.observation.answer;
+          history.push({
+            step:history.length+1,
+            decision:"finish",
+            reason:observed.observation.reason||"post_action_observation_complete",
+            answer:finalAnswer.slice(0,4000),
+            url:after.url,
+            observationSource:"post_action"
+          });
+          await updateRun(runId,{
+            status:"succeeded",
+            steps:history,
+            result:{answer:finalAnswer,page:after,provider,model,convergence:"post_action_observation_complete"},
+            completed_at:new Date().toISOString()
+          });
+          await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
+          return out({
+            ok:true,
+            runId,
+            status:"succeeded",
+            answer:finalAnswer,
+            page:after,
+            steps:history,
+            provider,
+            model,
+            convergence:"post_action_observation_complete"
+          });
+        }
+      }catch{}
     }
 
     finalAnswer="Maximum browser-agent steps reached before the goal was conclusively completed.";
