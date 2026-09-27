@@ -1,0 +1,26 @@
+name: Hercules Organic Acquisition
+
+on:
+  pull_request:
+    paths:
+      - "governance/hercules-organic-acquisition-v1.json"
+      - "docs/launch/HERCULES-ORGANIC-ACQUISITION-V1.md"
+      - "supabase/functions/hercules-launch/**"
+      - "supabase/migrations/20260927103300_hercules_organic_acquisition_v1.sql"
+      - "tests/hercules-organic-acquisition.test.mjs"
+      - ".github/workflows/hercules-organic-acquisition.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  organic-acquisition:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Test organic acquisition contract
+        run: node --test tests/hercules-organic-acquisition.test.mjs
