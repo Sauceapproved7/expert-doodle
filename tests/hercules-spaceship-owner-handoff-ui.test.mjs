@@ -22,3 +22,11 @@ test("credential submission continues the launch automatically",()=>{
   assert.match(ui,/\$\('shipkey'\)\.value=''/);
   assert.match(ui,/\$\('shipsecret'\)\.value=''/);
 });
+
+
+test("owner can launch the Spaceship OAuth handoff in the current browser without Opera",()=>{
+  assert.match(ui,/Continue securely in this browser/);
+  assert.match(ui,/spaceship_mcp_owner_handoff/);
+  assert.match(ui,/location\.href=d\.handoffUrl/);
+  assert.match(ui,/No password, API secret, cookie, or CAPTCHA data is sent to ChatGPT/);
+});
