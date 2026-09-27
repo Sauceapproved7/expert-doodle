@@ -46,3 +46,36 @@ test("smoke sentinel runs hourly at minute 17",()=>{
 test("smoke sentinel stores no credentials",()=>{
   assert.doesNotMatch(sql,/access_secret|client_secret|api_secret|x-hercules-internal-key/i);
 });
+
+
+const provider=await readFile(
+  new URL("../supabase/functions/hercules-provider-connect/index.ts",import.meta.url),
+  "utf8"
+);
+const ui=await readFile(
+  new URL("../supabase/functions/hercules-integrations/index.ts",import.meta.url),
+  "utf8"
+);
+
+test("owner provider surface exposes smoke status and manual run",()=>{
+  assert.match(provider,/action==='storefront_smoke_status'/);
+  assert.match(provider,/hercules_storefront_smoke_status/);
+  assert.match(provider,/action==='storefront_smoke_run'/);
+  assert.match(provider,/hercules_storefront_smoke_submit/);
+  assert.match(provider,/owner_or_admin_required/);
+});
+
+test("Integrations exposes smoke status and read-only manual run",()=>{
+  assert.match(ui,/Storefront Smoke/);
+  assert.match(ui,/id="smokestatus"/);
+  assert.match(ui,/id="smokerun"/);
+  assert.match(ui,/action:'storefront_smoke_status'/);
+  assert.match(ui,/action:'storefront_smoke_run'/);
+  assert.match(ui,/Read-only Hercules Browser verification/);
+});
+
+test("smoke UI does not expose provider or registrar credentials",()=>{
+  assert.doesNotMatch(ui,/shpat_[A-Za-z0-9]/);
+  assert.doesNotMatch(ui,/X-Shopify-Access-Token/);
+  assert.doesNotMatch(ui,/X-API-Secret/);
+});
