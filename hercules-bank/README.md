@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: deployable authenticated durable sandbox financial service with production-readiness proof controls
+## Current maturity: deployable authenticated durable sandbox financial service with production-readiness and adapter-qualification controls
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -250,3 +250,22 @@ v1.1 exposes the v1.0 readiness evaluator through a sanitized owner-only status 
   `externalRailsEnabled:false`.
 
 See `docs/HERCULES-FINANCIAL-READINESS-DOSSIER-V1.1.md`.
+
+
+## Production adapter qualification
+
+v1.2 adds executable qualification for candidate production infrastructure without
+introducing live credentials or external money movement.
+
+- production database adapters must explicitly identify as production and prove health,
+  transactional round-trip, backup creation, and isolated restore verification;
+- production key-custody adapters must explicitly identify as production and prove
+  non-exportable key metadata, rotation-enabled metadata, and signing capability;
+- qualification never rotates a key;
+- regulated-provider qualification is read-only and requires HTTPS, health, declared
+  money/custody capabilities, and a sandbox or dry-run mode;
+- provider qualification never exposes or invokes `submitTransfer`;
+- qualification success still returns `activationAllowed:false` and
+  `externalRailsEnabled:false`.
+
+See `docs/HERCULES-FINANCIAL-ADAPTER-QUALIFICATION-V1.2.md`.
