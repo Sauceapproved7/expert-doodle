@@ -224,8 +224,8 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
-    return out({ok:true,service:'hercules-private-bridge',version:'1.2.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle'],
+    return out({ok:true,service:'hercules-private-bridge',version:'1.3.0',status:'ready',
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -348,6 +348,78 @@ Deno.serve(async(req:Request)=>{
       status:await launchApprovalStatus(),
       envelope:await launchApprovalEnvelopeStatus()
     });
+  }
+
+  if(action==='privacy_request_list'){
+    const limit=Math.max(1,Math.min(100,Number(b.limit||25)));
+    const status=String(b.status||'').trim();
+    let q=admin.from('hercules_privacy_requests')
+      .select('public_reference,category,email,message,status,requester_verified,verification_method,created_at,updated_at,resolved_at')
+      .order('created_at',{ascending:false})
+      .limit(limit);
+    if(status)q=q.eq('status',status);
+    const {data,error}=await q;
+    if(error)return out({error:'privacy_request_list_failed'},500);
+    return out({ok:true,requests:data||[]});
+  }
+
+  if(action==='privacy_request_verify'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const reference=String(b.reference||'').trim().toLowerCase();
+    const method=String(b.verification_method||'').trim();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+    const allowedMethods=new Set(['authenticated_account','email_control','business_authority']);
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reference))return out({error:'valid_reference_required'},400);
+    if(!allowedMethods.has(method))return out({error:'valid_verification_method_required'},400);
+    const expected=('VERIFY '+reference).toUpperCase();
+    if(confirmation!==expected)return out({error:'explicit_confirmation_required',expected},400);
+
+    const {data:current,error:readError}=await admin.from('hercules_privacy_requests')
+      .select('public_reference,status,requester_verified,metadata')
+      .eq('public_reference',reference)
+      .maybeSingle();
+    if(readError||!current)return out({error:'privacy_request_not_found'},404);
+
+    const now=new Date().toISOString();
+    const metadata={
+      ...(current.metadata||{}),
+      verification:{
+        verified_by:uid,
+        verified_at:now,
+        method
+      }
+    };
+    const {data,error}=await admin.from('hercules_privacy_requests')
+      .update({
+        requester_verified:true,
+        verification_method:method,
+        status:'verifying',
+        metadata,
+        updated_at:now
+      })
+      .eq('public_reference',reference)
+      .select('public_reference,category,email,status,requester_verified,verification_method,updated_at')
+      .maybeSingle();
+    if(error||!data)return out({error:'privacy_request_verification_failed'},500);
+
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'privacy.request.verified',
+      resource_type:'hercules_privacy_request',
+      resource_id:reference,
+      changes:{requester_verified:true,verification_method:method,status:'verifying'},
+      metadata:{source:'hercules-private-bridge',explicit_confirmation:true}
+    });
+    return out({ok:true,request:data});
+  }
+
+  if(action==='privacy_request_preview'){
+    const reference=String(b.reference||'').trim().toLowerCase();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reference))return out({error:'valid_reference_required'},400);
+    const {data,error}=await admin.rpc('hercules_privacy_request_preview',{p_public_reference:reference});
+    if(error)return out({error:'privacy_request_preview_failed',detail:error.message},500);
+    return out(data||{ok:false,error:'privacy_request_preview_empty'},data?.ok===false?409:200);
   }
 
   if(action==='spaceship_dns_status'){

@@ -168,7 +168,7 @@ Deletion may not immediately remove:
 - backup copies pending normal backup expiration;
 - information necessary to establish or defend legal claims.
 
-The Hercules Privacy Request Center is the monitored in-product request channel for access, export, correction, deletion, privacy questions, and support. Every request receives an opaque reference and begins with requester verification incomplete. Identity or authority must be verified before export, correction, or deletion is performed. Hercules must preserve legally or operationally required audit/security evidence where deletion is not permitted.
+The Hercules Privacy Request Center is the monitored in-product request channel for access, export, correction, deletion, privacy questions, and support. Every request receives an opaque reference and begins with requester verification incomplete. Identity or authority must be verified before export, correction, or deletion is performed. Hercules Data Rights Operations v1 can generate a non-destructive preview after verification that inventories user-scoped content and identifies membership, billing, audit, security, release, and legal/operational records requiring separate treatment. The preview does not delete data. Hercules must preserve legally or operationally required audit/security evidence where deletion is not permitted.
 
 ## 9. Security
 
@@ -209,7 +209,7 @@ Privacy and support requests may be submitted through the Hercules Privacy Reque
 ## Launch verification blockers in this candidate
 
 Before publication:
-- confirm the customer-data deletion/export workflow;
+- complete the reviewed export-delivery and deletion-execution phases after the verified preview workflow;
 - confirm internal retention practices against production behavior;
 - confirm state/regional privacy disclosures for the launch market;
 - confirm payment-provider data handling if billing is activated;
