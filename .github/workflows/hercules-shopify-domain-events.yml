@@ -1,0 +1,26 @@
+name: Hercules Shopify Domain Events
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-provider-connect/**"
+      - "supabase/functions/hercules-shopify-webhook/**"
+      - "tests/hercules-shopify-domain-events.test.mjs"
+      - "docs/HERCULES-SHOPIFY-DOMAIN-EVENTS-V1.md"
+      - ".github/workflows/hercules-shopify-domain-events.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shopify-domain-events:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify Shopify domain events fast path
+        run: node --test tests/hercules-shopify-domain-events.test.mjs tests/hercules-shopify-domain-monitor.test.mjs
