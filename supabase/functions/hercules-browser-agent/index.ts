@@ -57,6 +57,24 @@ function compactPage(payload:any){
     })):[]
   };
 }
+function securityChallenge(page:any){
+  const title=String(page?.title||"").toLowerCase();
+  const text=String(page?.text||"").toLowerCase();
+  const titleHit=/^(just a moment|attention required|security verification)/i.test(title.trim());
+  const textHit=[
+    "performing security verification",
+    "verifies you are not a bot",
+    "verify you are human",
+    "checking if the site connection is secure",
+    "captcha",
+  ].some(marker=>text.includes(marker));
+  if(!titleHit&&!textHit)return null;
+  return {
+    type:"anti_bot_verification_required",
+    title:String(page?.title||"").slice(0,500),
+    url:String(page?.url||"").slice(0,2048),
+  };
+}
 function directSatisfaction(goal:string,page:any,history:any[]){
   const g=String(goal||"").toLowerCase();
   const asksTitle=/\b(page\s+title|title)\b/i.test(g);
@@ -149,7 +167,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.5.0",
+    ok:true,service:"hercules-browser-agent",version:"0.6.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,highImpactAutonomy:false
@@ -186,6 +204,13 @@ Deno.serve(async(req:Request)=>{
     if(!sessionId)throw new Error("browser_session_missing");
     let page=compactPage(nav);
     if(!domainAllowed(page.url||startUrl,allowedDomains))throw new Error("top_level_domain_not_allowed");
+    const initialChallenge=securityChallenge(page);
+    if(initialChallenge){
+      history.push({step:0,decision:"blocked",url:page.url,reason:initialChallenge.type,title:initialChallenge.title});
+      await updateRun(runId,{status:"blocked",steps:history,error:initialChallenge.type,result:{page,challenge:initialChallenge},completed_at:new Date().toISOString()});
+      await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
+      return out({ok:false,runId,status:"blocked",error:initialChallenge.type,page,challenge:initialChallenge,steps:history},409);
+    }
 
     for(let i=0;i<maxSteps;i++){
       const scrape=await browserCall({
@@ -197,6 +222,13 @@ Deno.serve(async(req:Request)=>{
         history.push({step:i+1,decision:"blocked",url:page.url,reason:"top_level_domain_not_allowed"});
         await updateRun(runId,{status:"blocked",steps:history,error:"top_level_domain_not_allowed",completed_at:new Date().toISOString()});
         return out({ok:false,runId,status:"blocked",error:"top_level_domain_not_allowed",page});
+      }
+      const challenge=securityChallenge(page);
+      if(challenge){
+        history.push({step:i+1,decision:"blocked",url:page.url,reason:challenge.type,title:challenge.title});
+        await updateRun(runId,{status:"blocked",steps:history,error:challenge.type,result:{page,challenge},completed_at:new Date().toISOString()});
+        await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
+        return out({ok:false,runId,status:"blocked",error:challenge.type,page,challenge,steps:history},409);
       }
       const direct=directSatisfaction(goal,page,history);
       if(direct){
