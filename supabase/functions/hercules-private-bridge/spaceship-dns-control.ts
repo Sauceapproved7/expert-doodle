@@ -163,11 +163,41 @@ async function providerClient(req:Request){
     return {mode:"mcp_oauth",client:spaceshipMcpClient(req)};
   }
   try{
-    const {apiKey,apiSecret}=await credentials();
-    return {
-      mode:"external_api",
-      client:new SpaceshipDnsClient({apiKey,apiSecret,allowedDomains:[DOMAIN],fetchImpl:fetch})
-    };
+    let {apiKey,apiSecret}=await credentials();
+    let client=new SpaceshipDnsClient({apiKey,apiSecret,allowedDomains:[DOMAIN],fetchImpl:fetch});
+
+    try{
+      await client.listRecords(DOMAIN);
+      return {mode:"external_api",client};
+    }catch(error:any){
+      if(Number(error?.status)!==401)throw error;
+    }
+
+    const swapped=new SpaceshipDnsClient({
+      apiKey:apiSecret,
+      apiSecret:apiKey,
+      allowedDomains:[DOMAIN],
+      fetchImpl:fetch
+    });
+
+    try{
+      await swapped.listRecords(DOMAIN);
+    }catch(swappedError:any){
+      if(Number(swappedError?.status)===401){
+        throw new Error("spaceship_api_credentials_rejected");
+      }
+      throw swappedError;
+    }
+
+    const normalized=await rest("rpc/hercules_spaceship_dns_configure_credentials",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({p_api_key:apiSecret,p_api_secret:apiKey}),
+    });
+    if(normalized!==true)throw new Error("spaceship_credential_normalization_failed");
+
+    apiKey=""; apiSecret="";
+    return {mode:"external_api_normalized",client:swapped};
   }catch(error){
     if(error instanceof Error&&error.message==="spaceship_credentials_not_configured"){
       throw new Error("spaceship_mcp_authorization_required");
