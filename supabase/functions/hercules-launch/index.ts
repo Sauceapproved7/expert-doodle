@@ -37,14 +37,45 @@ async function serviceRpc(name:string,body:Record<string,unknown>){
   return payload;
 }
 
+async function restInsert(table:string,row:Record<string,unknown>){
+  if(!S) throw new Error("marketing_storage_unavailable");
+  const r=await fetch(U+"/rest/v1/"+table,{method:"POST",headers:{"content-type":"application/json","apikey":S,"authorization":"Bearer "+S,"prefer":"return=minimal"},body:JSON.stringify(row),signal:AbortSignal.timeout(10000)});
+  if(!r.ok)throw new Error("storage_"+r.status);
+}
+async function existingPilot(email:string){
+  if(!S)return false;
+  const q=new URL(U+"/rest/v1/marketing_contacts");
+  q.searchParams.set("email","eq."+email);
+  q.searchParams.set("campaign","eq.founding-100-revenue-recovery");
+  q.searchParams.set("select","id");
+  q.searchParams.set("limit","1");
+  const r=await fetch(q,{headers:{"apikey":S,"authorization":"Bearer "+S},signal:AbortSignal.timeout(10000)});
+  if(!r.ok)return false;
+  const rows=await r.json().catch(()=>[]);
+  return Array.isArray(rows)&&rows.length>0;
+}
+function cleanText(v:unknown,max=240){return String(v??"").trim().slice(0,max)}
+function validEmail(v:string){return v.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)}
+const PUBLIC_MARKETING_EVENTS=new Set(["cta_open_product","proof_demo_interest","pilot_interest","proof_demo_started","first_verified_useful_action"]);
+function safeMarketingProperties(value:unknown){
+  const input=value&&typeof value==="object"?value as Record<string,unknown>:{};
+  return {
+    path:cleanText(input.path,500)||null,
+    referrer:cleanText(input.referrer,500)||null,
+    surface:cleanText(input.surface,80)||null,
+    dataset:cleanText(input.dataset,80)||null,
+    project_id:cleanText(input.project_id,80)||null
+  };
+}
+
 const html = String.raw`<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070707">
-<meta name="description" content="Hercules by SauceApproved — your AI command system for asking, researching, building, deploying, and operating.">
-<title>Hercules by SauceApproved</title>
+<meta name="description" content="Hercules Revenue Recovery turns receivables evidence into controlled next actions with approvals, verification, and proof.">
+<title>Hercules Revenue Recovery by SauceApproved</title>
 <style>
 :root{color-scheme:dark;--bg:#070707;--panel:#111214;--panel2:#17181b;--line:#2a2c31;--text:#f6f7f8;--muted:#9da3ad;--soft:#cdd1d7;--good:#86e4a6;--warn:#efc66d;--bad:#ff9595}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(circle at 18% -10%,#242833 0,transparent 30%),radial-gradient(circle at 85% 10%,#171c27 0,transparent 24%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
@@ -68,23 +99,80 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
 <div class="shell">
 <header class="top">
   <div class="brandwrap"><div class="mark">H</div><div><div class="brand">HERCULES</div><div class="tag">by SauceApproved</div></div></div>
-  <nav class="navlinks" id="publicNav"><a class="btn ghost small" href="#capabilities">Capabilities</a><a class="btn ghost small" href="#system">System</a><button class="btn primary small" id="openHercules">Open Hercules</button></nav>
+  <nav class="navlinks" id="publicNav"><a class="btn ghost small" href="#revenue-recovery">Recovery</a><a class="btn ghost small" href="#proof-demo">Proof</a><a class="btn ghost small" href="#trust">Trust</a><a class="btn ghost small" href="#pilot">Pilot</a><button class="btn primary small" id="openHercules">Open Hercules</button></nav>
   <div class="row hidden" id="appActions"><span class="pill" id="livePill"><span class="dot"></span>Checking</span><button class="btn small" id="signOut">Sign out</button></div>
 </header>
 
 <section id="landing">
   <section class="hero">
     <div>
-      <div class="tag">AI command system</div>
+      <div class="tag">Revenue Recovery · Early Access</div>
       <h1>HERCULES</h1>
-      <div class="sub">Your AI command system.</div>
-      <p>Ask. Research. Build. Deploy. Hercules brings intelligence, knowledge, execution, deployment, and system operations into one owned control surface.</p>
-      <div class="row"><span class="pill">AI reasoning</span><span class="pill">Verified knowledge</span><span class="pill">Forge Builder</span><span class="pill">Hercules Wallet</span><span class="pill">Owned deployments</span></div>
+      <div class="sub">Recover cash. Keep control. Prove every action.</div>
+      <p>Hercules Revenue Recovery turns overdue B2B receivables into an evidence-backed next step. It separates routine follow-up from disputes, promises to pay, paid evidence, and human-review cases while preserving approval boundaries.</p>
+      <div class="row"><span class="pill">Evidence first</span><span class="pill">Human approval</span><span class="pill">Verified action history</span><span class="pill">No black box</span></div>
+      <div class="row" style="margin-top:18px"><a class="btn primary" href="#proof-demo" id="heroProof">Watch Hercules prove it</a><a class="btn" href="#pilot" id="heroPilot">Request founding pilot</a></div>
     </div>
     <div class="commandbox">
-      <div class="tag">Give Hercules a goal</div>
-      <textarea id="heroPrompt" aria-label="Hercules goal" placeholder="Research a problem, build an app, prepare a deployment, or tell Hercules what you need done."></textarea>
-      <div class="commandmeta"><span class="muted">Your prompt stays off the URL.</span><button class="btn primary" id="heroRun">Run with Hercules</button></div>
+      <div class="tag">Synthetic proof case</div>
+      <h2 style="margin:8px 0 12px">$18,400 overdue · 3 invoices</h2>
+      <p class="muted">One invoice has a payment promise. One has a dispute. One is a clean follow-up candidate. Hercules should not treat them the same.</p>
+      <div class="featurelist" style="margin-top:14px"><div class="feature"><span>Current state</span><span class="pill">verified evidence</span></div><div class="feature"><span>Next action</span><span class="pill">reasoned route</span></div><div class="feature"><span>Consequential action</span><span class="pill">approval gated</span></div><div class="feature"><span>Outcome</span><span class="pill">proof retained</span></div></div>
+    </div>
+  </section>
+
+  <section class="section" id="revenue-recovery">
+    <div class="tag">Hercules Revenue Recovery</div><h2>Receivables evidence in. Controlled action out.</h2>
+    <div class="grid4">
+      <div class="card"><div class="tag">01 · Observe</div><h3>Establish current state</h3><p>Use invoice, payment, dispute, and relationship evidence to determine what is actually true now.</p></div>
+      <div class="card"><div class="tag">02 · Reason</div><h3>Explain the route</h3><p>Produce an inspectable reason for the next step rather than hiding logic behind an automation score.</p></div>
+      <div class="card"><div class="tag">03 · Control</div><h3>Gate consequences</h3><p>Keep consequential external actions behind explicit human approval and permission boundaries.</p></div>
+      <div class="card"><div class="tag">04 · Prove</div><h3>Preserve the receipt</h3><p>Keep evidence of what Hercules saw, proposed, approved, executed, and verified.</p></div>
+    </div>
+  </section>
+
+  <section class="section" id="proof-demo">
+    <div class="tag">60–90 second proof demo</div><h2>Same overdue balance. Three different truths.</h2>
+    <div class="three">
+      <div class="card"><div class="tag">Synthetic demo data</div><h3>Invoice A · $8,400</h3><p>31 days overdue. No dispute. No payment promise. Route: prepare controlled follow-up.</p></div>
+      <div class="card"><div class="tag">Synthetic demo data</div><h3>Invoice B · $6,000</h3><p>18 days overdue. Customer disputed line items. Route: human review; do not send routine collection follow-up.</p></div>
+      <div class="card"><div class="tag">Synthetic demo data</div><h3>Invoice C · $4,000</h3><p>12 days overdue. Payment promised for Friday. Route: hold until promise window; verify before acting.</p></div>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div class="tag">Live walkthrough</div><h3 id="demoHeadline">Ready to run the proof.</h3>
+      <p class="muted" id="demoDetail">Run the synthetic case to watch Hercules move through evidence, state, route, approval, verification, and proof.</p>
+      <div class="progress" id="demoProgress"><div>Evidence</div><div>State</div><div>Route</div><div>Approval</div><div>Proof</div></div>
+      <button class="btn primary" style="margin-top:14px" id="demoRun">Run proof demo</button>
+    </div>
+    <div class="panel" style="margin-top:14px">
+      <div class="tag">5-minute workflow</div><h3>From receivable to verified useful action</h3>
+      <div class="featurelist"><div class="feature"><span>Minute 1 · Import supported receivable evidence</span><span class="pill">source preserved</span></div><div class="feature"><span>Minute 2 · Determine current case state</span><span class="pill">reason codes</span></div><div class="feature"><span>Minute 3 · Plan smallest safe route</span><span class="pill">no blind escalation</span></div><div class="feature"><span>Minute 4 · Review consequential action</span><span class="pill">human approval</span></div><div class="feature"><span>Minute 5 · Verify result and retain proof</span><span class="pill">audit trail</span></div></div>
+    </div>
+  </section>
+
+  <section class="section proof" id="trust">
+    <div class="panel"><div class="tag">Hercules Trust Center</div><h2>Trust the evidence.</h2><div class="featurelist"><div class="feature"><span>Owner-code provenance controls</span><span class="pill">implemented</span></div><div class="feature"><span>Customer workspace boundaries</span><span class="pill">tested</span></div><div class="feature"><span>Public registration release gate</span><span class="pill">fail closed</span></div><div class="feature"><span>Revenue Recovery approval boundary</span><span class="pill">implemented</span></div></div></div>
+    <div class="panel"><div class="tag">What is not proven yet</div><h3>No fake maturity claims.</h3><p class="muted">General availability, final paid pricing, final legal terms, production retention commitments, and unrestricted public registration remain owner/review gated. Staging evidence is not represented as production uptime history.</p></div>
+  </section>
+
+  <section class="section proof" id="security">
+    <div class="panel"><div class="tag">Security</div><h3>Fail closed where consequences matter.</h3><p class="muted">Customer isolation, permission boundaries, approval gates, provenance checks, and release gates are part of the launch architecture. Security claims remain limited to verified controls.</p></div>
+    <div class="panel"><div class="tag">Legal / privacy status</div><h3>DRAFT — owner review required before general availability.</h3><p class="muted">The prepared Terms and Privacy drafts must match final production providers, retention, billing, support, and launch-market scope before they become effective.</p></div>
+  </section>
+
+  <section class="section" id="pilot">
+    <div class="tag">Founding 100</div><h2>Request a controlled founding pilot.</h2>
+    <div class="two">
+      <form class="panel" id="pilotForm">
+        <label class="tag" for="pilotName">Name</label><input class="input" id="pilotName" maxlength="100" autocomplete="name" placeholder="Your name">
+        <label class="tag" for="pilotEmail" style="display:block;margin-top:12px">Business email</label><input class="input" id="pilotEmail" type="email" maxlength="254" required autocomplete="email" placeholder="you@company.com">
+        <label class="tag" for="pilotCompany" style="display:block;margin-top:12px">Company</label><input class="input" id="pilotCompany" maxlength="160" autocomplete="organization" placeholder="Company name">
+        <label class="tag" for="pilotRole" style="display:block;margin-top:12px">Role</label><select class="input" id="pilotRole"><option>Owner / Founder</option><option>Finance / AR</option><option>Accountant / Bookkeeper</option><option>Fractional CFO / Consultant</option><option>Agency / Operator</option><option>Other</option></select>
+        <input class="hidden" id="pilotWebsite" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <button class="btn primary" style="width:100%;margin-top:14px" type="submit">Request founding pilot</button>
+        <div class="notice hidden" id="pilotMsg"></div>
+      </form>
+      <div class="panel"><div class="tag">Pilot + contact path</div><h3>Built for controlled U.S. B2B receivables workflows first.</h3><p class="muted">Initial pilots focus on businesses managing their own commercial receivables. Hercules is not being offered here as consumer debt collection, third-party collections, credit scoring, legal collections, or a guaranteed recovery service.</p><p class="muted">This form records the early-access contact request in the protected Hercules marketing system. Dedicated support, security, and privacy contacts remain launch-gated until monitored owner-approved channels are configured.</p><div class="featurelist" style="margin-top:14px"><div class="feature"><span>Goal</span><span class="pill">first verified useful action</span></div><div class="feature"><span>Data</span><span class="pill">synthetic until authorized</span></div><div class="feature"><span>Action</span><span class="pill">approval gated</span></div></div></div>
     </div>
   </section>
 
@@ -168,6 +256,7 @@ const U="__URL__",K="__KEY__";
 const sb=createClient(U,K,{auth:{persistSession:true,autoRefreshToken:true}});
 const $=id=>document.getElementById(id);
 let authMode="signin",user=null,project=null,orgId=null,orgSlug=null,publicSignupOpen=false;
+async function track(eventName,properties={}){try{await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"marketing_event",event_name:eventName,properties:Object.assign({path:location.pathname,referrer:document.referrer||null},properties)})})}catch{}}
 
 function show(id,on=true){$(id).classList.toggle("hidden",!on)}
 function setNotice(id,text,tone){const el=$(id);el.textContent=text;el.className="notice "+(tone||"");show(id,Boolean(text))}
@@ -186,8 +275,18 @@ async function fetchFn(name,options){
 function switchRoot(target){show("landing",target==="landing");show("auth",target==="auth");show("app",target==="app");show("publicNav",target!=="app");show("appActions",target==="app")}
 async function refreshRegistrationState(){try{const r=await fetch(U+"/functions/v1/hercules-launch-gate",{headers:{apikey:K},cache:"no-store"});const d=await r.json().catch(()=>({}));publicSignupOpen=Boolean(r.ok&&d?.lastCheck?.launch_ready===true&&d?.publicRegistrationOpen===true)}catch{publicSignupOpen=false}const sw=$("authSwitch");if(sw&&authMode==="signin"){sw.disabled=!publicSignupOpen;sw.textContent=publicSignupOpen?"Create account":"Early access — sign-in only"}return publicSignupOpen}
 async function openProduct(){const s=(await sb.auth.getSession()).data.session;if(s){await bootApp();return}switchRoot("auth");const open=await refreshRegistrationState();if(!open)setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn")}
-$("openHercules").onclick=openProduct;$("systemOpen").onclick=openProduct;$("backHome").onclick=()=>switchRoot("landing");
-$("heroRun").onclick=()=>{const p=$("heroPrompt").value.trim();if(p)sessionStorage.setItem("hercules_pending_prompt",p);openProduct()};
+$("openHercules").onclick=()=>{track("cta_open_product",{surface:"nav"});openProduct()};$("systemOpen").onclick=()=>{track("cta_open_product",{surface:"system"});openProduct()};$("backHome").onclick=()=>switchRoot("landing");
+$("heroProof").onclick=()=>track("proof_demo_interest",{surface:"hero"});
+$("heroPilot").onclick=()=>track("pilot_interest",{surface:"hero"});
+const demoSteps=[
+ ["Evidence loaded","Three synthetic receivables enter with source facts preserved."],
+ ["Current state established","Hercules distinguishes routine overdue, disputed, and promised-payment cases."],
+ ["Safe routes planned","Each case receives the smallest evidence-backed next route."],
+ ["Consequences gated","External action stays behind approval where required."],
+ ["Proof retained","The workflow reaches a verified useful action with an inspectable trail."]
+];
+$("demoRun").onclick=async()=>{track("proof_demo_started",{dataset:"synthetic-v1"});const steps=[...document.querySelectorAll("#demoProgress div")];steps.forEach(x=>x.className="");$("demoRun").disabled=true;for(let i=0;i<demoSteps.length;i++){steps.slice(0,i).forEach(x=>x.className="done");steps[i].className="active";$("demoHeadline").textContent=demoSteps[i][0];$("demoDetail").textContent=demoSteps[i][1];await new Promise(r=>setTimeout(r,850))}steps.forEach(x=>x.className="done");$("demoHeadline").textContent="Verified useful action reached.";$("demoDetail").textContent="The synthetic proof finished without sending an external collection action.";track("first_verified_useful_action",{surface:"proof_demo",dataset:"synthetic-v1"});$("demoRun").disabled=false};
+$("pilotForm").onsubmit=async e=>{e.preventDefault();setNotice("pilotMsg","");const email=$("pilotEmail").value.trim(),first_name=$("pilotName").value.trim(),company=$("pilotCompany").value.trim(),role=$("pilotRole").value,website=$("pilotWebsite").value;if(!email){setNotice("pilotMsg","Enter a business email.","bad");return}const btn=e.submitter||$("pilotForm").querySelector("button[type=submit]");if(btn)btn.disabled=true;try{const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"pilot_request",email,first_name,company,role,website,referrer:document.referrer||null})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Request failed");setNotice("pilotMsg","Pilot request received. Hercules recorded the request for controlled follow-up.","good");e.target.reset()}catch(err){setNotice("pilotMsg","Pilot request could not be recorded: "+err.message,"bad")}finally{if(btn)btn.disabled=false}};
 
 $("authSwitch").onclick=async()=>{if(authMode==="signin"&&!publicSignupOpen){const open=await refreshRegistrationState();if(!open){setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}}authMode=authMode==="signin"?"signup":"signin";$("authTitle").textContent=authMode==="signin"?"Sign in":"Create account";$("authSubmit").textContent=authMode==="signin"?"Sign in":"Create account";$("authSwitch").disabled=false;$("authSwitch").textContent=authMode==="signin"?(publicSignupOpen?"Create account":"Early access — sign-in only"):"Sign in instead";setNotice("authMsg","")};
 $("authSubmit").onclick=async()=>{setNotice("authMsg","");if(authMode==="signup"&&!await refreshRegistrationState()){authMode="signin";$("authTitle").textContent="Sign in";$("authSubmit").textContent="Sign in";setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}const email=$("email").value.trim(),password=$("password").value;const q=authMode==="signin"?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});if(q.error){setNotice("authMsg",q.error.message,"bad");return}if(authMode==="signup"&&!q.data.session){setNotice("authMsg","Check your email to confirm the account, then sign in.","good");return}await bootApp()};
@@ -211,7 +310,7 @@ $("knowledgeSearch").onclick=async()=>{const q=$("knowledgeQuery").value.trim();
 
 function resetBuild(){document.querySelectorAll("#buildProgress div").forEach(x=>x.className="");setNotice("buildResult","");$("buildState").textContent="Ready"}
 $("buildName").oninput=()=>{if(!$("buildSlug").dataset.manual)$("buildSlug").value=$("buildName").value.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,63)};$("buildSlug").oninput=()=>{$("buildSlug").dataset.manual="1"};
-$("builderForm").onsubmit=async e=>{e.preventDefault();resetBuild();const goal=$("buildGoal").value.trim();if(!goal){setNotice("buildResult","Describe what Hercules should build.","bad");return}const btn=$("buildRun");btn.disabled=true;btn.textContent="Building…";$("buildState").textContent="Running Forge";const steps=[...document.querySelectorAll("#buildProgress div")];steps[0].className="active";try{const d=await fetchFn("hercules-forge-builder",{method:"POST",body:JSON.stringify({action:"build_deploy",name:$("buildName").value.trim(),slug:$("buildSlug").value.trim(),profile:$("buildProfile").value,goal})});steps.forEach(x=>x.className="done");if(!d.liveVerification?.verified)steps[4].className="active";$("buildState").textContent=d.liveVerification?.verified?"Live and verified":"Deployed — verification pending";const url=d.deployment?.public_url||d.public_url||"";setNotice("buildResult",(d.liveVerification?.verified?"Build complete. ":"Build deployed. ")+(url?url:"No public URL returned."),d.liveVerification?.verified?"good":"warn");await loadDeployments()}catch(err){$("buildState").textContent="Build failed";setNotice("buildResult",err.message,"bad")}finally{btn.disabled=false;btn.textContent="Build & deploy"}};
+$("builderForm").onsubmit=async e=>{e.preventDefault();resetBuild();const goal=$("buildGoal").value.trim();if(!goal){setNotice("buildResult","Describe what Hercules should build.","bad");return}const btn=$("buildRun");btn.disabled=true;btn.textContent="Building…";$("buildState").textContent="Running Forge";const steps=[...document.querySelectorAll("#buildProgress div")];steps[0].className="active";try{const d=await fetchFn("hercules-forge-builder",{method:"POST",body:JSON.stringify({action:"build_deploy",name:$("buildName").value.trim(),slug:$("buildSlug").value.trim(),profile:$("buildProfile").value,goal})});steps.forEach(x=>x.className="done");if(!d.liveVerification?.verified)steps[4].className="active";$("buildState").textContent=d.liveVerification?.verified?"Live and verified":"Deployed — verification pending";const url=d.deployment?.public_url||d.public_url||"";setNotice("buildResult",(d.liveVerification?.verified?"Build complete. ":"Build deployed. ")+(url?url:"No public URL returned."),d.liveVerification?.verified?"good":"warn");if(d.liveVerification?.verified)track("first_verified_useful_action",{surface:"forge_builder",project_id:project?.id||null});await loadDeployments()}catch(err){$("buildState").textContent="Build failed";setNotice("buildResult",err.message,"bad")}finally{btn.disabled=false;btn.textContent="Build & deploy"}};
 
 async function ensureOrg(){
   if(orgId&&orgSlug)return orgId;
@@ -256,36 +355,52 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.3.0",product:"Hercules",presentation:"launch-surface",registration:"manual-release-gated",owned_runtime:true,backend_rebuild:false});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.4.0",product:"Hercules Revenue Recovery",presentation:"marketing-launch-surface",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true});
   }
-
   if(req.method==="POST"){
-    const user=await authenticatedUser(req);
-    if(!user)return Response.json({error:"authenticated_user_required"},{status:401,headers:{"cache-control":"no-store"}});
-    const body=await req.json().catch(()=>({}));
-    if(String(body?.action||"")!=="bootstrap_organization"){
-      return Response.json({error:"unsupported_action"},{status:400,headers:{"cache-control":"no-store"}});
-    }
-    const orgName=String(body?.org_name||"").trim();
-    const orgSlug=String(body?.org_slug||"").trim();
-    if(!orgName||orgName.length>120||!/^\w/.test(orgName)){
-      return Response.json({error:"valid_organization_name_required"},{status:400,headers:{"cache-control":"no-store"}});
-    }
-    if(!/^[a-z0-9][a-z0-9-]{1,62}$/.test(orgSlug)){
-      return Response.json({error:"valid_organization_slug_required"},{status:400,headers:{"cache-control":"no-store"}});
-    }
+    const len=Number(req.headers.get("content-length")||"0");
+    if(len>16384)return Response.json({ok:false,error:"payload_too_large"},{status:413,headers:{"cache-control":"no-store"}});
+    const body=await req.json().catch(()=>null);
+    if(!body||typeof body!=="object")return Response.json({ok:false,error:"invalid_json"},{status:400,headers:{"cache-control":"no-store"}});
+    const action=cleanText((body as any).action,64);
     try{
-      const organizationId=await serviceRpc("hercules_bootstrap_organization_internal",{
-        p_user_id:user.id,
-        org_name:orgName,
-        org_slug:orgSlug
-      });
-      return Response.json({ok:true,organization_id:organizationId},{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+      if(action==="marketing_event"){
+        const eventName=cleanText((body as any).event_name,96).toLowerCase();
+        if(!PUBLIC_MARKETING_EVENTS.has(eventName))return Response.json({ok:false,error:"invalid_event"},{status:400,headers:{"cache-control":"no-store"}});
+        const properties=safeMarketingProperties((body as any).properties);
+        await restInsert("marketing_events",{event_name:eventName,event_source:"hercules-launch",url:properties.path,properties,occurred_at:new Date().toISOString()});
+        return Response.json({ok:true},{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+      }
+      if(action==="pilot_request"){
+        if(cleanText((body as any).website,120))return Response.json({ok:true},{headers:{"cache-control":"no-store"}});
+        const email=cleanText((body as any).email,254).toLowerCase();
+        if(!validEmail(email))return Response.json({ok:false,error:"invalid_email"},{status:400,headers:{"cache-control":"no-store"}});
+        if(!await existingPilot(email)){
+          await restInsert("marketing_contacts",{email,first_name:cleanText((body as any).first_name,100)||null,source:"hercules-launch",medium:"web",campaign:"founding-100-revenue-recovery",referrer:cleanText((body as any).referrer,500)||null,status:"lead",metadata:{company:cleanText((body as any).company,160)||null,role:cleanText((body as any).role,100)||null,scope:"controlled-us-b2b-receivables",consent_version:"pilot-request-v1"}});
+        }
+        await restInsert("marketing_events",{event_name:"pilot_request",event_source:"hercules-launch",url:"/pilot",properties:{campaign:"founding-100-revenue-recovery"},occurred_at:new Date().toISOString()});
+        return Response.json({ok:true,accepted:true},{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+      }
+      if(action==="bootstrap_organization"){
+        const user=await authenticatedUser(req);
+        if(!user)return Response.json({error:"authenticated_user_required"},{status:401,headers:{"cache-control":"no-store"}});
+        const orgName=String((body as any)?.org_name||"").trim();
+        const orgSlug=String((body as any)?.org_slug||"").trim();
+        if(!orgName||orgName.length>120||!/^\w/.test(orgName)){
+          return Response.json({error:"valid_organization_name_required"},{status:400,headers:{"cache-control":"no-store"}});
+        }
+        if(!/^[a-z0-9][a-z0-9-]{1,62}$/.test(orgSlug)){
+          return Response.json({error:"valid_organization_slug_required"},{status:400,headers:{"cache-control":"no-store"}});
+        }
+        const organizationId=await serviceRpc("hercules_bootstrap_organization_internal",{p_user_id:user.id,org_name:orgName,org_slug:orgSlug});
+        return Response.json({ok:true,organization_id:organizationId},{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+      }
+      return Response.json({ok:false,error:"unsupported_action"},{status:400,headers:{"cache-control":"no-store"}});
     }catch(error){
-      return Response.json({error:"organization_bootstrap_failed",detail:error instanceof Error?error.message:"unknown"},{status:409,headers:{"cache-control":"no-store"}});
+      const code=action==="bootstrap_organization"?"organization_bootstrap_failed":"storage_error";
+      return Response.json({ok:false,error:code,detail:error instanceof Error?error.message:"unknown"},{status:action==="bootstrap_organization"?409:503,headers:{"cache-control":"no-store"}});
     }
   }
-
   if(req.method!=="GET")return Response.json({error:"method_not_allowed"},{status:405});
   return new Response(html,{headers:{
     "content-type":"text/html; charset=utf-8",
