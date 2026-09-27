@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: read
   checks: read
 
@@ -29,14 +29,19 @@ jobs:
         run: node --test tests/hercules-main-guard.test.mjs
 
   main-guard-runtime:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: main-guard-contract
+    permissions:
+      contents: write
+      pull-requests: read
+      checks: read
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+
       - name: Collect authorization evidence
         id: guard
         env:
@@ -44,14 +49,46 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh api -H "Accept: application/vnd.github+json"             "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls?per_page=100"             > /tmp/hercules-prs.json
+
+          fail_closed() {
+            {
+              echo "authorized=false"
+              echo "reason=$1"
+              echo "before=$(jq -r '.before // ""' "$GITHUB_EVENT_PATH")"
+              echo "after=$(jq -r '.after // ""' "$GITHUB_EVENT_PATH")"
+              echo "pr_number="
+            } >> "$GITHUB_OUTPUT"
+          }
+
+          if ! gh api -H "Accept: application/vnd.github+json" \
+            "/repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/pulls?per_page=100" \
+            > /tmp/hercules-prs.json; then
+            fail_closed "pull_request_evidence_unavailable"
+            exit 0
+          fi
+
           PR_HEAD="$(jq -r '[.[] | select(.merged_at != null and .base.ref == "main")][0].head.sha // empty' /tmp/hercules-prs.json)"
           if [ -n "$PR_HEAD" ]; then
-            gh api -H "Accept: application/vnd.github+json"               "/repos/${GITHUB_REPOSITORY}/commits/${PR_HEAD}/check-runs?per_page=100"               > /tmp/hercules-checks.json
+            if ! gh api -H "Accept: application/vnd.github+json" \
+              "/repos/${GITHUB_REPOSITORY}/commits/${PR_HEAD}/check-runs?per_page=100" \
+              > /tmp/hercules-checks.json; then
+              fail_closed "required_check_evidence_unavailable"
+              exit 0
+            fi
           else
             printf '{"check_runs":[]}' > /tmp/hercules-checks.json
           fi
-          node scripts/hercules-main-guard.mjs             --event "$GITHUB_EVENT_PATH"             --prs /tmp/hercules-prs.json             --checks /tmp/hercules-checks.json             >> "$GITHUB_OUTPUT"
+
+          if ! node scripts/hercules-main-guard.mjs \
+            --event "$GITHUB_EVENT_PATH" \
+            --prs /tmp/hercules-prs.json \
+            --checks /tmp/hercules-checks.json \
+            > /tmp/hercules-guard-output; then
+            fail_closed "guard_evaluation_failed"
+            exit 0
+          fi
+
+          cat /tmp/hercules-guard-output >> "$GITHUB_OUTPUT"
 
       - name: Restore previous protected tree
         if: steps.guard.outputs.authorized != 'true'
@@ -64,18 +101,22 @@ jobs:
           set -euo pipefail
           git fetch origin main --tags --prune
           CURRENT="$(git rev-parse origin/main)"
+
           if [ "$CURRENT" != "$AFTER" ]; then
             echo "Main advanced from $AFTER to $CURRENT; refusing ambiguous automatic restore."
             exit 1
           fi
+
           if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
             echo "No valid previous main commit is available for restore."
             exit 1
           fi
+
           TREE="$(git rev-parse "${BEFORE}^{tree}")"
           export GIT_AUTHOR_NAME="Hercules Main Guard"
           export GIT_AUTHOR_EMAIL="actions@users.noreply.github.com"
           export GIT_COMMITTER_NAME="$GIT_AUTHOR_NAME"
           export GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
+
           RESTORE="$(printf 'Hercules main guard: restore protected tree\n\nReason: %s\nRejected head: %s\nRestored tree from: %s\n' "$REASON" "$AFTER" "$BEFORE" | git commit-tree "$TREE" -p "$AFTER")"
           git push origin "$RESTORE:refs/heads/main"
