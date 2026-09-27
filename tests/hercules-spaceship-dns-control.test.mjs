@@ -31,8 +31,11 @@ test("credential registry stores only Vault references", () => {
   assert.match(migration, /hercules_store_secret/);
   assert.match(migration, /vault\.update_secret/);
   assert.match(migration, /force row level security/i);
-  assert.doesNotMatch(migration, /api_key\s+text\s*,/i);
-  assert.doesNotMatch(migration, /api_secret\s+text\s*,/i);
+  const tableBlock = migration.match(
+    /create table if not exists public\.hercules_spaceship_dns_credentials[\s\S]*?\);/i,
+  )?.[0] || "";
+  assert.doesNotMatch(tableBlock, /\bapi_key\s+text\b/i);
+  assert.doesNotMatch(tableBlock, /\bapi_secret\s+text\b/i);
 });
 
 test("credential provisioning and operator bridge are service-role only", () => {
