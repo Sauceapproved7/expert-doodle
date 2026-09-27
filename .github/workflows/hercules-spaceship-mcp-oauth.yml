@@ -6,8 +6,10 @@ on:
       - "supabase/functions/hercules-private-bridge/spaceship-mcp.ts"
       - "supabase/functions/hercules-private-bridge/spaceship-dns-control.ts"
       - "supabase/migrations/*hercules_spaceship_mcp*"
+      - "supabase/migrations/*hercules_business_email_dns_autopilot*"
       - "supabase/migrations/20260927054500_hercules_domain_launch_autopilot_v1.sql"
       - "tests/hercules-spaceship-mcp-oauth.test.mjs"
+      - "tests/hercules-business-email-dns-autopilot.test.mjs"
       - ".github/workflows/hercules-spaceship-mcp-oauth.yml"
       - "governance/owner-code-policy.json"
   workflow_dispatch:
@@ -24,4 +26,4 @@ jobs:
       - name: Enforce owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
       - name: Verify Spaceship MCP OAuth lane
-        run: node --test tests/hercules-spaceship-mcp-oauth.test.mjs tests/hercules-spaceship-dns-control.test.mjs tests/hercules-domain-launch-autopilot.test.mjs
+        run: node --test tests/hercules-spaceship-mcp-oauth.test.mjs tests/hercules-spaceship-dns-control.test.mjs tests/hercules-domain-launch-autopilot.test.mjs tests/hercules-business-email-dns-autopilot.test.mjs
