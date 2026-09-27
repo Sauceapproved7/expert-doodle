@@ -1,4 +1,4 @@
-# Hercules Critical Probe Coverage Calibration v0.1
+# Hercules Critical Probe Coverage Calibration v0.2
 
 Date: 2026-09-27 UTC
 
@@ -23,17 +23,30 @@ The existing `critical-probe-coverage` SLO required 90% of critical services to 
 - all 16 critical services had a conclusive health check inside the previous 45 minutes
 - measured 45-minute critical coverage: 100%
 
-## Change
+## Configuration change
 
 The SLO freshness window is calibrated from 15 minutes to 45 minutes.
 
 The target remains unchanged at 90%.
 
-This does not convert failures into passes or suppress unhealthy results. It aligns the freshness window with the production monitor's deliberate rotating sweep.
+## Evaluator correction
+
+The first configuration migration exposed an implementation defect: `hercules_evaluate_slos()` recorded each SLO's configured `window_minutes`, but the critical-probe classification itself still used a hard-coded 15-minute freshness interval.
+
+The follow-up migration separates the two production semantics:
+
+- critical service health remains based on a 15-minute freshness interval;
+- critical probe coverage uses the configured `critical-probe-coverage` freshness window, currently 45 minutes.
+
+The evaluator now records the freshness interval used in evidence details and observability dimensions.
+
+## Safety
+
+This does not convert unhealthy service results into healthy ones, lower the 90% coverage target, or suppress provider failures. It fixes the evaluator so the coverage metric measures the window declared by its own SLO definition.
 
 ## Follow-up
 
-A future monitor revision may probe critical services more frequently while continuing to rotate non-critical services. If that is deployed and verified without provider throttling, the SLO window should be tightened again.
+A future monitor revision may probe critical services more frequently while continuing to rotate non-critical services. If that is deployed and verified without provider throttling, the coverage window should be tightened again.
 
 ## Claims discipline
 
