@@ -5,7 +5,8 @@ on:
     paths:
       - "supabase/functions/hercules-launch/**"
       - "supabase/functions/hercules-revenue-rescue/**"
-      - "tests/hercules-customer-recovery-workspace.test.mjs"\n      - "tests/hercules-domain-agent-app-surface.test.mjs"
+      - "tests/hercules-customer-recovery-workspace.test.mjs"
+      - "tests/hercules-domain-agent-app-surface.test.mjs"
       - "docs/launch/HERCULES-CUSTOMER-JOURNEY.md"
       - ".github/workflows/hercules-customer-recovery-workspace.yml"
   workflow_dispatch:
