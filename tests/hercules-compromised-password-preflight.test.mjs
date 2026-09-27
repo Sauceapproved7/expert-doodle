@@ -13,13 +13,14 @@ test("signup uses a server-side compromised-password preflight",()=>{
   assert.match(source,/password_safety_unavailable/);
 });
 
-test("signup checks password safety before Supabase signUp",()=>{
+test("signup checks password safety before the server-enforced signup route",()=>{
   const check=source.indexOf("password_breach_check");
-  const signUp=source.indexOf("sb.auth.signUp");
+  const secureSignup=source.indexOf('action:"secure_signup"');
   assert.ok(check>=0);
-  assert.ok(signUp>=0);
+  assert.ok(secureSignup>=0);
   assert.match(source,/checkPasswordSafety\(password\)/);
-  assert.ok(source.indexOf("checkPasswordSafety(password)")<signUp);
+  assert.ok(source.indexOf("checkPasswordSafety(password)")<secureSignup);
+  assert.doesNotMatch(source,/sb\.auth\.signUp\(\{email,password\}\)/);
 });
 
 test("signup password minimum is hardened to twelve characters",()=>{

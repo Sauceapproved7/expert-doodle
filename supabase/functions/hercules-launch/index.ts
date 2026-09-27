@@ -79,6 +79,70 @@ async function compromisedPasswordCount(password:string){
   }
   return 0;
 }
+async function screenPasswordServer(password:string){
+  if(typeof password!=="string"||password.length<12||password.length>256)return {ok:false,error:"weak_password_length",status:400};
+  try{
+    const breached=await compromisedPasswordCount(password);
+    if(breached>0)return {ok:false,error:"compromised_password",status:422};
+    return {ok:true,error:null,status:200};
+  }catch{
+    return {ok:false,error:"password_safety_unavailable",status:503};
+  }
+}
+async function issuePasswordTicket(purpose:"signup"|"change_password",email:string|null,userId:string|null){
+  if(!S)throw new Error("service_role_unavailable");
+  const r=await fetch(U+"/rest/v1/rpc/hercules_password_screening_issue",{
+    method:"POST",
+    headers:{apikey:S,authorization:"Bearer "+S,"content-type":"application/json"},
+    body:JSON.stringify({p_purpose:purpose,p_email:email,p_user_id:userId,p_ttl_seconds:120}),
+    signal:AbortSignal.timeout(10000)
+  });
+  const text=await r.text();
+  if(!r.ok)throw new Error("password_screening_ticket_"+r.status);
+  return String(JSON.parse(text));
+}
+async function serverRegistrationOpen(){
+  const r=await fetch(U+"/functions/v1/hercules-launch-gate",{headers:K?{apikey:K}:{},signal:AbortSignal.timeout(10000)}).catch(()=>null);
+  if(!r?.ok)return false;
+  const d=await r.json().catch(()=>null);
+  return Boolean(d?.lastCheck?.launch_ready===true&&d?.publicRegistrationOpen===true);
+}
+async function secureSignup(email:string,password:string){
+  if(!await serverRegistrationOpen())return {status:403,body:{ok:false,error:"public_registration_closed"}};
+  const check=await screenPasswordServer(password);
+  if(!check.ok)return {status:check.status,body:{ok:false,error:check.error}};
+  const ticket=await issuePasswordTicket("signup",email,null);
+  const r=await fetch(U+"/auth/v1/signup",{
+    method:"POST",
+    headers:{apikey:K,authorization:"Bearer "+K,"content-type":"application/json"},
+    body:JSON.stringify({email,password,data:{hercules_password_screening_ticket:ticket}}),
+    signal:AbortSignal.timeout(15000)
+  });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)return {status:r.status,body:{ok:false,error:d?.msg||d?.message||d?.error||"signup_failed"}};
+  return {status:200,body:{ok:true,user:d?.user||null,session:d?.access_token?{access_token:d.access_token,refresh_token:d.refresh_token}:null}};
+}
+async function securePasswordChange(req:Request,password:string,nonce:string,currentPassword:string){
+  const auth=req.headers.get("authorization")||"";
+  const user=await authenticatedUser(req);
+  if(!user)return {status:401,body:{ok:false,error:"authenticated_user_required"}};
+  const check=await screenPasswordServer(password);
+  if(!check.ok)return {status:check.status,body:{ok:false,error:check.error}};
+  const ticket=await issuePasswordTicket("change_password",null,user.id);
+  const data={...(user.user_metadata||{}),hercules_password_screening_ticket:ticket};
+  const body:any={password,data};
+  if(nonce)body.nonce=nonce;
+  if(currentPassword)body.current_password=currentPassword;
+  const r=await fetch(U+"/auth/v1/user",{
+    method:"PUT",
+    headers:{apikey:K,authorization:auth,"content-type":"application/json"},
+    body:JSON.stringify(body),
+    signal:AbortSignal.timeout(15000)
+  });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok)return {status:r.status,body:{ok:false,error:d?.msg||d?.message||d?.error||"password_change_failed"}};
+  return {status:200,body:{ok:true,user:d}};
+}
 const PUBLIC_MARKETING_EVENTS=new Set(["landing_view","cta_open_product","proof_demo_interest","pilot_interest","proof_demo_started","first_verified_useful_action"]);
 function safeMarketingProperties(value:unknown){
   const input=value&&typeof value==="object"?value as Record<string,unknown>:{};
@@ -413,7 +477,7 @@ $("pilotForm").onsubmit=async e=>{e.preventDefault();setNotice("pilotMsg","");co
 
 $("authSwitch").onclick=async()=>{if(authMode==="signin"&&!publicSignupOpen){const open=await refreshRegistrationState();if(!open){setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}}authMode=authMode==="signin"?"signup":"signin";$("authTitle").textContent=authMode==="signin"?"Sign in":"Create account";$("authSubmit").textContent=authMode==="signin"?"Sign in":"Create account";$("authSwitch").disabled=false;$("authSwitch").textContent=authMode==="signin"?(publicSignupOpen?"Create account":"Early access — sign-in only"):"Sign in instead";setNotice("authMsg","")};
 async function checkPasswordSafety(password){const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"password_breach_check",password})});const d=await r.json().catch(()=>({}));if(r.ok&&d.safe===true)return true;if(d.error==="compromised_password")throw new Error("Choose a password that has not appeared in known data breaches.");if(d.error==="weak_password_length")throw new Error("Use at least 12 characters for your password.");throw new Error("Password safety check is unavailable. Account creation is temporarily paused.")}
-$("authSubmit").onclick=async()=>{setNotice("authMsg","");if(authMode==="signup"&&!await refreshRegistrationState()){authMode="signin";$("authTitle").textContent="Sign in";$("authSubmit").textContent="Sign in";setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}const email=$("email").value.trim(),password=$("password").value;if(authMode==="signup"){try{await checkPasswordSafety(password)}catch(error){setNotice("authMsg",error instanceof Error?error.message:"Password safety check failed.","bad");return}}const q=authMode==="signin"?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});if(q.error){setNotice("authMsg",q.error.message,"bad");return}if(authMode==="signup"&&!q.data.session){setNotice("authMsg","Check your email to confirm the account, then sign in.","good");return}await bootApp()};
+$("authSubmit").onclick=async()=>{setNotice("authMsg","");if(authMode==="signup"&&!await refreshRegistrationState()){authMode="signin";$("authTitle").textContent="Sign in";$("authSubmit").textContent="Sign in";setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}const email=$("email").value.trim(),password=$("password").value;if(authMode==="signin"){const q=await sb.auth.signInWithPassword({email,password});if(q.error){setNotice("authMsg",q.error.message,"bad");return}await bootApp();return}try{await checkPasswordSafety(password)}catch(error){setNotice("authMsg",error instanceof Error?error.message:"Password safety check failed.","bad");return}const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"secure_signup",email,password})});const d=await r.json().catch(()=>({}));if(!r.ok){setNotice("authMsg",d.error==="compromised_password"?"Choose a password that has not appeared in known data breaches.":d.error==="weak_password_length"?"Use at least 12 characters for your password.":d.error||"Account creation failed.","bad");return}if(!d.session){setNotice("authMsg","Check your email to confirm the account, then sign in.","good");return}const q=await sb.auth.setSession(d.session);if(q.error){setNotice("authMsg",q.error.message,"bad");return}await bootApp()};
 $("signOut").onclick=async()=>{await sb.auth.signOut();user=null;project=null;orgId=null;orgSlug=null;switchRoot("landing")};
 
 const BLOCKED_RECOVERY_STATES=new Set(["disputed","promise_active","paid","do_not_contact","unverified_history","manual_review"]);
@@ -542,8 +606,18 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 
 Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
+  if(url.searchParams.get("password_defense_probe")==="compromised"){
+    const check=await screenPasswordServer("Password123!");
+    return Response.json({
+      ok:check.ok===false&&check.error==="compromised_password",
+      service:"hercules-launch",
+      password_defense:"hercules-password-defense-v2",
+      probe:"compromised_password_rejected",
+      result:check
+    },{status:200,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+  }
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.6.1",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.7.3",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true});
   }
   if(req.method==="POST"){
     const len=Number(req.headers.get("content-length")||"0");
@@ -562,6 +636,19 @@ Deno.serve(async(req:Request)=>{
         }catch{
           return Response.json({ok:false,error:"password_safety_unavailable"},{status:503,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
         }
+      }
+      if(action==="secure_signup"){
+        const email=cleanText((body as any).email,254).toLowerCase(),password=String((body as any).password||"");
+        if(!validEmail(email))return Response.json({ok:false,error:"invalid_email"},{status:400,headers:{"cache-control":"no-store"}});
+        if(!password)return Response.json({ok:false,error:"password_required"},{status:400,headers:{"cache-control":"no-store"}});
+        const result=await secureSignup(email,password);
+        return Response.json(result.body,{status:result.status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+      }
+      if(action==="secure_change_password"){
+        const password=String((body as any).password||"");
+        if(!password)return Response.json({ok:false,error:"password_required"},{status:400,headers:{"cache-control":"no-store"}});
+        const result=await securePasswordChange(req,password,cleanText((body as any).nonce,128),String((body as any).current_password||""));
+        return Response.json(result.body,{status:result.status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
       }
       if(action==="marketing_event"){
         const eventName=cleanText((body as any).event_name,96).toLowerCase();
