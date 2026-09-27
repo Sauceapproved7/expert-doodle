@@ -3,13 +3,9 @@ name: Hercules Workflow Syntax Gate
 on:
   workflow_dispatch:
   push:
-    paths:
-      - ".github/workflows/**"
-      - "scripts/verify-workflow-files.mjs"
+    branches:
+      - main
   pull_request:
-    paths:
-      - ".github/workflows/**"
-      - "scripts/verify-workflow-files.mjs"
 
 permissions:
   contents: read
