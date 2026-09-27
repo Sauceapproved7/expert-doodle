@@ -1,0 +1,33 @@
+{
+  "schema": "sauceapproved.shopify.production-store.v1",
+  "status": "active",
+  "verifiedAt": "2026-09-27T05:31:00Z",
+  "shop": {
+    "gid": "gid://shopify/Shop/100002726208",
+    "name": "Sauceapproved",
+    "originalMyshopifyDomain": "azymhc-x0.myshopify.com",
+    "currentPrimaryDomain": "sauceapproved-2.myshopify.com",
+    "currentPrimaryDomainGid": "gid://shopify/Domain/174338638144",
+    "currentPrimarySslEnabled": true
+  },
+  "intendedCustomDomain": "sauceapproved.com",
+  "identityRule": {
+    "aliasesRepresentSameShop": true,
+    "neverTreatOriginalAndCurrentPrimaryAsSeparateStores": true,
+    "requireShopGidMatchForProductionActions": true
+  },
+  "anchorProduct": {
+    "gid": "gid://shopify/Product/10258238406976",
+    "title": "SauceApproved™ Premium Graphic Hoodie | Unisex Streetwear",
+    "handle": "sauceapproved-premium-hoodie",
+    "status": "ACTIVE",
+    "vendor": "Printify",
+    "variantsCount": 29
+  },
+  "cutoverPolicy": {
+    "requireRegistrarDnsReady": true,
+    "requireShopifyCustomDomainRecognized": true,
+    "requireCustomDomainSslEnabled": true,
+    "makeCustomDomainPrimaryOnlyAfterAllChecksPass": true
+  }
+}
