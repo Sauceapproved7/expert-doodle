@@ -26,6 +26,13 @@ function recordKey(record) {
   return String(record.type || "").toUpperCase() + ":" + String(record.name || "").toLowerCase();
 }
 
+function recordGroupType(record) {
+  const raw = record?.group;
+  if (raw && typeof raw === "object") return String(raw.type || "").trim();
+  if (typeof raw === "string") return raw.trim();
+  return "unknown";
+}
+
 function recordValue(record) {
   const type = String(record.type || "").toUpperCase();
   if (type === "A" || type === "AAAA") return String(record.address || "").toLowerCase();
@@ -74,7 +81,7 @@ export function buildShopifyDnsPlan(existingRecords = []) {
       if (recordValue(record) === desiredValue) continue;
       conflicts.push({
         key,
-        group: record.group ?? "custom",
+        group: recordGroupType(record),
         record: withoutProviderMetadata(record),
       });
     }
