@@ -75,3 +75,23 @@ test("browser agent deterministically completes a followed-link title goal after
   assert.match(agent,/const postAction=postActionSatisfaction\(goal,page,after,plan\.decision\)/);
   assert.match(agent,/if\(postAction\)/);
 });
+
+test("browser transient recovery never retries a generic interaction 502",async()=>{
+  const browser=await readFile(new URL("../supabase/functions/hercules-browser/index.ts",import.meta.url),"utf8");
+  const start=browser.indexOf("function transientWorkerFailure");
+  const end=browser.indexOf("function delay",start);
+  const block=browser.slice(start,end);
+  assert.doesNotMatch(block,/worker_http_\(\?:502\|503\|504\)/);
+  assert.match(block,/failed to connect to backend/);
+  assert.match(block,/websocket was closed before the connection was established/);
+});
+
+test("runtime monitor distinguishes upstream transport failures from interaction failures",async()=>{
+  const files=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
+    .filter(x=>x.includes("hercules_browser_runtime_monitor_v2"))
+    .sort();
+  const latest=await readFile(new URL("../supabase/migrations/"+files.at(-1),import.meta.url),"utf8");
+  assert.doesNotMatch(latest,/worker_http_\(502\|503\|504\)\|429 Too Many Requests/);
+  assert.match(latest,/failed to connect to backend/);
+  assert.match(latest,/websocket was closed before the connection was established/);
+});
