@@ -33,16 +33,20 @@ The submit function:
 
 ## Security repair
 
-During live verification, Browserless debug logging was found to serialize launch options containing the inherited process environment. Because that environment includes the Browserless authentication token, debug output could expose the credential in service logs.
+During live verification, Browserless debug logging was found to serialize launch options containing inherited process-environment data. That created a risk that runtime authentication material could appear in service logs.
 
-The Browserless credential was rotated, the gateway was updated to the matching replacement credential, and verbose Browserless debug logging was disabled before the bridge was accepted as healthy. Credentials are not recorded in this repository.
+An initial attempt to suppress that debug path was insufficient. The final repair rotated the affected Browserless authentication material, synchronized the matching gateway configuration, explicitly disabled Browserless debug namespaces, redeployed both services, and repeated the full browser probe.
+
+After the final repair, the post-probe runtime-log inspection found zero launch-option or environment-dump records from the affected debug path. Runtime credentials are not recorded in this repository.
 
 ## Live verification
 
-A post-repair probe executed through the full Hercules Browser path against `https://example.com/` and returned HTTP 200 with `ok: true`, the expected page title, URL, text, and link metadata.
+The final post-repair probe executed through the full Hercules Browser path against `https://example.com/` and returned HTTP 200 with `ok: true`, the expected URL, and page title `Example Domain`.
 
-This verification establishes that the operator bridge can execute real browser work through Hercules-owned browser infrastructure. It does not imply that an arbitrary third-party account is authenticated; account-bound actions still require a valid authorized session or provider credential.
+This verifies that the operator bridge can execute real browser work through Hercules-owned browser infrastructure after the logging hardening.
+
+A separate live attempt against the Spaceship domain manager reached Spaceship through Hercules Browser but was stopped by the site's Cloudflare security-verification challenge. Hercules must not bypass that protection. DNS changes therefore require an authorized Spaceship DNS API/MCP path or a legitimate authenticated browser session accepted by the provider.
 
 ## Source-of-truth rule
 
-The migration in `supabase/migrations/20260927033800_hercules_browser_operator_bridge_v1.sql` must remain equivalent to the deployed production functions. Do not place browser credentials, service-role keys, passwords, cookies, or recovery material in repository source.
+The migration in `supabase/migrations/20260927033800_hercules_browser_operator_bridge_v1.sql` must remain equivalent to the deployed production functions. Do not place runtime credentials, passwords, cookies, recovery material, or private keys in repository source.
