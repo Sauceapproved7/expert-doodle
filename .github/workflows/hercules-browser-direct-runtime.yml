@@ -6,6 +6,7 @@ on:
       - "render/hercules-browser-direct/**"
       - "tests/hercules-browser-direct-runtime.test.mjs"
       - "tests/hercules-browser-owner-handoff.test.mjs"
+      - "tests/hercules-browser-owner-start.test.mjs"
       - "docs/HERCULES-BROWSER-DIRECT-RUNTIME-V1.md"
       - ".github/workflows/hercules-browser-direct-runtime.yml"
   workflow_dispatch:
@@ -27,6 +28,6 @@ jobs:
       - name: Enforce owner-code boundary
         run: node scripts/verify-owner-code-only.mjs
       - name: Run direct browser runtime tests
-        run: node --test tests/hercules-browser-direct-runtime.test.mjs tests/hercules-browser-owner-handoff.test.mjs
+        run: node --test tests/hercules-browser-direct-runtime.test.mjs tests/hercules-browser-owner-handoff.test.mjs tests/hercules-browser-owner-start.test.mjs
       - name: Run security baseline
         run: node scripts/security-baseline.mjs
