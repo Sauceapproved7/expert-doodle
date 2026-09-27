@@ -9,6 +9,9 @@ on:
       - "supabase/functions/hercules-private-bridge/**"
       - "docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md"
       - "docs/launch/HERCULES-DATA-RIGHTS-OPERATIONS-*.md"
+      - "docs/launch/HERCULES-RETENTION-VERIFICATION-*.md"
+      - "governance/hercules-privacy-retention-v1.json"
+      - "tests/hercules-privacy-retention-verification.test.mjs"
       - "tests/hercules-privacy-request-center.test.mjs"
       - ".github/workflows/hercules-privacy-request-center.yml"
   workflow_dispatch:
@@ -31,5 +34,7 @@ jobs:
         run: node scripts/verify-owner-code-only.mjs
       - name: Test privacy request center
         run: node --test tests/hercules-privacy-request-center.test.mjs
+      - name: Test privacy retention verification
+        run: node --test tests/hercules-privacy-retention-verification.test.mjs
       - name: Run security baseline
         run: node scripts/security-baseline.mjs
