@@ -122,7 +122,10 @@ export class HerculesBankRuntime {
   }
 
   async openCustomerAccount({customerId, accountId = "acct_" + randomUUID()} = {}) {
-    return this.#commit((candidate) => candidate.openCustomerAccount({customerId, accountId}));
+    return this.#commit((candidate) => {
+      const opened = candidate.openCustomerAccount({customerId, accountId});
+      return candidate.getAccount(opened.id);
+    });
   }
 
   async fundSandboxAccount(input) {
