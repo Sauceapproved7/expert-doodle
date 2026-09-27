@@ -266,7 +266,7 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
   </section>
 
   <section class="section" id="pilot">
-    <div class="tag">Founding 100</div><h2>Founding Revenue Recovery Pilot</h2>
+    <div class="tag">Founding 100</div><h2>Founding Revenue Recovery Pilot</h2><div class="notice good"><b>Founding Pilot applications are open.</b> Controlled pilot intake is live. Paid billing and general public account creation remain closed.</div>
     <div class="two">
       <form class="panel" id="pilotForm">
         <div class="tag">Pilot intake</div><h3>Request a controlled evaluation.</h3>
@@ -670,7 +670,7 @@ Deno.serve(async(req:Request)=>{
     },{status:200,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
   }
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.7.3",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.8.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",controlled_pilot_open:true,paid_billing_active:false,public_account_registration_open:false,owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true});
   }
   if(req.method==="POST"){
     const len=Number(req.headers.get("content-length")||"0");
