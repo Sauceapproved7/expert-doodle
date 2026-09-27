@@ -10,8 +10,8 @@ test("production AI allowlist excludes providers without verified privacy eviden
   assert.match(ai,/provider:'LLM7'/);
   assert.match(ai,/provider:'KiloCode'/);
   assert.doesNotMatch(ai,/Yqcloud/);
-  assert.doesNotMatch(privacy,/Yqcloud/);
-  assert.doesNotMatch(flow,/Yqcloud/);
+  assert.match(privacy,/Yqcloud is not part of the launch provider allowlist/);
+  assert.match(flow,/Yqcloud was removed from the launch allowlist/);
 });
 
 test("privacy evidence reflects the canonical standalone browser",()=>{
