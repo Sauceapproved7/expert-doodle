@@ -1,0 +1,26 @@
+name: Hercules Spaceship Secure Onboarding
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-private-bridge/**"
+      - "supabase/functions/hercules-integrations/**"
+      - "tests/hercules-spaceship-secure-onboarding.test.mjs"
+      - "docs/HERCULES-SPACESHIP-SECURE-ONBOARDING-V1.md"
+      - ".github/workflows/hercules-spaceship-secure-onboarding.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secure-onboarding:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run secure onboarding tests
+        run: node --test tests/hercules-spaceship-secure-onboarding.test.mjs
