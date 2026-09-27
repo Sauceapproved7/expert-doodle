@@ -1,3 +1,15 @@
+alter table public.hercules_spaceship_dns_runs
+  drop constraint if exists hercules_spaceship_dns_runs_action_check;
+
+alter table public.hercules_spaceship_dns_runs
+  add constraint hercules_spaceship_dns_runs_action_check
+  check (action in (
+    'inspect_shopify_dns',
+    'reconcile_shopify_dns',
+    'inspect_resend_mail_dns',
+    'reconcile_resend_mail_dns'
+  ));
+
 create or replace function public.hercules_spaceship_dns_submit(
   p_action text,
   p_replace_custom_conflicts boolean default false
@@ -81,6 +93,7 @@ as $$
 declare
   v_now timestamptz := now();
   v_oauth_status text;
+  v_api_status text;
   v_ledger_status text;
   v_ledger_value jsonb;
   v_run record;
@@ -127,7 +140,13 @@ begin
    where singleton=true
    limit 1;
 
-  if coalesce(v_oauth_status,'unconfigured') <> 'configured' then
+  select status into v_api_status
+    from public.hercules_spaceship_dns_credentials
+   where singleton=true
+   limit 1;
+
+  if coalesce(v_oauth_status,'unconfigured') <> 'configured'
+     and coalesce(v_api_status,'unconfigured') <> 'configured' then
     update public.hercules_continuity_ledger
        set status='waiting_provider_authorization',
            value=coalesce(value,'{}'::jsonb) || jsonb_build_object(
@@ -135,7 +154,7 @@ begin
              'providerConnectionReady',false,
              'lastEmailDnsTickAt',v_now
            ),
-           provenance='Canonical Hercules business sender waiting on legitimate Spaceship provider authorization before mail DNS can be written.',
+           provenance='Canonical Hercules business sender waiting on legitimate Spaceship OAuth or External API authorization before mail DNS can be written.',
            verified_at=v_now,
            updated_at=v_now
      where key='hercules-outbound-business-sender';
@@ -231,7 +250,7 @@ begin
            'lastEmailDnsRequestId',v_submit_id,
            'lastEmailDnsTickAt',v_now
          ),
-         provenance='Spaceship is authorized; Hercules queued fail-closed Resend mail DNS reconciliation without replacing custom conflicts.',
+         provenance='Spaceship is authorized by OAuth or External API; Hercules queued fail-closed Resend mail DNS reconciliation without replacing custom conflicts.',
          verified_at=v_now,
          updated_at=v_now
    where key='hercules-outbound-business-sender';
@@ -250,7 +269,7 @@ revoke all on function public.hercules_business_email_dns_autopilot_tick()
 grant execute on function public.hercules_business_email_dns_autopilot_tick() to service_role;
 
 comment on function public.hercules_business_email_dns_autopilot_tick() is
-  'Fail-closed business-email DNS autopilot. Waits for Spaceship authorization, queues non-destructive Resend DNS reconciliation, and never claims provider activation before independent Resend verification.';
+  'Fail-closed business-email DNS autopilot. Accepts legitimate Spaceship OAuth or External API authorization, queues non-destructive Resend DNS reconciliation, and never claims provider activation before independent Resend verification.';
 
 do $$
 declare
