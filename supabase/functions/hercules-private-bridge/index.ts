@@ -67,6 +67,52 @@ Deno.serve(async(req:Request)=>{
   const org=String(a.m.organization_id), uid=String(a.user.id);
   const b=await req.json().catch(()=>({})), action=String(b.action||'status');
 
+  if(action==='spaceship_dns_status'){
+    const {data,error}=await admin.from('hercules_spaceship_dns_credentials')
+      .select('status,configured_at,updated_at')
+      .eq('singleton',true).maybeSingle();
+    if(error)return out({error:'spaceship_dns_status_failed'},500);
+    return out({
+      ok:true,
+      provider:'spaceship',
+      domain:'sauceapproved.com',
+      status:data?.status||'unconfigured',
+      configuredAt:data?.configured_at||null,
+      updatedAt:data?.updated_at||null,
+      permissions:['dnsrecords:read','dnsrecords:write'],
+      secretExposure:false
+    });
+  }
+
+  if(action==='configure_spaceship_dns'){
+    const apiKey=String(b.api_key||'').trim();
+    const apiSecret=String(b.api_secret||'').trim();
+    if(!apiKey||!apiSecret)return out({error:'spaceship_api_key_and_secret_required'},400);
+    const {data,error}=await admin.rpc('hercules_spaceship_dns_configure_credentials',{
+      p_api_key:apiKey,
+      p_api_secret:apiSecret
+    });
+    b.api_key=''; b.api_secret='';
+    if(error||data!==true)return out({error:'spaceship_dns_configuration_failed'},500);
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'spaceship.dns.credentials.configured',
+      resource_type:'hercules_spaceship_dns',
+      resource_id:null,
+      changes:{domain:'sauceapproved.com',status:'configured'},
+      metadata:{secret_exposure:false,permissions:['dnsrecords:read','dnsrecords:write']}
+    });
+    return out({
+      ok:true,
+      provider:'spaceship',
+      domain:'sauceapproved.com',
+      status:'configured',
+      permissions:['dnsrecords:read','dnsrecords:write'],
+      secretExposure:false
+    });
+  }
+
   if(action==='status'||action==='list'){
     const {data,error}=await admin.from('hercules_private_bridge_profiles')
       .select('id,name,server_url,private_dns,routes,reconnect_policy,enabled,connection_status,last_health_at,last_health,created_at,updated_at')
