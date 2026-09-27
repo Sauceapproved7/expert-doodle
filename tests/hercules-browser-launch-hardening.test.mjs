@@ -104,3 +104,12 @@ test("browser agent deterministically plans explicit named-link navigation befor
   const ai=agent.indexOf("await aiPlan",deterministic);
   assert.ok(deterministic>=0 && ai>deterministic);
 });
+
+test("runtime monitor regex stays within PostgreSQL repetition limits",async()=>{
+  const files=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
+    .filter(x=>x.includes("hercules_browser_runtime_monitor_v2"))
+    .sort();
+  const latest=await readFile(new URL("../supabase/migrations/"+files.at(-1),import.meta.url),"utf8");
+  assert.doesNotMatch(latest,/\{0,(?:25[6-9]|2[6-9]\d|[3-9]\d\d|\d{4,})\}/);
+  assert.match(latest,/classifierVersion','2\.2/);
+});
