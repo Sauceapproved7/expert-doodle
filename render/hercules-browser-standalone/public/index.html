@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#07090d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon-192.svg">
+  <link rel="stylesheet" href="/style.css">
+  <title>Hercules Browser</title>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">H</div>
+        <div>
+          <h1>Hercules Browser</h1>
+          <p>Standalone autonomous Chromium</p>
+        </div>
+      </div>
+      <div class="health"><span id="healthDot"></span><span id="healthText">Connecting</span></div>
+    </header>
+
+    <section class="toolbar">
+      <button class="iconbtn" id="back" aria-label="Back">←</button>
+      <button class="iconbtn" id="forward" aria-label="Forward">→</button>
+      <button class="iconbtn" id="reload" aria-label="Reload">↻</button>
+      <form id="navForm" class="omnibox">
+        <input id="urlInput" autocomplete="off" spellcheck="false" inputmode="url" placeholder="Enter a URL">
+        <button type="submit">Go</button>
+      </form>
+      <button class="iconbtn" id="newSession" aria-label="New secure session">＋</button>
+    </section>
+
+    <section class="workspace">
+      <div class="screenWrap">
+        <img id="screen" alt="Live Hercules browser session" draggable="false">
+        <div id="screenMessage" class="screenMessage">Opening Hercules Browser…</div>
+      </div>
+
+      <aside class="side">
+        <div class="panel">
+          <div class="panelHead">
+            <span>Session</span><span id="sessionState" class="pill">Starting</span>
+          </div>
+          <div class="kv"><span>Title</span><strong id="pageTitle">—</strong></div>
+          <div class="kv"><span>URL</span><strong id="pageUrl">—</strong></div>
+        </div>
+
+        <div class="panel">
+          <div class="panelHead">
+            <span>Direct Control</span><span class="pill">Secure</span>
+          </div>
+          <input id="textInput" class="textInput" type="password" autocomplete="off" placeholder="Type into focused field">
+          <div class="grid2">
+            <button id="sendText">Send text</button>
+            <button id="toggleText">Show</button>
+          </div>
+          <div class="grid4">
+            <button data-key="Tab">Tab</button>
+            <button data-key="Enter">Enter</button>
+            <button data-key="Escape">Esc</button>
+            <button data-key="Backspace">⌫</button>
+          </div>
+          <div class="grid2">
+            <button id="scrollUp">Scroll ↑</button>
+            <button id="scrollDown">Scroll ↓</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panelHead">
+            <span>Autopilot</span><span class="pill accent">Armed</span>
+          </div>
+          <p class="small">Hercules can execute bounded browser plans automatically and preserve resumable checkpoints.</p>
+          <div class="kv"><span>Max steps</span><strong id="maxSteps">25</strong></div>
+          <div class="kv"><span>Retries</span><strong id="maxRetries">3</strong></div>
+          <div class="kv"><span>Checkpoint</span><strong id="checkpoint">Ready</strong></div>
+        </div>
+      </aside>
+    </section>
+
+    <footer class="statusbar">
+      <span id="status">Initializing secure browser session…</span>
+      <span>Owned Chromium · No Opera dependency</span>
+    </footer>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

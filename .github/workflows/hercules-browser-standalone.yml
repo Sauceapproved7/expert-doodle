@@ -1,0 +1,31 @@
+name: Hercules Standalone Browser
+
+on:
+  pull_request:
+    paths:
+      - "render/hercules-browser-standalone/**"
+      - "tests/hercules-browser-standalone.test.mjs"
+      - "docs/HERCULES-BROWSER-STANDALONE-V1.md"
+      - ".github/workflows/hercules-browser-standalone.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  standalone-browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Enforce execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
+      - name: Enforce owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Test standalone browser
+        run: node --test tests/hercules-browser-standalone.test.mjs
+      - name: Run security baseline
+        run: node scripts/security-baseline.mjs
