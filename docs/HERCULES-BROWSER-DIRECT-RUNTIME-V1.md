@@ -1,53 +1,50 @@
 # Hercules Browser Direct Runtime v1
 
-Date: 2026-09-27
+Date: 2026-09-27  
+Status: **verified rollback implementation; not the canonical production worker**
 
 ## Purpose
 
-Remove Browserless/CDP as a required dependency for the owned Hercules Browser production path.
+The direct runtime was built to remove Browserless/CDP from the Hercules critical path while the canonical Gateway v2 implementation was being completed.
 
-The direct runtime launches its own Playwright-managed Chromium process and exposes the same bounded worker contract already consumed by `hercules-browser`:
+It launches Playwright-managed Chromium and exposes the bounded worker contract consumed by `hercules-browser`: `navigate`, `scrape`, `screenshot`, `interact`, and `close_session`.
 
-- `navigate`
-- `scrape`
-- `screenshot`
-- `interact`
-- `close_session`
+## Production disposition
+
+The direct service was deployed and verified successfully, including LinkedIn navigation to the legitimate authentication surface, a six-request production burst with 6/6 success, and Browser Agent convergence from Example Domain to IANA.
+
+After PR #268, `hercules-browser-gateway-v2` became the canonical production worker because it keeps the same local-Chromium safety model while reusing an owned Chromium process across isolated contexts.
+
+The direct service remains the first rollback target in the production worker registry. Browserless-backed services are legacy rollback material only.
 
 ## Security properties
 
-- Bearer-token authentication is mandatory for `/v1/run`.
-- The token is supplied at runtime and is not committed to source.
-- HTTP(S) targets are checked before navigation.
-- Localhost, link-local, RFC1918/private IPv4, loopback, unique-local IPv6, `.local`, and `.internal` targets are blocked.
-- DNS answers are checked so public hostnames resolving only to private addresses are rejected.
-- Subresource requests pass through the same public-network allow check.
-- Raw JavaScript/code execution is not exposed.
-- CAPTCHA, MFA, provider login, consent, and anti-bot systems are not bypassed.
-- Browser sessions can be reused only by an opaque session ID and expire after ten minutes.
+- bearer-token authentication is mandatory for `/v1/run`;
+- token material is runtime/Vault-backed and not committed;
+- HTTP(S) targets are checked before navigation;
+- localhost, link-local, RFC1918/private IPv4, loopback, unique-local IPv6, `.local`, and `.internal` targets are blocked;
+- DNS answers are checked for private-address resolution;
+- subresource requests use the same public-network checks;
+- raw JavaScript/code execution is not exposed;
+- CAPTCHA, MFA, provider login, consent, and anti-bot systems are not bypassed;
+- opaque browser sessions expire after ten minutes.
 
-## Why this exists
+## Render deployment contract
 
-During live DA-24 LinkedIn verification on 2026-09-27, the three owned Browserless-backed endpoints failed at the CDP layer with connection timeouts or a public-edge 429/Cloudflare response. A separate Hercules screenshot path had already proven that the LinkedIn route itself reached the legitimate LinkedIn sign-in surface.
-
-The direct runtime removes that infrastructure dependency while keeping the same authorization and browser safety boundaries.
-
-## Deployment contract
-
-Render build command:
+Build command:
 
 ```sh
 cd render/hercules-browser-direct && npm install --omit=dev && node node_modules/playwright-core/cli.js install chromium
 ```
 
-Render start command:
+Start command:
 
 ```sh
 node render/hercules-browser-direct/server.mjs
 ```
 
-Required runtime environment:
+Required environment:
+- `HERCULES_DIRECT_TOKEN` — Vault-backed worker bearer token.
+- `PLAYWRIGHT_BROWSERS_PATH=0` — required on Render so Chromium is packaged in the deployed artifact instead of only the transient build cache.
 
-- `HERCULES_DIRECT_TOKEN`: Vault-backed worker bearer token.
-
-The production `hercules_browser_workers.primary` row is cut over only after the direct runtime is deployed and verified.
+Do not promote this service back to primary without an explicit rollback reason and fresh production verification.
