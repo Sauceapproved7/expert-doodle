@@ -1,7 +1,7 @@
 # Hercules Privacy Policy — DRAFT v0.1
 
 **Status:** DRAFT — NOT YET EFFECTIVE  
-**Company:** SauceApproved Enterprise LLC  
+**Company:** SauceApproved enterprise LLC  
 **Product:** Hercules / Hercules Revenue Recovery  
 **Owner/legal review required before publication**
 
@@ -97,7 +97,7 @@ Information may be used to:
 
 Some Hercules features may send selected input to an AI provider or AI-routing layer when the user invokes an AI-assisted capability.
 
-Before publication, SauceApproved Enterprise LLC must verify and document:
+Before publication, SauceApproved enterprise LLC must verify and document:
 - which production AI providers can receive customer content;
 - what fields are sent to each provider;
 - provider retention settings;
@@ -122,7 +122,7 @@ A provider must not be listed merely because Hercules has experimental code or a
 
 ## 6. Sharing
 
-SauceApproved Enterprise LLC may disclose information:
+SauceApproved enterprise LLC may disclose information:
 - to service providers acting on its behalf;
 - at the customer's direction;
 - when necessary to provide a requested integration;
