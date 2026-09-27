@@ -80,10 +80,10 @@ If the pilot demonstrates value, move to an owner-approved commercial plan. No b
 
 The commercial model is a **monthly software subscription**, not an outcome-based collection fee.
 
-Current post-pilot proposal:
-- **Starter:** $99/month.
+Current production-aligned post-pilot catalog starts at:
+- **Starter:** $49/month or $490/year.
 
-That figure remains a **proposal only** until the owner approves pricing and the commercial launch gates are complete. No founding-pilot fee is active yet. A customer must not be represented as owing a pilot or subscription payment solely because this package exists.
+That catalog remains **owner-approval gated** until the authenticated pricing approval and commercial launch gates are complete. No founding-pilot fee is active yet. A customer must not be represented as owing a pilot or subscription payment solely because this package exists.
 
 The higher Growth and Scale proposals remain available for later use but are intentionally outside this first narrow offer.
 
