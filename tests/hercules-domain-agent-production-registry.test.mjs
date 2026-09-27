@@ -92,7 +92,7 @@ test("domain-agent decisions are recorded in a private credential-free audit tab
   assert.match(migration,/enable row level security/i);
   assert.match(migration,/revoke all on table private\.hercules_domain_agent_audit from public, anon, authenticated/i);
   assert.doesNotMatch(migration,/task_input|raw_payload|access_token|refresh_token\s+text|client_secret\s+text/i);
-  assert.match(edge,/hercules_domain_agent_audit/);
+  assert.match(edge,/hercules_domain_agent_record_audit/);
   assert.match(edge,/recordAudit/);
 });
 
