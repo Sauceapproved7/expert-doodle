@@ -5,7 +5,7 @@ on:
     paths:
       - "supabase/functions/hercules-launch/**"
       - "supabase/functions/hercules-revenue-rescue/**"
-      - "tests/hercules-customer-recovery-workspace.test.mjs"
+      - "tests/hercules-customer-recovery-workspace.test.mjs"\n      - "tests/hercules-domain-agent-app-surface.test.mjs"
       - "docs/launch/HERCULES-CUSTOMER-JOURNEY.md"
       - ".github/workflows/hercules-customer-recovery-workspace.yml"
   workflow_dispatch:
@@ -25,4 +25,4 @@ jobs:
       - name: Enforce owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
       - name: Test customer recovery workspace
-        run: node --experimental-strip-types --test tests/hercules-customer-recovery-workspace.test.mjs tests/hercules-ad-studio-integration.test.mjs
+        run: node --experimental-strip-types --test tests/hercules-customer-recovery-workspace.test.mjs tests/hercules-ad-studio-integration.test.mjs tests/hercules-domain-agent-app-surface.test.mjs
