@@ -76,6 +76,16 @@ test("fully green dossier stays locked and returns only sanitized control summar
       readiness:{ready:true,executionEnabled:false,blockers:[]},
     },
     productionInputs:readyInputs(),
+    qualificationEvidenceStatus:{
+      ready:true,
+      stale:false,
+      identityChanged:false,
+      qualifiedAt:"2026-09-27T06:00:00Z",
+      expiresAt:"2026-10-04T06:00:00Z",
+      blockers:[],
+      activationAllowed:false,
+      externalRailsEnabled:false,
+    },
     now:"2026-09-27T07:00:00Z",
   });
 
