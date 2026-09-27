@@ -2,9 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   SHOPIFY_DNS_RECORDS,
+  RESEND_MAIL_DNS_RECORDS,
   SpaceshipDnsClient,
   createSpaceshipDnsClientFromEnv,
   planShopifyDnsReconciliation,
+  planResendMailDnsReconciliation,
 } from "../hercules-deploy/spaceship-dns.mjs";
 
 test("Shopify DNS contract uses official type-specific fields", () => {
@@ -184,4 +186,68 @@ test("environment factory fails closed without credentials and defaults to Sauce
   });
   await client.listRecords("sauceapproved.com");
   assert.throws(() => client.assertAllowed("example.com"), /not allowlisted/);
+});
+
+
+test("Resend business email DNS contract uses Spaceship type-specific fields", () => {
+  assert.deepEqual(RESEND_MAIL_DNS_RECORDS, [
+    {type:"TXT", name:"resend._domainkey", value:"p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC6+i+jh2KU91qQnRldgoE2THb9mwmwTlE+fJhKF6nZyhxvZWd826LtIVc2vZHATG5uBu0X0TxkfyO9pJAOth022HQWHHZR1TcoqeZK9LAJ/S5Jw8yY1htY9UvkH2niGQYluGZ+zMKmlMzwcTc7zwu/Q3Wemmcjhku+dPtYsbweiQIDAQAB", ttl:3600},
+    {type:"MX", name:"send", exchange:"feedback-smtp.us-east-1.amazonses.com", preference:10, ttl:3600},
+    {type:"TXT", name:"send", value:"v=spf1 include:amazonses.com ~all", ttl:3600},
+    {type:"CNAME", name:"rsend", cname:"send.forge.rmta.net", ttl:3600},
+    {type:"MX", name:"@", exchange:"inbound-smtp.us-east-1.amazonaws.com", preference:10, ttl:3600},
+  ]);
+});
+
+test("Resend mail planner preserves unrelated records and only targets exact mail keys", () => {
+  const existing = [
+    {type:"A", name:"@", address:"23.227.38.65", ttl:3600, group:{type:"custom"}},
+    {type:"CNAME", name:"www", cname:"shops.myshopify.com", ttl:3600, group:{type:"custom"}},
+    {type:"TXT", name:"@", value:"unrelated-verification=keep", ttl:3600, group:{type:"custom"}},
+  ];
+  const plan = planResendMailDnsReconciliation(existing);
+  assert.equal(plan.safeToApply, true);
+  assert.equal(plan.deleteRecords.length, 0);
+  assert.equal(plan.saveRecords.length, 5);
+  assert.equal(plan.unchanged.length, 3);
+  assert.equal(plan.ready, false);
+});
+
+test("Resend mail planner fails closed on provider-managed conflicts and identifies custom replacements", () => {
+  const providerConflict = planResendMailDnsReconciliation([
+    {type:"MX", name:"@", exchange:"mail.provider.example", preference:10, ttl:3600, group:{type:"product"}},
+  ]);
+  assert.equal(providerConflict.safeToApply, false);
+  assert.equal(providerConflict.blockingConflicts.length, 1);
+  assert.equal(providerConflict.deleteRecords.length, 0);
+
+  const customConflict = planResendMailDnsReconciliation([
+    {type:"TXT", name:"send", value:"v=spf1 include:old.example ~all", ttl:3600, group:{type:"custom"}},
+  ]);
+  assert.equal(customConflict.safeToApply, true);
+  assert.deepEqual(customConflict.deleteRecords, [
+    {type:"TXT", name:"send", value:"v=spf1 include:old.example ~all"},
+  ]);
+});
+
+test("client serializes TXT and MX records using official Spaceship fields", async () => {
+  const calls = [];
+  const client = new SpaceshipDnsClient({
+    apiKey:"key_test",
+    apiSecret:"secret_test",
+    allowedDomains:["sauceapproved.com"],
+    fetchImpl:async (url, init={}) => {
+      calls.push({url,init});
+      return new Response(null,{status:204});
+    },
+  });
+  await client.saveRecords("sauceapproved.com", [
+    {type:"TXT", name:"send", value:"v=spf1 include:amazonses.com ~all", ttl:3600},
+    {type:"MX", name:"send", exchange:"feedback-smtp.us-east-1.amazonses.com", preference:10, ttl:3600},
+  ]);
+  const payload=JSON.parse(calls[0].init.body);
+  assert.deepEqual(payload.items, [
+    {type:"TXT", name:"send", value:"v=spf1 include:amazonses.com ~all", ttl:3600},
+    {type:"MX", name:"send", exchange:"feedback-smtp.us-east-1.amazonses.com", preference:10, ttl:3600},
+  ]);
 });
