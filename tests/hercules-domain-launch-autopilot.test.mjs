@@ -53,3 +53,25 @@ test("autopilot matches live Spaceship DNS run timestamp schema",()=>{
   assert.match(runBlock,/started_at/);
   assert.doesNotMatch(runBlock,/v_run\.created_at/);
 });
+
+
+test("status query uses each live table's own timestamp column",()=>{
+  const latestRun=sql.slice(
+    sql.indexOf("latest_run as ("),
+    sql.indexOf("domain_row as (")
+  );
+  const domainRow=sql.slice(
+    sql.indexOf("domain_row as ("),
+    sql.indexOf("select jsonb_build_object(")
+  );
+  assert.match(latestRun,/order by started_at desc/);
+  assert.doesNotMatch(latestRun,/order by created_at desc/);
+  assert.match(domainRow,/order by created_at desc/);
+  assert.doesNotMatch(domainRow,/order by started_at desc/);
+});
+
+test("tick selects started_at into the provider run record",()=>{
+  const tick=sql.slice(sql.indexOf("create or replace function public.hercules_domain_launch_autopilot_tick"));
+  assert.match(tick,/select trace_id,status,error,started_at,completed_at,summary/);
+  assert.doesNotMatch(tick,/select trace_id,status,error,created_at,completed_at,summary/);
+});

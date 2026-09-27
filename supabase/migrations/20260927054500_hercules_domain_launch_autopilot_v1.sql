@@ -58,7 +58,7 @@ as $$
     from public.hercules_domains
     where domain_name='sauceapproved.com'
       and status <> 'removed'
-    order by started_at desc
+    order by created_at desc
     limit 1
   )
   select jsonb_build_object(
@@ -153,7 +153,7 @@ begin
     );
   end if;
 
-  select trace_id,status,error,created_at,completed_at,summary
+  select trace_id,status,error,started_at,completed_at,summary
     into v_run
     from public.hercules_spaceship_dns_runs
    where action='reconcile_shopify_dns'
