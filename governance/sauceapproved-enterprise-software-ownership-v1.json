@@ -1,0 +1,72 @@
+{
+  "schema": "sauceapproved.enterprise.software-ownership",
+  "version": 1,
+  "effectiveDate": "2026-09-27",
+  "legalEntity": {
+    "name": "SauceApproved enterprise LLC",
+    "jurisdiction": "Connecticut"
+  },
+  "canonicalRepository": "Sauceapproved7/expert-doodle",
+  "purpose": "Create a durable ownership and provenance intake rule for software intended to be held by SauceApproved enterprise LLC without overstating chain of title or third-party rights.",
+  "ownershipModel": {
+    "defaultBusinessIntent": "Software created, commissioned, acquired, or maintained specifically for the enterprise is intended to become an enterprise portfolio asset.",
+    "chainOfTitleRequired": true,
+    "acceptableEvidence": [
+      "written IP assignment",
+      "applicable work-made-for-hire documentation",
+      "contractor or contributor IP assignment",
+      "documented acquisition",
+      "other legally sufficient ownership record"
+    ],
+    "historicRightsPreserved": true,
+    "thirdPartyRightsPreserved": true,
+    "priorLicenseGrantsPreserved": true
+  },
+  "currentCanonicalAssets": [
+    {
+      "name": "Hercules",
+      "scope": "canonical Hercules platform source, configuration, schemas, workflows, documentation, and original project materials in Sauceapproved7/expert-doodle",
+      "currentDeclaredRightsHolder": "Sauceapproved7",
+      "targetEnterpriseOwner": "SauceApproved enterprise LLC",
+      "status": "enterprise-transfer-pending-executed-assignment"
+    },
+    {
+      "name": "Hercules Browser",
+      "scope": "owned Hercules Browser implementation and repository-defined control, routing, recovery, and operator surfaces",
+      "currentDeclaredRightsHolder": "Sauceapproved7",
+      "targetEnterpriseOwner": "SauceApproved enterprise LLC",
+      "status": "enterprise-transfer-pending-executed-assignment"
+    },
+    {
+      "name": "Hercules Ad Studio",
+      "scope": "hercules-forge/ad-studio and its repository tests and documentation",
+      "currentDeclaredRightsHolder": "Sauceapproved7",
+      "targetEnterpriseOwner": "SauceApproved enterprise LLC",
+      "status": "enterprise-transfer-pending-executed-assignment"
+    }
+  ],
+  "futureSoftwareIntake": {
+    "required": [
+      "canonical asset name and source location",
+      "creation or acquisition date",
+      "author or authorized source",
+      "AI assistance disclosure when material",
+      "third-party dependency and license inventory",
+      "chain-of-title evidence to SauceApproved enterprise LLC",
+      "repository commit or artifact identifier"
+    ],
+    "rule": "Do not mark an asset enterprise-owned until chain-of-title evidence is recorded."
+  },
+  "postAssignmentRepositoryActions": [
+    "update IP_PROVENANCE.md declared project rights holder",
+    "update governance/owner-code-policy.json declaredRightsHolder",
+    "update ownership constants and tests that intentionally bind to the prior rights-holder string",
+    "update copyright and licensing notices where legally appropriate without revoking prior valid grants",
+    "record the executed assignment reference without publishing private signatures or sensitive personal data"
+  ],
+  "legalEffect": {
+    "transfersIPByItself": false,
+    "note": "This governance record states enterprise intent and workflow. It does not substitute for an executed assignment or other legally sufficient chain-of-title instrument."
+  },
+  "ownerOnlyBoundary": "Execution of a legally binding IP assignment by the current rights holder."
+}
