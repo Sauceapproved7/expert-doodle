@@ -94,3 +94,21 @@ v0.3 adds a local HTTP API backed by the durable sandbox runtime.
 
 The API is still a sandbox control surface. It is not an authorization to hold deposits
 or connect to ACH, wire, card, RTP/FedNow, or other regulated money movement.
+
+
+## Browser console
+
+v0.4 adds the Hercules Financial sandbox console and a browser-safe session bridge.
+
+The browser never receives or stores Hercules Base access or refresh tokens. Sign-in is
+forwarded server-to-server to Hercules Base. The bank service holds those tokens only in
+process memory and returns an opaque `bank_session` cookie with `HttpOnly` and
+`SameSite=Strict`.
+
+Cookie-authenticated state changes require the in-memory `X-Bank-CSRF` value. Reloading
+the console rotates that value. Access-token refresh also occurs server-side.
+
+The console exposes sandbox accounts, balances, statements, account creation, and
+internal transfers. It deliberately has no real deposit, ACH, wire, card, or cash UI.
+
+For an HTTPS deployment, start the browser service with secure session cookies enabled.
