@@ -46,3 +46,10 @@ test("autopilot stops before Shopify custom-domain mutation",()=>{
   assert.match(sql,/shopify_attachment_ready/);
   assert.doesNotMatch(sql,/webPresenceCreate|domainCreate|primaryDomainUpdate/);
 });
+
+
+test("autopilot matches live Spaceship DNS run timestamp schema",()=>{
+  const runBlock=sql.slice(sql.indexOf("hercules_spaceship_dns_runs"));
+  assert.match(runBlock,/started_at/);
+  assert.doesNotMatch(runBlock,/v_run\.created_at/);
+});
