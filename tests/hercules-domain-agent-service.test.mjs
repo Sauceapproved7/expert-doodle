@@ -6,7 +6,7 @@ import {
   createDomainAgentIdentity,
   createProviderGrantRecord,
 } from "../hercules-authority/domain-agent.mjs";
-import {createDomainAgentService} from "../hercules-authority/domain-agent-service.mjs";
+import {createDomainAgentService} from "../hercules-authority/domain-agent-service.mjs";\nimport {createHerculesRouteTask} from "../hercules-authority/domain-agent-router.mjs";
 
 const TOKEN = "0123456789abcdef0123456789abcdef";
 const SHA = "b".repeat(64);
@@ -248,4 +248,30 @@ test("oversized task bodies are rejected before routing or provider execution", 
   });
   assert.equal(response.status, 413);
   assert.equal(executed, 0);
+});
+
+test("Hercules route adapter converts domain-agent task input into owned router inference", async () => {
+  const calls = [];
+  const routeTask = createHerculesRouteTask({
+    router: {
+      infer(input) {
+        calls.push(input);
+        return {modelId: "hercules-agent", route: "coding", scores: {coding: 0.9}};
+      },
+    },
+  });
+  const routed = await routeTask({
+    requestId: "task-1",
+    input: {text: "Build the production connector"},
+    provider: "github",
+    action: "repository.update",
+    resource: "repo",
+  });
+  assert.equal(routed.modelId, "hercules-agent");
+  assert.equal(routed.route, "coding");
+  assert.equal(calls[0], "Build the production connector");
+});
+
+test("Hercules route adapter refuses an invalid router runtime", () => {
+  assert.throws(() => createHerculesRouteTask({router: {}}), /infer/i);
 });
