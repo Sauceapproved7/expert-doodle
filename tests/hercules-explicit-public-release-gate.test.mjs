@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 const launch=readFileSync(new URL("../supabase/functions/hercules-launch/index.ts",import.meta.url),"utf8");
 const gate=readFileSync(new URL("../supabase/functions/hercules-launch-gate/index.ts",import.meta.url),"utf8");
 const migration=readFileSync(new URL("../supabase/migrations/20260927040500_add_explicit_public_release_gate.sql",import.meta.url),"utf8");
+const passwordDefenseGate=readFileSync(new URL("../supabase/migrations/20260927180400_hercules_password_defense_launch_gate_v1.sql",import.meta.url),"utf8");
 
 test("launch surface requires both launch readiness and explicit public release",()=>{
   assert.match(launch,/lastCheck\?\.launch_ready===true&&d\?\.publicRegistrationOpen===true/);
@@ -59,4 +60,23 @@ test("organic proof surface includes Build Receipt 001",()=>{
   assert.match(launch,/Three receivables\. Three safe routes\./);
   assert.match(launch,/id="build-receipt-001"/);
   assert.match(launch,/Request founding pilot/);
+});
+
+
+test("auth hardening is computed from live Hercules password defense evidence",()=>{
+  assert.match(gate,/hercules_password_defense_status/);
+  assert.match(gate,/password_defense_probe=compromised/);
+  assert.match(gate,/commercial\.auth_hardening=passwordDefense\.ok/);
+  assert.match(gate,/hercules-password-defense-v2/);
+  assert.match(passwordDefenseGate,/hercules_password_defense_status/);
+  assert.match(passwordDefenseGate,/hercules_password_screening_guard/);
+  assert.match(passwordDefenseGate,/service_role_can_issue/);
+  assert.match(passwordDefenseGate,/anon_can_issue/);
+  assert.match(passwordDefenseGate,/authenticated_can_issue/);
+});
+
+test("native provider warning cannot by itself fail the Hercules auth gate",()=>{
+  assert.doesNotMatch(gate,/requiredCommercial=\['auth_hardening','pricing','privacy','terms'\]/);
+  assert.match(gate,/requiredOwnerCommercial=\['pricing','privacy','terms'\]/);
+  assert.match(gate,/commercialOk=passwordDefense\.ok&&requiredOwnerCommercial\.every/);
 });
