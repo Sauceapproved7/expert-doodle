@@ -275,7 +275,8 @@ async function completeCallback(url:URL){
   if(error||data!==true)throw new Error("spaceship_mcp_authorization_store_failed");
   await markLatestHandoffComplete();
   const {data:autopilot}=await admin.rpc("hercules_domain_launch_autopilot_tick");
-  return {ok:true,provider:"spaceship-mcp",status:"configured",autopilot:autopilot||null};
+  const {data:emailAutopilot}=await admin.rpc("hercules_business_email_dns_autopilot_tick");
+  return {ok:true,provider:"spaceship-mcp",status:"configured",autopilot:autopilot||null,emailAutopilot:emailAutopilot||null};
 }
 async function accessToken(){
   const current=await row();
