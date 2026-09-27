@@ -121,10 +121,12 @@ async function acquireWorkerLease(workerName:string,traceId:string,waitBudgetMs=
 }
 async function releaseWorkerLease(leaseId:string|null,traceId:string){
   if(!leaseId)return;
-  await admin.rpc("hercules_browser_worker_lease_release",{
-    p_lease_id:leaseId,
-    p_trace_id:traceId
-  }).catch(()=>null);
+  try{
+    await admin.rpc("hercules_browser_worker_lease_release",{
+      p_lease_id:leaseId,
+      p_trace_id:traceId
+    });
+  }catch{}
 }
 
 function detectSecurityChallenge(page:any){
