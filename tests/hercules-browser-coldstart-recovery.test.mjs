@@ -26,8 +26,9 @@ test("worker warmup URLs are controlled by the worker registry",()=>{
 
 test("transient CDP startup failures use bounded backoff before retry",()=>{
   assert.match(browser,/function transientWorkerFailure/);
-  assert.match(browser,/worker_http_\(\?:502\|503\|504\)/);
+  assert.doesNotMatch(browser,/worker_http_\(\?:502\|503\|504\)/);
   assert.match(browser,/failed to connect to backend/);
+  assert.match(browser,/connectOverCDP/);
   assert.match(browser,/websocket was closed before the connection was established/);
   assert.match(browser,/const retryBudgetMs=20000/);
   assert.match(browser,/await delay\(backoffMs\)/);
