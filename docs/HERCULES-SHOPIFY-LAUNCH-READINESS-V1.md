@@ -37,3 +37,10 @@ Printify tracked inventory is deliberately not a hard gate because print-on-dema
 A first-party Shopify readiness monitor runs every fifteen minutes after the Hercules Shopify provider connection is authorized. Until that connection exists, the monitor returns without making a provider request.
 
 The current ChatGPT Shopify connector can seed a sanitized snapshot so the readiness state is useful before the first-party credential is authorized.
+
+
+## Operator surface
+
+Hercules Integrations now has a Launch Readiness card. Before first-party Shopify authorization, it shows the last verified stored snapshot. After authorization, refreshing that card performs a live first-party Shopify read and updates the readiness state.
+
+The first-party provider query is limited to the fixed production shop and gathers plan, MAIN theme, the anchor hoodie, its publication state, launch collections, and navigation menus. No Shopify credential value is returned to the UI or stored in the readiness snapshot.
