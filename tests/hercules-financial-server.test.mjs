@@ -161,3 +161,39 @@ test("Financial launcher passes qualification evidence status into owner readine
     await rm(root,{recursive:true,force:true});
   }
 });
+
+
+test("Financial launcher opens a durable readiness drift sentinel", async () => {
+  const root=await mkdtemp(join(tmpdir(),"hercules-financial-drift-"));
+  let service=null;
+  try{
+    service=await startHerculesFinancialService({
+      statePath:join(root,"bank.json"),
+      baseAuthUrl:"https://base.example.test",
+      jwtSecret:SECRET,
+      port:0,
+      nowSeconds:()=>1100,
+    });
+    assert.ok(service.readinessDriftSentinel);
+    assert.equal(typeof service.readinessDriftSentinel.check,"function");
+
+    const ownerToken=signJwtHs256({
+      sub:"owner-1",
+      role:"owner",
+      issuer:"hercules-base",
+      audience:"hercules-base-api",
+      ttlSeconds:900,
+      nowSeconds:1000,
+    },SECRET);
+    const response=await fetch(service.endpoint+"/v1/admin/readiness-drift",{
+      headers:{authorization:"Bearer "+ownerToken},
+    });
+    const body=await response.json();
+    assert.equal(response.status,200);
+    assert.equal(body.activationAllowed,false);
+    assert.equal(body.externalRailsEnabled,false);
+  }finally{
+    if(service?.server?.listening)await new Promise((resolve)=>service.server.close(resolve));
+    await rm(root,{recursive:true,force:true});
+  }
+});
