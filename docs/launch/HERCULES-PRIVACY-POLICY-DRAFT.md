@@ -168,7 +168,7 @@ Deletion may not immediately remove:
 - backup copies pending normal backup expiration;
 - information necessary to establish or defend legal claims.
 
-A monitored business privacy/support request channel must be configured before this candidate becomes effective. Requests must be authenticated or otherwise verified before export, correction, or deletion is performed. Hercules must preserve legally or operationally required audit/security evidence where deletion is not permitted.
+The Hercules Privacy Request Center is the monitored in-product request channel for access, export, correction, deletion, privacy questions, and support. Every request receives an opaque reference and begins with requester verification incomplete. Identity or authority must be verified before export, correction, or deletion is performed. Hercules must preserve legally or operationally required audit/security evidence where deletion is not permitted.
 
 ## 9. Security
 
@@ -202,7 +202,7 @@ The final policy should explain how material changes are communicated and state 
 
 ## 14. Contact
 
-A monitored privacy/contact channel must be configured before publication. Until that business channel is verified, Hercules must not publish a personal address or personal email as the default privacy contact.
+Privacy and support requests may be submitted through the Hercules Privacy Request Center on the Hercules launch surface. The Center is a business-operated request channel and does not publish the owner's personal email address. Business/legal inquiries may also be submitted there, subject to the final Terms and any legally required notice method.
 
 ---
 
@@ -211,7 +211,6 @@ A monitored privacy/contact channel must be configured before publication. Until
 Before publication:
 - confirm the customer-data deletion/export workflow;
 - confirm internal retention practices against production behavior;
-- configure a monitored privacy contact;
 - confirm state/regional privacy disclosures for the launch market;
 - confirm payment-provider data handling if billing is activated;
 - ensure public statements match the final Terms of Service and live product.
