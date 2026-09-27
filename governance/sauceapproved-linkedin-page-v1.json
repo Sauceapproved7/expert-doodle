@@ -1,0 +1,38 @@
+{
+  "schema": "sauceapproved.social.linkedin-page",
+  "version": 1,
+  "status": "ready_for_owner_creation",
+  "pageType": "company",
+  "brandName": "SauceApproved",
+  "legalEntity": "SauceApproved Enterprise LLC",
+  "website": "https://sauceapproved.com",
+  "preferredPublicUrl": "sauceapproved",
+  "fallbackPublicUrls": [
+    "sauceapproved-enterprise",
+    "sauceapproved-ai",
+    "sauceapproved-hercules"
+  ],
+  "industry": "Software Development",
+  "companyType": "Privately Held",
+  "tagline": "Verifiable AI software that helps businesses recover cash, keep control, and prove every action.",
+  "description": "SauceApproved builds verifiable AI software for real business workflows. Our flagship product, Hercules Revenue Recovery, helps U.S. businesses managing their own commercial receivables separate routine overdue cases from disputes, active payment promises, paid evidence, and human-review situations. Hercules is designed around evidence, approval boundaries, and verified action history—not black-box automation or guaranteed recovery claims. Founding pilots are currently controlled and release-gated.",
+  "specialties": [
+    "AI software",
+    "Revenue recovery",
+    "B2B receivables",
+    "Workflow automation",
+    "Verifiable AI",
+    "Human-in-the-loop automation",
+    "Operational software",
+    "Business process automation"
+  ],
+  "primaryCta": "Visit website",
+  "trackedWebsite": "https://sauceapproved.com/?utm_source=linkedin&utm_medium=organic_social&utm_campaign=founding-pilot-organic-v1&utm_content=company-page",
+  "firstContentPillar": "Why overdue invoices are not all the same",
+  "governance": {
+    "ownerAdminRequired": true,
+    "noPersonalProfileForBrand": true,
+    "publicRegistrationStillClosed": true,
+    "pricingProposalOnly": true
+  }
+}
