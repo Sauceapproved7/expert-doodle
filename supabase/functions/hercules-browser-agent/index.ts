@@ -277,7 +277,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"1.0.0",
+    ok:true,service:"hercules-browser-agent",version:"0.9.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,securityChallengeDetection:true,highImpactAutonomy:false
