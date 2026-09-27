@@ -53,6 +53,13 @@ function eventHash(event){
     previousHash:event.previousHash,
   }))).digest("hex");
 }
+function assertEventShape(event){
+  if(!event||typeof event!=="object"||Array.isArray(event))throw new Error("compliance event is invalid");
+  const expected=["hash","payload","previousHash","sequence","type"];
+  const actual=Object.keys(event).sort();
+  if(JSON.stringify(actual)!==JSON.stringify(expected))throw new Error("compliance event shape integrity failure");
+  if(!event.payload||typeof event.payload!=="object"||Array.isArray(event.payload))throw new Error("compliance event payload is invalid");
+}
 function appendEvent(state,type,payload){
   const event={
     sequence:state.events.length+1,
@@ -109,7 +116,7 @@ function verifyAndRestore(snapshot){
   let previousHash=null;
   for(let i=0;i<snapshot.events.length;i+=1){
     const event=snapshot.events[i];
-    if(!event||typeof event!=="object")throw new Error("compliance event is invalid");
+    assertEventShape(event);
     if(event.sequence!==i+1)throw new Error("compliance event sequence integrity failure");
     if(event.previousHash!==previousHash)throw new Error("compliance event previous hash integrity failure");
     if(event.hash!==eventHash(event))throw new Error("compliance event hash integrity failure");
