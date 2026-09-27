@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.browser-routing-policy.v1",
-  "version": 1,
+  "version": 2,
   "status": "active",
   "defaultBrowser": "hercules-browser",
   "ownedControlSurface": "hercules-browser",
@@ -25,6 +25,28 @@
   },
   "verification": {
     "neverClaimHerculesUsedWithoutExecutionEvidence": true,
-    "preserveAuditEvidence": true
+    "preserveAuditEvidence": true,
+    "runtimeMonitor": "hercules-browser-runtime"
+  },
+  "personalSessionBrowser": {
+    "mode": "explicit-owner-session-only",
+    "purpose": "Use only when a provider requires the owner's already-authenticated personal browser session or human verification.",
+    "automaticFallback": false,
+    "passwordExport": false,
+    "cookieExport": false,
+    "credentialExport": false,
+    "humanVerificationBypass": false,
+    "securityChallengeBypass": false,
+    "requirements": [
+      "explicit-owner-session-connection",
+      "provider-accepted-authenticated-session",
+      "preserve-provider-security-controls"
+    ]
+  },
+  "capacityPolicy": {
+    "productionWorker": "primary",
+    "maxConcurrentStarts": 1,
+    "queueBeforeUpstream": true,
+    "reason": "Current Browserless upstream returned HTTP 429 under concurrent launch stress; Hercules serializes CDP starts until upstream capacity is deliberately increased and recertified."
   }
 }
