@@ -4,8 +4,10 @@ on:
   pull_request:
     paths:
       - "supabase/functions/hercules-private-bridge/**"
+      - "supabase/migrations/*hercules_launch_approval_envelope*"
       - "supabase/functions/hercules-integrations/**"
       - "tests/hercules-launch-owner-decision-center.test.mjs"
+      - "docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md"
       - "docs/HERCULES-LAUNCH-OWNER-DECISION-CENTER-V1.md"
       - ".github/workflows/hercules-launch-owner-decision-center.yml"
       - "governance/owner-code-policy.json"

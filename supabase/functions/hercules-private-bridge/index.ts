@@ -19,12 +19,12 @@ const LAUNCH_DOCS={
   auth_hardening:'docs/launch/HERCULES-AUTH-SECURITY-REVIEW-2026-09-27.md'
 } as const;
 const LAUNCH_PACKET={
-  version:'hercules-launch-packet-2026-09-27-v1',
-  digest:'2531abae2cf8caae0af2d153feac617d4b21ce7976476c49ced57a5956615690',
+  version:'hercules-launch-packet-2026-09-27-v2',
+  digest:'e2166a626887f9c5995f409d6ce91900ef2175bcc6e221b6bffec46ce657a086',
   documents:{
     pricing:{path:LAUNCH_DOCS.pricing,sha:'85ecbdc37e4d73cdf1b6c3f9987fac8a57c47f00'},
     terms:{path:LAUNCH_DOCS.terms,sha:'e607d7e992458b9a7f0cca82cdeb216cae47eab5'},
-    privacy:{path:LAUNCH_DOCS.privacy,sha:'e88a83a7cb4ce5f01a3049eddfc80f84643c5b8c'}
+    privacy:{path:LAUNCH_DOCS.privacy,sha:'5bb5022e464c68ba27e80a1a2bfaa430c624cc44'}
   },
   pricing:{
     starter:{monthly:4900,annual:49000},
@@ -227,7 +227,7 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
-    return out({ok:true,service:'hercules-private-bridge',version:'1.4.0',status:'ready',
+    return out({ok:true,service:'hercules-private-bridge',version:'1.5.0',status:'ready',
       capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
@@ -442,7 +442,7 @@ Deno.serve(async(req:Request)=>{
       resource_type:'hercules_privacy_request',
       resource_id:reference,
       changes:{schema_version:data?.schema_version||null,size_bytes:data?.size_bytes||null},
-      metadata:{source:'hercules-private-bridge-v1.4.0',secret_exposure:false}
+      metadata:{source:'hercules-private-bridge-v1.5.0',secret_exposure:false}
     });
     return out(data);
   }
@@ -479,7 +479,7 @@ Deno.serve(async(req:Request)=>{
         full_account_deletion_complete:false,
         preserved_for_review:data?.preserved_for_review||[]
       },
-      metadata:{source:'hercules-private-bridge-v1.4.0',explicit_confirmation:true,secret_exposure:false}
+      metadata:{source:'hercules-private-bridge-v1.5.0',explicit_confirmation:true,secret_exposure:false}
     });
     return out(data);
   }

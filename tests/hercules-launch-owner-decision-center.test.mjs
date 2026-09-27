@@ -10,6 +10,14 @@ const ui=await readFile(
   new URL("../supabase/functions/hercules-integrations/index.ts",import.meta.url),
   "utf8"
 );
+const packetMigration=await readFile(
+  new URL("../supabase/migrations/20260927210500_hercules_launch_approval_envelope_v2.sql",import.meta.url),
+  "utf8"
+);
+const privacy=await readFile(
+  new URL("../docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md",import.meta.url),
+  "utf8"
+);
 
 test("decision backend exposes status without changing approvals",()=>{
   assert.match(bridge,/action==='launch_approval_status'/);
@@ -75,12 +83,23 @@ test("decision status does not expose owner user identifiers",()=>{
 });
 
 
-test("launch approval envelope is locked to exact canonical document versions",()=>{
-  assert.match(bridge,/hercules-launch-packet-2026-09-27-v1/);
-  assert.match(bridge,/2531abae2cf8caae0af2d153feac617d4b21ce7976476c49ced57a5956615690/);
+test("launch approval envelope v2 is locked to the exact current canonical documents",()=>{
+  assert.match(bridge,/hercules-launch-packet-2026-09-27-v2/);
+  assert.match(bridge,/e2166a626887f9c5995f409d6ce91900ef2175bcc6e221b6bffec46ce657a086/);
   assert.match(bridge,/85ecbdc37e4d73cdf1b6c3f9987fac8a57c47f00/);
   assert.match(bridge,/e607d7e992458b9a7f0cca82cdeb216cae47eab5/);
-  assert.match(bridge,/e88a83a7cb4ce5f01a3049eddfc80f84643c5b8c/);
+  assert.match(bridge,/5bb5022e464c68ba27e80a1a2bfaa430c624cc44/);
+  assert.match(packetMigration,/hercules-launch-packet-2026-09-27-v2/);
+  assert.match(packetMigration,/e2166a626887f9c5995f409d6ce91900ef2175bcc6e221b6bffec46ce657a086/);
+  assert.match(packetMigration,/5bb5022e464c68ba27e80a1a2bfaa430c624cc44/);
+});
+
+test("privacy candidate reflects live data-rights and retention evidence before packet v2 approval",()=>{
+  assert.match(privacy,/FINAL CANDIDATE v0\.4/);
+  assert.match(privacy,/Hercules Data Rights Operations v2/);
+  assert.match(privacy,/HERCULES-RETENTION-VERIFICATION-2026-09-27\.md/);
+  assert.doesNotMatch(privacy,/complete the reviewed export-delivery and deletion-execution phases/i);
+  assert.doesNotMatch(privacy,/confirm internal retention practices against production behavior/i);
 });
 
 test("one owner approval can atomically decide pricing terms and privacy",()=>{

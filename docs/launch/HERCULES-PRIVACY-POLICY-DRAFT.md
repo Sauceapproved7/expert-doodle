@@ -1,4 +1,4 @@
-# Hercules Privacy Policy — FINAL CANDIDATE v0.3
+# Hercules Privacy Policy — FINAL CANDIDATE v0.4
 
 **Status:** FINAL CANDIDATE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE  
 **Company:** SauceApproved enterprise LLC  
@@ -168,7 +168,7 @@ Deletion may not immediately remove:
 - backup copies pending normal backup expiration;
 - information necessary to establish or defend legal claims.
 
-The Hercules Privacy Request Center is the monitored in-product request channel for access, export, correction, deletion, privacy questions, and support. Every request receives an opaque reference and begins with requester verification incomplete. Identity or authority must be verified before export, correction, or deletion is performed. Hercules Data Rights Operations v1 can generate a non-destructive preview after verification that inventories user-scoped content and identifies membership, billing, audit, security, release, and legal/operational records requiring separate treatment. The preview does not delete data. Hercules must preserve legally or operationally required audit/security evidence where deletion is not permitted.
+The Hercules Privacy Request Center is the monitored in-product request channel for access, export, correction, deletion, privacy questions, and support. Every request receives an opaque reference and begins with requester verification incomplete. Identity or authority must be verified before export, correction, or deletion is performed. Hercules Data Rights Operations v2 can generate a non-destructive preview and verified export package after requester verification. For verified deletion requests, Hercules can generate a request-bound deletion plan and, after authenticated owner confirmation, remove scoped user content while preserving account, membership, usage, billing, audit, security, release, tax/accounting, contractual, dispute, and other records that require separate treatment. The preview does not delete data, and protected or review-required records are not silently removed by the customer-content deletion executor.
 
 ## 9. Security
 
@@ -208,11 +208,17 @@ Privacy and support requests may be submitted through the Hercules Privacy Reque
 
 ## Launch verification blockers in this candidate
 
-Before publication:
-- complete the reviewed export-delivery and deletion-execution phases after the verified preview workflow;
-- confirm internal retention practices against production behavior;
-- confirm state/regional privacy disclosures for the launch market;
-- confirm payment-provider data handling if billing is activated;
-- ensure public statements match the final Terms of Service and live product.
+Verified launch evidence already completed:
+- monitored in-product privacy/support request channel;
+- production AI/provider data-flow review for the current two-provider launch chain;
+- requester verification and non-destructive data-rights preview;
+- verified export package, request-bound deletion planning, owner-confirmed scoped user-content deletion, and post-delete verification;
+- production retention behavior recorded in `HERCULES-RETENTION-VERIFICATION-2026-09-27.md` without inventing a universal customer-content TTL.
 
-The AI-provider privacy evidence review is no longer an open blocker for the current two-provider launch chain, but any provider-chain change requires a new review.
+Before publication, remaining items are:
+- confirm state/regional privacy disclosures for the actual launch market;
+- confirm and document the live payment-provider data flow if paid billing is activated;
+- ensure public statements match the final Terms of Service and live product;
+- complete owner/qualified final review and affirmative publication approval.
+
+Any provider-chain change requires a fresh privacy/retention review.
