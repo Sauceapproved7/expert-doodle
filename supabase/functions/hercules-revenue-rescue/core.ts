@@ -23,6 +23,7 @@ export type RevenueLead = {
 const TERMINAL = new Set<RevenueStatus>(["booked", "won", "lost", "opted_out", "human_handoff"]);
 const VALID = new Set<RevenueStatus>(["new", "contacting", "engaged", "booked", "won", "lost", "opted_out", "human_handoff"]);
 const CHANNELS = new Set<RevenueChannel>(["sms", "email", "voice", "internal"]);
+const BLOCKED_CASE_STATES = new Set(["disputed", "promise_active", "paid", "manual_review", "unverified_history", "do_not_contact"]);
 
 const SEQUENCES: Record<string, Array<{channel: RevenueChannel; delayMs: number; template: string}>> = {
   missed_call: [
@@ -63,13 +64,18 @@ export function normalizeLead(input: RevenueLead): Required<Pick<RevenueLead,"or
   if (!VALID.has(status)) throw new TypeError(`unsupported status: ${status}`);
   const money = Number(input.estimatedValueCents ?? 0);
   if (!Number.isInteger(money) || money < 0) throw new TypeError("estimatedValueCents must be a non-negative integer");
-  const channels = [...new Set((input.allowedChannels ?? []).map((x) => String(x).toLowerCase() as RevenueChannel))]
+  const context = input.context && typeof input.context === "object" ? input.context : {};
+  const caseState = text(context.caseState)?.toLowerCase() ?? null;
+  const requestedChannels = [...new Set((input.allowedChannels ?? []).map((x) => String(x).toLowerCase() as RevenueChannel))]
     .filter((channel) => {
       if (!CHANNELS.has(channel)) throw new TypeError(`unsupported channel: ${channel}`);
       if ((channel === "sms" || channel === "voice") && !phone) return false;
       if (channel === "email" && !email) return false;
       return true;
     });
+  const channels: RevenueChannel[] = caseState && BLOCKED_CASE_STATES.has(caseState)
+    ? ["internal"]
+    : requestedChannels;
   return {
     ...input,
     organizationId,
@@ -85,7 +91,7 @@ export function normalizeLead(input: RevenueLead): Required<Pick<RevenueLead,"or
     currency: (text(input.currency) ?? "USD").toUpperCase(),
     estimatedValueCents: money,
     allowedChannels: channels,
-    context: input.context && typeof input.context === "object" ? input.context : {},
+    context,
     lastInboundAt: text(input.lastInboundAt),
     lastOutboundAt: text(input.lastOutboundAt),
   };
