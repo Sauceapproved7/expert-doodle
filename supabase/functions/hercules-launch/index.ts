@@ -56,6 +56,29 @@ async function existingPilot(email:string){
 }
 function cleanText(v:unknown,max=240){return String(v??"").trim().slice(0,max)}
 function validEmail(v:string){return v.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)}
+function hexUpper(bytes:ArrayBuffer){return Array.from(new Uint8Array(bytes)).map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase()}
+async function compromisedPasswordCount(password:string){
+  if(typeof password!=="string"||password.length<12||password.length>256)throw new Error("password_length_invalid");
+  const hash=await crypto.subtle.digest("SHA-1",new TextEncoder().encode(password));
+  const digest=hexUpper(hash);
+  const prefix=digest.slice(0,5);
+  const suffix=digest.slice(5);
+  const response=await fetch("https://api.pwnedpasswords.com/range/"+prefix,{
+    method:"GET",
+    headers:{"Add-Padding":"true","User-Agent":"Hercules-Password-Safety/1.0"},
+    signal:AbortSignal.timeout(7000)
+  });
+  if(!response.ok)throw new Error("password_safety_upstream_"+response.status);
+  const responseBody=await response.text();
+  for(const line of responseBody.split(/\r?\n/)){
+    const [remoteSuffix,countRaw]=line.trim().split(":");
+    if(remoteSuffix&&remoteSuffix.toUpperCase()===suffix){
+      const count=Number(countRaw||0);
+      return Number.isFinite(count)&&count>0?Math.trunc(count):1;
+    }
+  }
+  return 0;
+}
 const PUBLIC_MARKETING_EVENTS=new Set(["landing_view","cta_open_product","proof_demo_interest","pilot_interest","proof_demo_started","first_verified_useful_action"]);
 function safeMarketingProperties(value:unknown){
   const input=value&&typeof value==="object"?value as Record<string,unknown>:{};
@@ -241,7 +264,7 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
 </section>
 
 <section id="auth" class="hidden">
-  <div class="authwrap"><div class="panel authcard"><div class="tag">Secure access</div><h1 id="authTitle">Sign in</h1><input class="input" id="email" type="email" autocomplete="email" placeholder="Email"><input class="input" id="password" type="password" minlength="8" autocomplete="current-password" placeholder="Password"><button class="btn primary" style="width:100%;margin-top:12px" id="authSubmit">Sign in</button><button class="btn" style="width:100%;margin-top:8px" id="authSwitch">Create account</button><button class="btn ghost" style="width:100%;margin-top:8px" id="backHome">Back</button><div class="notice hidden" id="authMsg"></div></div></div>
+  <div class="authwrap"><div class="panel authcard"><div class="tag">Secure access</div><h1 id="authTitle">Sign in</h1><input class="input" id="email" type="email" autocomplete="email" placeholder="Email"><input class="input" id="password" type="password" minlength="12" autocomplete="current-password" placeholder="Password"><button class="btn primary" style="width:100%;margin-top:12px" id="authSubmit">Sign in</button><button class="btn" style="width:100%;margin-top:8px" id="authSwitch">Create account</button><button class="btn ghost" style="width:100%;margin-top:8px" id="backHome">Back</button><div class="notice hidden" id="authMsg"></div></div></div>
 </section>
 
 <section id="app" class="hidden">
@@ -389,7 +412,8 @@ $("demoRun").onclick=async()=>{track("proof_demo_started",{dataset:"synthetic-v1
 $("pilotForm").onsubmit=async e=>{e.preventDefault();setNotice("pilotMsg","");const email=$("pilotEmail").value.trim(),first_name=$("pilotName").value.trim(),company=$("pilotCompany").value.trim(),role=$("pilotRole").value,website=$("pilotWebsite").value;if(!email){setNotice("pilotMsg","Enter a business email.","bad");return}const btn=e.submitter||$("pilotForm").querySelector("button[type=submit]");if(btn)btn.disabled=true;try{const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"pilot_request",email,first_name,company,role,website,referrer:document.referrer||null,attribution:acquisition})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Request failed");setNotice("pilotMsg","Pilot request received. Hercules recorded the request for controlled follow-up.","good");e.target.reset()}catch(err){setNotice("pilotMsg","Pilot request could not be recorded: "+err.message,"bad")}finally{if(btn)btn.disabled=false}};
 
 $("authSwitch").onclick=async()=>{if(authMode==="signin"&&!publicSignupOpen){const open=await refreshRegistrationState();if(!open){setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}}authMode=authMode==="signin"?"signup":"signin";$("authTitle").textContent=authMode==="signin"?"Sign in":"Create account";$("authSubmit").textContent=authMode==="signin"?"Sign in":"Create account";$("authSwitch").disabled=false;$("authSwitch").textContent=authMode==="signin"?(publicSignupOpen?"Create account":"Early access — sign-in only"):"Sign in instead";setNotice("authMsg","")};
-$("authSubmit").onclick=async()=>{setNotice("authMsg","");if(authMode==="signup"&&!await refreshRegistrationState()){authMode="signin";$("authTitle").textContent="Sign in";$("authSubmit").textContent="Sign in";setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}const email=$("email").value.trim(),password=$("password").value;const q=authMode==="signin"?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});if(q.error){setNotice("authMsg",q.error.message,"bad");return}if(authMode==="signup"&&!q.data.session){setNotice("authMsg","Check your email to confirm the account, then sign in.","good");return}await bootApp()};
+async function checkPasswordSafety(password){const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"password_breach_check",password})});const d=await r.json().catch(()=>({}));if(r.ok&&d.safe===true)return true;if(d.error==="compromised_password")throw new Error("Choose a password that has not appeared in known data breaches.");if(d.error==="weak_password_length")throw new Error("Use at least 12 characters for your password.");throw new Error("Password safety check is unavailable. Account creation is temporarily paused.")}
+$("authSubmit").onclick=async()=>{setNotice("authMsg","");if(authMode==="signup"&&!await refreshRegistrationState()){authMode="signin";$("authTitle").textContent="Sign in";$("authSubmit").textContent="Sign in";setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}const email=$("email").value.trim(),password=$("password").value;if(authMode==="signup"){try{await checkPasswordSafety(password)}catch(error){setNotice("authMsg",error instanceof Error?error.message:"Password safety check failed.","bad");return}}const q=authMode==="signin"?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});if(q.error){setNotice("authMsg",q.error.message,"bad");return}if(authMode==="signup"&&!q.data.session){setNotice("authMsg","Check your email to confirm the account, then sign in.","good");return}await bootApp()};
 $("signOut").onclick=async()=>{await sb.auth.signOut();user=null;project=null;orgId=null;orgSlug=null;switchRoot("landing")};
 
 const BLOCKED_RECOVERY_STATES=new Set(["disputed","promise_active","paid","do_not_contact","unverified_history","manual_review"]);
@@ -519,7 +543,7 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.6.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.6.1",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true});
   }
   if(req.method==="POST"){
     const len=Number(req.headers.get("content-length")||"0");
@@ -528,6 +552,17 @@ Deno.serve(async(req:Request)=>{
     if(!body||typeof body!=="object")return Response.json({ok:false,error:"invalid_json"},{status:400,headers:{"cache-control":"no-store"}});
     const action=cleanText((body as any).action,64);
     try{
+      if(action==="password_breach_check"){
+        const password=typeof (body as any).password==="string"?(body as any).password:"";
+        if(password.length<12||password.length>256)return Response.json({ok:false,error:"weak_password_length"},{status:400,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+        try{
+          const breached=await compromisedPasswordCount(password);
+          if(breached>0)return Response.json({ok:false,error:"compromised_password"},{status:422,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+          return Response.json({ok:true,safe:true},{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+        }catch{
+          return Response.json({ok:false,error:"password_safety_unavailable"},{status:503,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+        }
+      }
       if(action==="marketing_event"){
         const eventName=cleanText((body as any).event_name,96).toLowerCase();
         if(!PUBLIC_MARKETING_EVENTS.has(eventName))return Response.json({ok:false,error:"invalid_event"},{status:400,headers:{"cache-control":"no-store"}});
