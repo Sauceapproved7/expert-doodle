@@ -1,0 +1,21 @@
+name: Hercules Time Machine
+on:
+  pull_request:
+    paths:
+      - "hercules-time-machine/**"
+      - "tests/hercules-time-machine.test.mjs"
+      - "docs/HERCULES-TIME-MACHINE-V0.1.md"
+      - "governance/owner-code-policy.json"
+      - ".github/workflows/hercules-time-machine.yml"
+permissions:
+  contents: read
+jobs:
+  time-machine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --check hercules-time-machine/time-machine.mjs
+      - run: node --test tests/hercules-time-machine.test.mjs
