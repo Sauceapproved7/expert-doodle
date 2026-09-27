@@ -91,3 +91,19 @@ Current controls:
 
 Production use still requires deployment controls such as TLS, rate limiting, secret
 rotation, environment isolation, durable audit retention, and regulated-provider review.
+
+
+## Browser session boundary
+
+v0.4 adds a browser console without exposing Hercules Base bearer credentials to page
+JavaScript. The bank service stores Base access and refresh tokens in process memory and
+issues only an opaque HttpOnly SameSite=Strict browser cookie.
+
+State-changing browser requests require a separate CSRF value held only in page memory.
+The value is rotated after session restoration. Logout removes the bank-side session and
+requests revocation of the Base refresh token.
+
+The browser session store is intentionally memory-only. A process restart logs browser
+sessions out rather than persisting bearer or refresh credentials to disk. Public HTTPS
+deployments must enable Secure cookies and place the service behind the normal Hercules
+TLS, rate-limit, and abuse-control boundary.
