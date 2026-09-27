@@ -13,7 +13,7 @@ test("browser control plane performs bounded on-demand warmup instead of persist
   assert.match(browser,/warmupUrls/);
   assert.match(browser,/warmWorkers/);
   assert.match(browser,/AbortSignal\.timeout\(45000\)/);
-  assert.match(browser,/maxAttempts=3/);
+  assert.match(browser,/maxAttempts=5/);
   assert.doesNotMatch(browser,/setInterval\([^)]*fetch/i);
 });
 
@@ -30,8 +30,8 @@ test("transient CDP startup failures use bounded backoff before retry",()=>{
   assert.match(browser,/failed to connect to backend/);
   assert.match(browser,/connectOverCDP/);
   assert.match(browser,/websocket was closed before the connection was established/);
-  assert.match(browser,/const retryBudgetMs=20000/);
-  assert.match(browser,/await delay\(backoffMs\)/);
+  assert.match(browser,/const retryBudgetMs=45000/);
+  assert.match(browser,/await delay\\(backoffMs\\)/);\n  assert.match(browser,/2000\\*\\(2\\*\\*\\(attempt-1\\)\\)/);
 });
 
 test("failed worker retries are preserved in run telemetry",()=>{
