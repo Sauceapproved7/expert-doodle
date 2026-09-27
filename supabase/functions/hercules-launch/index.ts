@@ -518,8 +518,21 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 
 Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
+  if(url.searchParams.get("storefront")==="1"){
+    try{
+      const route=await serviceRpc("hercules_storefront_route",{});
+      if(!route?.url)return Response.json({ok:false,error:"storefront_route_unavailable"},{status:503,headers:{"cache-control":"no-store"}});
+      const redirect=Response.redirect(String(route.url),302);
+      redirect.headers.set("cache-control","no-store");
+      redirect.headers.set("x-content-type-options","nosniff");
+      redirect.headers.set("referrer-policy","no-referrer");
+      return redirect;
+    }catch(error){
+      return Response.json({ok:false,error:"storefront_route_failed",detail:error instanceof Error?error.message:"unknown"},{status:503,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+    }
+  }
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.6.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.6.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true,storefront_continuity:true});
   }
   if(req.method==="POST"){
     const len=Number(req.headers.get("content-length")||"0");
