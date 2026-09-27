@@ -1,4 +1,199 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import {createClient} from 'npm:@supabase/supabase-js@2';
+
+const U=Deno.env.get('SUPABASE_URL')!;
+const A=Deno.env.get('SUPABASE_ANON_KEY')!;
+const S=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const admin=createClient(U,S,{auth:{persistSession:false}});
+const enc=new TextEncoder();
+
+const bridgeOut=(body:unknown,status=200)=>Response.json(body,{status,headers:{
+  'cache-control':'no-store',
+  'x-content-type-options':'nosniff',
+  'access-control-allow-origin':'*',
+  'access-control-allow-headers':'authorization,content-type,x-hercules-personal-session',
+  'access-control-allow-methods':'GET,POST,OPTIONS'
+}});
+
+async function sha256Hex(value:string){
+  return [...new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(value)))]
+    .map(x=>x.toString(16).padStart(2,'0')).join('');
+}
+
+function randomToken(){
+  return crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','');
+}
+
+function validOrigin(value:string){
+  try{
+    const u=new URL(value);
+    return u.protocol==='https:'&&u.origin===value&&!u.username&&!u.password;
+  }catch{return false}
+}
+
+function hasCredentialMaterial(value:unknown):boolean{
+  if(Array.isArray(value))return value.some(hasCredentialMaterial);
+  if(!value||typeof value!=='object')return false;
+  for(const [k,v] of Object.entries(value as Record<string,unknown>)){
+    if(/password|passwd|cookie|authorization|provider.?token|session.?cookie|one.?time.?code|otp|mfa.?secret|recovery.?code|private.?key/i.test(k))return true;
+    if(hasCredentialMaterial(v))return true;
+  }
+  return false;
+}
+
+async function bridgeOwner(req:Request){
+  const h=req.headers.get('authorization')||'';
+  if(!h.startsWith('Bearer '))return null;
+  const db=createClient(U,A,{auth:{persistSession:false},global:{headers:{Authorization:h}}});
+  const {data:{user}}=await db.auth.getUser();
+  return user||null;
+}
+
+async function sessionFromToken(token:string){
+  if(!token)return null;
+  const hash=await sha256Hex(token);
+  const {data}=await admin.from('hercules_personal_browser_sessions')
+    .select('id,owner_user_id,status,approved_origin,expires_at')
+    .eq('session_token_sha256',hash)
+    .eq('status','connected')
+    .gt('expires_at',new Date().toISOString())
+    .maybeSingle();
+  return data||null;
+}
+
+async function handlePersonalBrowserBridge(req:Request){
+  if(req.method==='OPTIONS')return bridgeOut({ok:true});
+  if(req.method!=='POST')return bridgeOut({error:'method_not_allowed'},405);
+
+  const body=await req.json().catch(()=>({}));
+  const action=String(body.action||'');
+
+  if(hasCredentialMaterial(body) && !['connect'].includes(action)){
+    return bridgeOut({error:'credential_export_forbidden'},400);
+  }
+
+  if(action==='create_pair'){
+    const user=await bridgeOwner(req);
+    if(!user)return bridgeOut({error:'owner_auth_required'},401);
+    const pairToken=randomToken();
+    const pairHash=await sha256Hex(pairToken);
+    const expiresAt=new Date(Date.now()+15*60*1000).toISOString();
+    const {data,error}=await admin.from('hercules_personal_browser_sessions').insert({
+      owner_user_id:user.id,
+      pair_token_sha256:pairHash,
+      status:'waiting',
+      expires_at:expiresAt
+    }).select('id,expires_at').single();
+    if(error)return bridgeOut({error:'pair_create_failed',detail:error.message},500);
+    return bridgeOut({ok:true,session_id:data.id,pair_token:pairToken,expires_at:data.expires_at});
+  }
+
+  if(action==='owner_status'){
+    const user=await bridgeOwner(req);
+    if(!user)return bridgeOut({error:'owner_auth_required'},401);
+    const {data,error}=await admin.from('hercules_personal_browser_sessions')
+      .select('id,status,approved_origin,approved_tab_title,browser_name,connected_at,last_seen_at,expires_at,created_at')
+      .eq('owner_user_id',user.id)
+      .order('created_at',{ascending:false})
+      .limit(10);
+    if(error)return bridgeOut({error:'status_failed',detail:error.message},500);
+    return bridgeOut({ok:true,sessions:data||[]});
+  }
+
+  if(action==='owner_close'){
+    const user=await bridgeOwner(req);
+    if(!user)return bridgeOut({error:'owner_auth_required'},401);
+    const id=String(body.session_id||'');
+    const {error}=await admin.from('hercules_personal_browser_sessions')
+      .update({status:'closed',updated_at:new Date().toISOString()})
+      .eq('id',id).eq('owner_user_id',user.id);
+    if(error)return bridgeOut({error:'close_failed',detail:error.message},500);
+    return bridgeOut({ok:true});
+  }
+
+  if(action==='connect'){
+    const pairToken=String(body.pair_token||'');
+    const approvedOrigin=String(body.approved_origin||'');
+    if(!pairToken||!validOrigin(approvedOrigin))return bridgeOut({error:'invalid_pair_request'},400);
+    const pairHash=await sha256Hex(pairToken);
+    const {data:row}=await admin.from('hercules_personal_browser_sessions')
+      .select('id,status,expires_at')
+      .eq('pair_token_sha256',pairHash)
+      .eq('status','waiting')
+      .gt('expires_at',new Date().toISOString())
+      .maybeSingle();
+    if(!row)return bridgeOut({error:'pair_token_invalid_or_expired'},403);
+
+    const sessionToken=randomToken();
+    const sessionHash=await sha256Hex(sessionToken);
+    const expiresAt=new Date(Date.now()+30*60*1000).toISOString();
+    const {error}=await admin.from('hercules_personal_browser_sessions').update({
+      session_token_sha256:sessionHash,
+      approved_origin:approvedOrigin,
+      approved_tab_title:String(body.approved_tab_title||'').slice(0,240),
+      browser_name:String(body.browser_name||'Hercules Personal Browser').slice(0,120),
+      status:'connected',
+      connected_at:new Date().toISOString(),
+      last_seen_at:new Date().toISOString(),
+      expires_at:expiresAt,
+      updated_at:new Date().toISOString()
+    }).eq('id',row.id).eq('status','waiting');
+    if(error)return bridgeOut({error:'pair_connect_failed',detail:error.message},500);
+    return bridgeOut({ok:true,session_id:row.id,session_token:sessionToken,expires_at:expiresAt});
+  }
+
+  const token=req.headers.get('x-hercules-personal-session')||'';
+  const session=await sessionFromToken(token);
+  if(!session)return bridgeOut({error:'personal_browser_session_required'},401);
+
+  if(action==='disconnect'){
+    await admin.from('hercules_personal_browser_sessions').update({
+      status:'closed',last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }).eq('id',session.id);
+    return bridgeOut({ok:true});
+  }
+
+  if(action==='poll'){
+    await admin.from('hercules_personal_browser_sessions').update({
+      last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }).eq('id',session.id);
+
+    const {data:cmd,error}=await admin.from('hercules_personal_browser_commands')
+      .select('id,action,payload,created_at')
+      .eq('session_id',session.id)
+      .eq('status','pending')
+      .order('created_at',{ascending:true})
+      .limit(1)
+      .maybeSingle();
+    if(error)return bridgeOut({error:'command_poll_failed',detail:error.message},500);
+    if(!cmd)return bridgeOut({ok:true,command:null});
+
+    const {data:claimed,error:claimError}=await admin.from('hercules_personal_browser_commands')
+      .update({status:'claimed',claimed_at:new Date().toISOString()})
+      .eq('id',cmd.id).eq('status','pending')
+      .select('id,action,payload,created_at').maybeSingle();
+    if(claimError)return bridgeOut({error:'command_claim_failed',detail:claimError.message},500);
+    return bridgeOut({ok:true,command:claimed||null});
+  }
+
+  if(action==='complete'){
+    const commandId=String(body.command_id||'');
+    const result=body.result&&typeof body.result==='object'?body.result:{ok:false,error:'invalid_result'};
+    if(hasCredentialMaterial(result))return bridgeOut({error:'credential_export_forbidden'},400);
+    const ok=(result as Record<string,unknown>).ok===true;
+    const {error}=await admin.from('hercules_personal_browser_commands').update({
+      status:ok?'succeeded':'failed',
+      result,
+      error:ok?null:String((result as Record<string,unknown>).error||'browser_action_failed').slice(0,500),
+      completed_at:new Date().toISOString()
+    }).eq('id',commandId).eq('session_id',session.id).eq('status','claimed');
+    if(error)return bridgeOut({error:'command_complete_failed',detail:error.message},500);
+    return bridgeOut({ok:true});
+  }
+
+  return bridgeOut({error:'unknown_action'},400);
+}
+
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hercules Integrations</title><style>
 :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080808;color:#f5f5f5;font-family:system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:880px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.brand{font-weight:900;letter-spacing:.14em}.card{background:#141414;border:1px solid #303030;border-radius:18px;padding:18px;margin-top:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.input{width:100%;background:#090909;color:#fff;border:1px solid #3a3a3a;border-radius:11px;padding:12px;font-size:16px;margin-top:8px}.btn{border:1px solid #3a3a3a;background:#202020;color:#fff;border-radius:11px;padding:11px 14px;font-weight:750;cursor:pointer}.primary{background:#fff;color:#080808}.muted{color:#aaa}.hidden{display:none}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}.status{white-space:pre-wrap;background:#0b0b0b;border-radius:10px;padding:12px;margin-top:10px}.launch-summary{display:grid;gap:8px;margin-top:10px}.launch-line{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;background:#0b0b0b;border:1px solid #292929;border-radius:10px;padding:10px}.launch-key{color:#aaa}.launch-value{font-weight:800;text-align:right}.pass{color:#b7f7c7}.wait{color:#f4d58d}.fail{color:#ffb0b0}details{margin-top:10px}summary{cursor:pointer;color:#aaa}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:720px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}</style></head><body><main class="wrap">
@@ -122,7 +317,7 @@ async function waitDns(requestId){for(let i=0;i<35;i++){await new Promise(r=>set
 async function reconcileDomain(){const q=await call('hercules-domains',{action:'production_reconcile',organization_id:ORG,confirm_domain:'sauceapproved.com'});if(q?.already_ready){await domainStatus();return q}if(!q?.queued||!q?.request_id)throw Error('DNS reconcile was not queued');$('domainout').textContent='DNS reconciliation queued. Verifying provider result…';const result=await waitDns(q.request_id);$('domainout').textContent=fmt(result);await domainStatus();return result}
 async function shopifyStatus(){try{$('shopout').textContent=fmt(await call('hercules-provider-connect',{action:'shopify_domain_status'}))}catch(e){$('shopout').textContent='Shopify: '+e.message}}
 async function stripeStatus(){try{const d=await call('hercules-provider-connect',{action:'status'});const row=(d.connections||[]).find(x=>x.provider==='stripe');$('stripeout').textContent=fmt(row||{provider:'stripe',status:'not_connected'})}catch(e){$('stripeout').textContent='Stripe: '+e.message}}
-async function personalBrowserCall(body){const t=await token();if(!t)throw Error('Sign in required');const r=await fetch(U+'/functions/v1/hercules-personal-browser-bridge',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+t,'apikey':K},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.detail||('HTTP '+r.status));return d}
+async function personalBrowserCall(body){const t=await token();if(!t)throw Error('Sign in required');const r=await fetch(U+'/functions/v1/hercules-integrations',{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+t,'apikey':K},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.detail||('HTTP '+r.status));return d}
 async function personalBrowserStatus(){try{$('browserout').textContent=fmt(await personalBrowserCall({action:'owner_status'}))}catch(e){$('browserout').textContent='Personal Browser: '+e.message}}
 async function launchReadinessStatus(){try{const d=await call('hercules-domains',{action:'production_status',organization_id:ORG});const p=d?.production||{};renderLaunchSummary(p);$('launchout').textContent=fmt(p)}catch(e){$('launchsummary').replaceChildren(launchLine('Launch status','UNAVAILABLE','fail'));$('launchout').textContent='Launch: '+e.message}}
 async function storefrontSmokeStatus(){try{const d=await call('hercules-provider-connect',{action:'storefront_smoke_status'});$('smokeout').textContent=fmt(d)}catch(e){$('smokeout').textContent='Smoke: '+e.message}}
@@ -172,7 +367,9 @@ $('shipsave').onclick=async()=>{const apiKey=$('shipkey').value.trim(),apiSecret
 sb.auth.onAuthStateChange(()=>boot());boot();
 </script></body></html>`;
 
-Deno.serve(()=>new Response(html,{status:200,headers:new Headers({
+Deno.serve(async(req:Request)=>{
+  if(req.method==='POST'||req.method==='OPTIONS')return handlePersonalBrowserBridge(req);
+  return new Response(html,{status:200,headers:new Headers({
   'Content-Type':'text/html; charset=UTF-8',
   'Cache-Control':'no-store, no-cache, must-revalidate',
   'Pragma':'no-cache',
@@ -181,4 +378,5 @@ Deno.serve(()=>new Response(html,{status:200,headers:new Headers({
   'Referrer-Policy':'no-referrer',
   'Permissions-Policy':'camera=(), microphone=(), geolocation=()',
   'Content-Security-Policy':"default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline'; connect-src 'self' https://xbwuablxhhwsaoomsoco.supabase.co wss://xbwuablxhhwsaoomsoco.supabase.co https://esm.sh; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self' https://github.com"
-})}));
+})});
+});
