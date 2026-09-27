@@ -1,4 +1,9 @@
 import {HerculesBankLedger} from "./ledger.mjs";
+import {restoreLedgerFromSnapshot} from "./store.mjs";
+
+const SANDBOX_SNAPSHOT_SCHEMA = "sauceapproved.hercules.bank-sandbox-snapshot";
+const SANDBOX_SNAPSHOT_VERSION = 1;
+const SYSTEM_CASH_ACCOUNT_ID = "system:sandbox-cash";
 
 function nonEmpty(value, label) {
   if (typeof value !== "string" || value.trim() === "") {
@@ -7,15 +12,108 @@ function nonEmpty(value, label) {
   return value.trim();
 }
 
+function normalizeCurrency(value) {
+  const currency = nonEmpty(value, "currency").toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) throw new TypeError("currency must be a three-letter code");
+  return currency;
+}
+
+function clone(value) {
+  return structuredClone(value);
+}
+
+function validateRestoredAccounts({ledger, accounts, currency}) {
+  if (!Array.isArray(accounts)) throw new Error("bank sandbox snapshot accounts are invalid");
+  const seen = new Set();
+  for (const metadata of accounts) {
+    if (!metadata || typeof metadata !== "object") {
+      throw new Error("bank sandbox account metadata is invalid");
+    }
+    const id = nonEmpty(metadata.id, "account id");
+    const customerId = nonEmpty(metadata.customerId, "customerId");
+    if (seen.has(id)) throw new Error("bank sandbox snapshot contains duplicate accounts");
+    seen.add(id);
+
+    const ledgerAccount = ledger.account(id);
+    if (!ledgerAccount) throw new Error("bank sandbox snapshot account is missing from ledger");
+    if (
+      ledgerAccount.currency !== currency
+      || ledgerAccount.normalSide !== "CREDIT"
+      || ledgerAccount.allowNegative !== false
+    ) {
+      throw new Error("bank sandbox account ledger metadata mismatch");
+    }
+    if (
+      metadata.currency !== currency
+      || metadata.status !== "OPEN"
+      || metadata.mode !== "SANDBOX"
+      || metadata.customerId !== customerId
+    ) {
+      throw new Error("bank sandbox account metadata mismatch");
+    }
+  }
+
+  const system = ledger.account(SYSTEM_CASH_ACCOUNT_ID);
+  if (
+    !system
+    || system.currency !== currency
+    || system.normalSide !== "DEBIT"
+    || system.allowNegative !== true
+  ) {
+    throw new Error("bank sandbox system cash account mismatch");
+  }
+
+  for (const ledgerAccount of ledger.snapshot().accounts) {
+    if (ledgerAccount.id === SYSTEM_CASH_ACCOUNT_ID) continue;
+    if (ledgerAccount.normalSide === "CREDIT" && !seen.has(ledgerAccount.id)) {
+      throw new Error("bank sandbox snapshot contains orphan customer ledger account");
+    }
+  }
+}
+
 export class HerculesBankSandbox {
   #currency;
   #ledger;
   #accounts = new Map();
-  #systemCashAccountId = "system:sandbox-cash";
+  #systemCashAccountId = SYSTEM_CASH_ACCOUNT_ID;
 
-  constructor({currency = "USD"} = {}) {
+  constructor({currency = "USD", snapshot = null} = {}) {
     this.mode = "SANDBOX";
-    this.#currency = nonEmpty(currency, "currency").toUpperCase();
+
+    if (snapshot !== null) {
+      if (!snapshot || typeof snapshot !== "object") {
+        throw new TypeError("bank sandbox snapshot must be an object");
+      }
+      if (snapshot.schema !== SANDBOX_SNAPSHOT_SCHEMA) {
+        throw new Error("bank sandbox snapshot schema mismatch");
+      }
+      if (snapshot.version !== SANDBOX_SNAPSHOT_VERSION) {
+        throw new Error("bank sandbox snapshot version mismatch");
+      }
+      if (snapshot.mode !== this.mode) throw new Error("bank sandbox snapshot mode mismatch");
+
+      this.#currency = normalizeCurrency(snapshot.currency);
+      this.#ledger = restoreLedgerFromSnapshot(snapshot.ledger);
+      validateRestoredAccounts({
+        ledger:this.#ledger,
+        accounts:snapshot.accounts,
+        currency:this.#currency,
+      });
+
+      for (const metadata of snapshot.accounts) {
+        const account = Object.freeze({
+          id:metadata.id,
+          customerId:metadata.customerId,
+          currency:metadata.currency,
+          status:metadata.status,
+          mode:metadata.mode,
+        });
+        this.#accounts.set(account.id, account);
+      }
+      return;
+    }
+
+    this.#currency = normalizeCurrency(currency);
     this.#ledger = new HerculesBankLedger({currency:this.#currency});
     this.#ledger.createAccount({
       id:this.#systemCashAccountId,
@@ -23,6 +121,14 @@ export class HerculesBankSandbox {
       normalSide:"DEBIT",
       allowNegative:true,
     });
+  }
+
+  static fromSnapshot(snapshot) {
+    return new HerculesBankSandbox({snapshot});
+  }
+
+  get currency() {
+    return this.#currency;
   }
 
   openCustomerAccount({customerId, accountId}) {
@@ -44,6 +150,13 @@ export class HerculesBankSandbox {
     });
     this.#accounts.set(normalizedAccountId, metadata);
     return metadata;
+  }
+
+  listAccountsForCustomer(customerId) {
+    const normalizedCustomerId = nonEmpty(customerId, "customerId");
+    return [...this.#accounts.values()]
+      .filter((account) => account.customerId === normalizedCustomerId)
+      .map((account) => this.getAccount(account.id));
   }
 
   getAccount(accountId) {
@@ -121,6 +234,17 @@ export class HerculesBankSandbox {
 
   journal() {
     return this.#ledger.transactions();
+  }
+
+  snapshot() {
+    return {
+      schema:SANDBOX_SNAPSHOT_SCHEMA,
+      version:SANDBOX_SNAPSHOT_VERSION,
+      mode:this.mode,
+      currency:this.#currency,
+      accounts:[...this.#accounts.values()].map((account) => clone(account)),
+      ledger:this.#ledger.snapshot(),
+    };
   }
 
   requestExternalTransfer() {
