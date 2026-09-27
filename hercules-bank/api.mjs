@@ -1,20 +1,31 @@
 import http from "node:http";
 
 import {verifyJwtHs256} from "../hercules-base/auth-core.mjs";
+import {bankConsoleAsset} from "./console.mjs";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_ADMIN_ROLES = Object.freeze(["owner", "admin", "staging_admin"]);
 
-function send(res, status, body) {
-  res.writeHead(status, {
-    "content-type":"application/json; charset=utf-8",
+function securityHeaders(contentType) {
+  return {
+    "content-type":contentType,
     "cache-control":"no-store",
     "pragma":"no-cache",
     "x-content-type-options":"nosniff",
     "x-frame-options":"DENY",
     "referrer-policy":"no-referrer",
-  });
+    "content-security-policy":"default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+  };
+}
+
+function send(res, status, body) {
+  res.writeHead(status, securityHeaders("application/json; charset=utf-8"));
   res.end(JSON.stringify(body));
+}
+
+function sendAsset(res, asset) {
+  res.writeHead(200, securityHeaders(asset.type));
+  res.end(asset.body);
 }
 
 async function readBody(req) {
@@ -129,11 +140,16 @@ export function createHerculesBankApi({
         return send(res, 200, {
           ok:true,
           service:"hercules-bank",
-          version:"0.3",
+          version:"0.5",
           mode:runtime.mode,
           currency:runtime.currency,
           externalRails:false,
         });
+      }
+
+      if (req.method === "GET") {
+        const asset = bankConsoleAsset(url.pathname);
+        if (asset) return sendAsset(res, asset);
       }
 
       const claims = claimsFromRequest(req, {
@@ -187,6 +203,21 @@ export function createHerculesBankApi({
         return send(res, 200, {
           from:publicAccount(result.from),
           to:publicAccount(result.to, {includeCustomerId:false}),
+        });
+      }
+
+      if (req.method === "GET" && url.pathname === "/v1/admin/overview") {
+        requireAdmin(claims, allowedAdminRoles);
+        const metadata = runtime.snapshot().accounts ?? [];
+        const accounts = metadata.map((entry) => publicAccount(runtime.getAccount(entry.id)));
+        return send(res, 200, {
+          mode:runtime.mode,
+          currency:runtime.currency,
+          externalRails:false,
+          accountCount:accounts.length,
+          customerCount:new Set(accounts.map((account) => account.customerId)).size,
+          totalCustomerBalanceMinor:accounts.reduce((sum, account) => sum + account.balanceMinor, 0),
+          accounts,
         });
       }
 
