@@ -61,7 +61,7 @@ async function audit(org:string,uid:string,action:string,id:string|null,changes:
 async function launchApprovalStatus(){
   const [{data:approvals,error:approvalError},{data:gate,error:gateError},{data:release,error:releaseError}]=await Promise.all([
     admin.from('hercules_launch_approvals')
-      .select('approval_type,status,approved_by,approved_at,evidence,updated_at')
+      .select('approval_type,status,approved_at,evidence,updated_at')
       .order('approval_type'),
     admin.from('hercules_launch_gate_checks')
       .select('technical_ok,commercial_ok,launch_ready,checks,checked_at')
@@ -80,7 +80,6 @@ async function launchApprovalStatus(){
     {
       status:row.status,
       approvedAt:row.approved_at||null,
-      approvedBy:row.approved_by||null,
       evidence:row.evidence||{},
       updatedAt:row.updated_at||null,
       document:(LAUNCH_DOCS as any)[row.approval_type]||null
@@ -186,7 +185,7 @@ Deno.serve(async(req:Request)=>{
     const {data,error}=await admin.from('hercules_launch_approvals')
       .update(patch)
       .eq('approval_type',approvalType)
-      .select('approval_type,status,approved_by,approved_at,evidence,updated_at')
+      .select('approval_type,status,approved_at,evidence,updated_at')
       .maybeSingle();
     if(error||!data)return out({error:'launch_approval_update_failed'},500);
 
