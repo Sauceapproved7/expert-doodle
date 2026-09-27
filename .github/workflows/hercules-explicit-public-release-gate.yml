@@ -1,0 +1,24 @@
+name: Hercules Explicit Public Release Gate
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-launch/**"
+      - "supabase/functions/hercules-launch-gate/**"
+      - "supabase/migrations/20260927040500_add_explicit_public_release_gate.sql"
+      - "tests/hercules-explicit-public-release-gate.test.mjs"
+      - "docs/HERCULES-EXPLICIT-PUBLIC-RELEASE-GATE-V0.1.md"
+      - ".github/workflows/hercules-explicit-public-release-gate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --test tests/hercules-explicit-public-release-gate.test.mjs

@@ -151,7 +151,7 @@ async function fetchFn(name,options){
   return d;
 }
 function switchRoot(target){show("landing",target==="landing");show("auth",target==="auth");show("app",target==="app");show("publicNav",target!=="app");show("appActions",target==="app")}
-async function refreshRegistrationState(){try{const r=await fetch(U+"/functions/v1/hercules-launch-gate",{headers:{apikey:K},cache:"no-store"});const d=await r.json().catch(()=>({}));publicSignupOpen=Boolean(r.ok&&d?.lastCheck?.launch_ready===true)}catch{publicSignupOpen=false}const sw=$("authSwitch");if(sw&&authMode==="signin"){sw.disabled=!publicSignupOpen;sw.textContent=publicSignupOpen?"Create account":"Early access — sign-in only"}return publicSignupOpen}
+async function refreshRegistrationState(){try{const r=await fetch(U+"/functions/v1/hercules-launch-gate",{headers:{apikey:K},cache:"no-store"});const d=await r.json().catch(()=>({}));publicSignupOpen=Boolean(r.ok&&d?.lastCheck?.launch_ready===true&&d?.publicRegistrationOpen===true)}catch{publicSignupOpen=false}const sw=$("authSwitch");if(sw&&authMode==="signin"){sw.disabled=!publicSignupOpen;sw.textContent=publicSignupOpen?"Create account":"Early access — sign-in only"}return publicSignupOpen}
 async function openProduct(){const s=(await sb.auth.getSession()).data.session;if(s){await bootApp();return}switchRoot("auth");const open=await refreshRegistrationState();if(!open)setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn")}
 $("openHercules").onclick=openProduct;$("systemOpen").onclick=openProduct;$("backHome").onclick=()=>switchRoot("landing");
 $("heroRun").onclick=()=>{const p=$("heroPrompt").value.trim();if(p)sessionStorage.setItem("hercules_pending_prompt",p);openProduct()};
@@ -221,7 +221,7 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 Deno.serve((req:Request)=>{
   const url=new URL(req.url);
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.1.0",product:"Hercules",presentation:"launch-surface",registration:"launch-gated",owned_runtime:true,backend_rebuild:false});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.2.0",product:"Hercules",presentation:"launch-surface",registration:"manual-release-gated",owned_runtime:true,backend_rebuild:false});
   }
   return new Response(html,{headers:{
     "content-type":"text/html; charset=utf-8",
