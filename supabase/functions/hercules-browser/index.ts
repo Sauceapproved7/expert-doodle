@@ -187,8 +187,8 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
     return result;
   };
 
-  const maxAttempts=3;
-  const retryBudgetMs=20000;
+  const maxAttempts=5;
+  const retryBudgetMs=45000;
   const started=Date.now();
   const urls=warmupUrls(w);
   let warm=await warmWorkers(urls);
@@ -203,7 +203,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
         throw withWorkerTelemetry(error,attempt,warm);
       }
 
-      const backoffMs=Math.min(4000,1000*(2**(attempt-1)));
+      const backoffMs=Math.min(10000,2000*(2**(attempt-1)));
       if(Date.now()-started+backoffMs>retryBudgetMs){
         throw withWorkerTelemetry(error,attempt,warm);
       }
@@ -224,7 +224,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.5.1",
+    ok:true,service:"hercules-browser",version:"1.5.2",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,securityChallengeDetection:true,antiBotBypass:false,controlPlane:"Hercules"
   });
