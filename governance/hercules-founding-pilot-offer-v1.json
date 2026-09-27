@@ -1,0 +1,92 @@
+{
+  "schema": "sauceapproved.hercules.founding-pilot-offer",
+  "version": 1,
+  "offerName": "Hercules Revenue Recovery — Founding Pilot",
+  "product": "Hercules Revenue Recovery",
+  "status": "packaged_release_gated",
+  "deliveryMode": "controlled_founding_pilot",
+  "market": "US_B2B_OWN_RECEIVABLES",
+  "targetCustomer": {
+    "companyTypes": [
+      "agency",
+      "contractor",
+      "consultancy",
+      "professional_services",
+      "bookkeeping_accounting",
+      "wholesale",
+      "commercial_services"
+    ],
+    "buyerRoles": [
+      "owner_founder",
+      "finance_ar",
+      "accountant_bookkeeper",
+      "fractional_cfo_consultant"
+    ],
+    "fitCriteria": [
+      "business_manages_its_own_commercial_receivables",
+      "has_overdue_b2b_invoices_or_receivables_follow_up_work",
+      "accepts_approval_gated_consequential_actions",
+      "can_begin_with_synthetic_data_until_real_data_is_authorized"
+    ]
+  },
+  "painfulProblem": "Blanket reminder automation can treat routine overdue invoices, disputes, active payment promises, paid evidence, and human-review cases as if they were the same problem.",
+  "deliverables": [
+    "recovery_desk_workspace",
+    "supported_receivable_intake",
+    "case_state_routing",
+    "approval_gated_follow_up_plan",
+    "blocked_state_human_review",
+    "verified_action_history",
+    "pilot_readout"
+  ],
+  "successEvent": "first_verified_useful_action",
+  "successDefinition": "At least one supported receivable reaches a useful, evidence-backed next state with its route, approval status, and result visible without claiming a payment-recovery outcome.",
+  "requiredLiveCapabilities": [
+    "hercules-launch",
+    "hercules-revenue-rescue"
+  ],
+  "intakeToDelivery": [
+    "pilot_request",
+    "qualification",
+    "workspace_activation",
+    "first_receivable",
+    "case_state_routing",
+    "verified_useful_action",
+    "pilot_readout",
+    "conversion_decision"
+  ],
+  "pricing": {
+    "status": "owner_approval_required",
+    "activeBilling": false,
+    "pilotPriceUsd": null,
+    "pilotPriceNote": "No pilot price is active until the owner explicitly approves the commercial terms.",
+    "postPilotProposal": {
+      "plan": "Starter",
+      "monthlyUsd": 99,
+      "billingPeriod": "monthly",
+      "status": "proposal_only",
+      "source": "docs/launch/HERCULES-PRICING-PROPOSAL.md"
+    }
+  },
+  "dataHandling": {
+    "defaultMode": "synthetic_until_authorized",
+    "realCustomerDataRequires": "explicit_authorization_and_applicable_launch_data_handling_requirements"
+  },
+  "externalActions": "approval_gated",
+  "exclusions": [
+    "consumer_debt_collection",
+    "third_party_debt_collection",
+    "credit_scoring",
+    "debt_purchasing",
+    "legal_collections",
+    "guaranteed_recovery",
+    "uncontrolled_autonomous_collection"
+  ],
+  "activationDependencies": [
+    "owner_pricing_approval",
+    "owner_terms_approval",
+    "owner_privacy_approval",
+    "auth_hardening_verification",
+    "explicit_public_release_approval"
+  ]
+}

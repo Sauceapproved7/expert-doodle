@@ -1,0 +1,25 @@
+name: Hercules Founding Pilot Offer
+
+on:
+  pull_request:
+    paths:
+      - "governance/hercules-founding-pilot-offer-v1.json"
+      - "docs/launch/HERCULES-FOUNDING-PILOT-OFFER-V1.md"
+      - "supabase/functions/hercules-launch/**"
+      - "tests/hercules-founding-pilot-offer.test.mjs"
+      - ".github/workflows/hercules-founding-pilot-offer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  founding-pilot-offer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Test founding pilot offer contract
+        run: node --test tests/hercules-founding-pilot-offer.test.mjs

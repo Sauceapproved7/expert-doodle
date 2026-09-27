@@ -161,9 +161,10 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
   </section>
 
   <section class="section" id="pilot">
-    <div class="tag">Founding 100</div><h2>Request a controlled founding pilot.</h2>
+    <div class="tag">Founding 100</div><h2>Founding Revenue Recovery Pilot</h2>
     <div class="two">
       <form class="panel" id="pilotForm">
+        <div class="tag">Pilot intake</div><h3>Request a controlled evaluation.</h3>
         <label class="tag" for="pilotName">Name</label><input class="input" id="pilotName" maxlength="100" autocomplete="name" placeholder="Your name">
         <label class="tag" for="pilotEmail" style="display:block;margin-top:12px">Business email</label><input class="input" id="pilotEmail" type="email" maxlength="254" required autocomplete="email" placeholder="you@company.com">
         <label class="tag" for="pilotCompany" style="display:block;margin-top:12px">Company</label><input class="input" id="pilotCompany" maxlength="160" autocomplete="organization" placeholder="Company name">
@@ -172,7 +173,18 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
         <button class="btn primary" style="width:100%;margin-top:14px" type="submit">Request founding pilot</button>
         <div class="notice hidden" id="pilotMsg"></div>
       </form>
-      <div class="panel"><div class="tag">Pilot + contact path</div><h3>Built for controlled U.S. B2B receivables workflows first.</h3><p class="muted">Initial pilots focus on businesses managing their own commercial receivables. Hercules is not being offered here as consumer debt collection, third-party collections, credit scoring, legal collections, or a guaranteed recovery service.</p><p class="muted">This form records the early-access contact request in the protected Hercules marketing system. Dedicated support, security, and privacy contacts remain launch-gated until monitored owner-approved channels are configured.</p><div class="featurelist" style="margin-top:14px"><div class="feature"><span>Goal</span><span class="pill">first verified useful action</span></div><div class="feature"><span>Data</span><span class="pill">synthetic until authorized</span></div><div class="feature"><span>Action</span><span class="pill">approval gated</span></div></div></div>
+      <div class="panel">
+        <div class="tag">What the pilot delivers</div><h3>One narrow receivables workflow, finished end to end.</h3>
+        <p class="muted">Built for U.S. businesses managing their own commercial receivables. The pilot starts with supported receivable evidence, routes each case through the live Recovery Desk, protects blocked states, and preserves the resulting proof trail.</p>
+        <div class="featurelist" style="margin-top:14px">
+          <div class="feature"><span>Workspace</span><span class="pill">Recovery Desk</span></div>
+          <div class="feature"><span>Goal</span><span class="pill">First verified useful action</span></div>
+          <div class="feature"><span>Data</span><span class="pill">Synthetic until authorized</span></div>
+          <div class="feature"><span>Unsafe cases</span><span class="pill">human review only</span></div>
+          <div class="feature"><span>External action</span><span class="pill">approval gated</span></div>
+        </div>
+        <p class="muted" style="margin-top:14px">Commercial terms remain owner-gated. Current pricing material is a proposal, not active billing. Hercules is not being offered here as consumer debt collection, third-party collections, credit scoring, legal collections, or a guaranteed recovery service.</p>
+      </div>
     </div>
   </section>
 
