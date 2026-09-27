@@ -1,0 +1,24 @@
+name: Hercules Domain Status Shopify Cutover
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-domains/**"
+      - "tests/hercules-domain-status-shopify-cutover.test.mjs"
+      - "docs/HERCULES-DOMAIN-STATUS-SHOPIFY-CUTOVER-V1.md"
+      - ".github/workflows/hercules-domain-status-shopify-cutover.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  domain-status-shopify-cutover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify sanitized cutover status
+        run: node --test tests/hercules-domain-status-shopify-cutover.test.mjs
