@@ -8,7 +8,7 @@ const agent=await readFile(
 );
 
 test("browser agent exposes navigation-observation convergence version",()=>{
-  assert.match(agent,/version:"0\.9\.0"/);
+  assert.match(agent,/version:"0\.10\.0"/);
   assert.match(agent,/observationOnlyGoal/);
   assert.match(agent,/navigate_observation/);
 });
