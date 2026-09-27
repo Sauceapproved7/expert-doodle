@@ -28,3 +28,27 @@ test("synthetic launch certification remains available while public signup stays
   assert.match(migration,/hercules-onboard-%@example\.com/);
   assert.match(migration,/synthetic_e2e/);
 });
+
+
+test("public launch exposes the Revenue Recovery marketing contract",()=>{
+  assert.match(launch,/Recover cash\. Keep control\. Prove every action\./);
+  assert.match(launch,/id="revenue-recovery"/);
+  assert.match(launch,/id="proof-demo"/);
+  assert.match(launch,/id="trust"/);
+  assert.match(launch,/id="pilot"/);
+  assert.match(launch,/Synthetic demo data/);
+  assert.match(launch,/Request founding pilot/);
+});
+
+test("public launch instruments marketing and first verified value events",()=>{
+  assert.match(launch,/marketing_event/);
+  assert.match(launch,/pilot_request/);
+  assert.match(launch,/first_verified_useful_action/);
+  assert.match(launch,/event_source:"hercules-launch"/);
+});
+
+test("public launch preserves owner-bound legal and registration gates",()=>{
+  assert.match(launch,/DRAFT — owner review required before general availability/);
+  assert.match(launch,/Public account creation is not open yet/);
+  assert.match(launch,/not being offered here as .*guaranteed recovery service/i);
+});
