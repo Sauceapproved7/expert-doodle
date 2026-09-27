@@ -6,7 +6,7 @@ const root=new URL("../",import.meta.url);
 const manifest=JSON.parse(await readFile(new URL("../hercules-runtime/personal-browser-bridge/manifest.json",import.meta.url),"utf8"));
 const background=await readFile(new URL("../hercules-runtime/personal-browser-bridge/background.js",import.meta.url),"utf8");
 const popup=await readFile(new URL("../hercules-runtime/personal-browser-bridge/popup.js",import.meta.url),"utf8");
-const edge=await readFile(new URL("../supabase/functions/hercules-personal-browser-bridge/index.ts",import.meta.url),"utf8");
+const integrations=await readFile(new URL("../supabase/functions/hercules-integrations/index.ts",import.meta.url),"utf8");
 const migration=await readFile(new URL("../supabase/migrations/20260927122500_hercules_personal_browser_bridge_v1.sql",import.meta.url),"utf8");
 
 test("personal browser bridge requests only bounded browser permissions",()=>{
@@ -46,7 +46,7 @@ test("pairing and session tokens are stored only as hashes server-side",()=>{
   assert.match(migration,/session_token_sha256 text/i);
   assert.doesNotMatch(migration,/pair_token\s+text/i);
   assert.doesNotMatch(migration,/session_token\s+text/i);
-  assert.match(edge,/sha256Hex/);
+  assert.match(integrations,/sha256Hex/);
 });
 
 test("personal browser sessions and commands are service-role controlled and expire",()=>{
@@ -70,5 +70,15 @@ test("extension never exports cookies passwords session tokens or one-time codes
   assert.doesNotMatch(background,/localStorage/);
   assert.doesNotMatch(background,/sessionStorage/);
   assert.doesNotMatch(background,/\.value\s*[,}]/);
-  assert.match(edge,/credential_export_forbidden/);
+  assert.match(integrations,/credential_export_forbidden/);
+});
+
+
+test("personal browser bridge reuses Hercules Integrations instead of consuming a new Edge Function slot",()=>{
+  assert.match(background,/functions\/v1\/hercules-integrations/);
+  assert.match(integrations,/action==='create_pair'/);
+  assert.match(integrations,/action==='connect'/);
+  assert.match(integrations,/action==='poll'/);
+  assert.match(integrations,/action==='complete'/);
+  assert.match(integrations,/hercules_personal_browser_sessions/);
 });
