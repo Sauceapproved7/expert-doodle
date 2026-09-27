@@ -1,67 +1,72 @@
 begin;
 
-create or replace function public.hercules_github_finalizer_cron_tick()
-returns bigint
+create or replace function public.hercules_sync_github_finalizer_cron_state()
+returns trigger
 language plpgsql
 security definer
-set search_path to 'public', 'vault'
+set search_path to 'public', 'cron'
 as $function$
 declare
-  v_ref uuid;
-  v_secret text;
-  v_request_id bigint;
-  v_ready boolean := false;
+  v_enable boolean;
 begin
-  select exists(
-    select 1
-    from public.hercules_provider_connections c
-    where c.provider='github_forge'
-      and c.account_key='Sauceapproved7/expert-doodle'
-      and c.status in ('pending','error')
-      and c.secret_ref is not null
-      and coalesce(c.metadata->>'app_id','') <> ''
-  ) into v_ready;
-
-  if not v_ready then
-    return 0;
+  if new.provider <> 'github_forge'
+     or new.account_key <> 'Sauceapproved7/expert-doodle' then
+    return new;
   end if;
 
-  select secret_ref into v_ref
-  from public.hercules_internal_service_keys
-  where purpose='github-finalizer'
-    and enabled=true;
+  v_enable :=
+    new.status in ('pending','error')
+    and new.secret_ref is not null
+    and coalesce(new.metadata->>'app_id','') <> '';
 
-  if v_ref is null then
-    raise exception 'github_finalizer_secret_missing';
-  end if;
+  update cron.job
+  set active=v_enable
+  where jobname='hercules-github-finalizer';
 
-  v_secret := public.hercules_get_secret(v_ref);
-
-  select net.http_post(
-    url := 'https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-github-app',
-    headers := jsonb_build_object(
-      'Content-Type','application/json',
-      'x-hercules-internal-key',v_secret
-    ),
-    body := '{"action":"reconcile"}'::jsonb,
-    timeout_milliseconds := 5000
-  ) into v_request_id;
-
-  return v_request_id;
+  return new;
 end;
 $function$;
 
+drop trigger if exists hercules_sync_github_finalizer_cron_state
+on public.hercules_provider_connections;
+
+create trigger hercules_sync_github_finalizer_cron_state
+after insert or update of status,secret_ref,metadata
+on public.hercules_provider_connections
+for each row
+execute function public.hercules_sync_github_finalizer_cron_state();
+
+update cron.job
+set active=exists(
+  select 1
+  from public.hercules_provider_connections c
+  where c.provider='github_forge'
+    and c.account_key='Sauceapproved7/expert-doodle'
+    and c.status in ('pending','error')
+    and c.secret_ref is not null
+    and coalesce(c.metadata->>'app_id','') <> ''
+)
+where jobname='hercules-github-finalizer';
+
 do $$
 declare
-  v_def text;
+  v_active boolean;
 begin
-  select pg_get_functiondef('public.hercules_github_finalizer_cron_tick()'::regprocedure)
-  into v_def;
+  select active into v_active
+  from cron.job
+  where jobname='hercules-github-finalizer';
 
-  if position('c.status in (''pending'',''error'')' in v_def)=0
-     or position('c.secret_ref is not null' in v_def)=0
-     or position('return 0' in v_def)=0 then
-    raise exception 'GitHub finalizer cron guard was not installed';
+  if v_active is distinct from false then
+    raise exception 'GitHub finalizer cron should be idle before App creation';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_trigger
+    where tgname='hercules_sync_github_finalizer_cron_state'
+      and not tgisinternal
+  ) then
+    raise exception 'GitHub finalizer cron state trigger was not installed';
   end if;
 end
 $$;
