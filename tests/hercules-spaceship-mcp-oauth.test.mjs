@@ -149,3 +149,11 @@ test("internal handoff launcher revokes the handoff if browser queueing fails",(
   assert.match(mcp,/status:"revoked"/);
   assert.match(mcp,/browser_submit_failed/);
 });
+
+
+test("authenticated owner can issue a one-time Spaceship browser handoff without the internal worker",()=>{
+  assert.match(mcp,/spaceship_mcp_owner_handoff/);
+  assert.match(mcp,/if\(action==="spaceship_mcp_owner_handoff"\)/);
+  assert.match(mcp,/owner_admin_required/);
+  assert.match(mcp,/await issueHandoff\(\)/);
+});
