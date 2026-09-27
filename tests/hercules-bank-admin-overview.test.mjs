@@ -46,3 +46,24 @@ test("owner overview summarizes sandbox accounts without exposing journal intern
     await new Promise(r=>server.close(r));
   }finally{await rm(root,{recursive:true,force:true})}
 });
+
+
+test("bank console is served without bearer and carries restrictive browser headers", async()=>{
+  const root=await mkdtemp(join(tmpdir(),"hercules-bank-console-http-"));
+  try{
+    const runtime=await HerculesBankRuntime.open({statePath:join(root,"bank.json")});
+    const server=createHerculesBankApi({runtime,jwtSecret:SECRET,nowSeconds:()=>1100});
+    await new Promise(r=>server.listen(0,"127.0.0.1",r));
+    const base="http://127.0.0.1:"+server.address().port;
+
+    const response=await fetch(base+"/console");
+    const html=await response.text();
+    assert.equal(response.status,200);
+    assert.match(response.headers.get("content-type"),/text\/html/);
+    assert.match(response.headers.get("content-security-policy"),/default-src 'self'/);
+    assert.match(response.headers.get("cache-control"),/no-store/);
+    assert.match(html,/HERCULES BANK/);
+
+    await new Promise(r=>server.close(r));
+  }finally{await rm(root,{recursive:true,force:true})}
+});
