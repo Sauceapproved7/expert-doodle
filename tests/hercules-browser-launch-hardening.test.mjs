@@ -94,3 +94,13 @@ test("runtime monitor distinguishes upstream transport failures from interaction
   assert.match(latest,/failed to connect to backend/);
   assert.match(latest,/websocket was closed before the connection was established/);
 });
+
+test("browser agent deterministically plans explicit named-link navigation before AI planning",async()=>{
+  const agent=await readFile(new URL("../supabase/functions/hercules-browser-agent/index.ts",import.meta.url),"utf8");
+  assert.match(agent,/function deterministicLinkPlan\(goal:string,page:any,allowedDomains:string\[\]\)/);
+  assert.match(agent,/domainAllowed\(link\.href,allowedDomains\)/);
+  assert.match(agent,/decision:"click"/);
+  const deterministic=agent.indexOf("const deterministicPlan=deterministicLinkPlan");
+  const ai=agent.indexOf("await aiPlan",deterministic);
+  assert.ok(deterministic>=0 && ai>deterministic);
+});

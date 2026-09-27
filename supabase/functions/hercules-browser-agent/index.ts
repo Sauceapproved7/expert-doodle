@@ -168,6 +168,36 @@ function postActionSatisfaction(goal:string,before:any,after:any,decision:string
   return null;
 }
 
+function deterministicLinkPlan(goal:string,page:any,allowedDomains:string[]){
+  const g=String(goal||"").toLowerCase();
+  const wantsNavigation=/(?:\bfollow(?:ed|ing)?\b|\bopen\b|\bclick\b|\bvisit\b|\bgo to\b)/.test(g);
+  if(!wantsNavigation)return null;
+
+  const links=(Array.isArray(page?.links)?page.links:[])
+    .map((x:any)=>({text:String(x?.text||"").trim(),href:String(x?.href||"").trim()}))
+    .filter((link:any)=>link.text&&link.href&&domainAllowed(link.href,allowedDomains));
+  if(!links.length)return null;
+
+  const named=links.filter((link:any)=>{
+    const label=link.text.toLowerCase();
+    return label.length>=2&&g.includes(label);
+  });
+  let link:any=null;
+  if(named.length===1)link=named[0];
+  else if(named.length===0&&links.length===1&&/\blink\b/.test(g))link=links[0];
+  if(!link)return null;
+
+  const escaped=link.href.replace(/\\/g,"\\\\").replace(/"/g,'\\"');
+  return {
+    decision:"click",
+    selector:links.length===1?"a":`a[href="${escaped}"]`,
+    inputKey:"",
+    answer:"",
+    reason:"deterministic_named_link",
+    ms:0
+  };
+}
+
 function stripFence(v:string){
   let s=String(v||"").trim();
   if(s.startsWith("```")){
@@ -295,7 +325,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.11.0",
+    ok:true,service:"hercules-browser-agent",version:"0.12.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,securityChallengeDetection:true,highImpactAutonomy:false
@@ -494,7 +524,10 @@ Deno.serve(async(req:Request)=>{
         return out({ok:true,runId,status:"succeeded",answer:finalAnswer,page,steps:history,provider,model,convergence:direct.reason});
       }
       const controls=scrape?.result?.extracted||{};
-      const planned=await aiPlan(goal,page,controls,history,inputKeys);
+      const deterministicPlan=deterministicLinkPlan(goal,page,allowedDomains);
+      const planned=deterministicPlan
+        ? {plan:deterministicPlan,provider:"deterministic",model:"link-planner"}
+        : await aiPlan(goal,page,controls,history,inputKeys);
       provider=planned.provider; model=planned.model;
       const plan=planned.plan;
 

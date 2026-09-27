@@ -42,7 +42,7 @@ test("failed worker retries are preserved in run telemetry",()=>{
 });
 
 test("browser agent allows enough time for cold-start recovery",()=>{
-  assert.match(agent,/version:"0\.11\.0"/);
+  assert.match(agent,/version:"0\.12\.0"/);
   assert.match(agent,/Math\.min\(120000,Number\(request\?\.timeoutMs\|\|30000\)\+90000\)/);
   assert.match(migration,/timeout_milliseconds := 120000/);
 });
