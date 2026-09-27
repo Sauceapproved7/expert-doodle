@@ -100,6 +100,73 @@ async function credentials() {
   return {apiKey, apiSecret};
 }
 
+async function mcpOauthConfigured(){
+  const rows=await rest(
+    "hercules_spaceship_mcp_oauth?singleton=eq.true&status=eq.configured&select=status&limit=1"
+  ) as Array<{status?:string}>;
+  return Array.isArray(rows)&&rows[0]?.status==="configured";
+}
+
+async function mcpDns(req:Request,action:"dns_records_get"|"dns_records_save"|"dns_records_delete",args:any){
+  const key=req.headers.get("x-hercules-internal-key")||"";
+  if(!key)throw new Error("spaceship_dns_internal_secret_unavailable");
+  const response=await fetch(U+"/functions/v1/hercules-spaceship-mcp",{
+    method:"POST",
+    headers:{"content-type":"application/json","x-hercules-internal-key":key},
+    body:JSON.stringify({action,arguments:args}),
+    signal:AbortSignal.timeout(30000)
+  });
+  const payload=await response.json().catch(()=>({}));
+  if(!response.ok||payload?.ok!==true){
+    throw new Error(String(payload?.error||"spaceship_mcp_dns_failed").slice(0,1000));
+  }
+  return payload.result||{};
+}
+
+function spaceshipMcpClient(req:Request){
+  return {
+    async listRecords(domain:string){
+      const items:any[]=[]; const take=500;
+      for(let skip=0;skip<10000;skip+=take){
+        const page=await mcpDns(req,"dns_records_get",{domainName:domain,take,skip});
+        const rows=Array.isArray(page?.items)?page.items:[];
+        const total=Number(page?.total);
+        if(!Number.isFinite(total)||total<0)throw new Error("Spaceship MCP DNS list total is invalid");
+        items.push(...rows);
+        if(items.length>=total)return {items,total};
+        if(rows.length===0)throw new Error("Spaceship MCP DNS pagination ended before total");
+      }
+      throw new Error("Spaceship MCP DNS record limit exceeded");
+    },
+    async saveRecords(domain:string,records:any[],options:any={}){
+      const result=await mcpDns(req,"dns_records_save",{domainName:domain,records,force:options?.force===true});
+      return {saved:Number(result?.saved||records.length)};
+    },
+    async deleteRecords(domain:string,records:any[]){
+      const result=await mcpDns(req,"dns_records_delete",{domainName:domain,records});
+      return {deleted:Number(result?.deleted||records.length)};
+    }
+  };
+}
+
+async function providerClient(req:Request){
+  if(await mcpOauthConfigured()){
+    return {mode:"mcp_oauth",client:spaceshipMcpClient(req)};
+  }
+  try{
+    const {apiKey,apiSecret}=await credentials();
+    return {
+      mode:"external_api",
+      client:new SpaceshipDnsClient({apiKey,apiSecret,allowedDomains:[DOMAIN],fetchImpl:fetch})
+    };
+  }catch(error){
+    if(error instanceof Error&&error.message==="spaceship_credentials_not_configured"){
+      throw new Error("spaceship_mcp_authorization_required");
+    }
+    throw error;
+  }
+}
+
 async function createRun(traceId: string, action: string, replaceCustomConflicts: boolean) {
   await rest("hercules_spaceship_dns_runs", {
     method:"POST",
@@ -174,18 +241,12 @@ export async function handleSpaceshipDnsRequest(req: Request) {
   await createRun(traceId, action, replaceCustomConflicts);
 
   try {
-    const {apiKey, apiSecret} = await credentials();
-    const client = new SpaceshipDnsClient({
-      apiKey,
-      apiSecret,
-      allowedDomains:[DOMAIN],
-      fetchImpl:fetch,
-    });
+    const {client,mode} = await providerClient(req);
 
     if (action === "inspect_shopify_dns") {
       const current = await client.listRecords(DOMAIN);
       const plan = planShopifyDnsReconciliation(current.items);
-      const summary = planSummary(plan, current.items);
+      const summary = {...planSummary(plan, current.items),providerMode:mode};
       await finishRun(traceId, plan.blockingConflicts.length ? "conflict" : "succeeded", summary);
       return json({ok:true, traceId, action, summary});
     }
@@ -204,15 +265,25 @@ export async function handleSpaceshipDnsRequest(req: Request) {
       return json({ok:false, traceId, error:"custom_conflict_requires_explicit_replacement", summary:before}, 409);
     }
 
-    const result = await client.reconcileShopify(DOMAIN, {replaceCustomConflicts});
+    let deletedCount=0, savedCount=0;
+    if(preflight.deleteRecords.length){
+      const deleted=await client.deleteRecords(DOMAIN,preflight.deleteRecords);
+      deletedCount=Number(deleted?.deleted||preflight.deleteRecords.length);
+    }
+    if(preflight.saveRecords.length){
+      const saved=await client.saveRecords(DOMAIN,preflight.saveRecords,{force:false});
+      savedCount=Number(saved?.saved||preflight.saveRecords.length);
+    }
+
     const after = await client.listRecords(DOMAIN);
     const verification = planShopifyDnsReconciliation(after.items);
     const summary = {
       ...planSummary(verification, after.items),
-      changed:result.changed,
-      deletedCount:result.deleted?.length || 0,
-      savedCount:result.saved?.length || 0,
-      verified:result.verified === true && verification.ready,
+      providerMode:mode,
+      changed:Boolean(deletedCount||savedCount),
+      deletedCount,
+      savedCount,
+      verified:verification.ready,
     };
 
     if (!summary.verified) throw new Error("spaceship_dns_post_write_verification_failed");
@@ -221,7 +292,7 @@ export async function handleSpaceshipDnsRequest(req: Request) {
     return json({ok:true, traceId, action, summary});
   } catch (error) {
     const detail = error instanceof Error ? error.message.slice(0, 1000) : "spaceship_dns_failed";
-    const status = detail === "spaceship_credentials_not_configured" ? 503 : 502;
+    const status = ["spaceship_credentials_not_configured","spaceship_mcp_authorization_required"].includes(detail) ? 503 : 502;
     await finishRun(traceId, "failed", {domain:DOMAIN}, detail).catch(() => {});
     return json({ok:false, traceId, error:detail}, status);
   }

@@ -1,0 +1,27 @@
+name: Hercules Spaceship MCP OAuth
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-spaceship-mcp/**"
+      - "supabase/functions/hercules-private-bridge/spaceship-dns-control.ts"
+      - "supabase/migrations/*hercules_spaceship_mcp_oauth*"
+      - "supabase/migrations/20260927054500_hercules_domain_launch_autopilot_v1.sql"
+      - "tests/hercules-spaceship-mcp-oauth.test.mjs"
+      - ".github/workflows/hercules-spaceship-mcp-oauth.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spaceship-mcp-oauth:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify Spaceship MCP OAuth lane
+        run: node --test tests/hercules-spaceship-mcp-oauth.test.mjs tests/hercules-spaceship-dns-control.test.mjs tests/hercules-domain-launch-autopilot.test.mjs
