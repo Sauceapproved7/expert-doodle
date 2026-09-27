@@ -22,10 +22,10 @@ Proposed exclusions at launch:
 
 ## 2. Pricing
 
-Current proposal:
-- Starter — $99/month
-- Growth — $249/month
-- Scale — $599/month
+Canonical production-aligned catalog prepared for owner approval:
+- Starter — $49/month; $490/year
+- Pro — $149/month; $1,490/year
+- Scale — $399/month; $3,990/year
 
 Guardrails:
 - no outcome-based collection fee at launch without legal/compliance review;
