@@ -90,3 +90,13 @@ test("personal browser observations strip URL query strings and fragments",()=>{
   assert.doesNotMatch(background,/href:a\.href/);
   assert.doesNotMatch(background,/url:location\.href/);
 });
+
+
+test("injected DOM action carries its own URL sanitizer without relying on extension closures",()=>{
+  const start=background.indexOf("function domAction");
+  const end=background.indexOf("async function executeCommand",start);
+  const block=background.slice(start,end);
+  assert.match(block,/const safePageUrl=/);
+  assert.match(block,/href:safePageUrl\(a\.href\)/);
+  assert.match(block,/url:safePageUrl\(location\.href\)/);
+});
