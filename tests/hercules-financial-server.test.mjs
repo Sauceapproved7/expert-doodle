@@ -110,3 +110,54 @@ test("public binding with secure cookies marks the browser session Secure", asyn
     await rm(root,{recursive:true,force:true});
   }
 });
+
+
+test("Financial launcher passes qualification evidence status into owner readiness", async () => {
+  const root=await mkdtemp(join(tmpdir(),"hercules-financial-qe-"));
+  let service=null;
+  let calls=0;
+  const currentAdapterQualification={qualified:true,activationAllowed:false,externalRailsEnabled:false,checks:{}};
+  try{
+    service=await startHerculesFinancialService({
+      statePath:join(root,"bank.json"),
+      baseAuthUrl:"https://base.example.test",
+      jwtSecret:SECRET,
+      port:0,
+      nowSeconds:()=>1100,
+      qualificationEvidenceStore:{
+        status:async({currentQualification})=>{
+          calls+=1;
+          assert.equal(currentQualification,currentAdapterQualification);
+          return {
+            ready:false,
+            stale:true,
+            identityChanged:false,
+            blockers:["qualification evidence is stale or expired"],
+            activationAllowed:false,
+            externalRailsEnabled:false,
+          };
+        },
+      },
+      currentAdapterQualification,
+    });
+    const ownerToken=signJwtHs256({
+      sub:"owner-1",
+      role:"owner",
+      issuer:"hercules-base",
+      audience:"hercules-base-api",
+      ttlSeconds:900,
+      nowSeconds:1000,
+    },SECRET);
+    const response=await fetch(service.endpoint+"/v1/admin/production-readiness",{
+      headers:{authorization:"Bearer "+ownerToken},
+    });
+    const body=await response.json();
+    assert.equal(response.status,200);
+    assert.equal(calls,1);
+    assert.equal(body.controls.adapterQualification.stale,true);
+    assert.equal(body.activationAllowed,false);
+  }finally{
+    if(service?.server?.listening)await new Promise((resolve)=>service.server.close(resolve));
+    await rm(root,{recursive:true,force:true});
+  }
+});
