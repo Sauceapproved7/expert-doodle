@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 5,
+  "version": 6,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -59,6 +59,10 @@
     {
       "path": "hercules-time-machine",
       "role": "recovery-runtime"
+    },
+    {
+      "path": "hercules-runtime",
+      "role": "unified-execution-runtime"
     }
   ],
   "allowedModuleSpecifierPrefixes": [
