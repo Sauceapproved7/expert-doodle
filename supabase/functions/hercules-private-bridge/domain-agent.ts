@@ -11,7 +11,8 @@ const ACTIONS=new Set([
   'domain_agent_task_preflight',
   'domain_agent_execute',
   'domain_agent_execution_status',
-  'domain_agent_usage_status'
+  'domain_agent_usage_status',
+  'domain_agent_identity_status'
 ]);
 const SAFE_WORKLOADS=new Set([
   'benchmark.echo',
@@ -334,6 +335,12 @@ async function usageStatus(organizationId:string){
   return data||{};
 }
 
+async function identityStatus(organizationId:string){
+  const {data,error}=await admin.rpc('hercules_domain_agent_identity_status',{p_organization_id:organizationId});
+  if(error)throw new Error('identity_status_failed');
+  return data||{};
+}
+
 async function recordUsage(principal:Principal,requestId:string,metadata:Record<string,unknown>={}){
   const {data,error}=await admin.rpc('hercules_domain_agent_record_usage',{
     p_organization_id:principal.organizationId,
@@ -596,6 +603,16 @@ export async function handleDomainAgentRequest(req:Request){
         action:'usage_status',disposition:'READ',decisionSha256:digest,reasonCodes:['USAGE_STATUS_READ']
       });
       return out({...response,decision_sha256:digest});
+    }
+
+    if(action==='domain_agent_identity_status'){
+      const identities=await identityStatus(principal.organizationId);
+      return out({
+        ok:true,
+        service:'hercules-domain-agent',
+        request_id:requestId,
+        identities
+      });
     }
 
     if(action==='domain_agent_execution_status'){
