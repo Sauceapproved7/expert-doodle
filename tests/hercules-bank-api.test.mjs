@@ -252,3 +252,93 @@ test("statement access follows account ownership", async () => {
     await rm(root, {recursive:true, force:true});
   }
 });
+
+
+test("browser session bridge serves the console and enforces CSRF on mutations", async () => {
+  const {HerculesBankBrowserSessions}=await import("../hercules-bank/browser-session.mjs");
+  const root = await mkdtemp(join(tmpdir(), "hercules-bank-browser-api-"));
+  try {
+    const runtime = await HerculesBankRuntime.open({statePath:join(root,"bank.json")});
+    const browserSessions = new HerculesBankBrowserSessions({
+      authClient:{
+        async signIn({email,password}){
+          assert.equal(email,"alice@example.test");
+          assert.equal(password,"correct horse battery staple");
+          return {
+            user:{id:"user-alice",email},
+            access_token:token("user-alice"),
+            refresh_token:"r".repeat(48),
+          };
+        },
+      },
+      jwtSecret:JWT_SECRET,
+      issuer:ISSUER,
+      audience:AUDIENCE,
+      nowSeconds:() => 1100,
+      randomBytes:(size)=>Buffer.alloc(size,12),
+    });
+    const api = createHerculesBankApi({
+      runtime,
+      jwtSecret:JWT_SECRET,
+      issuer:ISSUER,
+      audience:AUDIENCE,
+      nowSeconds:() => 1100,
+      browserSessions,
+    });
+    await new Promise((resolve) => api.listen(0, "127.0.0.1", resolve));
+    const base = "http://127.0.0.1:" + api.address().port;
+
+    const page = await fetch(base + "/");
+    assert.equal(page.status,200);
+    assert.match(await page.text(),/HERCULES FINANCIAL/i);
+
+    const signedIn = await fetch(base + "/v1/session", {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({
+        email:"alice@example.test",
+        password:"correct horse battery staple",
+      }),
+    });
+    assert.equal(signedIn.status,201);
+    const cookie = signedIn.headers.get("set-cookie").split(";")[0];
+    const loginBody = await signedIn.json();
+    assert.equal(loginBody.user.id,"user-alice");
+    assert.equal(JSON.stringify(loginBody).includes("access_token"),false);
+    assert.equal(JSON.stringify(loginBody).includes("refresh_token"),false);
+
+    const session = await fetch(base + "/v1/session/csrf", {
+      headers:{cookie},
+    });
+    assert.equal(session.status,200);
+    const sessionBody = await session.json();
+    assert.equal(sessionBody.user.id,"user-alice");
+    assert.match(sessionBody.csrfToken,/^[A-Za-z0-9_-]+$/);
+
+    const denied = await fetch(base + "/v1/accounts", {
+      method:"POST",
+      headers:{cookie,"content-type":"application/json"},
+      body:"{}",
+    });
+    assert.equal(denied.status,403);
+
+    const opened = await fetch(base + "/v1/accounts", {
+      method:"POST",
+      headers:{
+        cookie,
+        "content-type":"application/json",
+        "x-bank-csrf":sessionBody.csrfToken,
+      },
+      body:"{}",
+    });
+    assert.equal(opened.status,201);
+
+    const accounts = await fetch(base + "/v1/accounts", {headers:{cookie}});
+    assert.equal(accounts.status,200);
+    assert.equal((await accounts.json()).accounts.length,1);
+
+    await new Promise((resolve) => api.close(resolve));
+  } finally {
+    await rm(root, {recursive:true, force:true});
+  }
+});
