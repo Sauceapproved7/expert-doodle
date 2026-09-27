@@ -100,3 +100,13 @@ If any of these cannot be established, do not merge the component until the prov
 This artifact implements the narrow ownership/provenance/canonical-source portion of the September 22, 2026 governance record `HERCULES_IP_OWNERSHIP_AND_PROVENANCE_CONTROL_20260922`.
 
 Future edits to this file must be committed so the governing rule and its implementation remain traceable.
+
+## Enterprise ownership transition — 2026-09-27
+
+SauceApproved enterprise LLC is the target legal entity for software intended to be held as a company asset. The enterprise intake rule and current asset status are recorded in `governance/sauceapproved-enterprise-software-ownership-v1.json` and `docs/SAUCEAPPROVED-ENTERPRISE-SOFTWARE-IP-REGISTER.md`.
+
+This transition record does **not** itself transfer intellectual property. The current repository declarations that identify `Sauceapproved7` as rights holder remain unchanged until an executed assignment or other legally sufficient chain-of-title record supports the change.
+
+A non-executed assignment draft is maintained at `docs/legal/SAUCEAPPROVED-ENTERPRISE-IP-ASSIGNMENT-DRAFT.md`. Do not treat that draft as proof of transfer and do not commit signatures or sensitive execution material to this public repository.
+
+After execution of a valid assignment, update the declared rights holder, owner-code policy, intentional ownership constants/tests, and applicable notices in a dedicated chain-of-title commit while preserving third-party rights and all prior valid license grants.
