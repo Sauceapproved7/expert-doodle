@@ -21,19 +21,15 @@ The technical launch path is green. This packet contains only the remaining deci
 
 ## Owner decision 1 — Final paid-launch pricing
 
-Two different price sets currently exist and must not be mixed.
+The stale $99 / $249 / $599 proposal has been retired from the canonical pricing document.
 
-### Current production database plans
+The launch-closeout catalog now matches the active production database:
+
 - Starter — $49/month; $490/year
 - Pro — $149/month; $1,490/year
 - Scale — $399/month; $3,990/year
 
-### Earlier proposed launch prices
-- Starter — $99/month
-- Growth — $249/month
-- Scale — $599/month
-
-**Required decision:** select the one price structure Hercules will actually sell at launch. After that decision, align database plans, public copy, payment products/prices, entitlements, checkout, and Terms.
+Hercules has prepared this as the single canonical launch catalog. The `pricing` approval remains pending because the authenticated owner decision center intentionally requires the exact confirmation phrase and does not infer approval from chat text.
 
 ## Owner action 2 — Business banking / payment account
 
@@ -42,11 +38,14 @@ For a paid launch, complete the identity-verified business-bank onboarding for S
 State formation evidence is now ready in the Vault. IRS/EIN naming reconciliation remains an administrative follow-up and the bank/payment provider must receive the exact tax identity information it requires.
 
 After the business account is available:
-1. connect the approved payment processor;
-2. set the business checking account as the payout account;
-3. configure the final Hercules products/prices;
-4. verify signed webhooks;
-5. run a real/sandbox end-to-end checkout, subscription, cancellation, refund, and payout-state test as applicable.
+1. complete Stripe business/identity verification;
+2. set the business checking account as the payout account in Stripe;
+3. use the authenticated Hercules Integrations **Stripe Direct** card to connect the Stripe secret key;
+4. verify Stripe products/prices against the canonical Hercules catalog;
+5. verify signed webhooks;
+6. run a controlled checkout, subscription, cancellation, refund, and payout-state test as applicable.
+
+Implementation packet: `docs/launch/HERCULES-STRIPE-ACTIVATION-PACKET-2026-09-27.md`.
 
 No raw bank username/password should be stored in Hercules.
 

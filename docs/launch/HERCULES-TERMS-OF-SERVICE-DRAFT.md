@@ -1,11 +1,11 @@
-# Hercules Terms of Service — DRAFT v0.1
+# Hercules Terms of Service — FINAL CANDIDATE v0.2
 
-**Status:** DRAFT — NOT YET EFFECTIVE  
-**Contracting entity:** SauceApproved enterprise LLC  
+**Status:** FINAL CANDIDATE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE  
+**Contracting entity:** SauceApproved Enterprise LLC  
 **Product:** Hercules / Hercules Revenue Recovery  
 **Owner/legal review required before publication**
 
-These draft terms are implementation material for launch preparation. They are not active terms until SauceApproved enterprise LLC approves and publishes a final version.
+These draft terms are implementation material for launch preparation. They are not active terms until SauceApproved Enterprise LLC approves and publishes a final version.
 
 ## 1. Service
 
@@ -79,31 +79,39 @@ Hercules does not guarantee a recovery outcome, payment outcome, response, savin
 
 Hercules may connect to third-party services selected or authorized by the customer or used as infrastructure providers.
 
-Third-party services are governed by their own terms and availability. SauceApproved enterprise LLC is not responsible for a third party's independent service outage, policy change, data practice, or refusal to perform an action.
+Third-party services are governed by their own terms and availability. SauceApproved Enterprise LLC is not responsible for a third party's independent service outage, policy change, data practice, or refusal to perform an action.
 
 Hercules will not represent a provider action as successful until the product has the verification evidence required by the applicable workflow.
 
 ## 8. Plans, billing, and cancellation
 
-**DRAFT COMMERCIAL TERMS — final pricing and payment-provider activation remain subject to owner approval.**
+The canonical launch catalog is:
 
-The proposed launch plans are Starter, Growth, and Scale. Final prices, included usage, billing intervals, taxes, renewal terms, cancellation rules, and refund rules must match the billing configuration actually activated at launch.
+- Starter — $49/month or $490/year;
+- Pro — $149/month or $1,490/year;
+- Scale — $399/month or $3,990/year.
 
-Customers authorize applicable charges only after completing the payment-provider checkout or other approved billing process.
+These amounts match the active Hercules production plan catalog. They do not become chargeable until the owner approves pricing through the authenticated launch-decision flow and the payment provider is activated and verified.
+
+Subscriptions renew for the selected monthly or annual interval until canceled. Cancellation stops future renewal and takes effect at the end of the current paid period unless applicable law or an express written agreement requires otherwise.
+
+Except where required by law or expressly stated in a written order form, fees already paid are non-refundable. SauceApproved Enterprise LLC may issue discretionary credits or refunds without creating an obligation to do so in other cases.
+
+Customers authorize applicable charges only after completing the payment-provider checkout or another approved billing process. Taxes may be added where required.
 
 Hercules will not charge for capabilities represented as unavailable.
 
 ## 9. Intellectual property
 
-SauceApproved enterprise LLC and its licensors retain their respective rights in Hercules, including original software, branding, documentation, designs, and other protected material, subject to applicable open-source and third-party licenses.
+SauceApproved Enterprise LLC and its licensors retain their respective rights in Hercules, including original software, branding, documentation, designs, and other protected material, subject to applicable open-source and third-party licenses.
 
 Customers retain their rights in customer-provided data and content.
 
-Customers grant SauceApproved enterprise LLC the limited rights necessary to host, process, transmit, secure, back up, and otherwise handle customer data solely to provide, protect, support, and improve the service as permitted by the final Privacy Policy and applicable law.
+Customers grant SauceApproved Enterprise LLC the limited rights necessary to host, process, transmit, secure, back up, and otherwise handle customer data solely to provide, protect, support, and improve the service as permitted by the final Privacy Policy and applicable law.
 
 ## 10. Feedback
 
-If a customer voluntarily provides product feedback, SauceApproved enterprise LLC may use that feedback to improve Hercules without an obligation to pay for it, provided this does not transfer ownership of the customer's confidential information or customer data.
+If a customer voluntarily provides product feedback, SauceApproved Enterprise LLC may use that feedback to improve Hercules without an obligation to pay for it, provided this does not transfer ownership of the customer's confidential information or customer data.
 
 ## 11. Security
 
@@ -136,27 +144,37 @@ Hercules does not warrant:
 
 ## 15. Limitation of liability
 
-**OWNER/COUNSEL REVIEW REQUIRED.**
+**CANDIDATE CLAUSE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE ACTIVATION.**
 
-The final launch terms must include a limitation-of-liability structure appropriate for SauceApproved enterprise LLC, the launch market, applicable law, pricing, and risk profile. No liability cap is activated by this draft.
+To the maximum extent permitted by law, neither party will be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, revenues, goodwill, or data, arising from the service.
+
+Except for liabilities that cannot lawfully be limited and obligations expressly excluded from the cap in a signed agreement, SauceApproved Enterprise LLC's aggregate liability arising from Hercules will not exceed the fees paid or payable by the affected customer for Hercules during the 12 months immediately preceding the event giving rise to the claim. If the customer has paid no fees, the candidate fallback cap is US $100.
+
+This clause is not effective until the Terms are affirmatively approved and published.
 
 ## 16. Indemnification
 
-**OWNER/COUNSEL REVIEW REQUIRED.**
+**CANDIDATE CLAUSE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE ACTIVATION.**
 
-Any indemnification language must be reviewed against the exact launch behavior and customer segment before publication.
+The customer will defend and indemnify SauceApproved Enterprise LLC against third-party claims arising from the customer's unlawful use of Hercules, customer-provided data the customer lacked authority to provide, or customer communications/actions taken in violation of applicable law or these Terms.
+
+Any broader or reciprocal indemnity, including intellectual-property indemnification by SauceApproved Enterprise LLC, requires a separate signed agreement or affirmative launch approval.
 
 ## 17. Termination
 
 Customers may stop using Hercules subject to the final billing/cancellation terms.
 
-SauceApproved enterprise LLC may suspend or terminate access for material breach, unlawful use, security risk, nonpayment, or conduct that threatens the service or third parties, subject to applicable law and any signed customer agreement.
+SauceApproved Enterprise LLC may suspend or terminate access for material breach, unlawful use, security risk, nonpayment, or conduct that threatens the service or third parties, subject to applicable law and any signed customer agreement.
 
 ## 18. Governing law and disputes
 
-**OWNER/COUNSEL REVIEW REQUIRED.**
+**CANDIDATE CLAUSE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE ACTIVATION.**
 
-SauceApproved enterprise LLC is organized in Connecticut. The final governing-law, venue, dispute-resolution, arbitration/class-action, and notice provisions must be affirmatively approved before these Terms become effective.
+These Terms are governed by the laws of the State of Connecticut, without regard to conflict-of-law principles, except where applicable law requires otherwise.
+
+Unless a signed agreement provides a different forum or applicable law requires another venue, disputes relating to these Terms or Hercules will be brought in a state or federal court with jurisdiction in Connecticut.
+
+No mandatory arbitration or class-action waiver is activated by this candidate. Any such provision requires separate affirmative approval before publication.
 
 ## 19. Changes to these terms
 
@@ -164,9 +182,7 @@ The final Terms should state how customers will be notified of material changes 
 
 ## 20. Contact
 
-A monitored customer-support contact and legal notice contact must be configured before publication.
-
-**Do not publish a personal address or personal email by default.**
+A monitored customer-support contact and legal notice contact must be configured before publication. Until those business channels are verified, Hercules must not publish a personal address or personal email as the default legal contact.
 
 ---
 

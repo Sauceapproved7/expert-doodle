@@ -1,7 +1,7 @@
-# Hercules Privacy Policy — DRAFT v0.1
+# Hercules Privacy Policy — FINAL CANDIDATE v0.2
 
-**Status:** DRAFT — NOT YET EFFECTIVE  
-**Company:** SauceApproved enterprise LLC  
+**Status:** FINAL CANDIDATE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE  
+**Company:** SauceApproved Enterprise LLC  
 **Product:** Hercules / Hercules Revenue Recovery  
 **Owner/legal review required before publication**
 
@@ -97,32 +97,33 @@ Information may be used to:
 
 Some Hercules features may send selected input to an AI provider or AI-routing layer when the user invokes an AI-assisted capability.
 
-Before publication, SauceApproved enterprise LLC must verify and document:
-- which production AI providers can receive customer content;
-- what fields are sent to each provider;
-- provider retention settings;
-- whether provider terms allow use of submitted data for model training;
-- any customer controls or opt-outs that apply.
+The verified Hercules AI routing path may send the user's prompt, applicable project context, bounded recent conversation context, and an internal system instruction through the SauceApproved G4F routing layer to an allowlisted provider.
 
-**No stronger claim about provider retention or training should be published until the active production configuration has been verified.**
+The currently verified allowlist includes LLM7, Yqcloud, and KiloCode. Provider selection may use failover, so more than one provider may receive an attempted request when an earlier route fails.
+
+Provider retention and model-training terms remain subject to the provider's current policies and any applicable account settings. Hercules must not publish a stronger "no training" or fixed-retention claim unless provider-specific evidence supports it.
 
 ## 5. Service providers and subprocessors
 
 Hercules relies on infrastructure and technology providers to operate the service.
 
-The final public policy or subprocessor list must identify the providers that actually process customer data at launch and their function, which may include categories such as:
-- database, authentication, and serverless infrastructure;
-- source and release infrastructure;
-- hosting or browser-execution infrastructure;
-- AI/model providers;
-- payment processing;
-- email/support or communications systems.
+Verified production infrastructure and eligible processing routes currently include:
 
-A provider must not be listed merely because Hercules has experimental code or an unused integration for it.
+- **Supabase** — authentication, database, serverless/Edge Functions, workspace and entitlement state, audit/evidence records, monitoring, and launch controls;
+- **Render** — hosting for the Hercules Browser gateway/API and related owned browser runtime;
+- **Railway** — hosting for the SauceApproved G4F AI-routing service;
+- **LLM7, Yqcloud, and KiloCode** — allowlisted AI providers that may receive a bounded request when selected by the Hercules AI routing/failover chain;
+- **GitHub** — source control, CI/security/provenance checks, and release/source evidence for Hercules code.
+
+Browserless is used as software/runtime within the SauceApproved-controlled Render browser service rather than as a separately hosted external Browserless account in the verified launch path.
+
+Stripe is **not yet connected** to Hercules. If Stripe is activated for paid launch, this policy must be updated to identify the live payment flow before the `privacy` approval is recorded.
+
+Pending or optional integrations are not evidence that customer data is currently flowing to those providers.
 
 ## 6. Sharing
 
-SauceApproved enterprise LLC may disclose information:
+SauceApproved Enterprise LLC may disclose information:
 - to service providers acting on its behalf;
 - at the customer's direction;
 - when necessary to provide a requested integration;
@@ -155,7 +156,7 @@ Deletion may not immediately remove:
 - backup copies pending normal backup expiration;
 - information necessary to establish or defend legal claims.
 
-The final launch experience must provide a documented request path before this section is published as an active commitment.
+A monitored business privacy/support request channel must be configured before this candidate becomes effective. Requests must be authenticated or otherwise verified before export, correction, or deletion is performed. Hercules must preserve legally or operationally required audit/security evidence where deletion is not permitted.
 
 ## 9. Security
 
@@ -189,9 +190,7 @@ The final policy should explain how material changes are communicated and state 
 
 ## 14. Contact
 
-A monitored privacy/contact channel must be configured before publication.
-
-**Do not publish a personal address or personal email by default.**
+A monitored privacy/contact channel must be configured before publication. Until that business channel is verified, Hercules must not publish a personal address or personal email as the default privacy contact.
 
 ---
 

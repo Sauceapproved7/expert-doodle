@@ -95,9 +95,9 @@ The launch gate currently has four pending approvals:
 
 These must not be marked approved without the corresponding owner decision or production evidence.
 
-### Pricing mismatch requiring a decision
+### Canonical pricing prepared
 
-Current active production billing plans:
+The launch-closeout catalog now matches the active production billing plans:
 
 | Plan code | Name | Monthly | Annual |
 |---|---|---:|---:|
@@ -105,24 +105,15 @@ Current active production billing plans:
 | pro | Pro | $149 | $1,490 |
 | scale | Scale | $399 | $3,990 |
 
-Current launch pricing proposal:
-
-| Proposed plan | Monthly |
-|---|---:|
-| Starter | $99 |
-| Growth | $249 |
-| Scale | $599 |
-
-The public offer and production billing configuration must be reconciled before pricing approval. Do not approve pricing while the plan names/prices disagree.
+The stale $99 / $249 / $599 proposal has been retired from the canonical pricing document. The pricing approval remains owner-gated in the authenticated Launch Decision Center.
 
 ### Stripe activation
 
-The deployed Stripe webhook currently reports:
+Stripe is not yet connected. Hercules Integrations now includes an owner-facing **Stripe Direct** connection card that validates the account, stores the key in Vault, and configures/reuses the signed webhook receiver once the owner supplies the Stripe secret key.
 
-- Stripe access credential configured: false
-- Stripe webhook signing secret configured: false
+See `docs/launch/HERCULES-STRIPE-ACTIVATION-PACKET-2026-09-27.md`.
 
-A paid launch therefore requires Stripe/provider connection and webhook verification after pricing is finalized.
+A paid launch still requires owner completion of Stripe business/identity verification, payout-bank setup, provider connection, and checkout lifecycle verification.
 
 A non-paid/private beta can remain billing-disabled only if that is an explicit launch decision and the public product does not advertise active paid checkout.
 
