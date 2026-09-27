@@ -62,3 +62,13 @@ test("UI links prepared documents but does not auto-approve them",()=>{
   assert.match(ui,/HERCULES-AUTH-SECURITY-REVIEW-2026-09-27\.md/);
   assert.doesNotMatch(ui,/launch_approval_decide[^\n]+decision:'approved'/);
 });
+
+
+test("decision status does not expose owner user identifiers",()=>{
+  const statusFn=bridge.slice(
+    bridge.indexOf("async function launchApprovalStatus"),
+    bridge.indexOf("async function refreshLaunchGate")
+  );
+  assert.doesNotMatch(statusFn,/approved_by/);
+  assert.doesNotMatch(statusFn,/approvedBy/);
+});
