@@ -4,7 +4,8 @@ on:
   pull_request:
     paths:
       - "hercules-runtime/personal-browser-bridge/**"
-      - "supabase/functions/hercules-personal-browser-bridge/**"
+      - "supabase/functions/hercules-private-bridge/personal-browser.ts"
+      - "supabase/functions/hercules-private-bridge/index.ts"
       - "supabase/migrations/*hercules_personal_browser_bridge*.sql"
       - "tests/hercules-personal-browser-bridge.test.mjs"
       - "tests/hercules-personal-browser-ui-multiplex.test.mjs"
