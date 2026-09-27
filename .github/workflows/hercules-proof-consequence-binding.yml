@@ -2,8 +2,10 @@ name: Hercules Proof Consequence Binding
 on:
   pull_request:
     paths:
-      - "hercules-proof/proof-consequence-binding.mjs"
+      - "hercules-proof/**"
+      - "hercules-consequence/**"
       - "tests/hercules-proof-consequence-binding.test.mjs"
+      - "docs/HERCULES-BUILD-STANDARD.md"
       - ".github/workflows/hercules-proof-consequence-binding.yml"
 permissions:
   contents: read
@@ -16,4 +18,4 @@ jobs:
         with:
           node-version: "22"
       - run: node --check hercules-proof/proof-consequence-binding.mjs
-      - run: node --test tests/hercules-proof-consequence-binding.test.mjs
+      - run: node --test tests/hercules-proof-object.test.mjs tests/hercules-consequence-envelope.test.mjs tests/hercules-proof-consequence-binding.test.mjs
