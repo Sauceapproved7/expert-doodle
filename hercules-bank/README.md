@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: deployable authenticated durable sandbox bank core
+## Current maturity: deployable authenticated durable sandbox bank with customer console
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -117,3 +117,21 @@ The command-line service reads `HERCULES_BANK_STATE_PATH`,
 `HERCULES_BASE_JWT_SECRET`, optional `HERCULES_BANK_HOST`,
 `HERCULES_BANK_PORT`, and `HERCULES_BANK_CURRENCY`. It prints service metadata only,
 never the JWT secret.
+
+
+## Browser console boundary
+
+v0.5 adds a same-origin browser console at `/` and `/console`.
+
+- Customer view shows account balances, account selection, internal sandbox transfers,
+  and transaction history.
+- Owner/admin tokens unlock a sandbox control center with customer/account counts,
+  aggregate sandbox liabilities, and controlled sandbox funding.
+- Access tokens may arrive in the URL fragment as `#access_token=...`; the console
+  immediately removes the fragment from the address bar and keeps the token only in
+  JavaScript memory.
+- The console does not write access tokens to localStorage, sessionStorage, or cookies.
+- Static console responses use no-store caching and a restrictive same-origin Content
+  Security Policy.
+- The user interface continuously identifies itself as SANDBOX and does not expose
+  real-money rail controls.
