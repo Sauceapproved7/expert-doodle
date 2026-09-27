@@ -1,0 +1,28 @@
+name: Hercules Shopify Domain Monitor
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-provider-connect/**"
+      - "supabase/functions/hercules-integrations/**"
+      - "supabase/migrations/*hercules_shopify_domain_monitor*"
+      - "tests/hercules-shopify-domain-monitor.test.mjs"
+      - "tests/hercules-shopify-provider-onboarding-ui.test.mjs"
+      - "docs/HERCULES-SHOPIFY-DOMAIN-MONITOR-V1.md"
+      - ".github/workflows/hercules-shopify-domain-monitor.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shopify-domain-monitor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify Shopify domain monitor
+        run: node --test tests/hercules-shopify-domain-monitor.test.mjs tests/hercules-shopify-provider-onboarding-ui.test.mjs

@@ -11,6 +11,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <section class="card"><h2>Expert Doodle GitHub Bridge</h2><p class="muted">Dedicated Hercules GitHub App bridge. GitHub grants only Contents write access to the repository you choose during installation. Verification writes only to <span class="mono">hercules/expert-doodle-write</span>; main and proprietary Hercules source are not modified.</p><input id="ghrepo" class="input" value="Sauceapproved7/expert-doodle" readonly><div class="row" style="margin-top:10px"><button id="ghconnect" class="btn primary">Connect GitHub App</button><button id="ghpre" class="btn">Preflight</button><button id="ghwrite" class="btn" disabled>Harmless write test</button></div><div id="ghout" class="status"></div></section>
 <section class="card"><h2>Spaceship DNS</h2><p class="muted">Secure SauceApproved DNS connection. Create a Spaceship API key with only <span class="mono">dnsrecords:read</span> and <span class="mono">dnsrecords:write</span>. The API secret is shown once by Spaceship.</p><div class="row"><a class="btn" href="https://www.spaceship.com/application/api-manager/" target="_blank" rel="noopener noreferrer">Open Spaceship API Manager</a></div><input id="shipkey" class="input" autocomplete="off" placeholder="Spaceship API Key"><input id="shipsecret" class="input" type="password" autocomplete="new-password" placeholder="Spaceship API Secret"><div class="row" style="margin-top:10px"><button id="shipsave" class="btn primary">Save DNS credentials + continue launch</button><button id="shipstatus" class="btn">Status</button></div><div id="shipout" class="status"></div></section>
 <section class="card"><h2>Production Domain</h2><p class="muted"><span class="mono">sauceapproved.com</span> → Shopify. Status reads live DNS. Once Spaceship credentials are saved, Hercules can reconcile only the required Shopify web-routing records while preserving unrelated DNS.</p><div class="row"><button id="domainstatus" class="btn">Refresh launch status</button><button id="domainreconcile" class="btn primary">Run DNS reconcile</button></div><div id="domainout" class="status"></div></section>
+<section class="card"><h2>Shopify Direct</h2><p class="muted">First-party Hercules Shopify connection for production webhooks plus automatic <span class="mono">sauceapproved.com</span> attachment/SSL/primary-state monitoring. The connection is locked to Shop GID <span class="mono">gid://shopify/Shop/100002726208</span>.</p><input id="shopclient" class="input" autocomplete="off" placeholder="Shopify Client ID"><input id="shopsecret" class="input" type="password" autocomplete="new-password" placeholder="Shopify Client Secret"><div class="row" style="margin-top:10px"><button id="shopsave" class="btn primary">Save Shopify connection + arm monitor</button><button id="shopstatus" class="btn">Domain status</button></div><div id="shopout" class="status"></div></section>
 </div></section></main>
 <script type="module">
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.57.4';
@@ -18,7 +19,7 @@ const U='https://xbwuablxhhwsaoomsoco.supabase.co',K='sb_publishable_wB9FvOqAi-J
 let user=null,forgeReady=false;const show=(id,v)=>$(id).classList.toggle('hidden',!v);async function token(){return(await sb.auth.getSession()).data.session?.access_token||''}
 async function call(slug,body){const t=await token();if(!t)throw Error('Sign in required');const r=await fetch(U+'/functions/v1/'+slug,{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+t,'apikey':K},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.detail||('HTTP '+r.status));return d}
 function fmt(x){return JSON.stringify(x,null,2)}
-async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus()])}}
+async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus()])}}
 $('signin').onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error){$('authmsg').textContent=r.error.message;show('authmsg',true)}};
 $('signout').onclick=()=>sb.auth.signOut();
 async function driveStatus(){try{$('gout').textContent=fmt(await call('hercules-drive',{action:'status'}))}catch(e){$('gout').textContent='Drive: '+e.message}}
@@ -33,6 +34,24 @@ async function spaceshipStatus(){try{$('shipout').textContent=fmt(await call('he
 async function domainStatus(){try{const d=await call('hercules-domains',{action:'production_status',organization_id:ORG});$('domainout').textContent=fmt(d);return d}catch(e){$('domainout').textContent='Domain: '+e.message;throw e}}
 async function waitDns(requestId){for(let i=0;i<35;i++){await new Promise(r=>setTimeout(r,2000));const d=await call('hercules-domains',{action:'production_reconcile_result',organization_id:ORG,request_id:requestId});if(d?.result?.ready)return d.result}throw Error('DNS reconciliation is still processing')}
 async function reconcileDomain(){const q=await call('hercules-domains',{action:'production_reconcile',organization_id:ORG,confirm_domain:'sauceapproved.com'});if(q?.already_ready){await domainStatus();return q}if(!q?.queued||!q?.request_id)throw Error('DNS reconcile was not queued');$('domainout').textContent='DNS reconciliation queued. Verifying provider result…';const result=await waitDns(q.request_id);$('domainout').textContent=fmt(result);await domainStatus();return result}
+async function shopifyStatus(){try{$('shopout').textContent=fmt(await call('hercules-provider-connect',{action:'shopify_domain_status'}))}catch(e){$('shopout').textContent='Shopify: '+e.message}}
+$('shopstatus').onclick=shopifyStatus;
+$('shopsave').onclick=async()=>{
+  const clientId=$('shopclient').value.trim(),clientSecret=$('shopsecret').value.trim();
+  if(!clientId||!clientSecret){$('shopout').textContent='Shopify: Client ID and Client Secret required';return}
+  try{
+    const d=await call('hercules-provider-connect',{action:'configure_shopify',client_id:clientId,client_secret:clientSecret});
+    $('shopclient').value='';
+    $('shopsecret').value='';
+    $('shopout').textContent=fmt(d);
+    await shopifyStatus();
+  }catch(e){
+    $('shopclient').value='';
+    $('shopsecret').value='';
+    $('shopout').textContent='Shopify: '+e.message;
+  }
+};
+
 $('shipstatus').onclick=spaceshipStatus;
 $('domainstatus').onclick=domainStatus;
 $('domainreconcile').onclick=async()=>{try{await reconcileDomain()}catch(e){$('domainout').textContent='Domain: '+e.message}};
