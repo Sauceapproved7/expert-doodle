@@ -3,9 +3,9 @@ name: Hercules Spaceship MCP OAuth
 on:
   pull_request:
     paths:
-      - "supabase/functions/hercules-spaceship-mcp/**"
+      - "supabase/functions/hercules-private-bridge/spaceship-mcp.ts"
       - "supabase/functions/hercules-private-bridge/spaceship-dns-control.ts"
-      - "supabase/migrations/*hercules_spaceship_mcp_oauth*"
+      - "supabase/migrations/*hercules_spaceship_mcp*"
       - "supabase/migrations/20260927054500_hercules_domain_launch_autopilot_v1.sql"
       - "tests/hercules-spaceship-mcp-oauth.test.mjs"
       - ".github/workflows/hercules-spaceship-mcp-oauth.yml"

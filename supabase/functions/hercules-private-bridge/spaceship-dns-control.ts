@@ -107,13 +107,15 @@ async function mcpOauthConfigured(){
   return Array.isArray(rows)&&rows[0]?.status==="configured";
 }
 
+const MCP_DNS_ACTIONS={dns_records_get:"spaceship_mcp_dns_records_get",dns_records_save:"spaceship_mcp_dns_records_save",dns_records_delete:"spaceship_mcp_dns_records_delete"} as const;
+
 async function mcpDns(req:Request,action:"dns_records_get"|"dns_records_save"|"dns_records_delete",args:any){
   const key=req.headers.get("x-hercules-internal-key")||"";
   if(!key)throw new Error("spaceship_dns_internal_secret_unavailable");
-  const response=await fetch(U+"/functions/v1/hercules-spaceship-mcp",{
+  const response=await fetch(U+"/functions/v1/hercules-private-bridge",{
     method:"POST",
     headers:{"content-type":"application/json","x-hercules-internal-key":key},
-    body:JSON.stringify({action,arguments:args}),
+    body:JSON.stringify({action:MCP_DNS_ACTIONS[action],arguments:args}),
     signal:AbortSignal.timeout(30000)
   });
   const payload=await response.json().catch(()=>({}));
