@@ -150,9 +150,24 @@ export class SpaceshipDnsClient {
 
   async listRecords(domain) {
     const normalized = this.assertAllowed(domain);
-    const query = new URLSearchParams({take:"500", skip:"0", orderBy:"type"});
-    const payload = await this.request("/dns/records/" + encodeURIComponent(normalized) + "?" + query);
-    return Array.isArray(payload?.items) ? payload.items : [];
+    const records = [];
+    const pageSize = 500;
+    const maxRecords = 10000;
+
+    for (let skip = 0; skip < maxRecords; skip += pageSize) {
+      const query = new URLSearchParams({take:String(pageSize), skip:String(skip), orderBy:"type"});
+      const payload = await this.request("/dns/records/" + encodeURIComponent(normalized) + "?" + query);
+      const items = Array.isArray(payload?.items) ? payload.items : [];
+      const total = Number(payload?.total);
+
+      records.push(...items);
+      if (records.length > maxRecords) throw new Error("Spaceship DNS record limit exceeded");
+      if (!Number.isFinite(total) || total < 0) throw new Error("Spaceship DNS list total is invalid");
+      if (records.length >= total) return records;
+      if (items.length === 0) throw new Error("Spaceship DNS pagination ended before total");
+    }
+
+    throw new Error("Spaceship DNS record limit exceeded");
   }
 
   async saveRecords(domain, records, {force=false} = {}) {
