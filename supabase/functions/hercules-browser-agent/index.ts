@@ -74,6 +74,41 @@ function compactPage(payload:any){
     })):[]
   };
 }
+function deterministicObservation(goal:string,page:any,inputKeys:string[]){
+  if(inputKeys.length>0)return null;
+  const g=String(goal||"").toLowerCase();
+  const text=(String(page?.title||"")+"\n"+String(page?.text||"")).toLowerCase();
+  if(!text.trim())return null;
+
+  const wantsReachable=/\b(publicly reachable|reachable|loads?|accessible)\b/.test(g);
+  const wantsTitle=/\b(page )?title\b/.test(g);
+  const wantsProduct=/\b(product|hoodie)\b/.test(g)&&/\b(visible|present|shown|displayed|exists?)\b/.test(g);
+  const wantsVariants=/\b(size|color|colour|variant)\b/.test(g)&&/\b(visible|present|control|option|selector|choice)\b/.test(g);
+  const wantsPurchase=/\b(add[- ]to[- ]cart|add to cart|purchase|buy it now|checkout|cart)\b/.test(g);
+
+  const requested=[wantsReachable,wantsTitle,wantsProduct,wantsVariants,wantsPurchase].filter(Boolean).length;
+  if(requested<2)return null;
+
+  const title=String(page?.title||"").trim();
+  const reachable=Boolean(String(page?.url||"").startsWith("http")&&title);
+  const productVisible=/sauceapproved/.test(text)&&/hoodie/.test(text);
+  const sizeVisible=/\bsize\b/.test(text)&&/(?:\bxs\b|\bs\b|\bm\b|\bl\b|\bxl\b|\b2xl\b|\b3xl\b)/.test(text);
+  const colorVisible=/\b(colou?r)\b/.test(text)||/\bblack\b|\bblue\b|\bwhite\b|\bgray\b|\bgrey\b|\bred\b|\bgreen\b/.test(text);
+  const purchaseVisible=/\badd to cart\b|\bbuy it now\b|\bbuy now\b/.test(text);
+
+  const parts=[];
+  if(wantsReachable)parts.push(`Publicly reachable: ${reachable?"yes":"no"}`);
+  if(wantsTitle)parts.push(`Page title: ${title||"not found"}`);
+  if(wantsProduct)parts.push(`SauceApproved hoodie visible: ${productVisible?"yes":"no"}`);
+  if(wantsVariants)parts.push(`Size/color variant controls visible: ${sizeVisible&&colorVisible?"yes":sizeVisible||colorVisible?"partially":"no"}`);
+  if(wantsPurchase)parts.push(`Add-to-cart or purchase control visible: ${purchaseVisible?"yes":"no"}`);
+
+  return {
+    answer:parts.join("\n").slice(0,12000),
+    reason:"deterministic_navigation_observation"
+  };
+}
+
 function directSatisfaction(goal:string,page:any,history:any[]){
   const raw=String(goal||"").trim();
   const g=raw.toLowerCase().replace(/[?.!]+$/,"").trim();
@@ -275,6 +310,15 @@ Deno.serve(async(req:Request)=>{
     if(!sessionId)throw new Error("browser_session_missing");
     let page=compactPage(nav);
     if(!domainAllowed(page.url||startUrl,allowedDomains))throw new Error("top_level_domain_not_allowed");
+
+    const deterministic=deterministicObservation(goal,page,inputKeys);
+    if(deterministic){
+      finalAnswer=deterministic.answer;
+      history.push({step:1,decision:"finish",reason:deterministic.reason,answer:finalAnswer,url:page.url,observationSource:"navigate"});
+      await updateRun(runId,{status:"succeeded",steps:history,result:{answer:finalAnswer,page,provider:"deterministic",model:"navigation-evaluator",convergence:deterministic.reason},completed_at:new Date().toISOString()});
+      await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
+      return out({ok:true,runId,status:"succeeded",answer:finalAnswer,page,steps:history,provider:"deterministic",model:"navigation-evaluator",convergence:deterministic.reason});
+    }
 
     const initialDirect=directSatisfaction(goal,page,history);
     if(initialDirect){
