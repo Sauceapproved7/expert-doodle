@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: authenticated durable sandbox bank core
+## Current maturity: deployable authenticated durable sandbox bank core
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -54,9 +54,9 @@ The external-transfer endpoint is intentionally present only as a fail-closed
 temporary file followed by atomic rename. Loading re-verifies the journal hash chain
 and replays every transaction through the ledger invariants before returning state.
 
-This is local-process durability, not a multi-writer transactional database. The
-customer metadata held by `HerculesBankSandbox` is not yet part of the persisted
-snapshot.
+This is local-process durability, not a multi-writer transactional database. Customer
+account ownership metadata and the ledger snapshot are persisted together and revalidated
+on restart.
 
 ## Trust boundary
 
@@ -94,3 +94,26 @@ v0.3 adds a local HTTP API backed by the durable sandbox runtime.
 
 The API is still a sandbox control surface. It is not an authorization to hold deposits
 or connect to ACH, wire, card, RTP/FedNow, or other regulated money movement.
+
+
+## Service and client boundary
+
+v0.4 makes the sandbox bank runnable as a first-party Hercules service.
+
+- `startHerculesBankService` opens durable state, creates the authenticated API, and
+  listens on `127.0.0.1` by default.
+- Runtime configuration requires an explicit durable state path and the Hercules Base
+  JWT secret. Weak JWT secrets fail before the service listens.
+- `HerculesBankClient` obtains access tokens from a caller-supplied token provider for
+  each request; it does not persist bearer tokens.
+- The client refuses cleartext HTTP endpoints unless they are loopback
+  (`127.0.0.1`, `localhost`, or `::1`).
+- Requests disable redirects, use bounded timeouts, disable caching, and send bearer
+  credentials only in the Authorization header.
+- Customer operations and the admin-only sandbox funding route remain the only exposed
+  money-like functions. External rails stay disabled.
+
+The command-line service reads `HERCULES_BANK_STATE_PATH`,
+`HERCULES_BASE_JWT_SECRET`, optional `HERCULES_BANK_HOST`,
+`HERCULES_BANK_PORT`, and `HERCULES_BANK_CURRENCY`. It prints service metadata only,
+never the JWT secret.
