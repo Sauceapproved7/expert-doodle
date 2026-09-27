@@ -195,8 +195,21 @@ test("Resend business email DNS contract uses Spaceship type-specific fields", (
     {type:"MX", name:"send", exchange:"feedback-smtp.us-east-1.amazonses.com", preference:10, ttl:3600},
     {type:"TXT", name:"send", value:"v=spf1 include:amazonses.com ~all", ttl:3600},
     {type:"CNAME", name:"rsend", cname:"send.forge.rmta.net", ttl:3600},
-    {type:"MX", name:"@", exchange:"inbound-smtp.us-east-1.amazonaws.com", preference:10, ttl:3600},
   ]);
+});
+
+test("Resend sending-only contract never manages apex inbound MX", () => {
+  assert.equal(
+    RESEND_MAIL_DNS_RECORDS.some((record) => record.type === "MX" && record.name === "@"),
+    false,
+  );
+  const existing = [
+    {type:"MX", name:"@", exchange:"mail.existing.example", preference:10, ttl:3600, group:{type:"custom"}},
+  ];
+  const plan = planResendMailDnsReconciliation(existing);
+  assert.equal(plan.deleteRecords.length, 0);
+  assert.equal(plan.blockingConflicts.length, 0);
+  assert.equal(plan.unchanged.length, 1);
 });
 
 test("Resend mail planner preserves unrelated records and only targets exact mail keys", () => {
@@ -208,14 +221,14 @@ test("Resend mail planner preserves unrelated records and only targets exact mai
   const plan = planResendMailDnsReconciliation(existing);
   assert.equal(plan.safeToApply, true);
   assert.equal(plan.deleteRecords.length, 0);
-  assert.equal(plan.saveRecords.length, 5);
+  assert.equal(plan.saveRecords.length, 4);
   assert.equal(plan.unchanged.length, 3);
   assert.equal(plan.ready, false);
 });
 
 test("Resend mail planner fails closed on provider-managed conflicts and identifies custom replacements", () => {
   const providerConflict = planResendMailDnsReconciliation([
-    {type:"MX", name:"@", exchange:"mail.provider.example", preference:10, ttl:3600, group:{type:"product"}},
+    {type:"CNAME", name:"rsend", cname:"mail.provider.example", ttl:3600, group:{type:"product"}},
   ]);
   assert.equal(providerConflict.safeToApply, false);
   assert.equal(providerConflict.blockingConflicts.length, 1);
