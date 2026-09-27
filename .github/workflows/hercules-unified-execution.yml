@@ -1,0 +1,24 @@
+name: Hercules Unified Execution
+on:
+  pull_request:
+    paths:
+      - "hercules-runtime/**"
+      - "hercules-proof/**"
+      - "hercules-consequence/**"
+      - "hercules-time-machine/**"
+      - "tests/hercules-unified-execution.test.mjs"
+      - "docs/HERCULES-UNIFIED-EXECUTION-V0.1.md"
+      - "governance/owner-code-policy.json"
+      - ".github/workflows/hercules-unified-execution.yml"
+permissions:
+  contents: read
+jobs:
+  unified-execution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --check hercules-runtime/execution-lifecycle.mjs
+      - run: node --test tests/hercules-proof-object.test.mjs tests/hercules-consequence-envelope.test.mjs tests/hercules-proof-consequence-binding.test.mjs tests/hercules-time-machine.test.mjs tests/hercules-unified-execution.test.mjs
