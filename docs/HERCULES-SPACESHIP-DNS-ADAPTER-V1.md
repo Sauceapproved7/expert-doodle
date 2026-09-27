@@ -24,7 +24,7 @@ The adapter manages only these web-routing records:
 | AAAA | @ | 2620:0127:f00f:5:: | 3600 |
 | CNAME | www | shops.myshopify.com | 3600 |
 
-It does not modify MX, TXT, SRV, DKIM, DMARC, email, verification, or unrelated subdomain records.
+It does not modify MX, TXT, SRV, DKIM, DMARC, email, verification, or unrelated subdomain records. Record payloads follow Spaceship's type-specific API contract: A/AAAA use `address`; CNAME uses `cname`.
 
 ## Spaceship API boundary
 
@@ -62,10 +62,11 @@ All unrelated records are preserved.
 
 1. reads the current DNS zone;
 2. calculates a minimal reconciliation;
-3. removes only conflicting records in the managed set;
-4. saves only missing Shopify records;
-5. reads the zone again;
-6. fails unless the resulting Shopify DNS contract verifies exactly.
+3. refuses provider-managed, personal-nameserver, or unknown-ownership conflicts;
+4. requires explicit `replaceCustomConflicts:true` before deleting conflicting custom A/AAAA/www records;
+5. saves only missing Shopify records with Spaceship's documented 60–3600 second TTL range;
+6. reads the complete paginated zone again;
+7. fails unless the resulting Shopify DNS contract verifies exactly.
 
 The operation is idempotent after the required records are in place.
 
@@ -80,3 +81,12 @@ The operation is idempotent after the required records are in place.
 7. Make the custom domain primary only after verification passes.
 
 No purchase, renewal, transfer, nameserver change, or billing action is part of this adapter.
+
+
+## Safety hardening
+
+The DNS client is domain-allowlisted. The default allowlist contains only `sauceapproved.com`; additional domains must be explicitly injected through `HERCULES_SPACESHIP_ALLOWED_DOMAINS`.
+
+Spaceship marks DNS records with ownership metadata. Only records whose group is `custom` are eligible for replacement. A conflict owned by a Spaceship product, personal nameserver configuration, or an unknown group fails closed instead of being deleted.
+
+The client paginates the full DNS inventory before planning changes so a conflict cannot be missed merely because the zone contains more than one API page.
