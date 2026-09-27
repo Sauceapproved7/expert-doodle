@@ -45,6 +45,15 @@ function domainAllowed(raw:string,allowed:string[]){
     return allowed.some(d=>h===d||h.endsWith("."+d));
   }catch{return false}
 }
+function transientClosedBrowser(error:unknown){
+  return /target page, context or browser has been closed/i.test(
+    error instanceof Error?error.message:String(error||"")
+  );
+}
+function replaySafe(history:any[]){
+  return !history.some(item=>item?.decision==="click"||item?.decision==="type");
+}
+
 function compactPage(payload:any){
   const page=payload?.result?.page||payload?.page||{};
   return {
@@ -149,7 +158,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.5.0",
+    ok:true,service:"hercules-browser-agent",version:"0.6.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,highImpactAutonomy:false
@@ -179,7 +188,34 @@ Deno.serve(async(req:Request)=>{
     goal,start_url:startUrl,allowed_domains:allowedDomains,max_steps:maxSteps,steps:[]
   });
 
-  let sessionId=""; const history:any[]=[]; let finalAnswer=""; let provider=""; let model="";
+  let sessionId=""; const history:any[]=[]; let finalAnswer=""; let provider=""; let model=""; let recoveries=0;
+  const recoverSession=async(recoverUrl:string,reason:string)=>{
+    if(recoveries>=1)throw new Error("browser_session_recovery_exhausted");
+    if(!replaySafe(history))throw new Error("browser_session_recovery_not_replay_safe");
+    if(sessionId)await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
+    const nav=await browserCall({
+      action:"navigate",
+      url:recoverUrl,
+      persistSession:true,
+      timeoutMs:30000,
+      maxTextChars:16000
+    });
+    const nextSession=String(nav?.result?.sessionId||"");
+    if(!nextSession)throw new Error("browser_recovery_session_missing");
+    const recovered=compactPage(nav);
+    if(!domainAllowed(recovered.url||recoverUrl,allowedDomains))throw new Error("top_level_domain_not_allowed");
+    sessionId=nextSession;
+    recoveries++;
+    history.push({
+      step:history.length+1,
+      decision:"recover_session",
+      reason,
+      url:recovered.url||recoverUrl,
+      recovery:recoveries
+    });
+    await updateRun(runId,{steps:history});
+    return recovered;
+  };
   try{
     const nav=await browserCall({action:"navigate",url:startUrl,persistSession:true,timeoutMs:30000,maxTextChars:16000});
     sessionId=String(nav?.result?.sessionId||"");
@@ -188,10 +224,20 @@ Deno.serve(async(req:Request)=>{
     if(!domainAllowed(page.url||startUrl,allowedDomains))throw new Error("top_level_domain_not_allowed");
 
     for(let i=0;i<maxSteps;i++){
-      const scrape=await browserCall({
-        action:"scrape",sessionId,timeoutMs:30000,maxTextChars:16000,
-        selectors:["a","button","input","textarea","select","form"]
-      });
+      let scrape:any;
+      try{
+        scrape=await browserCall({
+          action:"scrape",sessionId,timeoutMs:30000,maxTextChars:16000,
+          selectors:["a","button","input","textarea","select","form"]
+        });
+      }catch(error){
+        if(!transientClosedBrowser(error)||recoveries>=1||!replaySafe(history))throw error;
+        page=await recoverSession(page.url||startUrl,"transient_scrape_page_closed");
+        scrape=await browserCall({
+          action:"scrape",sessionId,timeoutMs:30000,maxTextChars:16000,
+          selectors:["a","button","input","textarea","select","form"]
+        });
+      }
       page=compactPage(scrape);
       if(!domainAllowed(page.url||startUrl,allowedDomains)){
         history.push({step:i+1,decision:"blocked",url:page.url,reason:"top_level_domain_not_allowed"});
@@ -250,7 +296,15 @@ Deno.serve(async(req:Request)=>{
         step={type:"wait",ms:plan.ms};
       }
 
-      const acted=await browserCall({action:"interact",sessionId,timeoutMs:30000,maxTextChars:16000,steps:[step]});
+      let acted:any;
+      try{
+        acted=await browserCall({action:"interact",sessionId,timeoutMs:30000,maxTextChars:16000,steps:[step]});
+      }catch(error){
+        const actionReplaySafe=plan.decision==="extract"||plan.decision==="wait";
+        if(!transientClosedBrowser(error)||recoveries>=1||!actionReplaySafe||!replaySafe(history))throw error;
+        page=await recoverSession(page.url||startUrl,"transient_interact_page_closed");
+        acted=await browserCall({action:"interact",sessionId,timeoutMs:30000,maxTextChars:16000,steps:[step]});
+      }
       const after=compactPage(acted);
       record.afterUrl=after.url;
       const observedStep=acted?.result?.steps?.[0];
