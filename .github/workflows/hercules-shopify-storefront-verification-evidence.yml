@@ -1,0 +1,26 @@
+name: Hercules Shopify Storefront Verification Evidence
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*hercules_shopify_storefront_verification_evidence*"
+      - "supabase/functions/hercules-domains/**"
+      - "tests/hercules-shopify-storefront-verification-evidence.test.mjs"
+      - "docs/HERCULES-SHOPIFY-STOREFRONT-VERIFICATION-EVIDENCE-V1.md"
+      - ".github/workflows/hercules-shopify-storefront-verification-evidence.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storefront-verification-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify storefront evidence
+        run: node --test tests/hercules-shopify-storefront-verification-evidence.test.mjs
