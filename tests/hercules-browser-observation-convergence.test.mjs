@@ -8,7 +8,7 @@ const agent=await readFile(
 );
 
 test("browser agent exposes navigation-observation convergence version",()=>{
-  assert.match(agent,/version:"0\.7\.0"/);
+  assert.match(agent,/version:"0\.8\.0"/);
   assert.match(agent,/observationOnlyGoal/);
   assert.match(agent,/navigate_observation/);
 });
@@ -45,4 +45,15 @@ test("existing browser safety guardrails remain",()=>{
   assert.match(agent,/highImpactAutonomy:false/);
   assert.match(agent,/rawCodeExecution:false/);
   assert.match(agent,/domainAllowed\(page\.url\|\|startUrl,allowedDomains\)/);
+});
+
+
+test("title shortcut is strict and cannot truncate a composite observation goal",()=>{
+  const start=agent.indexOf("function directSatisfaction");
+  const end=agent.indexOf("function stripFence",start);
+  const block=agent.slice(start,end);
+  assert.match(block,/titleOnly/);
+  assert.match(block,/what\(\?:'s\| is\)/);
+  assert.doesNotMatch(block,/asksTitle/);
+  assert.doesNotMatch(block,/asksNavigation/);
 });

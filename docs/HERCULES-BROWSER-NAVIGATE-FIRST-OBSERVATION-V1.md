@@ -39,3 +39,10 @@ Existing protections remain:
 - raw browser code execution prohibition;
 - bounded step count;
 - one safe transient-session recovery for replay-safe flows.
+
+
+## Complete-answer rule
+
+Browser Agent v0.8 narrows the direct page-title shortcut to genuine title-only requests. A composite read-only request such as “return the page title and whether product controls are visible” is not allowed to terminate with the title alone.
+
+Composite observational goals continue through the navigate-first planner, which must return one complete `finish` answer from the already returned page evidence or fall back to the normal browser loop.
