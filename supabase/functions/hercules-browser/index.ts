@@ -105,7 +105,7 @@ function workerErrorAttempts(error:unknown){
   return Number.isFinite(n)?Math.max(1,Math.trunc(n)):1;
 }
 
-async function acquireWorkerLease(workerName:string,traceId:string,waitBudgetMs=25000){
+async function acquireWorkerLease(workerName:string,traceId:string,waitBudgetMs=45000){
   const started=Date.now();
   while(Date.now()-started<waitBudgetMs){
     const {data,error}=await admin.rpc("hercules_browser_worker_lease_acquire",{
@@ -224,7 +224,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.5.2",
+    ok:true,service:"hercules-browser",version:"1.5.3",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,securityChallengeDetection:true,antiBotBypass:false,controlPlane:"Hercules"
   });
