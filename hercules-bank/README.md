@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: deployable authenticated durable sandbox financial service with customer and owner consoles
+## Current maturity: deployable authenticated durable sandbox financial service with customer, owner, and compliance operations
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -195,3 +195,19 @@ all live external execution disabled.
 - `HerculesRegulatedRailBoundary.executeTransfer()` remains hard-locked in v0.8.
 
 See `docs/HERCULES-FINANCIAL-REGULATED-BOUNDARY-V0.8.md` for design sources and limits.
+
+
+## Compliance operations
+
+v0.9 operationalizes the v0.8 readiness model while keeping external execution locked.
+
+- compliance evidence is stored as bounded metadata, not source documents or identity data;
+- every compliance mutation is recorded in a tamper-evident hash-chained event history;
+- regulated-provider profiles store contract metadata only and exclude API credentials;
+- KYC/AML/sanctions integrations must implement the bounded compliance-provider adapter;
+- reconciliation persists result summaries and exception counts, not raw provider datasets;
+- owner-only compliance routes inherit Hercules Base authorization and browser CSRF controls;
+- the Financial console shows compliance readiness and a permanent Live Money Locked state;
+- `HERCULES_BANK_COMPLIANCE_STATE_PATH` may override the default compliance-state path.
+
+See `docs/HERCULES-FINANCIAL-COMPLIANCE-OPERATIONS-V0.9.md`.

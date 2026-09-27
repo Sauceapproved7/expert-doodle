@@ -122,6 +122,7 @@ export function createHerculesBankApi({
   nowSeconds=()=>Math.floor(Date.now()/1000),
   adminRoles=DEFAULT_ADMIN_ROLES,
   browserSessions=null,
+  complianceOperations=null,
 }={}){
   if(!runtime||typeof runtime.openCustomerAccount!=="function"){
     throw new TypeError("Hercules Bank runtime is required");
@@ -138,6 +139,14 @@ export function createHerculesBankApi({
     ||typeof browserSessions.requireCsrf!=="function"
   )){
     throw new TypeError("browserSessions is invalid");
+  }
+  if(complianceOperations!==null&&(
+    typeof complianceOperations.summary!=="function"
+    ||typeof complianceOperations.recordEvidence!=="function"
+    ||typeof complianceOperations.setProviderProfile!=="function"
+    ||typeof complianceOperations.recordReconciliation!=="function"
+  )){
+    throw new TypeError("complianceOperations is invalid");
   }
 
   const allowedAdminRoles=new Set(adminRoles);
@@ -157,7 +166,7 @@ export function createHerculesBankApi({
         return send(res,200,{
           ok:true,
           service:"hercules-bank",
-          version:"0.7",
+          version:"0.9",
           mode:runtime.mode,
           currency:runtime.currency,
           externalRails:false,
@@ -267,6 +276,61 @@ export function createHerculesBankApi({
           customerCount:new Set(accounts.map((account)=>account.customerId)).size,
           totalCustomerBalanceMinor,
           accounts,
+        });
+      }
+
+      if(url.pathname==="/v1/admin/compliance"){
+        requireAdmin(claims,allowedAdminRoles);
+        if(!complianceOperations)return send(res,503,{error:"compliance_operations_unavailable"});
+        if(req.method==="GET"){
+          return send(res,200,complianceOperations.summary());
+        }
+      }
+
+      if(req.method==="POST"&&url.pathname==="/v1/admin/compliance/evidence"){
+        requireMutationCsrf(req,context,browserSessions);
+        requireAdmin(claims,allowedAdminRoles);
+        if(!complianceOperations)return send(res,503,{error:"compliance_operations_unavailable"});
+        const body=await readBody(req);
+        await complianceOperations.recordEvidence({
+          control:body.control,
+          status:body.status,
+          reference:body.reference,
+          reviewedAt:body.reviewedAt,
+          actorId:claims.sub,
+        });
+        return send(res,200,complianceOperations.summary());
+      }
+
+      if(req.method==="POST"&&url.pathname==="/v1/admin/compliance/provider"){
+        requireMutationCsrf(req,context,browserSessions);
+        requireAdmin(claims,allowedAdminRoles);
+        if(!complianceOperations)return send(res,503,{error:"compliance_operations_unavailable"});
+        const body=await readBody(req);
+        await complianceOperations.setProviderProfile({
+          id:body.id,
+          environment:body.environment,
+          endpoint:body.endpoint,
+          capabilities:body.capabilities,
+          actorId:claims.sub,
+        });
+        return send(res,200,complianceOperations.summary());
+      }
+
+      if(req.method==="POST"&&url.pathname==="/v1/admin/compliance/reconciliation"){
+        requireMutationCsrf(req,context,browserSessions);
+        requireAdmin(claims,allowedAdminRoles);
+        if(!complianceOperations)return send(res,503,{error:"compliance_operations_unavailable"});
+        const body=await readBody(req);
+        const reconciliation=await complianceOperations.recordReconciliation({
+          actorId:claims.sub,
+          runId:body.runId,
+          internal:body.internal,
+          provider:body.provider,
+        });
+        return send(res,200,{
+          reconciliation,
+          compliance:complianceOperations.summary(),
         });
       }
 
