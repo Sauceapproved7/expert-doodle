@@ -204,3 +204,48 @@ test("owner-only boundaries stop before routing or provider execution", async (t
   assert.equal(routed, 0);
   assert.equal(executed, 0);
 });
+
+test("reusing an idempotency key for a different operation is rejected", async (t) => {
+  const state = await start();
+  t.after(() => state.service.close());
+
+  const headers = {
+    "content-type": "application/json",
+    authorization: "Bearer " + TOKEN,
+    "idempotency-key": "conflict-key",
+  };
+  const first = await fetch(state.baseUrl + "/v1/tasks", {
+    method: "POST",
+    headers,
+    body: JSON.stringify(state.task),
+  });
+  assert.equal(first.status, 200);
+
+  const second = await fetch(state.baseUrl + "/v1/tasks", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({...state.task, input: {text: "Different operation"}}),
+  });
+  assert.equal(second.status, 409);
+  assert.equal(state.executions.length, 1);
+});
+
+test("oversized task bodies are rejected before routing or provider execution", async (t) => {
+  let executed = 0;
+  const state = await start({
+    executeProviderTask: async () => { executed += 1; return {ok: true}; },
+  });
+  t.after(() => state.service.close());
+
+  const response = await fetch(state.baseUrl + "/v1/tasks", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: "Bearer " + TOKEN,
+      "idempotency-key": "oversized",
+    },
+    body: JSON.stringify({...state.task, input: {text: "x".repeat(300000)}}),
+  });
+  assert.equal(response.status, 413);
+  assert.equal(executed, 0);
+});
