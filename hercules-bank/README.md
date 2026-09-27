@@ -62,3 +62,20 @@ node --test tests/hercules-bank-*.test.mjs
 ```
 
 The dedicated GitHub workflow is `.github/workflows/hercules-bank.yml`.
+
+
+## Authenticated API boundary
+
+v0.3 adds a local HTTP API backed by the durable sandbox runtime.
+
+- Hercules Base HS256 access tokens are verified with issuer, audience, expiry, and signature checks.
+- Account ownership is derived from the verified JWT `sub`; clients cannot choose another customer identity.
+- Customer account reads return 404 for accounts owned by another subject.
+- Transfer source accounts must belong to the authenticated subject.
+- Sandbox funding is restricted to configured administrator roles.
+- Request bodies are bounded to 64 KiB and malformed JSON fails closed.
+- Responses disable caching and include basic browser hardening headers.
+- External payment rails remain disabled and return `501 external_rails_disabled`.
+
+The API is still a sandbox control surface. It is not an authorization to hold deposits
+or connect to ACH, wire, card, RTP/FedNow, or other regulated money movement.
