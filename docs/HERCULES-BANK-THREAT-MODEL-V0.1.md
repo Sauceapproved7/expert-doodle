@@ -123,3 +123,17 @@ The browser session store is intentionally memory-only. A process restart logs b
 sessions out rather than persisting bearer or refresh credentials to disk. Public HTTPS
 deployments must enable Secure cookies and keep the service behind the Hercules network,
 TLS, rate-limit, monitoring, and abuse-control boundary.
+
+
+## Financial service launch boundary
+
+v0.6 makes the browser-safe financial surface startable as one controlled service.
+
+The launcher binds to loopback by default. Non-loopback binding requires Secure browser
+cookies. The Base Auth bridge refuses cleartext remote HTTP endpoints, preventing sign-in
+credentials or refresh material from being sent to a remote authentication service
+without transport encryption.
+
+These checks reduce accidental unsafe deployment. They do not replace TLS termination,
+network policy, rate limiting, secret rotation, monitoring, or regulated financial
+controls.
