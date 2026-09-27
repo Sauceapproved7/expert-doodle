@@ -111,7 +111,7 @@ function errorStatus(error){
   if(error instanceof TypeError||error instanceof RangeError)return 400;
   const message=String(error?.message??"");
   if(/unknown customer account|not_found/i.test(message))return 404;
-  if(/already exists|idempotency|negative|insufficient|overdraft/i.test(message))return 409;
+  if(/already exists|already reversed|idempotency|negative|insufficient|overdraft/i.test(message))return 409;
   return 500;
 }
 
@@ -357,6 +357,21 @@ export function createHerculesBankApi({
           idempotencyKey:body.idempotencyKey,
         });
         return send(res,200,{account:publicAccount(account)});
+      }
+
+      if(req.method==="POST"&&url.pathname==="/v1/admin/reversals"){
+        requireMutationCsrf(req,context,browserSessions);
+        requireAdmin(claims,allowedAdminRoles);
+        const body=await readBody(req);
+        const result=await runtime.reverseTransaction({
+          transactionHash:body.transactionHash,
+          idempotencyKey:body.idempotencyKey,
+          reason:body.reason??"sandbox transaction reversal",
+        });
+        return send(res,200,{
+          transaction:result.transaction,
+          accounts:result.accounts.map((account)=>publicAccount(account)),
+        });
       }
 
       if(req.method==="POST"&&url.pathname==="/v1/external-transfers"){
