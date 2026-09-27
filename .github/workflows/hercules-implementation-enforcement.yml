@@ -3,25 +3,9 @@ name: Hercules Implementation Enforcement
 on:
   workflow_dispatch:
   pull_request:
-    paths:
-      - "AGENTS.md"
-      - "CONTRIBUTING.md"
-      - ".github/copilot-instructions.md"
-      - ".github/PULL_REQUEST_TEMPLATE.md"
-      - ".github/workflows/hercules-implementation-enforcement.yml"
-      - "governance/hercules-execution-contract-v1.json"
-      - "scripts/verify-hercules-execution-contract.mjs"
-      - "tests/hercules-implementation-enforcement.test.mjs"
   push:
-    paths:
-      - "AGENTS.md"
-      - "CONTRIBUTING.md"
-      - ".github/copilot-instructions.md"
-      - ".github/PULL_REQUEST_TEMPLATE.md"
-      - ".github/workflows/hercules-implementation-enforcement.yml"
-      - "governance/hercules-execution-contract-v1.json"
-      - "scripts/verify-hercules-execution-contract.mjs"
-      - "tests/hercules-implementation-enforcement.test.mjs"
+    branches:
+      - main
 
 permissions:
   contents: read
