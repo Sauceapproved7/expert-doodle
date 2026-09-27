@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow,noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src https://dns.google https://sauceapproved.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <title>Hercules Domain Cutover Bridge</title>
+  <style>
+    :root{color-scheme:dark;--bg:#07090c;--panel:#0d1117;--panel2:#111821;--line:#253041;--text:#f3f6fa;--muted:#93a1b2;--accent:#eef4ff;--ok:#66d19e;--warn:#ffcd70;--bad:#ff7b7b;--shadow:0 24px 70px rgba(0,0,0,.35)}
+    *{box-sizing:border-box}
+    body{margin:0;background:radial-gradient(circle at top,#111a26 0,#07090c 42rem);color:var(--text);font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    main{max-width:920px;margin:0 auto;padding:34px 18px 64px}
+    .eyebrow{font:700 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.18em;text-transform:uppercase;color:#a9b8ca}
+    h1{font-size:clamp(30px,6vw,52px);line-height:1.02;margin:10px 0 14px;letter-spacing:-.04em}
+    .lead{max-width:720px;color:var(--muted);font-size:16px;margin:0 0 26px}
+    .card{background:linear-gradient(180deg,rgba(17,24,33,.96),rgba(10,14,20,.96));border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;margin:16px 0}
+    .card-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line)}
+    .card-body{padding:18px}
+    .title{font-weight:750;letter-spacing:-.01em}
+    .pill{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:6px 10px;font:700 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase;letter-spacing:.06em}
+    .pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 14px currentColor}
+    .ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}.idle{color:#a7b3c2}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .status{border:1px solid var(--line);background:rgba(4,7,10,.45);border-radius:13px;padding:13px}
+    .status dt{color:var(--muted);font-size:12px;margin-bottom:6px}.status dd{margin:0;font:700 13px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;overflow-wrap:anywhere}
+    button{appearance:none;border:0;border-radius:12px;padding:14px 17px;font-weight:800;font-size:14px;cursor:pointer}
+    button.primary{background:var(--accent);color:#0a0e13;min-width:190px}
+    button.secondary{background:#182230;color:var(--text);border:1px solid var(--line)}
+    button:disabled{opacity:.4;cursor:not-allowed}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .security{border-left:3px solid #55749b;padding:11px 13px;background:#0b121b;border-radius:0 10px 10px 0;color:#b8c5d4;margin-top:15px}
+    .records{display:grid;gap:8px;margin-top:12px}
+    .record{display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:11px 12px;background:#090d12}
+    code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:#dfe8f4;overflow-wrap:anywhere}
+    .small{font-size:12px;color:var(--muted)} .strong{color:var(--text);font-weight:700}
+    .footer{margin-top:22px;color:#718096;font-size:12px}
+    @media(max-width:650px){main{padding-top:24px}.grid{grid-template-columns:1fr}.record{grid-template-columns:60px 1fr}.record .pill{grid-column:1/-1;width:max-content}.actions button{width:100%}}
+  </style>
+</head>
+<body>
+<main>
+  <div class="eyebrow">SauceApproved · Hercules Control Plane · DA-20</div>
+  <h1>Hercules Domain Cutover Bridge</h1>
+  <p class="lead">One owner-controlled authorization, then Hercules resumes the remaining <span class="strong">sauceapproved.com → Shopify</span> cutover automatically.</p>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="title">Owner authorization</div>
+      <span id="auth-pill" class="pill idle">checking</span>
+    </div>
+    <div class="card-body">
+      <p id="auth-copy">Checking the one-time Spaceship authorization session…</p>
+      <div class="actions">
+        <button id="authorize" class="primary" type="button" disabled>Authorize Spaceship</button>
+        <button id="refresh" class="secondary" type="button">Refresh public checks</button>
+      </div>
+      <div class="security"><strong>Provider login and human verification stay on Spaceship.</strong> Hercules receives only the OAuth callback and resumes the cutover automatically. This bridge never asks for passwords, MFA codes, cookies, API secrets, or CAPTCHA data.</div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <div class="title">Public verification</div>
+      <span id="verify-pill" class="pill idle">pending</span>
+    </div>
+    <div class="card-body">
+      <div class="grid">
+        <dl class="status"><dt>Public DNS</dt><dd id="dns-status">Checking…</dd></dl>
+        <dl class="status"><dt>HTTPS / TLS reachability</dt><dd id="https-status">Checking…</dd></dl>
+        <dl class="status"><dt>Shopify internal state</dt><dd>waiting_dns</dd></dl>
+        <dl class="status"><dt>Primary-host state</dt><dd>pending</dd></dl>
+      </div>
+      <div class="records" id="records"></div>
+      <p class="small" style="margin-top:14px">Public DNS and HTTPS are external checks. Shopify attachment, SSL issuance, and primary-host confirmation remain authoritative only after Hercules verifies them through the connected production control plane.</p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div class="title">Automatic continuation</div></div>
+    <div class="card-body">
+      <div class="small">After successful provider consent:</div>
+      <p style="margin-bottom:0"><strong>OAuth callback → DNS reconcile → propagation verification → Shopify domain detection → SSL verification → primary-host verification → launch-readiness rerun.</strong></p>
+    </div>
+  </section>
+
+  <div class="footer">No provider security control is bypassed. Unrelated DNS records are ignored by this public checker and preserved by the Hercules reconciliation contract.</div>
+</main>
+<script>
+const AUTH_URL="https://id.service.spaceship.com/connect/authorize?client_id=spaceship.mcp&redirect_uri=https%3A%2F%2Fxbwuablxhhwsaoomsoco.supabase.co%2Ffunctions%2Fv1%2Fhercules-private-bridge%3Fspaceship_mcp_oauth_callback%3D1&response_type=code&scope=openid+offline_access+mcp.spaceship.com&state=S3WgJ_2VnNObY9o53DM_r1V_OwF40OHPUKRxEns7GSk&code_challenge=KbH9sSl0BHOS6WaPnvLnbC12ZauOX5AbfC1-p2q9Rr0&code_challenge_method=S256&resource=https%3A%2F%2Fmcp.spaceship.com%2F";
+const AUTH_EXPIRES_AT="2026-09-27T18:03:10.784Z";
+const DESIRED=[
+  {type:"A",name:"@",value:"23.227.38.65"},
+  {type:"AAAA",name:"@",value:"2620:0127:f00f:5::"},
+  {type:"CNAME",name:"www",value:"shops.myshopify.com"}
+];
+const $=id=>document.getElementById(id);
+const setPill=(el,label,tone)=>{el.textContent=label;el.className="pill "+tone};
+const clean=v=>String(v||"").trim().toLowerCase().replace(/\.$/,"");
+const v6=v=>clean(v).split(":").map(x=>x.replace(/^0+(?=[0-9a-f])/,"")).join(":");
+
+function syncAuth(){
+  const expiry=new Date(AUTH_EXPIRES_AT).getTime();
+  const live=Number.isFinite(expiry)&&Date.now()<expiry;
+  $("authorize").disabled=!live;
+  if(live){
+    const mins=Math.max(1,Math.ceil((expiry-Date.now())/60000));
+    setPill($("auth-pill"),"ready","ok");
+    $("auth-copy").textContent="Secure one-time authorization is ready for about "+mins+" minute"+(mins===1?"":"s")+".";
+  }else{
+    setPill($("auth-pill"),"expired","bad");
+    $("auth-copy").textContent="Authorization session expired — refresh it from Hercules.";
+  }
+}
+$("authorize").addEventListener("click",()=>{if(!$("authorize").disabled)window.location.assign(AUTH_URL)});
+
+async function dnsQuery(name,type){
+  const u="https://dns.google/resolve?name="+encodeURIComponent(name)+"&type="+encodeURIComponent(type);
+  const r=await fetch(u,{headers:{accept:"application/dns-json"},cache:"no-store"});
+  if(!r.ok)throw new Error("DNS HTTP "+r.status);
+  const d=await r.json();
+  return (Array.isArray(d.Answer)?d.Answer:[]).map(x=>clean(x.data));
+}
+function matchRecord(record,answers){
+  if(record.type==="AAAA")return answers.map(v6).includes(v6(record.value));
+  return answers.includes(clean(record.value));
+}
+async function checkDns(){
+  const [a,aaaa,cname]=await Promise.all([
+    dnsQuery("sauceapproved.com","A"),
+    dnsQuery("sauceapproved.com","AAAA"),
+    dnsQuery("www.sauceapproved.com","CNAME")
+  ]);
+  const answerMap={A:a,AAAA:aaaa,CNAME:cname};
+  const rows=DESIRED.map(r=>({...r,answers:answerMap[r.type],ok:matchRecord(r,answerMap[r.type])}));
+  const box=$("records");box.replaceChildren();
+  for(const row of rows){
+    const el=document.createElement("div");el.className="record";
+    const t=document.createElement("code");t.textContent=row.type+" "+row.name;
+    const v=document.createElement("code");v.textContent=row.value;
+    const p=document.createElement("span");setPill(p,row.ok?"present":"missing",row.ok?"ok":"warn");
+    el.append(t,v,p);box.append(el);
+  }
+  const good=rows.every(x=>x.ok);
+  $("dns-status").textContent=good?"Shopify routing records present":"Waiting for required Shopify records";
+  return good;
+}
+async function checkHttps(){
+  try{
+    await fetch("https://sauceapproved.com/",{mode:"no-cors",cache:"no-store"});
+    $("https-status").textContent="Public TLS connection reachable";
+    return true;
+  }catch{
+    $("https-status").textContent="Not reachable yet";
+    return false;
+  }
+}
+async function runChecks(){
+  $("refresh").disabled=true;
+  setPill($("verify-pill"),"checking","idle");
+  try{
+    const [dns,https]=await Promise.all([checkDns(),checkHttps()]);
+    if(dns&&https)setPill($("verify-pill"),"public checks pass","ok");
+    else setPill($("verify-pill"),"cutover pending","warn");
+  }catch{
+    $("dns-status").textContent="Public DNS check unavailable";
+    setPill($("verify-pill"),"check error","bad");
+  }finally{$("refresh").disabled=false}
+}
+$("refresh").addEventListener("click",runChecks);
+syncAuth();runChecks();
+setInterval(syncAuth,1000);
+setInterval(runChecks,30000);
+</script>
+</body>
+</html>
