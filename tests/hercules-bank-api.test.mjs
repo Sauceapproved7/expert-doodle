@@ -90,6 +90,7 @@ test("bank API binds account ownership to JWT subject and hides other customers"
     });
     assert.equal(opened.response.status, 201);
     assert.equal(opened.payload.account.customerId, "user-alice");
+    assert.equal(opened.payload.account.balanceMinor, 0);
 
     const own = await request(base, "/v1/accounts/" + encodeURIComponent(opened.payload.account.id), {
       bearer:token("user-alice"),
