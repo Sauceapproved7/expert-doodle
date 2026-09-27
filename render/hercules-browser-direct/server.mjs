@@ -1,6 +1,7 @@
 import http from "node:http";
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
+import { createHash, randomBytes } from "node:crypto";
 import { chromium } from "playwright-core";
 
 const PORT=Number(process.env.PORT||10000);
@@ -9,8 +10,12 @@ const MAX_BODY=262144;
 const MAX_STEPS=25;
 const MAX_TIMEOUT=60000;
 const SESSION_TTL=10*60*1000;
+const HANDOFF_TTL=10*60*1000;
+const HANDOFF_MAX=8;
 const DNS_TTL=60*1000;
 const sessions=new Map();
+const handoffs=new Map();
+const handoffIds=new Map();
 const dnsCache=new Map();
 
 const PRIVATE_HOST=/^(localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|169\.254(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|::1)$/i;
@@ -29,6 +34,156 @@ function reply(res,status,body,headers={}){
 function auth(req){
   const header=String(req.headers.authorization||"");
   return Boolean(TOKEN)&&header==="Bearer "+TOKEN;
+}
+
+function handoffHash(token){
+  return createHash("sha256").update(String(token||"")).digest("hex");
+}
+
+function ownerHeaders(extra={}){
+  return {
+    "cache-control":"no-store",
+    "pragma":"no-cache",
+    "referrer-policy":"no-referrer",
+    "x-content-type-options":"nosniff",
+    "x-frame-options":"DENY",
+    "permissions-policy":"camera=(), microphone=(), geolocation=(), payment=()",
+    "content-security-policy":"default-src 'self'; img-src 'self' data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+    ...extra
+  };
+}
+
+function publicOrigin(req){
+  const proto=String(req.headers["x-forwarded-proto"]||"https").split(",")[0].trim();
+  const host=String(req.headers["x-forwarded-host"]||req.headers.host||"");
+  if(!host)throw new Error("handoff_origin_unavailable");
+  return proto+"://"+host;
+}
+
+function handoffByToken(token){
+  const hash=handoffHash(token);
+  const h=handoffs.get(hash);
+  if(!h)return null;
+  if(h.expiresAt<=Date.now()){
+    handoffs.delete(hash);
+    handoffIds.delete(h.handoffId);
+    return null;
+  }
+  if(!sessions.has(h.sessionId)){
+    handoffs.delete(hash);
+    handoffIds.delete(h.handoffId);
+    return null;
+  }
+  return {hash,h};
+}
+
+function handoffStatus(id){
+  const hash=handoffIds.get(String(id||""));
+  if(!hash)return null;
+  const h=handoffs.get(hash);
+  if(!h)return null;
+  if(h.expiresAt<=Date.now()||!sessions.has(h.sessionId)){
+    handoffs.delete(hash);
+    handoffIds.delete(h.handoffId);
+    return null;
+  }
+  return {
+    handoffId:h.handoffId,
+    sessionId:h.sessionId,
+    opened:Boolean(h.openedAt),
+    finished:Boolean(h.finished),
+    expiresAt:new Date(h.expiresAt).toISOString()
+  };
+}
+
+function cleanupHandoffs(){
+  const now=Date.now();
+  for(const [hash,h] of handoffs){
+    if(h.expiresAt<=now||!sessions.has(h.sessionId)){
+      handoffs.delete(hash);
+      handoffIds.delete(h.handoffId);
+    }
+  }
+}
+
+function createHandoff(req,sessionId){
+  const sid=String(sessionId||"");
+  const s=sessions.get(sid);
+  if(!s)throw new Error("handoff_session_not_found");
+  cleanupHandoffs();
+  if(handoffs.size>=HANDOFF_MAX)throw new Error("handoff_capacity_reached");
+  s.lastUsed=Date.now();
+
+  const token=randomBytes(32).toString("base64url");
+  const hash=handoffHash(token);
+  const handoffId=crypto.randomUUID();
+  const expiresAt=Date.now()+HANDOFF_TTL;
+  handoffs.set(hash,{handoffId,sessionId:sid,expiresAt,openedAt:null,finished:false});
+  handoffIds.set(handoffId,hash);
+
+  return {
+    ok:true,
+    handoffId,
+    sessionId:sid,
+    expiresAt:new Date(expiresAt).toISOString(),
+    handoffUrl:publicOrigin(req)+"/owner/"+token
+  };
+}
+
+function ownerPage(token){
+  const p="/owner/"+encodeURIComponent(token);
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1"><title>Hercules Owner Handoff</title><style>
+  :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080a0d;color:#f4f5f7;font:15px system-ui,-apple-system,sans-serif}.wrap{max-width:1100px;margin:auto;padding:14px}.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}.tag{font-weight:800;letter-spacing:.04em}.muted{color:#9aa3ad}.screen{width:100%;border:1px solid #2a3038;border-radius:14px;background:#111;touch-action:none}.controls{position:sticky;bottom:0;background:#080a0df2;padding:10px 0;display:grid;gap:8px}.row{display:flex;gap:8px;flex-wrap:wrap}button,input{border:1px solid #343b45;border-radius:10px;background:#151a20;color:#fff;padding:12px;font:inherit}button{font-weight:700}input{flex:1;min-width:180px}.primary{background:#f3f5f7;color:#090b0e}.danger{border-color:#6d3740}.status{min-height:20px;color:#9fd3ad}
+  </style></head><body><main class="wrap"><div class="bar"><span class="tag">HERCULES OWNER HANDOFF</span><span class="muted">Temporary secure control of the existing Hercules browser session.</span></div><img id="screen" class="screen" alt="Live Hercules browser"><div class="controls"><div id="status" class="status">Connected. Click the page image to focus a field or button.</div><div class="row"><input id="entry" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type into the focused page field"><button id="send" class="primary">Send text</button><button id="show">Show</button></div><div class="row"><button data-key="Tab">Tab</button><button data-key="Enter">Enter</button><button data-key="Backspace">Backspace</button><button id="up">Scroll up</button><button id="down">Scroll down</button><button id="finish" class="danger">Finish handoff</button></div></div></main><script>
+  const base=${JSON.stringify(p)},img=document.getElementById("screen"),status=document.getElementById("status"),entry=document.getElementById("entry");
+  let active=true,timer=null;
+  async function post(path,body){const r=await fetch(base+path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body||{})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"handoff_failed");return j}
+  function refresh(){if(!active)return;img.src=base+"/frame?t="+Date.now();timer=setTimeout(refresh,1100)}
+  img.onload=()=>{status.textContent="Live session ready."};
+  img.onerror=()=>{status.textContent="Refreshing secure session…"};
+  img.addEventListener("click",async e=>{if(!active)return;const r=img.getBoundingClientRect(),x=(e.clientX-r.left)*(img.naturalWidth/r.width),y=(e.clientY-r.top)*(img.naturalHeight/r.height);try{await post("/action",{type:"click",x,y});status.textContent="Clicked."}catch(err){status.textContent=err.message}});
+  document.getElementById("send").onclick=async()=>{const text=entry.value;if(!text)return;entry.value="";try{const r=await post("/action",{type:"text",text});status.textContent="Sent "+r.chars+" characters securely."}catch(err){status.textContent=err.message}};
+  document.getElementById("show").onclick=()=>{entry.type=entry.type==="password"?"text":"password"};
+  document.querySelectorAll("[data-key]").forEach(b=>b.onclick=async()=>{try{await post("/action",{type:"key",key:b.dataset.key});status.textContent="Key sent."}catch(err){status.textContent=err.message}});
+  document.getElementById("up").onclick=()=>post("/action",{type:"scroll",deltaY:-560}).catch(e=>status.textContent=e.message);
+  document.getElementById("down").onclick=()=>post("/action",{type:"scroll",deltaY:560}).catch(e=>status.textContent=e.message);
+  document.getElementById("finish").onclick=async()=>{try{await post("/finish",{});active=false;clearTimeout(timer);entry.value="";status.textContent="Owner checkpoint complete. Hercules can resume this same session."}catch(err){status.textContent=err.message}};
+  refresh();
+</script></body></html>`;
+}
+
+async function ownerAction(h,input){
+  if(h.finished)throw new Error("handoff_finished");
+  const s=sessions.get(h.sessionId);
+  if(!s)throw new Error("handoff_session_not_found");
+  s.lastUsed=Date.now();
+  const type=String(input?.type||"");
+
+  if(type==="click"){
+    const x=clamp(input.x,0,1280,0);
+    const y=clamp(input.y,0,800,0);
+    await s.page.mouse.click(x,y);
+    return {ok:true,type,x,y};
+  }
+  if(type==="text"){
+    const value=String(input?.text||"").slice(0,1024);
+    if(!value)throw new Error("handoff_text_required");
+    await s.page.keyboard.insertText(value);
+    return {ok:true,type,chars:value.length};
+  }
+  if(type==="key"){
+    const key=String(input?.key||"");
+    const allowed=new Set(["Tab","Enter","Escape","Backspace","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"]);
+    if(!allowed.has(key))throw new Error("handoff_key_blocked");
+    await s.page.keyboard.press(key);
+    return {ok:true,type,key};
+  }
+  if(type==="scroll"){
+    const deltaY=clamp(input?.deltaY,-1200,1200,0);
+    await s.page.mouse.wheel(0,deltaY);
+    return {ok:true,type,deltaY};
+  }
+  throw new Error("handoff_action_unsupported");
 }
 
 function clamp(value,min,max,fallback){
@@ -150,7 +305,8 @@ async function fresh(){
   });
   const context=await browser.newContext({
     acceptDownloads:false,
-    ignoreHTTPSErrors:false
+    ignoreHTTPSErrors:false,
+    viewport:{width:1280,height:800}
   });
   const page=await context.newPage();
   await page.route("**/*",async route=>{
@@ -289,10 +445,69 @@ setInterval(async()=>{
   for(const [id,s] of sessions){
     if(s.lastUsed<cutoff)await closeSession(id);
   }
+  cleanupHandoffs();
 },60000).unref();
 
 http.createServer(async(req,res)=>{
   const url=new URL(req.url||"/","http://localhost");
+
+  if(req.method==="POST"&&url.pathname==="/v1/handoff"){
+    if(!auth(req))return reply(res,401,{error:"unauthorized"});
+    try{
+      const input=await readBody(req);
+      return reply(res,200,createHandoff(req,input.sessionId));
+    }catch(error){
+      const message=error instanceof Error?error.message:"handoff_error";
+      return reply(res,400,{ok:false,error:message.slice(0,300)});
+    }
+  }
+
+  if(req.method==="GET"&&url.pathname.startsWith("/v1/handoff/")&&url.pathname.endsWith("/status")){
+    if(!auth(req))return reply(res,401,{error:"unauthorized"});
+    const id=decodeURIComponent(url.pathname.slice("/v1/handoff/".length,-"/status".length));
+    const state=handoffStatus(id);
+    return state?reply(res,200,{ok:true,...state}):reply(res,404,{ok:false,error:"handoff_not_found"});
+  }
+
+  if(url.pathname.startsWith("/owner/")){
+    const rest=url.pathname.slice("/owner/".length);
+    const slash=rest.indexOf("/");
+    const rawToken=decodeURIComponent(slash===-1?rest:rest.slice(0,slash));
+    const suffix=slash===-1?"":rest.slice(slash);
+    const found=handoffByToken(rawToken);
+    if(!found)return reply(res,404,{ok:false,error:"handoff_invalid_or_expired"});
+    const {h}=found;
+    if(!h.openedAt)h.openedAt=Date.now();
+
+    if(req.method==="GET"&&suffix===""){
+      res.writeHead(200,ownerHeaders({"content-type":"text/html; charset=utf-8"}));
+      return res.end(ownerPage(rawToken));
+    }
+    if(req.method==="GET"&&suffix==="/frame"){
+      if(h.finished)return reply(res,410,{ok:false,error:"handoff_finished"});
+      const s=sessions.get(h.sessionId);
+      if(!s)return reply(res,410,{ok:false,error:"handoff_session_not_found"});
+      s.lastUsed=Date.now();
+      const png=await s.page.screenshot({type:"png",fullPage:false});
+      res.writeHead(200,ownerHeaders({"content-type":"image/png","content-length":String(png.length)}));
+      return res.end(png);
+    }
+    if(req.method==="POST"&&suffix==="/action"){
+      try{
+        return reply(res,200,await ownerAction(h,await readBody(req)));
+      }catch(error){
+        const message=error instanceof Error?error.message:"handoff_action_failed";
+        return reply(res,400,{ok:false,error:message.slice(0,300)});
+      }
+    }
+    if(req.method==="POST"&&suffix==="/finish"){
+      h.finished=true;
+      const s=sessions.get(h.sessionId);
+      if(s)s.lastUsed=Date.now();
+      return reply(res,200,{ok:true,finished:true,handoffId:h.handoffId,sessionId:h.sessionId});
+    }
+    return reply(res,404,{error:"not_found"});
+  }
 
   if(req.method==="GET"&&url.pathname==="/health"){
     return reply(res,200,{
@@ -302,7 +517,8 @@ http.createServer(async(req,res)=>{
       actions:["navigate","scrape","screenshot","interact","close_session"],
       sessionReuse:true,
       rawCodeExecution:false,
-      antiBotBypass:false
+      antiBotBypass:false,
+      ownerHandoff:true
     });
   }
 
