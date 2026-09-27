@@ -4,8 +4,11 @@ on:
   pull_request:
     paths:
       - "supabase/migrations/*hercules_privacy_request_center*"
+      - "supabase/migrations/*hercules_privacy_data_rights*"
       - "supabase/functions/hercules-launch/**"
+      - "supabase/functions/hercules-privacy-ops/**"
       - "docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md"
+      - "docs/launch/HERCULES-DATA-RIGHTS-OPERATIONS-*.md"
       - "tests/hercules-privacy-request-center.test.mjs"
       - ".github/workflows/hercules-privacy-request-center.yml"
   workflow_dispatch:
