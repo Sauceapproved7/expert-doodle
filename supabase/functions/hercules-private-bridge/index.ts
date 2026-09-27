@@ -2,6 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleSpaceshipDnsRequest } from './spaceship-dns-control.ts';
 import { handleSpaceshipMcpRequest, isSpaceshipMcpAction } from './spaceship-mcp.ts';
+import { handlePersonalBrowserRequest, isPersonalBrowserAction } from './personal-browser.ts';
 
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}').default||Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -144,13 +145,14 @@ Deno.serve(async(req:Request)=>{
     const probe=await req.clone().json().catch(()=>({}));
     const probeAction=String(probe?.action||'');
     if(isSpaceshipMcpAction(probeAction))return handleSpaceshipMcpRequest(req);
+    if(isPersonalBrowserAction(probeAction))return handlePersonalBrowserRequest(req);
   }
   if(req.method==='POST' && req.headers.get('x-hercules-internal-key')){
     return handleSpaceshipDnsRequest(req);
   }
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
-    return out({ok:true,service:'hercules-private-bridge',version:'1.1.0',status:'ready',
+    return out({ok:true,service:'hercules-private-bridge',version:'1.2.0',status:'ready',
       capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
