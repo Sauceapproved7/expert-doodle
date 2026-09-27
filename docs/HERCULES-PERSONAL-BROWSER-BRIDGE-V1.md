@@ -19,6 +19,14 @@ Hercules Personal Browser Bridge is the first-party owner-session path for websi
 - Navigation is restricted to the explicitly approved origin.
 - Command submission is service-role only.
 
+## Production endpoint
+
+The Personal Browser protocol is multiplexed through the existing `hercules-private-bridge` Edge Function:
+
+`https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-private-bridge`
+
+No separate Personal Browser Edge Function is required.
+
 ## Pairing flow
 
 1. Sign in to the authenticated Hercules Integrations page.
