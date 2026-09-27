@@ -1,0 +1,27 @@
+name: Hercules Spaceship DNS Multiplex
+
+on:
+  pull_request:
+    paths:
+      - "hercules-deploy/spaceship-dns.mjs"
+      - "supabase/functions/hercules-private-bridge/**"
+      - "supabase/migrations/*hercules_spaceship_dns_multiplex*"
+      - "tests/hercules-spaceship-dns-multiplex.test.mjs"
+      - "docs/HERCULES-SPACESHIP-DNS-MULTIPLEX-V1.md"
+      - "governance/owner-code-policy.json"
+      - ".github/workflows/hercules-spaceship-dns-multiplex.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  spaceship-dns-multiplex:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run Spaceship DNS adapter and multiplex tests
+        run: node --test tests/hercules-deploy-spaceship-dns.test.mjs tests/hercules-spaceship-dns-multiplex.test.mjs
