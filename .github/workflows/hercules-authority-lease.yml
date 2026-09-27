@@ -1,16 +1,20 @@
-name: Hercules Authority Lease
+name: Hercules Authority & Domain Agent
 on:
   pull_request:
     paths:
       - "hercules-authority/**"
       - "tests/hercules-authority-lease.test.mjs"
+      - "tests/hercules-domain-agent.test.mjs"
+      - "tests/hercules-domain-agent-service.test.mjs"
       - "docs/HERCULES-AUTHORITY-LEASE-V0.1.md"
+      - "docs/HERCULES-DOMAIN-AGENT-V1.md"
+      - "docs/HERCULES-THREAT-MODEL.md"
       - "governance/owner-code-policy.json"
       - ".github/workflows/hercules-authority-lease.yml"
 permissions:
   contents: read
 jobs:
-  authority-lease:
+  authority-domain-agent:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -18,4 +22,10 @@ jobs:
         with:
           node-version: "22"
       - run: node --check hercules-authority/authority-lease.mjs
+      - run: node --check hercules-authority/domain-agent.mjs
+      - run: node --check hercules-authority/domain-agent-service.mjs
       - run: node --test tests/hercules-authority-lease.test.mjs
+      - run: node --test tests/hercules-domain-agent.test.mjs
+      - run: node --test tests/hercules-domain-agent-service.test.mjs
+      - run: node scripts/verify-owner-code-only.mjs
+      - run: node scripts/verify-hercules-execution-contract.mjs
