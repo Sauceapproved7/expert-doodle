@@ -27,7 +27,7 @@ Hercules must protect:
 9. **Staging -> production**: isolated fixture evidence must never be represented as production operating history.
 10. **Forge -> notification transport**: invite/recovery delivery is an external service boundary; one-time lifecycle links are the only credential material intentionally sent to that provider.
 11. **Forge/operator -> Deploy Plane**: deployment requests cross a separate authenticated control boundary; jobs may reference deployment targets but must not carry deployment credentials.
-12. **Deploy Plane -> target adapter**: target adapters are replaceable infrastructure boundaries; adapters may hold provider/host credentials outside persisted deployment jobs.
+12. **Deploy Plane -> target adapter**: target adapters are replaceable infrastructure boundaries; adapters may hold provider/host credentials outside persisted deployment jobs.\n13. **Domain-agent ingress -> authority/provider adapters**: authenticated tasks cross tenant, replay, provider-grant, authority-lease, owner-boundary, AI-routing, and credential-isolation boundaries. The public domain is identity and ingress only; it is never treated as provider permission.
 
 ## Primary threats and required controls
 
@@ -60,6 +60,11 @@ Controls: fail-closed intent validation, deterministic project identifiers, mand
 
 ### Deployment-plane compromise
 Controls: constant-time Deploy Plane control-token checks, bounded request bodies, secret-shaped job-field rejection, immutable deployment requests, explicit state transitions, persistent verification/rollback evidence, HTTPS-or-loopback internal client transport, and adapter isolation. Provider/host credentials are not stored in deployment jobs.
+
+### Domain-agent confused-deputy, credential and replay risk
+Controls: stable HTTPS agent identity, tenant binding, provider/tenant matching, credential-free provider-grant records, authorization-evidence hash binding, authority-lease subject and intent binding, scope/impact/time evaluation, explicit owner-only boundaries, automatic refresh only for refreshable grants, pre-routing authorization, credential-isolated adapters, bounded request bodies, constant-time control-token checks, tenant-scoped idempotency, and deterministic audit fingerprints. Reusing an idempotency key for a different task fails closed.
+
+The domain name itself grants no provider authority. Missing consent, revoked grants, insufficient scopes, 2FA, identity verification, legal consent, and payment boundaries must not be inferred or bypassed.
 
 ### Audit tampering
 Controls: hash-chained audit events and retained head checkpoint. This is tamper-evident application storage, not an independent hardware/external trust anchor.
