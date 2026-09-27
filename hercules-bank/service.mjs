@@ -204,6 +204,35 @@ export class HerculesBankSandbox {
     });
   }
 
+  reverseTransaction({
+    transactionHash,
+    idempotencyKey,
+    reason = "sandbox transaction reversal",
+  }) {
+    const reversalOf = nonEmpty(transactionHash, "transactionHash");
+    const reversal = this.#ledger.reverseTransaction({
+      transactionHash:reversalOf,
+      idempotencyKey,
+      reason,
+    });
+    const accountIds = [...new Set(
+      reversal.entries
+        .map((entry) => entry.accountId)
+        .filter((accountId) => this.#accounts.has(accountId)),
+    )];
+    return Object.freeze({
+      transaction:Object.freeze({
+        sequence:reversal.sequence,
+        hash:reversal.hash,
+        reference:reversal.reference,
+        currency:reversal.currency,
+        reversalOf,
+        entries:Object.freeze(reversal.entries.map((entry) => Object.freeze({...entry}))),
+      }),
+      accounts:Object.freeze(accountIds.map((accountId) => this.getAccount(accountId))),
+    });
+  }
+
   statement(accountId) {
     const account = this.getAccount(accountId);
     const entries = [];

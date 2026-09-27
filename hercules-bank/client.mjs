@@ -81,6 +81,10 @@ export class HerculesBankClient {
     return body.account;
   }
 
+  async reverseSandboxTransaction(input) {
+    return this.#request("/v1/admin/reversals", {method:"POST", body:input});
+  }
+
   async #request(path, {method = "GET", body} = {}) {
     const token = await this.#tokenProvider();
     if (typeof token !== "string" || token.length === 0) {

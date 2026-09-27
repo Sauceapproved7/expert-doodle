@@ -136,6 +136,10 @@ export class HerculesBankRuntime {
     return this.#commit((candidate) => candidate.transfer(input));
   }
 
+  async reverseTransaction(input) {
+    return this.#commit((candidate) => candidate.reverseTransaction(input));
+  }
+
   requestExternalTransfer() {
     return this.#bank.requestExternalTransfer();
   }

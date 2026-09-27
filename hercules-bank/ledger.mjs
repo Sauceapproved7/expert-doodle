@@ -1,6 +1,7 @@
 import {createHash} from "node:crypto";
 
 const SIDES = new Set(["DEBIT", "CREDIT"]);
+const REVERSAL_MARKER = "[reversal-of:";
 
 function assertNonEmptyString(value, label) {
   if (typeof value !== "string" || value.trim() === "") {
@@ -255,6 +256,39 @@ export class HerculesBankLedger {
         {accountId:from.id, side:"DEBIT", amountMinor},
         {accountId:to.id, side:"CREDIT", amountMinor},
       ],
+    });
+  }
+
+  reverseTransaction({
+    transactionHash,
+    idempotencyKey,
+    reason = "sandbox transaction reversal",
+  }) {
+    const hash = assertNonEmptyString(transactionHash, "transactionHash");
+    const key = assertNonEmptyString(idempotencyKey, "idempotencyKey");
+    const normalizedReason = assertNonEmptyString(reason, "reason");
+    const original = this.#transactions.find((transaction) => transaction.hash === hash);
+    if (!original) throw new Error("unknown transaction: " + hash);
+    if (original.reference.includes(REVERSAL_MARKER)) {
+      throw new Error("reversal transactions cannot be reversed");
+    }
+
+    const marker = REVERSAL_MARKER + hash + "]";
+    const entries = original.entries.map((entry) => ({
+      accountId:entry.accountId,
+      side:entry.side === "DEBIT" ? "CREDIT" : "DEBIT",
+      amountMinor:entry.amountMinor,
+    }));
+    const reference = normalizedReason + " " + marker;
+    const existing = this.#transactions.find((transaction) => transaction.reference.endsWith(marker));
+    if (existing && existing.idempotencyKey !== key) {
+      throw new Error("transaction was already reversed");
+    }
+
+    return this.post({
+      idempotencyKey:key,
+      reference,
+      entries,
     });
   }
 
