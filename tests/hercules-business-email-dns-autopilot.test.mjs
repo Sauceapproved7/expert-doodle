@@ -11,11 +11,22 @@ const mcp=await readFile(
   "utf8"
 );
 
-test("business email DNS autopilot waits for authorized Spaceship OAuth",()=>{
+test("business email DNS autopilot accepts either OAuth or External API authorization",()=>{
   assert.match(sql,/hercules_business_email_dns_autopilot_tick/);
   assert.match(sql,/hercules_spaceship_mcp_oauth/);
+  assert.match(sql,/hercules_spaceship_dns_credentials/);
   assert.match(sql,/coalesce\(v_oauth_status,'unconfigured'\) <> 'configured'/);
+  assert.match(sql,/coalesce\(v_api_status,'unconfigured'\) <> 'configured'/);
+  assert.match(sql,/\band\s+coalesce\(v_api_status,'unconfigured'\) <> 'configured'/);
   assert.match(sql,/waiting_provider_authorization/);
+});
+
+
+test("business email migration expands DNS run actions for Resend",()=>{
+  assert.match(sql,/drop constraint if exists hercules_spaceship_dns_runs_action_check/i);
+  assert.match(sql,/inspect_resend_mail_dns/);
+  assert.match(sql,/reconcile_resend_mail_dns/);
+  assert.match(sql,/add constraint hercules_spaceship_dns_runs_action_check/i);
 });
 
 test("business email DNS autopilot calls only the fail-closed Resend reconciliation action",()=>{
