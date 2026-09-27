@@ -16,9 +16,9 @@ test("Shopify DNS target is pinned to current required records", () => {
 
 test("planner preserves unrelated records and reports custom conflicts", () => {
   const plan = buildShopifyDnsPlan([
-    {type:"MX", name:"@", exchange:"mx.example.test", preference:10, group:"custom"},
-    {type:"A", name:"@", address:"192.0.2.10", ttl:300, group:"custom"},
-    {type:"CNAME", name:"www", cname:"old.example.test", ttl:300, group:"custom"},
+    {type:"MX", name:"@", exchange:"mx.example.test", preference:10, group:{type:"custom"}},
+    {type:"A", name:"@", address:"192.0.2.10", ttl:300, group:{type:"custom"}},
+    {type:"CNAME", name:"www", cname:"old.example.test", ttl:300, group:{type:"custom"}},
   ]);
   assert.equal(plan.safeToApply, true);
   assert.equal(plan.customConflicts.length, 2);
@@ -28,7 +28,7 @@ test("planner preserves unrelated records and reports custom conflicts", () => {
 
 test("provider-managed conflicting records fail closed", () => {
   const plan = buildShopifyDnsPlan([
-    {type:"A", name:"@", address:"192.0.2.10", group:"product"},
+    {type:"A", name:"@", address:"192.0.2.10", group:{type:"product"}},
   ]);
   assert.equal(plan.safeToApply, false);
   assert.equal(plan.blockingConflicts.length, 1);
@@ -60,8 +60,8 @@ test("client is domain allowlisted and sends credentials only as headers", async
 test("reconcile deletes only conflicting target records, writes missing Shopify records, then verifies", async () => {
   const calls = [];
   let records = [
-    {type:"A", name:"@", address:"192.0.2.10", group:"custom"},
-    {type:"TXT", name:"@", value:"preserve-me", group:"custom"},
+    {type:"A", name:"@", address:"192.0.2.10", group:{type:"custom"}},
+    {type:"TXT", name:"@", value:"preserve-me", group:{type:"custom"}},
   ];
   const fetchImpl = async (url, init) => {
     const method = init.method || "GET";
@@ -79,7 +79,7 @@ test("reconcile deletes only conflicting target records, writes missing Shopify 
     }
     if (method === "PUT") {
       const payload = JSON.parse(init.body);
-      records.push(...payload.items.map((item) => ({...item, group:"custom"})));
+      records.push(...payload.items.map((item) => ({...item, group:{type:"custom"}})));
       return new Response(null, {status:204});
     }
     throw new Error("unexpected method");
@@ -99,4 +99,14 @@ test("reconcile deletes only conflicting target records, writes missing Shopify 
   assert.ok(records.some((record) => record.type === "TXT" && record.value === "preserve-me"));
   assert.ok(calls.some((call) => call.method === "DELETE"));
   assert.ok(calls.some((call) => call.method === "PUT"));
+});
+
+
+test("unknown record ownership group fails closed", () => {
+  const plan = buildShopifyDnsPlan([
+    {type:"A", name:"@", address:"192.0.2.10"},
+  ]);
+  assert.equal(plan.safeToApply, false);
+  assert.equal(plan.blockingConflicts.length, 1);
+  assert.equal(plan.blockingConflicts[0].group, "unknown");
 });
