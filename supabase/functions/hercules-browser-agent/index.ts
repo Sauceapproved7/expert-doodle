@@ -74,6 +74,37 @@ function compactPage(payload:any){
     })):[]
   };
 }
+function securityChallenge(payload:any){
+  const explicit=payload?.securityChallenge;
+  if(explicit?.detected===true){
+    return {
+      detected:true,
+      provider:String(explicit.provider||"unknown").slice(0,100),
+      kind:String(explicit.kind||"security_verification").slice(0,100),
+      humanVerificationRequired:explicit.humanVerificationRequired!==false,
+      bypassAttempted:false
+    };
+  }
+  const page=payload?.result?.page||payload?.page||{};
+  const title=String(page?.title||"").trim().toLowerCase();
+  const text=String(page?.text||"").toLowerCase();
+  const url=String(page?.url||"").toLowerCase();
+  const detected=
+    title==="just a moment..." ||
+    /performing security verification/.test(text) ||
+    /verify you are not a bot/.test(text) ||
+    /performance and security by cloudflare/.test(text) ||
+    /__cf_chl_|\/cdn-cgi\/challenge-platform/.test(url);
+  if(!detected)return null;
+  return {
+    detected:true,
+    provider:"cloudflare",
+    kind:"security_verification",
+    humanVerificationRequired:true,
+    bypassAttempted:false
+  };
+}
+
 function deterministicObservation(goal:string,page:any,inputKeys:string[]){
   if(inputKeys.length>0)return null;
   const g=String(goal||"").toLowerCase();
@@ -246,10 +277,10 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.9.0",
+    ok:true,service:"hercules-browser-agent",version:"1.0.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
-    antiBotBypass:false,highImpactAutonomy:false
+    antiBotBypass:false,securityChallengeDetection:true,highImpactAutonomy:false
   });
   if(req.method!=="POST")return out({error:"method_not_allowed"},405);
   if(!await authorized(req))return out({error:"internal_authorization_required"},403);
@@ -310,6 +341,34 @@ Deno.serve(async(req:Request)=>{
     if(!sessionId)throw new Error("browser_session_missing");
     let page=compactPage(nav);
     if(!domainAllowed(page.url||startUrl,allowedDomains))throw new Error("top_level_domain_not_allowed");
+    const initialChallenge=securityChallenge(nav);
+    if(initialChallenge){
+      history.push({
+        step:1,
+        decision:"human_verification_required",
+        reason:"security_challenge_detected",
+        url:page.url||startUrl,
+        provider:initialChallenge.provider
+      });
+      await updateRun(runId,{
+        status:"blocked",
+        steps:history,
+        error:"human_verification_required",
+        result:{page,securityChallenge:initialChallenge,sessionId,preserveSession:true},
+        completed_at:new Date().toISOString()
+      });
+      return out({
+        ok:false,
+        runId,
+        status:"blocked",
+        error:"human_verification_required",
+        securityChallenge:initialChallenge,
+        preserveSession:true,
+        sessionId,
+        page,
+        steps:history
+      },409);
+    }
 
     const deterministic=deterministicObservation(goal,page,inputKeys);
     if(deterministic){
@@ -375,6 +434,34 @@ Deno.serve(async(req:Request)=>{
         });
       }
       page=compactPage(scrape);
+      const scrapeChallenge=securityChallenge(scrape);
+      if(scrapeChallenge){
+        history.push({
+          step:i+1,
+          decision:"human_verification_required",
+          reason:"security_challenge_detected",
+          url:page.url||startUrl,
+          provider:scrapeChallenge.provider
+        });
+        await updateRun(runId,{
+          status:"blocked",
+          steps:history,
+          error:"human_verification_required",
+          result:{page,securityChallenge:scrapeChallenge,sessionId,preserveSession:true},
+          completed_at:new Date().toISOString()
+        });
+        return out({
+          ok:false,
+          runId,
+          status:"blocked",
+          error:"human_verification_required",
+          securityChallenge:scrapeChallenge,
+          preserveSession:true,
+          sessionId,
+          page,
+          steps:history
+        },409);
+      }
       if(!domainAllowed(page.url||startUrl,allowedDomains)){
         history.push({step:i+1,decision:"blocked",url:page.url,reason:"top_level_domain_not_allowed"});
         await updateRun(runId,{status:"blocked",steps:history,error:"top_level_domain_not_allowed",completed_at:new Date().toISOString()});
@@ -443,6 +530,33 @@ Deno.serve(async(req:Request)=>{
       }
       const after=compactPage(acted);
       record.afterUrl=after.url;
+      const actedChallenge=securityChallenge(acted);
+      if(actedChallenge){
+        history.push({
+          ...record,
+          decision:"human_verification_required",
+          reason:"security_challenge_detected",
+          provider:actedChallenge.provider
+        });
+        await updateRun(runId,{
+          status:"blocked",
+          steps:history,
+          error:"human_verification_required",
+          result:{page:after,securityChallenge:actedChallenge,sessionId,preserveSession:true},
+          completed_at:new Date().toISOString()
+        });
+        return out({
+          ok:false,
+          runId,
+          status:"blocked",
+          error:"human_verification_required",
+          securityChallenge:actedChallenge,
+          preserveSession:true,
+          sessionId,
+          page:after,
+          steps:history
+        },409);
+      }
       const observedStep=acted?.result?.steps?.[0];
       if(observedStep?.type==="extract"&&Array.isArray(observedStep?.items)){
         record.observation=observedStep.items.slice(0,10).map((x:any)=>String(x?.text||"").slice(0,1000));
