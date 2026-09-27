@@ -61,6 +61,11 @@ Controls: fail-closed intent validation, deterministic project identifiers, mand
 ### Deployment-plane compromise
 Controls: constant-time Deploy Plane control-token checks, bounded request bodies, secret-shaped job-field rejection, immutable deployment requests, explicit state transitions, persistent verification/rollback evidence, HTTPS-or-loopback internal client transport, and adapter isolation. Provider/host credentials are not stored in deployment jobs.
 
+### Domain-agent confused-deputy, credential and replay risk
+Controls: stable HTTPS agent identity, tenant binding, provider/tenant matching, credential-free provider-grant records, authorization-evidence hash binding, authority-lease subject and intent binding, scope/impact/time evaluation, explicit owner-only boundaries, automatic refresh only for refreshable grants, pre-routing authorization, credential-isolated adapters, bounded request bodies, constant-time control-token checks, tenant-scoped idempotency, and deterministic audit fingerprints. Reusing an idempotency key for a different task fails closed.
+
+The domain name itself grants no provider authority. Missing consent, revoked grants, insufficient scopes, 2FA, identity verification, legal consent, and payment boundaries must not be inferred or bypassed.
+
 ### Audit tampering
 Controls: hash-chained audit events and retained head checkpoint. This is tamper-evident application storage, not an independent hardware/external trust anchor.
 
