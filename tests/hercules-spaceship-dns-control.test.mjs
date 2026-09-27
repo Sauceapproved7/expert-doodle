@@ -5,6 +5,7 @@ import {readFile} from "node:fs/promises";
 const edge = await readFile(new URL("../supabase/functions/hercules-spaceship-dns/index.ts", import.meta.url), "utf8");
 const edgeAdapter = await readFile(new URL("../supabase/functions/hercules-spaceship-dns/spaceship-dns.mjs", import.meta.url), "utf8");
 const canonicalAdapter = await readFile(new URL("../hercules-deploy/spaceship-dns.mjs", import.meta.url), "utf8");
+const privateControl = await readFile(new URL("../supabase/functions/hercules-private-bridge/spaceship-dns-control.ts", import.meta.url), "utf8");
 const migration = await readFile(
   new URL("../supabase/migrations/20260927043000_hercules_spaceship_dns_control_v1.sql", import.meta.url),
   "utf8",
@@ -59,4 +60,15 @@ test("reconcile requires explicit custom-conflict replacement", () => {
   assert.match(edge, /custom_conflict_requires_explicit_replacement/);
   assert.match(edge, /preflight\.blockingConflicts\.length/);
   assert.match(edge, /preflight\.deleteRecords\.length && !replaceCustomConflicts/);
+});
+
+
+test("private DNS control validates API credentials and normalizes reversed fields",()=>{
+  assert.match(privateControl,/async function providerClient/);
+  assert.match(privateControl,/await client\.listRecords\(DOMAIN\)/);
+  assert.match(privateControl,/apiKey:apiSecret/);
+  assert.match(privateControl,/apiSecret:apiKey/);
+  assert.match(privateControl,/spaceship_api_credentials_rejected/);
+  assert.match(privateControl,/hercules_spaceship_dns_configure_credentials/);
+  assert.match(privateControl,/external_api_normalized/);
 });
