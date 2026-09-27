@@ -9,6 +9,7 @@ import { chromium } from "playwright-core";
 
 const PORT = Number(process.env.PORT || 10000);
 const OWNER_KEY = String(process.env.HERCULES_BROWSER_OWNER_KEY || "");
+const RUNTIME_TOKEN = String(process.env.HERCULES_BROWSER_RUNTIME_TOKEN || "");
 const PUBLIC_DIR = fileURLToPath(new URL("./public/", import.meta.url));
 const MAX_BODY = 256 * 1024;
 const MAX_TIMEOUT = 60000;
@@ -76,6 +77,13 @@ function ownerAuthorized(req) {
   const supplied=cookie(req,"hb_owner");
   const expected=ownerCookieValue();
   return Boolean(supplied&&expected&&sameSecret(supplied,expected));
+}
+
+function internalAuthorized(req) {
+  const header=String(req.headers.authorization||"");
+  const prefix="Bearer ";
+  if(!RUNTIME_TOKEN || !header.startsWith(prefix))return false;
+  return sameSecret(header.slice(prefix.length),RUNTIME_TOKEN);
 }
 
 async function claim(req,res) {
@@ -482,8 +490,13 @@ http.createServer(async(req,res)=>{
     }
   }
 
-  if(url.pathname.startsWith("/api/")&&url.pathname!=="/api/claim"&&!ownerAuthorized(req)) {
-    return json(res,401,{ok:false,error:"owner_auth_required"});
+  if(
+    url.pathname.startsWith("/api/") &&
+    url.pathname!=="/api/claim" &&
+    !ownerAuthorized(req) &&
+    !internalAuthorized(req)
+  ) {
+    return json(res,401,{ok:false,error:"browser_auth_required"});
   }
 
   try {
