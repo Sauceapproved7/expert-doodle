@@ -114,7 +114,7 @@ test("Private Bridge handoff route is internal-only to issue and public only wit
 
 test("handoff reuses an existing authorization URL and does not rotate PKCE state on repeated opens",()=>{
   assert.match(mcp,/if\(handoff\.authorization_url\)/);
-  assert.match(mcp,/return Response\.redirect\(String\(handoff\.authorization_url\)/);
+  assert.match(mcp,/return \{completed:false,authorizationUrl:String\(handoff\.authorization_url\)\}/);
   const beginIndex=mcp.indexOf("const started=await beginAuthorization()");
   const reuseIndex=mcp.indexOf("if(handoff.authorization_url)");
   assert.ok(reuseIndex>=0&&beginIndex>reuseIndex);
