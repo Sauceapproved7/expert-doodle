@@ -21,15 +21,18 @@ test("Spaceship MCP OAuth uses official discovery and dynamic registration",()=>
   assert.doesNotMatch(mcp,/fetch\(endpoint,/);
   assert.match(mcp,/code_challenge_method.*S256/);
   assert.match(mcp,/openid offline_access mcp\.spaceship\.com/);
-  assert.match(mcp,/token_endpoint_auth_method:"none"/);
+  assert.match(mcp,/token_endpoint_auth_method:"client_secret_post"/);
   assert.match(mcp,/client_id/);
-  assert.doesNotMatch(mcp,/client_secret:clientSecret/);
+  assert.match(mcp,/client_secret_post/);
+  assert.match(mcp,/token_endpoint_auth_methods_supported/);
+  assert.match(mcp,/hercules_spaceship_mcp_store_registration/);
 });
 
-test("Spaceship public client registration stores no client secret",()=>{
+test("Spaceship MCP now rejects the obsolete public-client registration path",()=>{
   assert.match(publicOauthMigration,/hercules_spaceship_mcp_store_public_registration/);
   assert.match(publicOauthMigration,/client_secret_secret_ref=null/);
-  assert.match(publicOauthMigration,/PKCE/);
+  assert.doesNotMatch(mcp,/hercules_spaceship_mcp_store_public_registration/);
+  assert.match(mcp,/current\?\.client_id&&current\?\.client_secret_secret_ref/);
 });
 
 test("OAuth callback validates state and stores only Vault references",()=>{
@@ -43,7 +46,16 @@ test("OAuth callback validates state and stores only Vault references",()=>{
   assert.match(mcp,/hercules_spaceship_mcp_complete_authorization/);
   assert.doesNotMatch(mcp,/access_token\s*:\s*accessToken/);
   assert.doesNotMatch(mcp,/refresh_token\s*:\s*refreshToken/);
-  assert.doesNotMatch(mcp,/clientSecret=await secret/);
+  assert.match(mcp,/clientSecret=await secret\(current\.client_secret_secret_ref\)/);
+  assert.match(mcp,/params\.set\("client_secret",clientSecret\)/);
+  assert.match(mcp,/params\.delete\("client_secret"\)/);
+});
+
+test("OAuth callback and refresh both authenticate the token endpoint confidentially",()=>{
+  const uses=mcp.match(/postToken\(params,clientSecret\)/g)||[];
+  assert.ok(uses.length>=2,"authorization-code and refresh exchanges must both use the client secret");
+  assert.match(mcp,/code_verifier:verifier/);
+  assert.match(mcp,/grant_type:"refresh_token"/);
 });
 
 test("MCP transport initializes then calls DNS tools",()=>{
