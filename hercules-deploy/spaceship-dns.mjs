@@ -1,11 +1,19 @@
 const SPACESHIP_API_BASE = "https://spaceship.dev/api/v1";
 const DEFAULT_ALLOWED_DOMAINS = Object.freeze(["sauceapproved.com"]);
-const SUPPORTED_MANAGED_TYPES = new Set(["A", "AAAA", "CNAME"]);
+const SUPPORTED_MANAGED_TYPES = new Set(["A", "AAAA", "CNAME", "TXT", "MX"]);
 
 export const SHOPIFY_DNS_RECORDS = Object.freeze([
   Object.freeze({type:"A", name:"@", address:"23.227.38.65", ttl:3600}),
   Object.freeze({type:"AAAA", name:"@", address:"2620:0127:f00f:5::", ttl:3600}),
   Object.freeze({type:"CNAME", name:"www", cname:"shops.myshopify.com", ttl:3600}),
+]);
+
+export const RESEND_MAIL_DNS_RECORDS = Object.freeze([
+  Object.freeze({type:"TXT", name:"resend._domainkey", value:"p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC6+i+jh2KU91qQnRldgoE2THb9mwmwTlE+fJhKF6nZyhxvZWd826LtIVc2vZHATG5uBu0X0TxkfyO9pJAOth022HQWHHZR1TcoqeZK9LAJ/S5Jw8yY1htY9UvkH2niGQYluGZ+zMKmlMzwcTc7zwu/Q3Wemmcjhku+dPtYsbweiQIDAQAB", ttl:3600}),
+  Object.freeze({type:"MX", name:"send", exchange:"feedback-smtp.us-east-1.amazonses.com", preference:10, ttl:3600}),
+  Object.freeze({type:"TXT", name:"send", value:"v=spf1 include:amazonses.com ~all", ttl:3600}),
+  Object.freeze({type:"CNAME", name:"rsend", cname:"send.forge.rmta.net", ttl:3600}),
+  Object.freeze({type:"MX", name:"@", exchange:"inbound-smtp.us-east-1.amazonaws.com", preference:10, ttl:3600}),
 ]);
 
 const MANAGED_KEYS = new Set(SHOPIFY_DNS_RECORDS.map((record) => recordKey(record)));
@@ -46,6 +54,17 @@ function cleanManagedRecord(record, {includeTtl = true} = {}) {
     const cname = String(record.cname || "").trim().replace(/\.$/, "");
     if (!cname) throw new TypeError("CNAME canonical name required");
     out.cname = cname;
+  } else if (type === "TXT") {
+    const value = String(record.value ?? "");
+    if (!value) throw new TypeError("TXT value required");
+    out.value = value;
+  } else if (type === "MX") {
+    const exchange = String(record.exchange || "").trim().replace(/\.$/, "");
+    const preference = Number(record.preference);
+    if (!exchange) throw new TypeError("MX exchange required");
+    if (!Number.isInteger(preference) || preference < 0 || preference > 65535) throw new TypeError("MX preference out of range");
+    out.exchange = exchange;
+    out.preference = preference;
   } else {
     const address = String(record.address || "").trim();
     if (!address) throw new TypeError(type + " address required");
@@ -59,23 +78,29 @@ function cleanManagedRecord(record, {includeTtl = true} = {}) {
   }
   return out;
 }
-
 function normalizedValue(record) {
   const clean = cleanManagedRecord(record, {includeTtl:false});
-  return clean.type === "CNAME"
-    ? clean.cname.toLowerCase()
-    : clean.address.toLowerCase();
+  if (clean.type === "TXT") return clean.value;
+  if (clean.type === "MX") return String(clean.preference) + ":" + clean.exchange.toLowerCase();
+  if (clean.type === "CNAME") return clean.cname.toLowerCase();
+  return clean.address.toLowerCase();
 }
-
 function sameManagedRecord(a, b) {
   return recordKey(a) === recordKey(b) && normalizedValue(a) === normalizedValue(b);
 }
 
-export function planShopifyDnsReconciliation(existingRecords = []) {
+function planManagedDnsReconciliation(existingRecords = [], desiredRecords = []) {
   if (!Array.isArray(existingRecords)) throw new TypeError("existingRecords must be an array");
+  if (!Array.isArray(desiredRecords) || desiredRecords.length < 1) throw new TypeError("desiredRecords must be a non-empty array");
 
-  const desired = SHOPIFY_DNS_RECORDS.map((record) => ({...record}));
-  const desiredByKey = new Map(desired.map((record) => [recordKey(record), record]));
+  const desired = desiredRecords.map((record) => cleanManagedRecord(record));
+  const desiredByKey = new Map();
+  for (const record of desired) {
+    const key = recordKey(record);
+    if (desiredByKey.has(key)) throw new Error("duplicate managed DNS key: " + key);
+    desiredByKey.set(key, record);
+  }
+
   const deleteRecords = [];
   const blockingConflicts = [];
   const unchanged = [];
@@ -116,6 +141,14 @@ export function planShopifyDnsReconciliation(existingRecords = []) {
     safeToApply:blockingConflicts.length === 0,
     ready:blockingConflicts.length === 0 && deleteRecords.length === 0 && saveRecords.length === 0,
   };
+}
+
+export function planShopifyDnsReconciliation(existingRecords = []) {
+  return planManagedDnsReconciliation(existingRecords, SHOPIFY_DNS_RECORDS);
+}
+
+export function planResendMailDnsReconciliation(existingRecords = []) {
+  return planManagedDnsReconciliation(existingRecords, RESEND_MAIL_DNS_RECORDS);
 }
 
 export class SpaceshipDnsClient {

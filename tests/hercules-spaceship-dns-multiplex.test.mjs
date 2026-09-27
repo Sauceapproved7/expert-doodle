@@ -37,3 +37,11 @@ test("SQL operator bridge targets existing private bridge function slot", () => 
   assert.match(migration, /purpose = 'spaceship-dns'/);
   assert.match(migration, /x-hercules-internal-key/);
 });
+
+
+test("private DNS control exposes fail-closed Resend mail inspect and reconcile actions", () => {
+  assert.match(control,/inspect_resend_mail_dns/);
+  assert.match(control,/reconcile_resend_mail_dns/);
+  assert.match(control,/planResendMailDnsReconciliation/);
+  assert.match(control,/RESEND_MAIL_DNS_RECORDS/);
+});
