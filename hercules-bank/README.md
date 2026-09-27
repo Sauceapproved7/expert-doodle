@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: sandbox ledger core
+## Current maturity: durable sandbox ledger core
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -19,7 +19,9 @@ The runtime currently provides:
 - fail-closed overdraft protection;
 - idempotent posting;
 - tamper-evident SHA-256 journal chaining;
-- single-currency transaction enforcement.
+- single-currency transaction enforcement;
+- verified restart snapshots;
+- atomic local state-file replacement with mode `0600` temporary files.
 
 ## Core invariant
 
@@ -30,6 +32,16 @@ sum(DEBIT amountMinor) === sum(CREDIT amountMinor)
 ```
 
 No floating-point currency amounts are accepted.
+
+## Durability boundary
+
+`HerculesBankStateStore` persists verified ledger snapshots using a same-directory
+temporary file followed by atomic rename. Loading re-verifies the journal hash chain
+and replays every transaction through the ledger invariants before returning state.
+
+This is local-process durability, not a multi-writer transactional database. The
+customer metadata held by `HerculesBankSandbox` is not yet part of the persisted
+snapshot.
 
 ## Trust boundary
 
