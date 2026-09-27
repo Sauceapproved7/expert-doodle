@@ -17,6 +17,9 @@ export function createHerculesBankBrowserService({
   secureSessionCookies=false,
   adminRoles,
   complianceOperations=null,
+  productionReadinessInputs={},
+  qualificationEvidenceStore=null,
+  currentAdapterQualification=null,
 }={}){
   if(!runtime)throw new TypeError("runtime is required");
   const authClient=new HerculesBaseAuthClient({
@@ -41,6 +44,9 @@ export function createHerculesBankBrowserService({
     nowSeconds,
     browserSessions,
     complianceOperations,
+    productionReadinessInputs,
+    qualificationEvidenceStore,
+    currentAdapterQualification,
     ...(adminRoles?{adminRoles}:{}),
   });
   return Object.freeze({
@@ -49,6 +55,8 @@ export function createHerculesBankBrowserService({
     authClient,
     browserSessions,
     complianceOperations,
+    qualificationEvidenceStore,
+    currentAdapterQualification,
   });
 }
 
