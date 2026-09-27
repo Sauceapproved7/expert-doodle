@@ -14,7 +14,7 @@ const mcp=await readFile(
 test("business email DNS autopilot waits for authorized Spaceship OAuth",()=>{
   assert.match(sql,/hercules_business_email_dns_autopilot_tick/);
   assert.match(sql,/hercules_spaceship_mcp_oauth/);
-  assert.match(sql,/status='configured'/);
+  assert.match(sql,/coalesce\(v_oauth_status,'unconfigured'\) <> 'configured'/);
   assert.match(sql,/waiting_provider_authorization/);
 });
 
