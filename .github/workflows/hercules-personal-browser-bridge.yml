@@ -1,0 +1,28 @@
+name: Hercules Personal Browser Bridge
+
+on:
+  pull_request:
+    paths:
+      - "hercules-runtime/personal-browser-bridge/**"
+      - "supabase/functions/hercules-personal-browser-bridge/**"
+      - "supabase/migrations/*hercules_personal_browser_bridge*.sql"
+      - "tests/hercules-personal-browser-bridge.test.mjs"
+      - ".github/workflows/hercules-personal-browser-bridge.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  personal-browser-bridge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Enforce owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify personal browser bridge
+        run: node --test tests/hercules-personal-browser-bridge.test.mjs
