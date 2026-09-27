@@ -46,7 +46,7 @@ test("cutover promotes standalone and preserves explicit rollback metadata",()=>
   assert.match(cutover,/"auth_mode"\s*:\s*"one_time_broker"/);
   assert.match(cutover,/"engine"\s*:\s*"playwright-local-chromium"/);
   assert.match(cutover,/"service_id"\s*:\s*"srv-daskfp8u01pc73cbvj0g"/);
-  assert.match(cutover,/"rollback"/);
+  assert.match(cutover,/['"]rollback['"]/);
   assert.match(cutover,/hercules-browser-gateway-v2/);
   assert.match(cutover,/token_secret_ref/);
   assert.doesNotMatch(cutover,/anti_bot_bypass["']?\s*[:,]\s*true/i);
