@@ -8,7 +8,7 @@ const agent=await readFile(
 );
 
 test("browser agent exposes deterministic observation evaluator version",()=>{
-  assert.match(agent,/version:"0\.10\.0"/);
+  assert.match(agent,/version:"0\.11\.0"/);
   assert.match(agent,/function deterministicObservation/);
   assert.match(agent,/deterministic_navigation_observation/);
 });

@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "governance/browser-routing-policy.json"
-      - "supabase/migrations/*hercules_browser_runtime_monitor_v2.sql"
+      - "supabase/migrations/*hercules_browser_runtime_monitor_v2*.sql"
       - "tests/hercules-browser-launch-hardening.test.mjs"
       - "docs/launch/HERCULES-BROWSER-LAUNCH-CERTIFICATION-2026-09-27.md"
       - ".github/workflows/hercules-browser-launch-hardening.yml"

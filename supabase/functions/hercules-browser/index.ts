@@ -83,12 +83,12 @@ function transientClosedSession(error:unknown){
 
 function transientWorkerFailure(error:unknown){
   const message=error instanceof Error?error.message:String(error||"");
-  return /worker_http_(?:502|503|504):/i.test(message)
-    || /failed to connect to backend/i.test(message)
+  return /failed to connect to backend/i.test(message)
     || /service unavailable/i.test(message)
     || /bad gateway/i.test(message)
     || /too many requests/i.test(message)
     || /websocket was closed before the connection was established/i.test(message)
+    || /connectOverCDP[\s\S]*(?:429|502|503|504)/i.test(message)
     || /ws unexpected response[^\n]*(?:429|502|503|504)/i.test(message);
 }
 function delay(ms:number){
@@ -224,7 +224,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.5.0",
+    ok:true,service:"hercules-browser",version:"1.5.1",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,securityChallengeDetection:true,antiBotBypass:false,controlPlane:"Hercules"
   });

@@ -4,13 +4,12 @@ import {readFile,readdir} from "node:fs/promises";
 
 const root=new URL("../",import.meta.url);
 const routing=JSON.parse(await readFile(new URL("../governance/browser-routing-policy.json",import.meta.url),"utf8"));
-const migrationName=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
-  .filter(x=>x.endsWith("_hercules_browser_runtime_monitor_v2.sql"))
-  .sort()
-  .at(-1);
-const migration=migrationName
-  ? await readFile(new URL("../supabase/migrations/"+migrationName,import.meta.url),"utf8")
-  : "";
+const migrationNames=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
+  .filter(x=>x.includes("hercules_browser_runtime_monitor_v2"))
+  .sort();
+const migration=(await Promise.all(
+  migrationNames.map(name=>readFile(new URL("../supabase/migrations/"+name,import.meta.url),"utf8"))
+)).join("\n");
 
 test("Hercules Browser remains the default owned browser route",()=>{
   assert.equal(routing.defaultBrowser,"hercules-browser");
@@ -65,4 +64,33 @@ test("browser agent re-checks goal completion after each action before planning 
   assert.match(agent,/aiObserve\(goal,after,history\)/);
   assert.match(agent,/post_action_observation_complete/);
   assert.match(agent,/decision:"finish"[\s\S]*observationSource:"post_action"/);
+});
+
+test("browser agent deterministically completes a followed-link title goal after the click",async()=>{
+  const agent=await readFile(new URL("../supabase/functions/hercules-browser-agent/index.ts",import.meta.url),"utf8");
+  assert.match(agent,/function postActionSatisfaction\(goal:string,before:any,after:any,decision:string\)/);
+  assert.match(agent,/follow(?:ed|ing)?|learn more|destination/i);
+  assert.match(agent,/destination_title_satisfied/);
+  assert.match(agent,/const postAction=postActionSatisfaction\(goal,page,after,plan\.decision\)/);
+  assert.match(agent,/if\(postAction\)/);
+});
+
+test("browser transient recovery never retries a generic interaction 502",async()=>{
+  const browser=await readFile(new URL("../supabase/functions/hercules-browser/index.ts",import.meta.url),"utf8");
+  const start=browser.indexOf("function transientWorkerFailure");
+  const end=browser.indexOf("function delay",start);
+  const block=browser.slice(start,end);
+  assert.doesNotMatch(block,/worker_http_\(\?:502\|503\|504\)/);
+  assert.match(block,/failed to connect to backend/);
+  assert.match(block,/websocket was closed before the connection was established/);
+});
+
+test("runtime monitor distinguishes upstream transport failures from interaction failures",async()=>{
+  const files=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
+    .filter(x=>x.includes("hercules_browser_runtime_monitor_v2"))
+    .sort();
+  const latest=await readFile(new URL("../supabase/migrations/"+files.at(-1),import.meta.url),"utf8");
+  assert.doesNotMatch(latest,/worker_http_\(502\|503\|504\)\|429 Too Many Requests/);
+  assert.match(latest,/failed to connect to backend/);
+  assert.match(latest,/websocket was closed before the connection was established/);
 });
