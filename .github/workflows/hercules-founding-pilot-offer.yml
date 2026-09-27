@@ -6,6 +6,7 @@ on:
       - "governance/hercules-founding-pilot-offer-v1.json"
       - "docs/launch/HERCULES-FOUNDING-PILOT-OFFER-V1.md"
       - "supabase/functions/hercules-launch/**"
+      - "supabase/migrations/*hercules_controlled_founding_pilot_launch*"
       - "tests/hercules-founding-pilot-offer.test.mjs"
       - ".github/workflows/hercules-founding-pilot-offer.yml"
   workflow_dispatch:
