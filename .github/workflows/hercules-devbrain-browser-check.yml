@@ -1,0 +1,22 @@
+name: Hercules DevBrain Browser Check
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-devbrain-fabric/**"
+      - "tests/hercules-devbrain-browser-check.test.mjs"
+      - "docs/HERCULES-DEVBRAIN-BROWSER-FABRIC-REPAIR-V0.1.md"
+      - ".github/workflows/hercules-devbrain-browser-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --test tests/hercules-devbrain-browser-check.test.mjs
