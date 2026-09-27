@@ -16,7 +16,7 @@ The handoff lives in the existing Hercules Integrations UI. It does not create a
 Only the already-approved public LinkedIn company-page fields are shown:
 
 - Page name: SauceApproved
-- Legal entity: SauceApproved Enterprise LLC
+- Legal entity: SauceApproved enterprise LLC
 - Industry: Software Development
 - Company type: Privately Held
 - Public tagline
