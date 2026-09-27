@@ -17,7 +17,7 @@ declare v_ref uuid;
 begin
   if length(trim(coalesce(p_client_id,''))) < 4 then raise exception 'spaceship_mcp_client_id_invalid'; end if;
   if length(trim(coalesce(p_client_secret,''))) < 8 then raise exception 'spaceship_mcp_client_secret_invalid'; end if;
-  if p_redirect_uri !~ '^https://xbwuablxhhwsaoomsoco[.]supabase[.]co/functions/v1/hercules-private-bridge' then
+  if p_redirect_uri <> 'https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-private-bridge?spaceship_mcp_oauth_callback=1' then
     raise exception 'spaceship_mcp_redirect_uri_invalid';
   end if;
 
