@@ -34,11 +34,12 @@ test("pricing terms and privacy require explicit typed confirmation",()=>{
   assert.match(ui,/window\.prompt\('Type exactly: '/);
 });
 
-test("auth hardening cannot be self-approved",()=>{
+test("auth hardening is system-computed and cannot be owner self-approved",()=>{
   assert.match(bridge,/approvalType==='auth_hardening'&&decision==='approved'/);
-  assert.match(bridge,/auth_hardening_requires_verified_platform_evidence/);
-  assert.match(bridge,/leaked-password protection/);
-  assert.match(ui,/Requires verified leaked-password protection evidence/);
+  assert.match(bridge,/auth_hardening_is_system_computed/);
+  assert.match(bridge,/hercules_password_defense_status/);
+  assert.match(bridge,/hercules-password-defense-v2/);
+  assert.match(ui,/System-computed from live Hercules Password Defense v2 evidence/);
 });
 
 test("decision writes are audited and launch gate is refreshed",()=>{
