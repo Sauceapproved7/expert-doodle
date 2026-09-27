@@ -196,11 +196,10 @@ export class HerculesReadinessDriftSentinel{
   snapshot(){return clone(this.#state)}
 
   check({dossier,now=new Date().toISOString(),warningHours=48}={}){
-    const checkedAt=iso(now,"now");
-    const warning=positiveInteger(warningHours,"warningHours",24*30);
-    const current=sanitizeDossier(dossier);
-
     const operation=this.#tail.then(async()=>{
+      const checkedAt=iso(now,"now");
+      const warning=positiveInteger(warningHours,"warningHours",24*30);
+      const current=sanitizeDossier(dossier);
       const candidate=verifyState(this.#state);
       const previous=candidate.events.at(-1)?.snapshot??null;
       const findings=evaluateFindings(previous,current,checkedAt,warning);
