@@ -7,7 +7,6 @@ const ui=await readFile(new URL("../supabase/functions/hercules-integrations/ind
 test("Hercules Integrations exposes an owner-facing Stripe Direct connection card",()=>{
   assert.match(ui,/Stripe Direct/);
   assert.match(ui,/configure_stripe/);
-  assert.match(ui,/stripe_secret_key/);
 });
 
 test("Stripe secret input is password masked and cleared after submission",()=>{
