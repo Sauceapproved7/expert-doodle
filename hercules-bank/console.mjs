@@ -152,6 +152,10 @@ async function refreshAdmin(){
   try{
     const data=await api("/v1/admin/overview");$("ownerPanel").hidden=false;
     $("adminAccounts").textContent=String(data.accountCount);$("adminCustomers").textContent=String(data.customerCount);$("adminBalance").textContent=money(data.totalCustomerBalanceMinor,data.currency);
+    $("fundAccount").innerHTML="";
+    for(const account of data.accounts||[]){
+      const option=document.createElement("option");option.value=account.id;option.textContent=account.id+" — "+money(account.balanceMinor,account.currency);$("fundAccount").appendChild(option);
+    }
   }catch(error){if(error.statusCode===403){$("ownerPanel").hidden=true;return}throw error}
 }
 async function connect(token){
