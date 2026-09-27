@@ -45,3 +45,45 @@ test("privacy candidate exposes a monitored in-product request channel",()=>{
   assert.match(privacy,/access, export, correction, deletion/i);
   assert.doesNotMatch(privacy,/smallzshon@gmail\.com/i);
 });
+
+
+const executionMigration=await readFile(
+  new URL("../supabase/migrations/20260927203000_hercules_privacy_data_rights_execution_v1.sql",import.meta.url),
+  "utf8"
+);
+const privacyOps=await readFile(
+  new URL("../supabase/functions/hercules-privacy-ops/index.ts",import.meta.url),
+  "utf8"
+);
+
+test("verified privacy exports are service-role-only and preserve protected records",()=>{
+  assert.match(executionMigration,/hercules_privacy_request_export/i);
+  assert.match(executionMigration,/requester_verified/i);
+  assert.match(executionMigration,/revoke all on function public\.hercules_privacy_request_export\(uuid\) from public, anon, authenticated/i);
+  assert.match(executionMigration,/protected_not_included/i);
+  assert.doesNotMatch(executionMigration,/delete from public\.hercules_audit_log/i);
+  assert.doesNotMatch(executionMigration,/delete from public\.hercules_security_events/i);
+});
+
+test("privacy deletion execution is exact-request-bound and fail closed",()=>{
+  assert.match(executionMigration,/hercules_privacy_request_delete_user_content/i);
+  assert.match(executionMigration,/privacy_deletion/i);
+  assert.match(executionMigration,/DELETE /i);
+  assert.match(executionMigration,/hercules_chat_tool_calls/i);
+  assert.match(executionMigration,/hercules_chat_memories/i);
+  assert.match(executionMigration,/hercules_chat_messages/i);
+  assert.match(executionMigration,/hercules_chat_sessions/i);
+  assert.match(executionMigration,/hercules_sessions/i);
+  assert.match(executionMigration,/hercules_projects/i);
+  assert.doesNotMatch(executionMigration,/delete from public\.hercules_memberships/i);
+  assert.doesNotMatch(executionMigration,/delete from public\.hercules_billing/i);
+});
+
+test("privacy ops requires authenticated owner confirmation before deletion",()=>{
+  assert.match(privacyOps,/owner_or_admin_required/i);
+  assert.match(privacyOps,/owner_required/i);
+  assert.match(privacyOps,/privacy_export/i);
+  assert.match(privacyOps,/privacy_deletion_plan/i);
+  assert.match(privacyOps,/privacy_delete_user_content/i);
+  assert.match(privacyOps,/explicit_confirmation_required/i);
+});
