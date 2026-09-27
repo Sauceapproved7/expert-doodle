@@ -86,3 +86,14 @@ test("provider usage is reserved before the provider side effect",()=>{
   assert.ok(usage>=0);
   assert.ok((internal<0||usage<internal)&&(owner<0||usage<owner));
 });
+
+test("commercial API access has an owner-facing API key lifecycle",()=>{
+  assert.match(agent,/domain_agent_api_key_issue/);
+  assert.match(agent,/domain_agent_api_key_revoke/);
+  assert.match(agent,/hercules_api_keys/);
+  assert.match(agent,/key_hash/);
+  assert.match(agent,/key_prefix/);
+  assert.match(agent,/crypto\.getRandomValues/);
+  assert.match(agent,/api_key_secret/);
+  assert.match(agent,/owner_admin_required_for_api_key_management/);
+});
