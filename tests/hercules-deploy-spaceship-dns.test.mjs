@@ -75,12 +75,12 @@ test("reconcile deletes only conflicting target records, writes missing Shopify 
         item.type === record.type && item.name === record.name &&
         (item.address ?? item.cname) === (record.address ?? record.cname)
       ));
-      return new Response("", {status:204});
+      return new Response(null, {status:204});
     }
     if (method === "PUT") {
       const payload = JSON.parse(init.body);
       records.push(...payload.items.map((item) => ({...item, group:"custom"})));
-      return new Response("", {status:204});
+      return new Response(null, {status:204});
     }
     throw new Error("unexpected method");
   };
