@@ -32,6 +32,7 @@ export function bankConsoleHtml(){
         <button class="nav active" data-view="overview">Overview</button>
         <button class="nav" data-view="transfer">Transfer</button>
         <button class="nav" data-view="activity">Activity</button>
+        <button id="ownerNav" class="nav" data-view="owner" hidden>Owner</button>
       </nav>
       <div class="rail-bottom">
         <div class="sandbox-note"><strong>Sandbox mode</strong><span>No real deposits or external rails.</span></div>
@@ -73,6 +74,27 @@ export function bankConsoleHtml(){
         <div class="section-head"><h3>Account activity</h3><select id="statementAccount"></select></div>
         <div class="panel"><div id="statementMeta" class="muted"></div><div id="activity" class="activity-list"></div></div>
       </section>
+
+      <section id="ownerView" class="view" hidden>
+        <div class="section-head">
+          <div><div class="eyebrow">OWNER CONTROLS</div><h3>Sandbox control center</h3></div>
+          <span class="owner-badge">OWNER</span>
+        </div>
+        <div class="owner-metrics">
+          <div><span>Customer accounts</span><strong id="ownerAccountCount">0</strong></div>
+          <div><span>Customers</span><strong id="ownerCustomerCount">0</strong></div>
+          <div><span>Sandbox liabilities</span><strong id="ownerLiabilities">$0.00</strong></div>
+        </div>
+        <div class="panel owner-panel">
+          <div class="eyebrow">SANDBOX FUNDING</div>
+          <h3>Add sandbox funds</h3>
+          <p>Credit test value to a customer account. No external money moves.</p>
+          <label>Account<select id="ownerFundAccount"></select></label>
+          <label>Amount (USD)<input id="ownerFundAmount" inputmode="decimal" placeholder="100.00"></label>
+          <button id="ownerFund" class="primary">Add sandbox funds</button>
+          <div id="ownerStatus" class="message"></div>
+        </div>
+      </section>
     </section>
   </section>
 </main>
@@ -81,13 +103,13 @@ export function bankConsoleHtml(){
 }
 
 export function bankConsoleCss(){
-  return `:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f5f7fb;background:#07090d;--panel:#10141b;--panel2:#151b25;--line:#252d3a;--muted:#8b96a8;--accent:#f4d27a;--accent2:#c89e38}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 70% -20%,#252017 0,transparent 34%),#07090d}.ambient{position:fixed;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.025),transparent 25%,transparent 75%,rgba(244,210,122,.025))}.topbar{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--line);background:rgba(7,9,13,.86);backdrop-filter:blur(16px);position:sticky;top:0;z-index:5}.brand{display:flex;align-items:center;gap:12px}.brand strong{display:block;letter-spacing:.12em;font-size:13px}.brand span{display:inline-block;margin-top:4px;padding:2px 7px;border:1px solid #5a4c29;border-radius:999px;color:var(--accent);font-size:10px;letter-spacing:.16em}.mark,.avatar{display:grid;place-items:center;background:linear-gradient(145deg,#f5dc99,#9b7628);color:#0b0d10;font-weight:900}.mark{width:38px;height:38px;border-radius:11px}.avatar{width:42px;height:42px;border-radius:50%}.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.status i{width:7px;height:7px;border-radius:50%;background:#57d38c;box-shadow:0 0 14px #57d38c}.login-shell{max-width:980px;margin:10vh auto;padding:40px}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--accent);font-weight:800}.login-shell h1{font-size:clamp(44px,7vw,78px);line-height:.96;letter-spacing:-.05em;margin:16px 0 20px;max-width:820px}.lead{color:#a8b1c1;max-width:570px;font-size:18px;line-height:1.6}.login-card{margin-top:34px;max-width:450px;background:rgba(16,20,27,.9);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 26px 70px rgba(0,0,0,.35)}label{display:block;color:#aeb7c6;font-size:12px;margin:12px 0}input,select{width:100%;margin-top:7px;padding:13px 14px;border-radius:11px;border:1px solid #303848;background:#090c11;color:#fff;outline:none}input:focus,select:focus{border-color:#7d6b40;box-shadow:0 0 0 3px rgba(244,210,122,.08)}button{font:inherit;cursor:pointer}.primary{border:0;border-radius:11px;padding:13px 16px;font-weight:850;background:linear-gradient(135deg,#f5dc99,#b88b2f);color:#111}.login-card .primary{width:100%;margin-top:10px}.quiet{border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:#10151d;color:#dce2ec}.compact{padding:9px 12px;font-size:12px}.message{min-height:20px;margin-top:12px;color:#bac3d2;font-size:12px}#app{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 72px)}.rail{padding:22px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column}.profile{display:flex;gap:11px;align-items:center;padding:8px}.profile strong{display:block;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis}.profile span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.rail nav{margin-top:28px;display:grid;gap:7px}.nav{border:0;background:transparent;color:#9ca6b6;text-align:left;padding:12px;border-radius:10px;font-weight:700}.nav.active,.nav:hover{background:#141a23;color:#fff}.rail-bottom{margin-top:auto}.sandbox-note{padding:13px;border:1px solid #4b422b;border-radius:12px;background:#17150f;margin-bottom:10px}.sandbox-note strong,.sandbox-note span{display:block}.sandbox-note strong{font-size:12px;color:var(--accent)}.sandbox-note span{font-size:10px;color:#a49a7f;margin-top:4px;line-height:1.4}.workspace{padding:34px;max-width:1260px;width:100%;margin:0 auto}.workspace-head,.section-head{display:flex;align-items:center;justify-content:space-between;gap:16px}.workspace-head h2{font-size:34px;margin:8px 0 24px;letter-spacing:-.03em}.hero-balance{padding:28px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(135deg,#151a22,#0e1218);margin-bottom:28px}.hero-balance span,.hero-balance small{display:block;color:var(--muted)}.hero-balance strong{display:block;font-size:56px;letter-spacing:-.05em;margin:10px 0}.hero-balance small{font-size:11px}.section-head h3,.panel h3{margin:8px 0 14px}.account-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.account-card,.panel{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:18px}.account-card{cursor:pointer}.account-card:hover{border-color:#4b5668}.account-card .balance{font-size:28px;font-weight:850;margin:18px 0 5px}.account-id{color:var(--muted);font-size:11px;overflow-wrap:anywhere}.muted{color:var(--muted);font-size:12px}.activity-row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:15px 0;border-bottom:1px solid var(--line)}.activity-row:last-child{border-bottom:0}.credit{color:#6de7a6}.debit{color:#f0bd7e}@media(max-width:780px){.topbar{padding:0 16px}#app{grid-template-columns:1fr}.rail{border-right:0;border-bottom:1px solid var(--line)}.rail nav{grid-template-columns:repeat(3,1fr);margin-top:14px}.nav{text-align:center}.rail-bottom{display:none}.workspace{padding:20px}.workspace-head{align-items:flex-start}.hero-balance strong{font-size:44px}}`;
+  return `:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#f5f7fb;background:#07090d;--panel:#10141b;--panel2:#151b25;--line:#252d3a;--muted:#8b96a8;--accent:#f4d27a;--accent2:#c89e38}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 70% -20%,#252017 0,transparent 34%),#07090d}.ambient{position:fixed;inset:0;pointer-events:none;background:linear-gradient(120deg,rgba(255,255,255,.025),transparent 25%,transparent 75%,rgba(244,210,122,.025))}.topbar{height:72px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:1px solid var(--line);background:rgba(7,9,13,.86);backdrop-filter:blur(16px);position:sticky;top:0;z-index:5}.brand{display:flex;align-items:center;gap:12px}.brand strong{display:block;letter-spacing:.12em;font-size:13px}.brand span{display:inline-block;margin-top:4px;padding:2px 7px;border:1px solid #5a4c29;border-radius:999px;color:var(--accent);font-size:10px;letter-spacing:.16em}.mark,.avatar{display:grid;place-items:center;background:linear-gradient(145deg,#f5dc99,#9b7628);color:#0b0d10;font-weight:900}.mark{width:38px;height:38px;border-radius:11px}.avatar{width:42px;height:42px;border-radius:50%}.status{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}.status i{width:7px;height:7px;border-radius:50%;background:#57d38c;box-shadow:0 0 14px #57d38c}.login-shell{max-width:980px;margin:10vh auto;padding:40px}.eyebrow{font-size:11px;letter-spacing:.18em;color:var(--accent);font-weight:800}.login-shell h1{font-size:clamp(44px,7vw,78px);line-height:.96;letter-spacing:-.05em;margin:16px 0 20px;max-width:820px}.lead{color:#a8b1c1;max-width:570px;font-size:18px;line-height:1.6}.login-card{margin-top:34px;max-width:450px;background:rgba(16,20,27,.9);border:1px solid var(--line);border-radius:18px;padding:24px;box-shadow:0 26px 70px rgba(0,0,0,.35)}label{display:block;color:#aeb7c6;font-size:12px;margin:12px 0}input,select{width:100%;margin-top:7px;padding:13px 14px;border-radius:11px;border:1px solid #303848;background:#090c11;color:#fff;outline:none}input:focus,select:focus{border-color:#7d6b40;box-shadow:0 0 0 3px rgba(244,210,122,.08)}button{font:inherit;cursor:pointer}.primary{border:0;border-radius:11px;padding:13px 16px;font-weight:850;background:linear-gradient(135deg,#f5dc99,#b88b2f);color:#111}.login-card .primary{width:100%;margin-top:10px}.quiet{border:1px solid var(--line);border-radius:10px;padding:10px 13px;background:#10151d;color:#dce2ec}.compact{padding:9px 12px;font-size:12px}.message{min-height:20px;margin-top:12px;color:#bac3d2;font-size:12px}#app{display:grid;grid-template-columns:260px 1fr;min-height:calc(100vh - 72px)}.rail{padding:22px 18px;border-right:1px solid var(--line);display:flex;flex-direction:column}.profile{display:flex;gap:11px;align-items:center;padding:8px}.profile strong{display:block;font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis}.profile span{display:block;color:var(--muted);font-size:11px;margin-top:3px}.rail nav{margin-top:28px;display:grid;gap:7px}.nav{border:0;background:transparent;color:#9ca6b6;text-align:left;padding:12px;border-radius:10px;font-weight:700}.nav.active,.nav:hover{background:#141a23;color:#fff}.rail-bottom{margin-top:auto}.sandbox-note{padding:13px;border:1px solid #4b422b;border-radius:12px;background:#17150f;margin-bottom:10px}.sandbox-note strong,.sandbox-note span{display:block}.sandbox-note strong{font-size:12px;color:var(--accent)}.sandbox-note span{font-size:10px;color:#a49a7f;margin-top:4px;line-height:1.4}.workspace{padding:34px;max-width:1260px;width:100%;margin:0 auto}.workspace-head,.section-head{display:flex;align-items:center;justify-content:space-between;gap:16px}.workspace-head h2{font-size:34px;margin:8px 0 24px;letter-spacing:-.03em}.hero-balance{padding:28px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(135deg,#151a22,#0e1218);margin-bottom:28px}.hero-balance span,.hero-balance small{display:block;color:var(--muted)}.hero-balance strong{display:block;font-size:56px;letter-spacing:-.05em;margin:10px 0}.hero-balance small{font-size:11px}.section-head h3,.panel h3{margin:8px 0 14px}.account-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}.account-card,.panel{border:1px solid var(--line);border-radius:16px;background:var(--panel);padding:18px}.account-card{cursor:pointer}.account-card:hover{border-color:#4b5668}.account-card .balance{font-size:28px;font-weight:850;margin:18px 0 5px}.account-id{color:var(--muted);font-size:11px;overflow-wrap:anywhere}.muted{color:var(--muted);font-size:12px}.activity-row{display:grid;grid-template-columns:1fr auto;gap:12px;padding:15px 0;border-bottom:1px solid var(--line)}.activity-row:last-child{border-bottom:0}.credit{color:#6de7a6}.debit{color:#f0bd7e}.owner-badge{padding:6px 9px;border-radius:999px;border:1px solid #66552e;color:var(--accent);font-size:10px;letter-spacing:.15em}.owner-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0 20px}.owner-metrics>div{border:1px solid #463c25;border-radius:15px;background:linear-gradient(145deg,#17150f,#10141b);padding:18px}.owner-metrics span{display:block;color:var(--muted);font-size:11px}.owner-metrics strong{display:block;font-size:26px;margin-top:7px}.owner-panel{border-color:#463c25}@media(max-width:780px){.topbar{padding:0 16px}#app{grid-template-columns:1fr}.rail{border-right:0;border-bottom:1px solid var(--line)}.rail nav{grid-template-columns:repeat(3,1fr);margin-top:14px}.nav{text-align:center}.rail-bottom{display:none}.workspace{padding:20px}.workspace-head{align-items:flex-start}.hero-balance strong{font-size:44px}.owner-metrics{grid-template-columns:1fr}}`;
 }
 
 export function bankConsoleJs(){
   return `(()=>{
 const $=(id)=>document.getElementById(id);
-let csrf="";let me=null;let accounts=[];let selectedAccount=null;
+let csrf="";let me=null;let accounts=[];let selectedAccount=null;let ownerOverview=null;
 
 function money(minor){return new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format((Number(minor)||0)/100)}
 function msg(id,value){$(id).textContent=value||""}
@@ -144,6 +166,26 @@ async function refreshAccounts(){
   accounts=data.accounts||[];
   renderAccounts();
 }
+async function refreshOwner(){
+  try{
+    const data=await request("/v1/admin/overview");
+    ownerOverview=data;
+    $("ownerNav").hidden=false;
+    $("ownerAccountCount").textContent=String(data.accountCount);
+    $("ownerCustomerCount").textContent=String(data.customerCount);
+    $("ownerLiabilities").textContent=money(data.totalCustomerBalanceMinor);
+    $("ownerFundAccount").textContent="";
+    for(const account of data.accounts||[])$("ownerFundAccount").appendChild(accountOption(account));
+    return true;
+  }catch(error){
+    if(error.message==="forbidden"||error.message==="unauthorized"){
+      ownerOverview=null;
+      $("ownerNav").hidden=true;
+      return false;
+    }
+    throw error;
+  }
+}
 async function bootstrap(){
   const session=await request("/v1/session/csrf");
   csrf=session.csrfToken;
@@ -151,6 +193,7 @@ async function bootstrap(){
   $("userEmail").textContent=me.email||me.id;
   $("loginPanel").hidden=true;$("app").hidden=false;
   await refreshAccounts();
+  await refreshOwner();
 }
 async function loadStatement(){
   const accountId=$("statementAccount").value||selectedAccount;
@@ -213,10 +256,27 @@ $("sendTransfer").onclick=async()=>{
   }catch(error){msg("transferStatus",error.message)}
 };
 $("statementAccount").onchange=()=>loadStatement().catch(e=>msg("statementMeta",e.message));
+$("ownerFund").onclick=async()=>{
+  try{
+    const amount=Math.round(Number($("ownerFundAmount").value.trim())*100);
+    if(!Number.isSafeInteger(amount)||amount<=0)throw new Error("Enter a valid positive amount.");
+    const accountId=$("ownerFundAccount").value;
+    if(!accountId)throw new Error("Select a customer account.");
+    await request("/v1/admin/fund-sandbox",{method:"POST",csrf:true,body:{
+      accountId,
+      amountMinor:amount,
+      idempotencyKey:"owner_web_"+crypto.randomUUID()
+    }});
+    $("ownerFundAmount").value="";
+    msg("ownerStatus","Sandbox funds added.");
+    await Promise.all([refreshOwner(),refreshAccounts()]);
+  }catch(error){msg("ownerStatus",error.message)}
+};
 for(const button of document.querySelectorAll(".nav"))button.onclick=async()=>{
   const view=button.dataset.view;
   showView(view);
   if(view==="activity")await loadStatement().catch(e=>msg("statementMeta",e.message));
+  if(view==="owner")await refreshOwner().catch(e=>msg("ownerStatus",e.message));
 };
 fetch("/health").then(r=>r.json()).then(data=>$("health").textContent=data.ok?"Financial core online":"Financial core unavailable").catch(()=>$("health").textContent="Financial core unavailable");
 bootstrap().catch(()=>{});
