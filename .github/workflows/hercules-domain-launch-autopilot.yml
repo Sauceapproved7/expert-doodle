@@ -1,0 +1,25 @@
+name: Hercules Domain Launch Autopilot
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*hercules_domain_launch_autopilot*"
+      - "tests/hercules-domain-launch-autopilot.test.mjs"
+      - "docs/HERCULES-DOMAIN-LAUNCH-AUTOPILOT-V1.md"
+      - ".github/workflows/hercules-domain-launch-autopilot.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  domain-launch-autopilot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify domain launch autopilot
+        run: node --test tests/hercules-domain-launch-autopilot.test.mjs
