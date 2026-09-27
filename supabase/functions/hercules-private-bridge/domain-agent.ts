@@ -12,7 +12,9 @@ const ACTIONS=new Set([
   'domain_agent_execute',
   'domain_agent_execution_status',
   'domain_agent_usage_status',
-  'domain_agent_identity_status'
+  'domain_agent_identity_status',
+  'domain_agent_api_key_issue',
+  'domain_agent_api_key_revoke'
 ]);
 const SAFE_WORKLOADS=new Set([
   'benchmark.echo',
@@ -96,6 +98,12 @@ const out=(body:unknown,status=200)=>new Response(JSON.stringify(body),{
 async function sha256(value:string){
   const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
   return [...new Uint8Array(bytes)].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+function randomHex(bytes=32){
+  const raw=new Uint8Array(bytes);
+  crypto.getRandomValues(raw);
+  return [...raw].map(v=>v.toString(16).padStart(2,'0')).join('');
 }
 
 function safeEqual(a:string,b:string){
@@ -339,6 +347,61 @@ async function identityStatus(organizationId:string){
   const {data,error}=await admin.rpc('hercules_domain_agent_identity_status',{p_organization_id:organizationId});
   if(error)throw new Error('identity_status_failed');
   return data||{};
+}
+
+async function manageApiKey(req:Request,body:any,action:string){
+  const owner=await ownerOrAdmin(req);
+  if(!owner)throw Object.assign(new Error('owner_admin_required_for_api_key_management'),{status:403});
+
+  if(action==='domain_agent_api_key_issue'){
+    const name=String(body.name||'Domain Agent API').trim();
+    if(name.length<1||name.length>80)throw Object.assign(new Error('valid_api_key_name_required'),{status:400});
+    const scopes=strings(body.scopes??['domain-agent:read','domain-agent:execute'],'scopes');
+    const allowed=new Set(['domain-agent:read','domain-agent:execute','domain-agent:*']);
+    if(scopes.length<1||scopes.some(x=>!allowed.has(x))){
+      throw Object.assign(new Error('invalid_domain_agent_api_key_scope'),{status:400});
+    }
+    let expiresAt:null|string=null;
+    if(body.expires_at!=null){
+      const when=new Date(String(body.expires_at));
+      if(!Number.isFinite(when.getTime())||when.getTime()<=Date.now()){
+        throw Object.assign(new Error('future_api_key_expiry_required'),{status:400});
+      }
+      expiresAt=when.toISOString();
+    }
+    const api_key_secret='hda_live_'+randomHex(32);
+    const key_hash=await sha256(api_key_secret);
+    const key_prefix=api_key_secret.slice(0,18);
+    const {data,error}=await admin.from('hercules_api_keys').insert({
+      organization_id:owner.organizationId,
+      created_by:owner.userId,
+      name,
+      key_prefix,
+      key_hash,
+      scopes,
+      status:'active',
+      expires_at:expiresAt
+    }).select('id,name,key_prefix,scopes,status,expires_at,created_at').single();
+    if(error)throw new Error('api_key_issue_failed');
+    return {
+      ok:true,
+      api_key:data,
+      api_key_secret,
+      secret_returned_once:true
+    };
+  }
+
+  const keyId=String(body.api_key_id||'').trim();
+  if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(keyId)){
+    throw Object.assign(new Error('valid_api_key_id_required'),{status:400});
+  }
+  const {data,error}=await admin.from('hercules_api_keys').update({
+    status:'revoked',
+    revoked_at:new Date().toISOString()
+  }).eq('id',keyId).eq('organization_id',owner.organizationId)
+    .select('id,name,key_prefix,scopes,status,expires_at,revoked_at').maybeSingle();
+  if(error||!data)throw Object.assign(new Error('api_key_not_found'),{status:404});
+  return {ok:true,api_key:data};
 }
 
 async function recordUsage(principal:Principal,requestId:string,metadata:Record<string,unknown>={}){
@@ -594,6 +657,10 @@ export async function handleDomainAgentRequest(req:Request){
     if(hasSensitiveInput(body))return out({error:'raw_credentials_not_accepted'},400);
     const action=String(body.action||'');
     if(!ACTIONS.has(action))return out({error:'unknown_domain_agent_action'},400);
+
+    if(action==='domain_agent_api_key_issue'||action==='domain_agent_api_key_revoke'){
+      return out(await manageApiKey(req,body,action));
+    }
 
     const requiredScope=action==='domain_agent_execute'?'domain-agent:execute':'domain-agent:read';
     const principal=await resolveOrganization(req,body,requiredScope);
