@@ -81,6 +81,12 @@ function transientClosedSession(error:unknown){
     || /target closed/i.test(message);
 }
 
+function transientNavigationContextFailure(error:unknown){
+  const message=error instanceof Error?error.message:String(error||"");
+  return /execution context was destroyed/i.test(message)
+    && /navigation/i.test(message);
+}
+
 function transientWorkerFailure(error:unknown){
   const message=error instanceof Error?error.message:String(error||"");
   return /failed to connect to backend/i.test(message)
@@ -224,7 +230,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.5.3",
+    ok:true,service:"hercules-browser",version:"1.5.4",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,securityChallengeDetection:true,antiBotBypass:false,controlPlane:"Hercules"
   });
@@ -282,25 +288,73 @@ Deno.serve(async(req:Request)=>{
     };
     let sessionRecoveryAttempts=0;
     let sessionRecovered=false;
+    let navigationRecoveryAttempts=0;
+    let navigationRecovered=false;
     let workerCall:any;
     try{
       workerCall=await callWorker(endpoint,w,payload,timeoutMs);
       workerAttemptsObserved+=workerCall.attempts;
     }catch(first){
       workerAttemptsObserved+=workerErrorAttempts(first);
-      if(!body?.sessionId||!targetUrl||!transientClosedSession(first))throw first;
-      sessionRecoveryAttempts=1;
-      const freshPayload={...payload};
-      delete freshPayload.sessionId;
-      freshPayload.persistSession=true;
-      try{
-        workerCall=await callWorker(endpoint,w,freshPayload,timeoutMs);
-        workerAttemptsObserved+=workerCall.attempts;
-      }catch(second){
-        workerAttemptsObserved+=workerErrorAttempts(second);
-        throw second;
+
+      if(action==="navigate"&&targetUrl&&!body?.sessionId&&transientNavigationContextFailure(first)){
+        navigationRecoveryAttempts=1;
+        const screenshotPayload={
+          ...payload,
+          action:"screenshot",
+          fullPage:false,
+          persistSession:true
+        };
+        delete screenshotPayload.sessionId;
+
+        let screenshotCall:any;
+        try{
+          screenshotCall=await callWorker(endpoint,w,screenshotPayload,timeoutMs);
+          workerAttemptsObserved+=screenshotCall.attempts;
+        }catch(second){
+          workerAttemptsObserved+=workerErrorAttempts(second);
+          throw second;
+        }
+
+        const recoveredSessionId=String(screenshotCall?.result?.sessionId||"");
+        if(!recoveredSessionId)throw new Error("navigation_recovery_session_unavailable");
+
+        const observePayload={
+          action:"scrape",
+          sessionId:recoveredSessionId,
+          selectors:[],
+          timeoutMs,
+          maxTextChars,
+          persistSession:true
+        };
+        try{
+          workerCall=await callWorker(endpoint,w,observePayload,timeoutMs);
+          workerAttemptsObserved+=workerCall.attempts;
+        }catch(second){
+          workerAttemptsObserved+=workerErrorAttempts(second);
+          throw second;
+        }
+        workerCall.result={
+          ...workerCall.result,
+          action:"navigate",
+          sessionId:recoveredSessionId
+        };
+        navigationRecovered=true;
+      }else{
+        if(!body?.sessionId||!targetUrl||!transientClosedSession(first))throw first;
+        sessionRecoveryAttempts=1;
+        const freshPayload={...payload};
+        delete freshPayload.sessionId;
+        freshPayload.persistSession=true;
+        try{
+          workerCall=await callWorker(endpoint,w,freshPayload,timeoutMs);
+          workerAttemptsObserved+=workerCall.attempts;
+        }catch(second){
+          workerAttemptsObserved+=workerErrorAttempts(second);
+          throw second;
+        }
+        sessionRecovered=true;
       }
-      sessionRecovered=true;
     }
     const result=workerCall.result;
     const securityChallenge=detectSecurityChallenge(result?.page);
@@ -315,6 +369,8 @@ Deno.serve(async(req:Request)=>{
       workerAttempts:totalAttempts,
       sessionRecoveryAttempts,
       sessionRecovered,
+      navigationRecoveryAttempts,
+      navigationRecovered,
       warmup:workerCall.warm,
       engine:w.metadata?.engine||"unknown",
       action,
