@@ -102,3 +102,13 @@ test("domain-agent internal control key is generated in-database and vaulted",()
   assert.match(migration,/hercules_store_secret/);
   assert.match(migration,/key_sha256/);
 });
+
+test("private audit writes go through a service-role-only RPC rather than private PostgREST exposure",()=>{
+  assert.match(migration,/create or replace function public\.hercules_domain_agent_record_audit/i);
+  assert.match(migration,/security definer/i);
+  assert.match(migration,/insert into private\.hercules_domain_agent_audit/i);
+  assert.match(migration,/revoke all on function public\.hercules_domain_agent_record_audit[\s\S]*from public, anon, authenticated/i);
+  assert.match(migration,/grant execute on function public\.hercules_domain_agent_record_audit[\s\S]*to service_role/i);
+  assert.match(edge,/admin\.rpc\('hercules_domain_agent_record_audit'/);
+  assert.doesNotMatch(edge,/schema\('private'\)/);
+});
