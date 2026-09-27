@@ -1,4 +1,4 @@
-const API="https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-personal-browser-bridge";
+const API="https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-integrations";
 const ALLOWED_ACTIONS=new Set(["observe","click","type","navigate","close"]);
 let polling=false;
 
