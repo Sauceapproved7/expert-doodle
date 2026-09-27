@@ -115,7 +115,7 @@ export function bankConsoleHtml(){
             <div><span>Open blockers</span><strong id="readyBlockers">0</strong></div>
           </div>
           <div id="readinessBlockerList" class="control-list"></div>
-          <div class="lock-note"><strong>Activation locked.</strong> This dossier is observational only and cannot enable external rails.</div>
+          <div class="lock-note"><strong>Activation locked.</strong> This dossier is observational only; external rails remain disabled.</div>
         </div>
         <div class="panel owner-panel">
           <div class="eyebrow">SANDBOX FUNDING</div>
