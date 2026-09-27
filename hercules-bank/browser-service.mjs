@@ -2,6 +2,7 @@ import {HerculesBaseAuthClient} from "./base-auth-client.mjs";
 import {createHerculesBankApi} from "./api.mjs";
 import {HerculesBankBrowserSessions} from "./browser-session.mjs";
 import {HerculesBankRuntime} from "./runtime.mjs";
+import {HerculesComplianceOperations} from "./compliance-operations.mjs";
 
 export function createHerculesBankBrowserService({
   runtime,
@@ -15,6 +16,7 @@ export function createHerculesBankBrowserService({
   randomBytes,
   secureSessionCookies=false,
   adminRoles,
+  complianceOperations=null,
 }={}){
   if(!runtime)throw new TypeError("runtime is required");
   const authClient=new HerculesBaseAuthClient({
@@ -38,6 +40,7 @@ export function createHerculesBankBrowserService({
     audience,
     nowSeconds,
     browserSessions,
+    complianceOperations,
     ...(adminRoles?{adminRoles}:{}),
   });
   return Object.freeze({
@@ -45,18 +48,23 @@ export function createHerculesBankBrowserService({
     runtime,
     authClient,
     browserSessions,
+    complianceOperations,
   });
 }
 
 export async function listenHerculesBankBrowserService({
   statePath,
+  complianceStatePath,
   currency="USD",
   host="127.0.0.1",
   port=38900,
   ...options
 }={}){
   const runtime=await HerculesBankRuntime.open({statePath,currency});
-  const service=createHerculesBankBrowserService({runtime,...options});
+  const complianceOperations=await HerculesComplianceOperations.open({
+    statePath:complianceStatePath??(String(statePath)+".compliance.json"),
+  });
+  const service=createHerculesBankBrowserService({runtime,complianceOperations,...options});
   await new Promise((resolve,reject)=>{
     const onError=(error)=>{
       service.server.off("listening",onListening);
