@@ -34,7 +34,9 @@ function renderLaunchDecisions(d){
     const row=document.createElement('div');row.className='launch-line';
     const left=document.createElement('div');
     const title=document.createElement('div');title.className='launch-key';title.textContent=type.replace('_',' ');
-    const current=document.createElement('div');current.className='launch-value '+decisionState(approvals[type]?.status);current.textContent=String(approvals[type]?.status||'pending').toUpperCase();
+    const authVerified=type==='auth_hardening'&&d?.authHardening?.verified===true;
+    const displayedStatus=authVerified?'verified':String(approvals[type]?.status||'pending');
+    const current=document.createElement('div');current.className='launch-value '+(authVerified?'pass':decisionState(displayedStatus));current.textContent=displayedStatus.toUpperCase();
     left.append(title,current);
     const actions=document.createElement('div');actions.className='row';
     if(type!=='auth_hardening'){
@@ -44,7 +46,7 @@ function renderLaunchDecisions(d){
       reset.onclick=()=>decideLaunch(type,'pending');
       actions.append(approve,reset);
     }else{
-      const note=document.createElement('div');note.className='muted';note.textContent='Requires verified leaked-password protection evidence';
+      const note=document.createElement('div');note.className='muted';note.textContent='System-computed from live Hercules Password Defense v2 evidence';
       actions.append(note);
     }
     row.append(left,actions);box.append(row);
