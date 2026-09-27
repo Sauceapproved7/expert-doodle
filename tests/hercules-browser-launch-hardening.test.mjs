@@ -59,3 +59,10 @@ test("browser worker capacity is explicitly leased before CDP execution",()=>{
   assert.match(migration,/create or replace function public\.hercules_browser_worker_lease_acquire/i);
   assert.match(migration,/values \('primary',1,75\)/i);
 });
+
+test("browser agent re-checks goal completion after each action before planning another action",async()=>{
+  const agent=await readFile(new URL("../supabase/functions/hercules-browser-agent/index.ts",import.meta.url),"utf8");
+  assert.match(agent,/aiObserve\(goal,after,history\)/);
+  assert.match(agent,/post_action_observation_complete/);
+  assert.match(agent,/decision:"finish"[\s\S]*observationSource:"post_action"/);
+});
