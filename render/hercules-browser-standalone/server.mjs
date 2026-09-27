@@ -78,18 +78,16 @@ function ownerAuthorized(req) {
   return Boolean(supplied&&expected&&sameSecret(supplied,expected));
 }
 
-function claim(req,res,url) {
-  const access=String(url.searchParams.get("access")||"");
+async function claim(req,res) {
+  const input=await readBody(req);
+  const access=String(input?.access||"");
   if(!OWNER_KEY || !access || !sameSecret(access,OWNER_KEY)) {
     return json(res,401,{ok:false,error:"owner_access_denied"});
   }
   const value=ownerCookieValue();
-  res.writeHead(302,{
-    "set-cookie":`hb_owner=${encodeURIComponent(value)}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict`,
-    "location":"/",
-    ...securityHeaders()
+  return json(res,200,{ok:true},{
+    "set-cookie":`hb_owner=${encodeURIComponent(value)}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict`
   });
-  res.end();
 }
 
 function clamp(v,min,max,fallback) {
@@ -476,16 +474,15 @@ http.createServer(async(req,res)=>{
     });
   }
 
-  if(req.method==="GET"&&url.pathname==="/claim")return claim(req,res,url);
-
-  if(req.method==="GET"&&url.pathname==="/"&&url.searchParams.has("access")) {
-    const access=url.searchParams.get("access");
-    const claimUrl=new URL("http://localhost/claim");
-    claimUrl.searchParams.set("access",access||"");
-    return claim(req,res,claimUrl);
+  if(req.method==="POST"&&url.pathname==="/api/claim") {
+    try{return await claim(req,res);}
+    catch(e){
+      const message=e instanceof Error?e.message:"owner_claim_failed";
+      return json(res,400,{ok:false,error:message.slice(0,300)});
+    }
   }
 
-  if(url.pathname.startsWith("/api/")&&!ownerAuthorized(req)) {
+  if(url.pathname.startsWith("/api/")&&url.pathname!=="/api/claim"&&!ownerAuthorized(req)) {
     return json(res,401,{ok:false,error:"owner_auth_required"});
   }
 
