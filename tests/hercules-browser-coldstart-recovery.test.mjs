@@ -31,7 +31,8 @@ test("transient CDP startup failures use bounded backoff before retry",()=>{
   assert.match(browser,/connectOverCDP/);
   assert.match(browser,/websocket was closed before the connection was established/);
   assert.match(browser,/const retryBudgetMs=45000/);
-  assert.match(browser,/await delay\\(backoffMs\\)/);\n  assert.match(browser,/2000\\*\\(2\\*\\*\\(attempt-1\\)\\)/);
+  assert.match(browser,/await delay\(backoffMs\)/);
+  assert.match(browser,/2000\*\(2\*\*\(attempt-1\)\)/);
 });
 
 test("failed worker retries are preserved in run telemetry",()=>{
