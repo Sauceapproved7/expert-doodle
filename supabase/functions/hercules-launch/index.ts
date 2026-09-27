@@ -176,6 +176,28 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
     </div>
   </section>
 
+  <section class="section" id="build-receipt-001">
+    <div class="tag">Build Receipt #001</div><h2>Three receivables. Three safe routes.</h2>
+    <div class="proof">
+      <div class="panel">
+        <div class="tag">What Hercules proved</div>
+        <h3>It did not treat every overdue invoice as the same problem.</h3>
+        <p class="muted">Using synthetic evidence, Hercules separated a routine overdue invoice, a disputed invoice, and a payment-promise case. The routes diverged before any consequential external action was allowed.</p>
+        <div class="featurelist" style="margin-top:14px">
+          <div class="feature"><span>$8,400 · routine overdue</span><span class="pill">controlled follow-up</span></div>
+          <div class="feature"><span>$6,000 · disputed</span><span class="pill">human review</span></div>
+          <div class="feature"><span>$4,000 · promised payment</span><span class="pill">hold + verify</span></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="tag">Evidence boundary</div>
+        <h3>Proof, not a recovery claim.</h3>
+        <p class="muted">This receipt demonstrates workflow behavior on synthetic data. It does not claim a recovery rate, customer savings, production uptime history, or guaranteed collections outcomes.</p>
+        <a class="btn primary" href="#pilot" style="margin-top:14px">Request founding pilot</a>
+      </div>
+    </div>
+  </section>
+
   <section class="section" id="capabilities">
     <div class="tag">Capabilities</div><h2>One system. Four operating lanes.</h2>
     <div class="grid4">
