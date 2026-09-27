@@ -1,0 +1,154 @@
+{
+  "schema": "hercules.privacy-retention.v1",
+  "verifiedAt": "2026-09-27T20:44:00Z",
+  "source": "production-observation-and-repository",
+  "principles": {
+    "no_blanket_customer_content_ttl": true,
+    "rights_request_execution": "hercules_privacy_request_delete_user_content",
+    "protected_records_fail_closed": true,
+    "no_invented_legal_periods": true
+  },
+  "controls": [
+    {
+      "id": "service_health_checks",
+      "table": "public.hercules_service_health_checks",
+      "mode": "automatic",
+      "automatic_purge": true,
+      "days": 30,
+      "condition": "checked_at older than 30 days",
+      "schedule": "17 3 * * *",
+      "job": "hercules-ops-retention"
+    },
+    {
+      "id": "resolved_service_incidents",
+      "table": "public.hercules_service_incidents",
+      "mode": "automatic",
+      "automatic_purge": true,
+      "days": 90,
+      "condition": "status=resolved and resolved_at older than 90 days",
+      "schedule": "17 3 * * *",
+      "job": "hercules-ops-retention"
+    },
+    {
+      "id": "rate_limit_buckets",
+      "table": "private.hercules_rate_limit_buckets",
+      "mode": "automatic",
+      "automatic_purge": true,
+      "days": 2,
+      "condition": "window_start older than 2 days",
+      "schedule": "37 3 * * *",
+      "job": "hercules-chat-cleanup"
+    },
+    {
+      "id": "ai_runs",
+      "table": "private.hercules_ai_runs",
+      "mode": "automatic",
+      "automatic_purge": true,
+      "days": 90,
+      "condition": "created_at older than 90 days",
+      "schedule": "37 3 * * *",
+      "job": "hercules-chat-cleanup"
+    },
+    {
+      "id": "chat_memories",
+      "table": "public.hercules_chat_memories",
+      "mode": "expires_at",
+      "automatic_purge": true,
+      "days": null,
+      "condition": "expires_at is not null and expires_at <= now()",
+      "schedule": "37 3 * * *",
+      "job": "hercules-chat-cleanup"
+    },
+    {
+      "id": "projects",
+      "table": "public.hercules_projects",
+      "mode": "verified_rights_request",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "sessions",
+      "table": "public.hercules_sessions",
+      "mode": "verified_rights_request",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "chat_sessions",
+      "table": "public.hercules_chat_sessions",
+      "mode": "verified_rights_request",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "chat_messages",
+      "table": "public.hercules_chat_messages",
+      "mode": "verified_rights_request",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "chat_tool_calls",
+      "table": "public.hercules_chat_tool_calls",
+      "mode": "verified_rights_request",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "privacy_requests",
+      "table": "public.hercules_privacy_requests",
+      "mode": "review",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "memberships",
+      "table": "public.hercules_memberships",
+      "mode": "protected_review",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "usage",
+      "table": "public.hercules_usage",
+      "mode": "protected_review",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "usage_events",
+      "table": "public.hercules_usage_events",
+      "mode": "protected_review",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "billing",
+      "table": "public.hercules_billing",
+      "mode": "protected_review",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "audit_log",
+      "table": "public.hercules_audit_log",
+      "mode": "protected_review",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "security_events",
+      "table": "public.hercules_security_events",
+      "mode": "protected_review",
+      "automatic_purge": false,
+      "days": null
+    },
+    {
+      "id": "release_evidence",
+      "table": "public.hercules_release_*",
+      "mode": "protected_review",
+      "automatic_purge": false,
+      "days": null
+    }
+  ]
+}
