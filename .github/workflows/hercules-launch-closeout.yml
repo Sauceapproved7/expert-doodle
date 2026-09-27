@@ -1,0 +1,32 @@
+name: Hercules Launch Closeout
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-integrations/**"
+      - "supabase/functions/hercules-launch-onboarding-e2e/**"
+      - "tests/hercules-stripe-provider-onboarding-ui.test.mjs"
+      - "tests/hercules-launch-onboarding-e2e-bootstrap.test.mjs"
+      - "docs/launch/HERCULES-PRICING-PROPOSAL.md"
+      - "docs/launch/HERCULES-TERMS-OF-SERVICE-DRAFT.md"
+      - "docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md"
+      - "docs/launch/HERCULES-STRIPE-ACTIVATION-PACKET-2026-09-27.md"
+      - ".github/workflows/hercules-launch-closeout.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  launch-closeout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288ca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Enforce owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify launch closeout behavior
+        run: node --test tests/hercules-stripe-provider-onboarding-ui.test.mjs tests/hercules-launch-onboarding-e2e-bootstrap.test.mjs
