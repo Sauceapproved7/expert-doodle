@@ -1,7 +1,7 @@
 # Hercules Launch Owner Approval Packet v0.1
 
 **Status:** PREPARED — owner decisions remain pending  
-**Entity:** SauceApproved Enterprise LLC  
+**Entity:** SauceApproved enterprise LLC  
 **Launch product:** Hercules Revenue Recovery
 
 This packet consolidates the remaining owner-bound launch decisions so they can be approved once, without reopening completed technical work.

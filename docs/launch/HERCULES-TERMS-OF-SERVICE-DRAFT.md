@@ -1,11 +1,11 @@
 # Hercules Terms of Service — DRAFT v0.1
 
 **Status:** DRAFT — NOT YET EFFECTIVE  
-**Contracting entity:** SauceApproved Enterprise LLC  
+**Contracting entity:** SauceApproved enterprise LLC  
 **Product:** Hercules / Hercules Revenue Recovery  
 **Owner/legal review required before publication**
 
-These draft terms are implementation material for launch preparation. They are not active terms until SauceApproved Enterprise LLC approves and publishes a final version.
+These draft terms are implementation material for launch preparation. They are not active terms until SauceApproved enterprise LLC approves and publishes a final version.
 
 ## 1. Service
 
@@ -79,7 +79,7 @@ Hercules does not guarantee a recovery outcome, payment outcome, response, savin
 
 Hercules may connect to third-party services selected or authorized by the customer or used as infrastructure providers.
 
-Third-party services are governed by their own terms and availability. SauceApproved Enterprise LLC is not responsible for a third party's independent service outage, policy change, data practice, or refusal to perform an action.
+Third-party services are governed by their own terms and availability. SauceApproved enterprise LLC is not responsible for a third party's independent service outage, policy change, data practice, or refusal to perform an action.
 
 Hercules will not represent a provider action as successful until the product has the verification evidence required by the applicable workflow.
 
@@ -95,15 +95,15 @@ Hercules will not charge for capabilities represented as unavailable.
 
 ## 9. Intellectual property
 
-SauceApproved Enterprise LLC and its licensors retain their respective rights in Hercules, including original software, branding, documentation, designs, and other protected material, subject to applicable open-source and third-party licenses.
+SauceApproved enterprise LLC and its licensors retain their respective rights in Hercules, including original software, branding, documentation, designs, and other protected material, subject to applicable open-source and third-party licenses.
 
 Customers retain their rights in customer-provided data and content.
 
-Customers grant SauceApproved Enterprise LLC the limited rights necessary to host, process, transmit, secure, back up, and otherwise handle customer data solely to provide, protect, support, and improve the service as permitted by the final Privacy Policy and applicable law.
+Customers grant SauceApproved enterprise LLC the limited rights necessary to host, process, transmit, secure, back up, and otherwise handle customer data solely to provide, protect, support, and improve the service as permitted by the final Privacy Policy and applicable law.
 
 ## 10. Feedback
 
-If a customer voluntarily provides product feedback, SauceApproved Enterprise LLC may use that feedback to improve Hercules without an obligation to pay for it, provided this does not transfer ownership of the customer's confidential information or customer data.
+If a customer voluntarily provides product feedback, SauceApproved enterprise LLC may use that feedback to improve Hercules without an obligation to pay for it, provided this does not transfer ownership of the customer's confidential information or customer data.
 
 ## 11. Security
 
@@ -138,7 +138,7 @@ Hercules does not warrant:
 
 **OWNER/COUNSEL REVIEW REQUIRED.**
 
-The final launch terms must include a limitation-of-liability structure appropriate for SauceApproved Enterprise LLC, the launch market, applicable law, pricing, and risk profile. No liability cap is activated by this draft.
+The final launch terms must include a limitation-of-liability structure appropriate for SauceApproved enterprise LLC, the launch market, applicable law, pricing, and risk profile. No liability cap is activated by this draft.
 
 ## 16. Indemnification
 
@@ -150,13 +150,13 @@ Any indemnification language must be reviewed against the exact launch behavior 
 
 Customers may stop using Hercules subject to the final billing/cancellation terms.
 
-SauceApproved Enterprise LLC may suspend or terminate access for material breach, unlawful use, security risk, nonpayment, or conduct that threatens the service or third parties, subject to applicable law and any signed customer agreement.
+SauceApproved enterprise LLC may suspend or terminate access for material breach, unlawful use, security risk, nonpayment, or conduct that threatens the service or third parties, subject to applicable law and any signed customer agreement.
 
 ## 18. Governing law and disputes
 
 **OWNER/COUNSEL REVIEW REQUIRED.**
 
-SauceApproved Enterprise LLC is organized in Connecticut. The final governing-law, venue, dispute-resolution, arbitration/class-action, and notice provisions must be affirmatively approved before these Terms become effective.
+SauceApproved enterprise LLC is organized in Connecticut. The final governing-law, venue, dispute-resolution, arbitration/class-action, and notice provisions must be affirmatively approved before these Terms become effective.
 
 ## 19. Changes to these terms
 
