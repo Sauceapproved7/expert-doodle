@@ -53,6 +53,14 @@ function transientClosedBrowser(error:unknown){
 function replaySafe(history:any[]){
   return !history.some(item=>item?.decision==="click"||item?.decision==="type");
 }
+function observationOnlyGoal(goal:string,inputKeys:string[]){
+  if(inputKeys.length>0)return false;
+  const g=String(goal||"").toLowerCase();
+  const observational=/\b(verify|check|determine|identify|inspect|return|report|whether|visible|reachable|describe|read|find)\b/.test(g);
+  const explicitReadOnly=/\b(read[- ]only|do not (?:click|change|submit|add|buy|purchase|log in|sign in|type|enter)|without (?:clicking|changing|submitting|typing))\b/.test(g);
+  const statefulImperative=/\b(click|type|fill|submit|press|select|choose|buy|purchase|log in|sign in|create|delete|change|update|save|connect|configure)\b/.test(g);
+  return observational&&(explicitReadOnly||!statefulImperative);
+}
 
 function compactPage(payload:any){
   const page=payload?.result?.page||payload?.page||{};
@@ -158,7 +166,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.6.0",
+    ok:true,service:"hercules-browser-agent",version:"0.7.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,highImpactAutonomy:false
@@ -222,6 +230,35 @@ Deno.serve(async(req:Request)=>{
     if(!sessionId)throw new Error("browser_session_missing");
     let page=compactPage(nav);
     if(!domainAllowed(page.url||startUrl,allowedDomains))throw new Error("top_level_domain_not_allowed");
+
+    const initialDirect=directSatisfaction(goal,page,history);
+    if(initialDirect){
+      finalAnswer=initialDirect.answer;
+      history.push({step:1,decision:"finish",reason:initialDirect.reason,answer:finalAnswer,url:page.url});
+      await updateRun(runId,{status:"succeeded",steps:history,result:{answer:finalAnswer,page,provider,model,convergence:initialDirect.reason},completed_at:new Date().toISOString()});
+      await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
+      return out({ok:true,runId,status:"succeeded",answer:finalAnswer,page,steps:history,provider,model,convergence:initialDirect.reason});
+    }
+
+    if(observationOnlyGoal(goal,inputKeys)){
+      const observedPlan=await aiPlan(goal,page,{},history,inputKeys);
+      provider=observedPlan.provider;
+      model=observedPlan.model;
+      if(observedPlan.plan.decision==="finish"){
+        finalAnswer=observedPlan.plan.answer||page.text.slice(0,4000);
+        history.push({
+          step:1,
+          decision:"finish",
+          reason:observedPlan.plan.reason||"navigate_observation_satisfied",
+          answer:finalAnswer.slice(0,4000),
+          url:page.url,
+          observationSource:"navigate"
+        });
+        await updateRun(runId,{status:"succeeded",steps:history,result:{answer:finalAnswer,page,provider,model,convergence:"navigate_observation"},completed_at:new Date().toISOString()});
+        await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
+        return out({ok:true,runId,status:"succeeded",answer:finalAnswer,page,steps:history,provider,model,convergence:"navigate_observation"});
+      }
+    }
 
     for(let i=0;i<maxSteps;i++){
       let scrape:any;

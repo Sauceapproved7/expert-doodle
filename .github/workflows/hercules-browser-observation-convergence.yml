@@ -1,0 +1,27 @@
+name: Hercules Browser Navigate First Observation
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-browser-agent/**"
+      - "tests/hercules-browser-observation-convergence.test.mjs"
+      - "tests/hercules-browser-session-recovery.test.mjs"
+      - "tests/hercules-browser-coldstart-recovery.test.mjs"
+      - "docs/HERCULES-BROWSER-NAVIGATE-FIRST-OBSERVATION-V1.md"
+      - ".github/workflows/hercules-browser-observation-convergence.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-observation-convergence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run Browser observation convergence tests
+        run: node --test tests/hercules-browser-observation-convergence.test.mjs tests/hercules-browser-session-recovery.test.mjs tests/hercules-browser-coldstart-recovery.test.mjs tests/hercules-browser-agent-operator-bridge.test.mjs
