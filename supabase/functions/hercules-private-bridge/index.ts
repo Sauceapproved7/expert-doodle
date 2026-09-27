@@ -134,9 +134,6 @@ async function refreshLaunchGate(){
 
 Deno.serve(async(req:Request)=>{
   const requestUrl=new URL(req.url);
-  if(req.method==='GET' && requestUrl.searchParams.get('spaceship_authorize')==='1'){
-    return handleSpaceshipMcpRequest(req);
-  }
   if(req.method==='GET' && requestUrl.searchParams.get('spaceship_mcp_oauth_callback')==='1'){
     return handleSpaceshipMcpRequest(req);
   }
