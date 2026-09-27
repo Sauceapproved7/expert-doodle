@@ -213,3 +213,53 @@ test("equivalent evaluations produce the same audit decision fingerprint", () =>
   });
   assert.equal(first.decisionSha256, second.decisionSha256);
 });
+
+test("lease subject, task intent, and provider authorization evidence are cryptographically bound", () => {
+  const wrongSubject = createAuthorityLease({
+    subject: {type: "domain-agent", id: "other-agent"},
+    intent: {id: "task-1"},
+    authorization: {evidenceSha256: SHA},
+    scope: {resources: ["github:repo:Sauceapproved7/expert-doodle"], actions: ["repository.update"], maxImpact: "RESOURCE"},
+    validFrom: "2026-09-27T17:00:00Z",
+    expiresAt: "2026-09-27T19:00:00Z",
+  });
+  const subjectDecision = evaluateDomainAgentTask({
+    identity: identity(), providerGrant: grant(), authorityLease: wrongSubject, request: request(),
+  });
+  assert.equal(subjectDecision.disposition, "DENY");
+  assert.ok(subjectDecision.reasonCodes.includes("AGENT_IDENTITY_MISMATCH"));
+
+  const wrongIntent = createAuthorityLease({
+    subject: {type: "domain-agent", id: "hercules-domain-agent"},
+    intent: {id: "other-task"},
+    authorization: {evidenceSha256: SHA},
+    scope: {resources: ["github:repo:Sauceapproved7/expert-doodle"], actions: ["repository.update"], maxImpact: "RESOURCE"},
+    validFrom: "2026-09-27T17:00:00Z",
+    expiresAt: "2026-09-27T19:00:00Z",
+  });
+  const intentDecision = evaluateDomainAgentTask({
+    identity: identity(), providerGrant: grant(), authorityLease: wrongIntent, request: request(),
+  });
+  assert.equal(intentDecision.disposition, "DENY");
+  assert.ok(intentDecision.reasonCodes.includes("INTENT_MISMATCH"));
+
+  const evidenceDecision = evaluateDomainAgentTask({
+    identity: identity(),
+    providerGrant: grant({authorizationEvidenceSha256: "c".repeat(64)}),
+    authorityLease: lease(),
+    request: request(),
+  });
+  assert.equal(evidenceDecision.disposition, "DENY");
+  assert.ok(evidenceDecision.reasonCodes.includes("AUTHORIZATION_EVIDENCE_MISMATCH"));
+});
+
+test("domain identity only accepts a hostname and always publishes an HTTPS origin", () => {
+  assert.throws(
+    () => createDomainAgentIdentity({domain: "http://agent.sauceapproved.com", tenantId: "x", agentId: "y"}),
+    /hostname/i,
+  );
+  assert.throws(
+    () => createDomainAgentIdentity({domain: "localhost", tenantId: "x", agentId: "y"}),
+    /public domain/i,
+  );
+});
