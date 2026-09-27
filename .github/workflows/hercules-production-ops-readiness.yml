@@ -1,0 +1,21 @@
+name: Hercules Production Ops Readiness
+on:
+  pull_request:
+    paths:
+      - "hercules-runtime/production-ops-readiness.mjs"
+      - "tests/hercules-production-ops-readiness.test.mjs"
+      - "docs/HERCULES-PRODUCTION-OPS-READINESS-V0.1.md"
+      - ".github/workflows/hercules-production-ops-readiness.yml"
+permissions:
+  contents: read
+jobs:
+  production-ops-readiness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --check hercules-runtime/production-ops-readiness.mjs
+      - run: node --test tests/hercules-production-ops-readiness.test.mjs
+      - run: node scripts/evaluate-slo.mjs --help >/dev/null || true
