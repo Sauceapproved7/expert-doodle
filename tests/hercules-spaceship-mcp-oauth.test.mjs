@@ -7,6 +7,7 @@ const bridge=await readFile(new URL("../supabase/functions/hercules-private-brid
 const dns=await readFile(new URL("../supabase/functions/hercules-private-bridge/spaceship-dns-control.ts",import.meta.url),"utf8");
 const oauthMigration=await readFile(new URL("../supabase/migrations/20260927102500_hercules_spaceship_mcp_oauth_v1.sql",import.meta.url),"utf8");
 const bridgeMigration=await readFile(new URL("../supabase/migrations/20260927103500_hercules_spaceship_mcp_bridge_integration_v1.sql",import.meta.url),"utf8");
+const publicOauthMigration=await readFile(new URL("../supabase/migrations/20260927110000_hercules_spaceship_public_oauth_v1.sql",import.meta.url),"utf8");
 
 test("Spaceship MCP OAuth uses official discovery and dynamic registration",()=>{
   assert.ok(mcp.includes('const RESOURCE_META="https://mcp.spaceship.com/.well-known/oauth-protected-resource"'));
@@ -19,6 +20,15 @@ test("Spaceship MCP OAuth uses official discovery and dynamic registration",()=>
   assert.doesNotMatch(mcp,/fetch\(endpoint,/);
   assert.match(mcp,/code_challenge_method.*S256/);
   assert.match(mcp,/openid offline_access mcp\.spaceship\.com/);
+  assert.match(mcp,/token_endpoint_auth_method:"none"/);
+  assert.match(mcp,/client_id/);
+  assert.doesNotMatch(mcp,/client_secret:clientSecret/);
+});
+
+test("Spaceship public client registration stores no client secret",()=>{
+  assert.match(publicOauthMigration,/hercules_spaceship_mcp_store_public_registration/);
+  assert.match(publicOauthMigration,/client_secret_secret_ref=null/);
+  assert.match(publicOauthMigration,/PKCE/);
 });
 
 test("OAuth callback validates state and stores only Vault references",()=>{
@@ -32,6 +42,7 @@ test("OAuth callback validates state and stores only Vault references",()=>{
   assert.match(mcp,/hercules_spaceship_mcp_complete_authorization/);
   assert.doesNotMatch(mcp,/access_token\s*:\s*accessToken/);
   assert.doesNotMatch(mcp,/refresh_token\s*:\s*refreshToken/);
+  assert.doesNotMatch(mcp,/clientSecret=await secret/);
 });
 
 test("MCP transport initializes then calls DNS tools",()=>{
@@ -78,13 +89,4 @@ test("successful OAuth callback triggers existing launch autopilot",()=>{
   assert.match(mcp,/hercules_domain_launch_autopilot_tick/);
   assert.match(mcp,/status:"configured"/);
   assert.match(mcp,/provider:"spaceship-mcp"/);
-});
-
-
-test("dynamic registration accepts safe field-name variants without exposing secret values",()=>{
-  assert.ok(mcp.includes('regBody?.client_id||regBody?.clientId'));
-  assert.ok(mcp.includes('regBody?.client_secret||regBody?.clientSecret'));
-  assert.match(mcp,/registration_response_fields/);
-  assert.doesNotMatch(mcp,/JSON\.stringify\(reg\)/);
-  assert.doesNotMatch(mcp,/clientSecret[^\n]*throw new Error/);
 });
