@@ -108,13 +108,27 @@ async function ensureRegistration(){
   if(!response.ok||!reg?.client_id||!reg?.client_secret){
     throw new Error("spaceship_mcp_dynamic_registration_failed:"+response.status);
   }
-  const clientSecret=String(reg.client_secret);
-  const {data,error}=await admin.rpc("hercules_spaceship_mcp_store_registration",{
-    p_client_id:String(reg.client_id),
-    p_client_secret:clientSecret,
-    p_redirect_uri:CALLBACK
+  let clientSecret=String(reg.client_secret);
+  const {data:clientSecretRef,error:secretError}=await admin.rpc("hercules_store_secret",{
+    p_value:clientSecret,
+    p_name:"spaceship-mcp-client-secret",
+    p_description:"OAuth dynamic-registration client secret for Hercules Spaceship MCP."
   });
-  if(error||data!==true)throw new Error("spaceship_mcp_registration_store_failed");
+  clientSecret="";
+  if(secretError||!clientSecretRef)throw new Error("spaceship_mcp_registration_secret_store_failed");
+  const {error:registrationError}=await admin.from("hercules_spaceship_mcp_oauth").update({
+    client_id:String(reg.client_id),
+    client_secret_secret_ref:String(clientSecretRef),
+    redirect_uri:CALLBACK,
+    access_token_secret_ref:null,
+    refresh_token_secret_ref:null,
+    oauth_state_sha256:null,
+    status:"registered",
+    authorized_at:null,
+    token_expires_at:null,
+    updated_at:new Date().toISOString()
+  }).eq("singleton",true);
+  if(registrationError)throw new Error("spaceship_mcp_registration_store_failed");
   return {clientId:String(reg.client_id),redirectUri:CALLBACK,discovered};
 }
 async function beginAuthorization(){
@@ -130,6 +144,7 @@ async function beginAuthorization(){
   url.searchParams.set("state",state);
   url.searchParams.set("code_challenge",challenge);
   url.searchParams.set("code_challenge_method","S256");
+  url.searchParams.set("prompt","consent");
   url.searchParams.set("resource","https://mcp.spaceship.com/");
   return {authorizationUrl:url.toString(),provider:"spaceship-mcp",status:"authorization_required",scope:SCOPE};
 }
