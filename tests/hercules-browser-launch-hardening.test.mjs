@@ -104,3 +104,23 @@ test("browser agent deterministically plans explicit named-link navigation befor
   const ai=agent.indexOf("await aiPlan",deterministic);
   assert.ok(deterministic>=0 && ai>deterministic);
 });
+
+test("browser burst admission queue survives the operator bridge timeout budget",async()=>{
+  const browser=await readFile(new URL("../supabase/functions/hercules-browser/index.ts",import.meta.url),"utf8");
+  assert.match(browser,/acquireWorkerLease\(workerName:string,traceId:string,waitBudgetMs=45000\)/);
+
+  const files=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
+    .filter(x=>x.includes("hercules_browser_operator_bridge"))
+    .sort();
+  const latest=await readFile(new URL("../supabase/migrations/"+files.at(-1),import.meta.url),"utf8");
+  assert.match(latest,/create or replace function public\.hercules_browser_submit\(p_request jsonb\)[\s\S]*timeout_milliseconds := 120000/i);
+});
+
+test("browser runtime monitor uses PostgreSQL-valid bounded regexes",async()=>{
+  const files=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
+    .filter(x=>x.includes("hercules_browser_runtime_monitor_v2"))
+    .sort();
+  const latest=await readFile(new URL("../supabase/migrations/"+files.at(-1),import.meta.url),"utf8");
+  assert.doesNotMatch(latest,/\.\{0,400\}/);
+  assert.match(latest,/connectovercdp\.\{0,200\}/i);
+});
