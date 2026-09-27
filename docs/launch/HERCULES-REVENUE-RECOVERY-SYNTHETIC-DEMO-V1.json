@@ -1,0 +1,36 @@
+{
+  "schema": "hercules.revenue.recovery.synthetic-demo.v1",
+  "synthetic": true,
+  "total_balance_cents": 1840000,
+  "cases": [
+    {
+      "invoice_id": "SYN-A",
+      "amount_cents": 840000,
+      "days_overdue": 31,
+      "dispute": false,
+      "payment_promise": null,
+      "expected_route": "controlled_follow_up"
+    },
+    {
+      "invoice_id": "SYN-B",
+      "amount_cents": 600000,
+      "days_overdue": 18,
+      "dispute": true,
+      "payment_promise": null,
+      "expected_route": "human_review"
+    },
+    {
+      "invoice_id": "SYN-C",
+      "amount_cents": 400000,
+      "days_overdue": 12,
+      "dispute": false,
+      "payment_promise": "Friday",
+      "expected_route": "hold_and_verify"
+    }
+  ],
+  "constraints": {
+    "external_action": false,
+    "customer_data": false,
+    "guaranteed_recovery": false
+  }
+}
