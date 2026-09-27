@@ -17,6 +17,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <section class="card"><h2>Personal Browser Bridge</h2><p class="muted">Pair one explicitly approved browser tab with Hercules. The bridge never exports passwords, cookies, OTP/MFA codes, provider session tokens, or CAPTCHA state.</p><div class="row"><button id="browserpair" class="btn primary">Create pairing token</button><button id="browserstatus" class="btn">Status</button></div><div id="browserout" class="status"></div></section>
 <section class="card"><h2>Launch Readiness</h2><p class="muted">One production view of the live storefront and final custom-domain gate.</p><div class="row"><button id="launchstatus" class="btn primary">Refresh launch readiness</button></div><div id="launchsummary" class="launch-summary"></div><details><summary>Raw launch data</summary><div id="launchout" class="status"></div></details></section>
 <section class="card"><h2>Storefront Smoke</h2><p class="muted">Read-only Hercules Browser verification of the live hoodie page, variant controls, and purchase controls. Runs hourly and automatically switches to <span class="mono">sauceapproved.com</span> after verified domain cutover.</p><div class="row"><button id="smokestatus" class="btn">Refresh smoke status</button><button id="smokerun" class="btn primary">Run smoke check now</button></div><div id="smokeout" class="status"></div></section>
+<section class="card"><h2>Launch Approval Envelope</h2><p class="muted">Hercules locks pricing, Terms, and Privacy to exact document versions, verifies the live production pricing catalog and auth-hardening evidence, then reduces the remaining commercial decision to one explicit owner approval. Public registration stays held closed.</p><div id="packetsummary" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="packetrefresh" class="btn">Refresh envelope</button><button id="packetapprove" class="btn primary" disabled>Approve launch packet</button></div><div id="packetout" class="status"></div></section>
 <section class="card"><h2>Launch Decisions</h2><p class="muted">Owner-only decisions that Hercules must not make for you. Review the prepared launch documents, then approve only what you have actually decided. Authentication hardening remains system-evidence gated.</p><div class="row"><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-PRICING-PROPOSAL.md" target="_blank" rel="noopener noreferrer">Pricing proposal</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-TERMS-OF-SERVICE-DRAFT.md" target="_blank" rel="noopener noreferrer">Terms draft</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md" target="_blank" rel="noopener noreferrer">Privacy draft</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-AUTH-SECURITY-REVIEW-2026-09-27.md" target="_blank" rel="noopener noreferrer">Auth review</a></div><div id="decisionrows" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="decisionrefresh" class="btn">Refresh decisions</button></div><div id="decisionout" class="status"></div></section>
 </div></section></main>
 <script type="module">
@@ -59,6 +60,56 @@ async function launchDecisionStatus(){
     $('decisionout').textContent='Launch decisions: '+e.message;throw e
   }
 }
+let launchPacketEnvelope=null;
+function renderLaunchPacketEnvelope(d){
+  launchPacketEnvelope=d||null;
+  const box=$('packetsummary');box.replaceChildren();
+  const p=d?.packet||{},r=d?.readiness||{};
+  box.append(
+    launchLine('Packet',String(p.version||'unavailable'),p.version?'pass':'fail'),
+    launchLine('Fingerprint',String(p.fingerprint||'—'),p.fingerprint?'pass':'fail'),
+    launchLine('Pricing catalog',r.pricingCatalogMatches?'MATCHES PRODUCTION':'MISMATCH',r.pricingCatalogMatches?'pass':'fail'),
+    launchLine('Auth hardening',r.authHardeningApproved?'VERIFIED':'NOT VERIFIED',r.authHardeningApproved?'pass':'fail'),
+    launchLine('Public registration',r.publicRegistrationHeldClosed?'HELD CLOSED':'OPEN',r.publicRegistrationHeldClosed?'pass':'fail'),
+    launchLine('Envelope',r.canApprove?'READY FOR OWNER DECISION':'BLOCKED',r.canApprove?'pass':'wait')
+  );
+  $('packetapprove').disabled=!r.canApprove;
+}
+async function launchPacketStatus(){
+  try{
+    const d=await call('hercules-private-bridge',{action:'launch_approval_bundle_status'});
+    renderLaunchPacketEnvelope(d);$('packetout').textContent=fmt(d);return d
+  }catch(e){
+    launchPacketEnvelope=null;$('packetapprove').disabled=true;
+    $('packetsummary').replaceChildren(launchLine('Envelope','UNAVAILABLE','fail'));
+    $('packetout').textContent='Launch envelope: '+e.message;throw e
+  }
+}
+async function approveLaunchPacket(){
+  const d=launchPacketEnvelope||await launchPacketStatus();
+  if(!d?.readiness?.canApprove)throw Error('Launch packet is not ready for approval.');
+  const phrase=String(d.packet?.confirmation||'');
+  if(!phrase.startsWith('APPROVE HERCULES LAUNCH PACKET '))throw Error('Launch packet confirmation is unavailable.');
+  const confirmation=window.prompt('Type exactly: '+phrase);
+  if(confirmation===null)return;
+  try{
+    const result=await call('hercules-private-bridge',{
+      action:'launch_approval_bundle_decide',
+      packet_version:d.packet.version,
+      packet_digest:d.packet.digest,
+      confirmation
+    });
+    $('packetout').textContent=fmt(result);
+    renderLaunchPacketEnvelope(result?.envelope||{});
+    renderLaunchDecisions(result?.status||{});
+    await launchReadinessStatus().catch(()=>{});
+  }catch(e){
+    $('packetout').textContent='Launch packet decision: '+e.message;
+  }
+}
+$('packetrefresh').onclick=()=>launchPacketStatus().catch(()=>{});
+$('packetapprove').onclick=()=>approveLaunchPacket().catch(e=>{$('packetout').textContent='Launch packet decision: '+e.message});
+
 async function decideLaunch(type,decision){
   const verb=decision==='approved'?'APPROVE':'RESET';
   const phrase=verb+' '+type.replace('_',' ').toUpperCase();
@@ -106,7 +157,7 @@ function renderLaunchSummary(p){
   );
   if(readiness?.storefront_verified_at)box.append(launchLine('Storefront verified at',String(readiness.storefront_verified_at),'pass'));
 }
-async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),stripeStatus(),personalBrowserStatus(),launchReadinessStatus(),storefrontSmokeStatus(),launchDecisionStatus()])}}
+async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),stripeStatus(),personalBrowserStatus(),launchReadinessStatus(),storefrontSmokeStatus(),launchDecisionStatus(),launchPacketStatus()])}}
 $('signin').onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error){$('authmsg').textContent=r.error.message;show('authmsg',true)}};
 $('signout').onclick=()=>sb.auth.signOut();
 async function driveStatus(){try{$('gout').textContent=fmt(await call('hercules-drive',{action:'status'}))}catch(e){$('gout').textContent='Drive: '+e.message}}
