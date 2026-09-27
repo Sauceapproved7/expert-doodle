@@ -45,17 +45,23 @@ async function secret(ref:string|null|undefined){
   if(error||!data)throw new Error("spaceship_mcp_secret_unavailable");
   return String(data);
 }
-async function getJson(url:string){
-  const r=await fetch(url,{headers:{accept:"application/json"},signal:AbortSignal.timeout(15000)});
+async function resourceMetadata(){
+  const r=await fetch(RESOURCE_META,{headers:{accept:"application/json"},signal:AbortSignal.timeout(15000)});
   const body=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error("spaceship_oauth_discovery_failed:"+r.status);
+  if(!r.ok)throw new Error("spaceship_oauth_resource_discovery_failed:"+r.status);
+  return body;
+}
+async function authorizationMetadata(){
+  const r=await fetch(AUTH_META,{headers:{accept:"application/json"},signal:AbortSignal.timeout(15000)});
+  const body=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error("spaceship_oauth_authorization_discovery_failed:"+r.status);
   return body;
 }
 async function metadata(){
-  const resource=await getJson(RESOURCE_META);
+  const resource=await resourceMetadata();
   const issuer=String(resource?.authorization_servers?.[0]||"");
   if(issuer!=="https://id.service.spaceship.com")throw new Error("spaceship_oauth_issuer_untrusted");
-  const oauth=await getJson(AUTH_META);
+  const oauth=await authorizationMetadata();
   if(String(oauth?.issuer||"")!==issuer)throw new Error("spaceship_oauth_metadata_mismatch");
   if(
     String(oauth?.authorization_endpoint||"")!==AUTHORIZATION_ENDPOINT ||
@@ -117,8 +123,8 @@ async function beginAuthorization(){
   url.searchParams.set("resource","https://mcp.spaceship.com/");
   return {authorizationUrl:url.toString(),provider:"spaceship-mcp",status:"authorization_required",scope:SCOPE};
 }
-async function postToken(endpoint:string,params:URLSearchParams){
-  const r=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded","accept":"application/json"},body:params.toString(),signal:AbortSignal.timeout(15000)});
+async function postToken(params:URLSearchParams){
+  const r=await fetch(TOKEN_ENDPOINT,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded","accept":"application/json"},body:params.toString(),signal:AbortSignal.timeout(15000)});
   const body=await r.json().catch(()=>({}));
   if(!r.ok||!body?.access_token)throw new Error("spaceship_mcp_token_exchange_failed:"+r.status);
   return body;
@@ -144,7 +150,7 @@ async function completeCallback(url:URL){
     code_verifier:verifier,
     resource:"https://mcp.spaceship.com/"
   });
-  const token=await postToken(TOKEN_ENDPOINT,params);
+  const token=await postToken(params);
   const expiresAt=new Date(Date.now()+Math.max(60,Number(token.expires_in||3600))*1000).toISOString();
   const {data,error}=await admin.rpc("hercules_spaceship_mcp_complete_authorization",{
     p_state:state,
@@ -174,7 +180,7 @@ async function accessToken(){
     scope:String(current.scope||SCOPE),
     resource:"https://mcp.spaceship.com/"
   });
-  const token=await postToken(TOKEN_ENDPOINT,params);
+  const token=await postToken(params);
   const expiresAt=new Date(Date.now()+Math.max(60,Number(token.expires_in||3600))*1000).toISOString();
   const nextRefresh=String(token.refresh_token||refresh);
   const {data,error}=await admin.rpc("hercules_spaceship_mcp_refresh_tokens",{
