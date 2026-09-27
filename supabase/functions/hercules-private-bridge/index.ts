@@ -17,6 +17,21 @@ const LAUNCH_DOCS={
   privacy:'docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md',
   auth_hardening:'docs/launch/HERCULES-AUTH-SECURITY-REVIEW-2026-09-27.md'
 } as const;
+const LAUNCH_PACKET={
+  version:'hercules-launch-packet-2026-09-27-v1',
+  digest:'2531abae2cf8caae0af2d153feac617d4b21ce7976476c49ced57a5956615690',
+  documents:{
+    pricing:{path:LAUNCH_DOCS.pricing,sha:'85ecbdc37e4d73cdf1b6c3f9987fac8a57c47f00'},
+    terms:{path:LAUNCH_DOCS.terms,sha:'e607d7e992458b9a7f0cca82cdeb216cae47eab5'},
+    privacy:{path:LAUNCH_DOCS.privacy,sha:'e88a83a7cb4ce5f01a3049eddfc80f84643c5b8c'}
+  },
+  pricing:{
+    starter:{monthly:4900,annual:49000},
+    pro:{monthly:14900,annual:149000},
+    scale:{monthly:39900,annual:399000}
+  }
+} as const;
+const LAUNCH_PACKET_CONFIRMATION='APPROVE HERCULES LAUNCH PACKET '+LAUNCH_PACKET.digest.slice(0,12).toUpperCase();
 
 async function actor(req:Request){
   const h=req.headers.get('authorization')||'', token=h.startsWith('Bearer ')?h.slice(7):'';
@@ -61,7 +76,7 @@ async function audit(org:string,uid:string,action:string,id:string|null,changes:
 }
 
 async function launchApprovalStatus(){
-  const [{data:approvals,error:approvalError},{data:gate,error:gateError},{data:release,error:releaseError}]=await Promise.all([
+  const [{data:approvals,error:approvalError},{data:gate,error:gateError},{data:release,error:releaseError},{data:passwordDefense,error:passwordDefenseError}]=await Promise.all([
     admin.from('hercules_launch_approvals')
       .select('approval_type,status,approved_at,evidence,updated_at')
       .order('approval_type'),
@@ -73,9 +88,10 @@ async function launchApprovalStatus(){
     admin.from('hercules_continuity_ledger')
       .select('status,value,verified_at')
       .eq('key','public-registration-open')
-      .maybeSingle()
+      .maybeSingle(),
+    admin.rpc('hercules_password_defense_status')
   ]);
-  if(approvalError||gateError||releaseError)throw new Error('launch_approval_status_failed');
+  if(approvalError||gateError||releaseError||passwordDefenseError)throw new Error('launch_approval_status_failed');
 
   const byType=Object.fromEntries((approvals||[]).map((row:any)=>[
     row.approval_type,
@@ -97,8 +113,64 @@ async function launchApprovalStatus(){
     publicRegistrationVerifiedAt:release?.verified_at||null,
     authHardening:{
       selfApprovalAllowed:false,
-      blocker:'Supabase leaked-password protection must be enabled and independently verified before auth_hardening can be approved.'
+      mode:'system_computed',
+      control:'hercules-password-defense-v2',
+      verified:passwordDefense?.ok===true,
+      evidence:passwordDefense||null,
+      note:'Launch auth hardening is computed from live Hercules password-defense evidence. The native Supabase warning may remain documented without becoming the launch decision source.'
     }
+  };
+}
+
+async function launchApprovalEnvelopeStatus(){
+  const status=await launchApprovalStatus();
+  const [{data:passwordDefense,error:passwordDefenseError},{data:plans,error}]=await Promise.all([
+    admin.rpc('hercules_password_defense_status'),
+    admin.from('hercules_plans')
+      .select('code,monthly_price_cents,annual_price_cents,is_active')
+      .in('code',['starter','pro','scale'])
+      .order('code')
+  ]);
+  if(error)throw new Error('launch_packet_pricing_read_failed');
+  if(passwordDefenseError)throw new Error('launch_packet_auth_hardening_read_failed');
+
+  const byCode=Object.fromEntries((plans||[]).map((row:any)=>[row.code,row]));
+  const pricingCatalogMatches=(['starter','pro','scale'] as const).every(code=>{
+    const expected=LAUNCH_PACKET.pricing[code], live=byCode[code];
+    return Boolean(
+      live?.is_active===true &&
+      Number(live?.monthly_price_cents)===expected.monthly &&
+      Number(live?.annual_price_cents)===expected.annual
+    );
+  });
+  const authHardeningApproved=passwordDefense?.ok===true;
+  const packetApprovals=['pricing','terms','privacy'].map(type=>({
+    type,
+    status:status?.approvals?.[type]?.status||'pending',
+    document:(LAUNCH_PACKET.documents as any)[type]
+  }));
+
+  return {
+    ok:true,
+    packet:{
+      version:LAUNCH_PACKET.version,
+      digest:LAUNCH_PACKET.digest,
+      fingerprint:LAUNCH_PACKET.digest.slice(0,12).toUpperCase(),
+      confirmation:LAUNCH_PACKET_CONFIRMATION,
+      documents:LAUNCH_PACKET.documents,
+      pricing:LAUNCH_PACKET.pricing
+    },
+    readiness:{
+      authHardeningApproved,
+      authHardeningSource:'hercules-password-defense-v2',
+      authHardeningEvidence:passwordDefense||null,
+      pricingCatalogMatches,
+      publicRegistrationHeldClosed:status.publicRegistrationOpen!==true,
+      canApprove:authHardeningApproved&&pricingCatalogMatches&&status.publicRegistrationOpen!==true
+    },
+    approvals:packetApprovals,
+    gate:status.gate||null,
+    publicRegistrationOpen:status.publicRegistrationOpen
   };
 }
 
@@ -153,7 +225,7 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
     return out({ok:true,service:'hercules-private-bridge',version:'1.2.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision'],
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -167,6 +239,11 @@ Deno.serve(async(req:Request)=>{
     catch{return out({error:'launch_approval_status_failed'},500)}
   }
 
+  if(action==='launch_approval_bundle_status'){
+    try{return out(await launchApprovalEnvelopeStatus())}
+    catch{return out({error:'launch_approval_bundle_status_failed'},500)}
+  }
+
   if(action==='launch_approval_decide'){
     if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
     const approvalType=String(b.approval_type||'').trim();
@@ -176,8 +253,8 @@ Deno.serve(async(req:Request)=>{
     if(!['approved','rejected','pending'].includes(decision))return out({error:'valid_decision_required'},400);
     if(approvalType==='auth_hardening'&&decision==='approved'){
       return out({
-        error:'auth_hardening_requires_verified_platform_evidence',
-        required:'Enable Supabase leaked-password protection, rerun the production security advisor, and require the warning to clear before approval.'
+        error:'auth_hardening_is_system_computed',
+        required:'The launch gate verifies Hercules Password Defense v2 directly. This is not an owner self-approval.'
       },409);
     }
     const expected=(decision==='approved'?'APPROVE ':decision==='rejected'?'REJECT ':'RESET ')+approvalType.replace('_',' ').toUpperCase();
@@ -216,6 +293,61 @@ Deno.serve(async(req:Request)=>{
 
     const gateRefresh=await refreshLaunchGate();
     return out({ok:true,approval:data,gateRefresh,status:await launchApprovalStatus()});
+  }
+
+  if(action==='launch_approval_bundle_decide'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const packetVersion=String(b.packet_version||'').trim();
+    const packetDigest=String(b.packet_digest||'').trim().toLowerCase();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+
+    if(packetVersion!==LAUNCH_PACKET.version)return out({
+      error:'launch_packet_version_mismatch',
+      expected:LAUNCH_PACKET.version
+    },409);
+    if(packetDigest!==LAUNCH_PACKET.digest)return out({
+      error:'launch_packet_digest_mismatch',
+      expected:LAUNCH_PACKET.digest
+    },409);
+    if(confirmation!==LAUNCH_PACKET_CONFIRMATION)return out({
+      error:'explicit_confirmation_required',
+      expected:LAUNCH_PACKET_CONFIRMATION
+    },400);
+
+    const envelope=await launchApprovalEnvelopeStatus();
+    if(!envelope.readiness.authHardeningApproved)return out({
+      error:'auth_hardening_required_before_launch_packet'
+    },409);
+    if(!envelope.readiness.pricingCatalogMatches)return out({
+      error:'launch_packet_pricing_catalog_mismatch'
+    },409);
+    if(!envelope.readiness.publicRegistrationHeldClosed)return out({
+      error:'public_registration_must_be_held_closed_during_launch_packet_approval'
+    },409);
+
+    const documentShas={
+      pricing:LAUNCH_PACKET.documents.pricing.sha,
+      terms:LAUNCH_PACKET.documents.terms.sha,
+      privacy:LAUNCH_PACKET.documents.privacy.sha
+    };
+    const {data,error}=await admin.rpc('hercules_launch_approval_bundle_decide',{
+      p_user_id:uid,
+      p_organization_id:org,
+      p_packet_version:LAUNCH_PACKET.version,
+      p_packet_digest:LAUNCH_PACKET.digest,
+      p_document_shas:documentShas,
+      p_confirmation:LAUNCH_PACKET_CONFIRMATION
+    });
+    if(error)return out({error:'launch_approval_bundle_update_failed',detail:error.message},500);
+
+    const gateRefresh=await refreshLaunchGate();
+    return out({
+      ok:true,
+      packet:data,
+      gateRefresh,
+      status:await launchApprovalStatus(),
+      envelope:await launchApprovalEnvelopeStatus()
+    });
   }
 
   if(action==='spaceship_dns_status'){

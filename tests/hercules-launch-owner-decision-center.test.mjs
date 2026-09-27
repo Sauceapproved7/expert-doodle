@@ -34,11 +34,12 @@ test("pricing terms and privacy require explicit typed confirmation",()=>{
   assert.match(ui,/window\.prompt\('Type exactly: '/);
 });
 
-test("auth hardening cannot be self-approved",()=>{
+test("auth hardening is system-computed and cannot be owner self-approved",()=>{
   assert.match(bridge,/approvalType==='auth_hardening'&&decision==='approved'/);
-  assert.match(bridge,/auth_hardening_requires_verified_platform_evidence/);
-  assert.match(bridge,/leaked-password protection/);
-  assert.match(ui,/Requires verified leaked-password protection evidence/);
+  assert.match(bridge,/auth_hardening_is_system_computed/);
+  assert.match(bridge,/hercules_password_defense_status/);
+  assert.match(bridge,/hercules-password-defense-v2/);
+  assert.match(ui,/System-computed from live Hercules Password Defense v2 evidence/);
 });
 
 test("decision writes are audited and launch gate is refreshed",()=>{
@@ -71,4 +72,41 @@ test("decision status does not expose owner user identifiers",()=>{
   );
   assert.doesNotMatch(statusFn,/approved_by/);
   assert.doesNotMatch(statusFn,/approvedBy/);
+});
+
+
+test("launch approval envelope is locked to exact canonical document versions",()=>{
+  assert.match(bridge,/hercules-launch-packet-2026-09-27-v1/);
+  assert.match(bridge,/2531abae2cf8caae0af2d153feac617d4b21ce7976476c49ced57a5956615690/);
+  assert.match(bridge,/85ecbdc37e4d73cdf1b6c3f9987fac8a57c47f00/);
+  assert.match(bridge,/e607d7e992458b9a7f0cca82cdeb216cae47eab5/);
+  assert.match(bridge,/e88a83a7cb4ce5f01a3049eddfc80f84643c5b8c/);
+});
+
+test("one owner approval can atomically decide pricing terms and privacy",()=>{
+  const block=bridge.slice(
+    bridge.indexOf("if(action==='launch_approval_bundle_decide')"),
+    bridge.indexOf("if(action==='spaceship_dns_status')")
+  );
+  assert.ok(block.length>0);
+  assert.match(block,/String\(a\.m\.role\)!=='owner'/);
+  assert.match(block,/owner_required/);
+  assert.match(block,/hercules_launch_approval_bundle_decide/);
+  assert.match(bridge,/APPROVE HERCULES LAUNCH PACKET/);
+  assert.match(block,/LAUNCH_PACKET_CONFIRMATION/);
+  assert.match(block,/refreshLaunchGate/);
+});
+
+test("bundle approval refuses stale packets or missing auth hardening",()=>{
+  assert.match(bridge,/launch_packet_version_mismatch/);
+  assert.match(bridge,/launch_packet_digest_mismatch/);
+  assert.match(bridge,/auth_hardening_required_before_launch_packet/);
+});
+
+test("decision center exposes one consolidated owner action without auto approval",()=>{
+  assert.match(ui,/Launch Approval Envelope/);
+  assert.match(ui,/Approve launch packet/);
+  assert.match(ui,/APPROVE HERCULES LAUNCH PACKET/);
+  assert.match(ui,/launch_approval_bundle_decide/);
+  assert.doesNotMatch(ui,/launch_approval_bundle_decide[^\n]+confirmation:['"]APPROVE HERCULES LAUNCH PACKET/);
 });
