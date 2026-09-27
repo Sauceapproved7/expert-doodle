@@ -6,7 +6,8 @@ import {
   createDomainAgentIdentity,
   createProviderGrantRecord,
 } from "../hercules-authority/domain-agent.mjs";
-import {createDomainAgentService} from "../hercules-authority/domain-agent-service.mjs";\nimport {createHerculesRouteTask} from "../hercules-authority/domain-agent-router.mjs";
+import {createDomainAgentService} from "../hercules-authority/domain-agent-service.mjs";
+import {createHerculesRouteTask} from "../hercules-authority/domain-agent-router.mjs";
 
 const TOKEN = "0123456789abcdef0123456789abcdef";
 const SHA = "b".repeat(64);
