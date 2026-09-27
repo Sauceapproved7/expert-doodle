@@ -1,0 +1,30 @@
+{
+  "schema": "sauceapproved.hercules.browser-routing-policy.v1",
+  "version": 1,
+  "status": "active",
+  "defaultBrowser": "hercules-browser",
+  "ownedControlSurface": "hercules-browser",
+  "ownedGateway": "https://hercules-browser-gateway.onrender.com",
+  "preferredCapabilities": [
+    "navigation",
+    "interaction",
+    "scraping",
+    "screenshots",
+    "session-reuse",
+    "browser-verification"
+  ],
+  "fallbackPolicy": {
+    "externalBrowserAllowed": true,
+    "conditions": [
+      "hercules-browser-unavailable",
+      "hercules-browser-incompatible",
+      "required-action-not-supported"
+    ],
+    "reasonRequired": true,
+    "paidExternalBrowserForConvenience": false
+  },
+  "verification": {
+    "neverClaimHerculesUsedWithoutExecutionEvidence": true,
+    "preserveAuditEvidence": true
+  }
+}
