@@ -144,6 +144,19 @@ async function securePasswordChange(req:Request,password:string,nonce:string,cur
   return {status:200,body:{ok:true,user:d}};
 }
 const PUBLIC_MARKETING_EVENTS=new Set(["landing_view","cta_open_product","proof_demo_interest","pilot_interest","proof_demo_started","first_verified_useful_action"]);
+const PRIVACY_REQUEST_CATEGORIES=new Set(["privacy_access","privacy_export","privacy_correction","privacy_deletion","privacy_question","support","legal_inquiry"]);
+async function recentPrivacyRequestCount(email:string){
+  if(!S)return 99;
+  const q=new URL(U+"/rest/v1/hercules_privacy_requests");
+  q.searchParams.set("email","eq."+email);
+  q.searchParams.set("created_at","gte."+new Date(Date.now()-24*60*60*1000).toISOString());
+  q.searchParams.set("select","id");
+  q.searchParams.set("limit","6");
+  const r=await fetch(q,{headers:{apikey:S,authorization:"Bearer "+S},signal:AbortSignal.timeout(10000)});
+  if(!r.ok)throw new Error("privacy_request_rate_check_failed");
+  const rows=await r.json().catch(()=>[]);
+  return Array.isArray(rows)?rows.length:99;
+}
 function safeMarketingProperties(value:unknown){
   const input=value&&typeof value==="object"?value as Record<string,unknown>:{};
   return {
@@ -322,6 +335,31 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
     <div class="panel"><div class="tag">Launch boundary</div><h3>Clean outside. Deep inside.</h3><p class="muted">The public product stays simple. Detailed operational controls remain behind authenticated owner/admin access.</p><button class="btn primary" style="margin-top:14px" id="systemOpen">Enter Hercules</button></div>
   </section>
 
+  <section class="section legal" id="privacyRequestCenter">
+    <div class="tag">Privacy & support</div>
+    <h3>Hercules Privacy Request Center</h3>
+    <p>Submit an access, export, correction, deletion, privacy, support, or business/legal inquiry. Hercules records the request and returns a reference. Identity or authority must be verified before any customer data is exported, corrected, or deleted.</p>
+    <form id="privacyForm" class="panel" style="margin-top:16px">
+      <label for="privacyRequestType">Request type</label>
+      <select id="privacyRequestType" required>
+        <option value="privacy_access">Access my data</option>
+        <option value="privacy_export">Export my data</option>
+        <option value="privacy_correction">Correct my data</option>
+        <option value="privacy_deletion">Delete my data</option>
+        <option value="privacy_question">Privacy question</option>
+        <option value="support">Customer support</option>
+        <option value="legal_inquiry">Business/legal inquiry</option>
+      </select>
+      <label for="privacyEmail" style="margin-top:12px">Business email</label>
+      <input id="privacyEmail" type="email" autocomplete="email" maxlength="254" required placeholder="you@company.com">
+      <label for="privacyMessage" style="margin-top:12px">Request details</label>
+      <textarea id="privacyMessage" minlength="10" maxlength="3000" required placeholder="Describe what you need. Do not include authentication codes, payment-card numbers, or government identifiers."></textarea>
+      <div class="hidden" aria-hidden="true"><label for="privacyWebsite">Website</label><input id="privacyWebsite" tabindex="-1" autocomplete="off"></div>
+      <button class="btn primary" type="submit" style="margin-top:12px">Submit request</button>
+      <div id="privacyRequestMsg" class="notice hidden"></div>
+    </form>
+  </section>
+
   <section class="section legal" id="privacy"><div class="tag">Early Access</div><h3>Privacy</h3><p>Hercules uses account identifiers, workspace content, prompts, build and deployment records, and audit data to operate the service, secure access, and improve reliability. Provider credentials remain server-side where supported. Do not submit data you are not authorized to use.</p></section>
   <section class="section legal" id="terms"><div class="tag">Early Access</div><h3>Terms</h3><p>Use Hercules only with systems and data you own or are authorized to operate. Early Access features, limits, and availability may change. Any paid production commitments, support levels, or warranties require separate written terms.</p></section>
   <footer class="footer"><span>Hercules by SauceApproved</span><span>Early Access · Privacy · Terms</span></footer>
@@ -473,6 +511,21 @@ const demoSteps=[
  ["Proof retained","The workflow reaches a verified useful action with an inspectable trail."]
 ];
 $("demoRun").onclick=async()=>{track("proof_demo_started",{dataset:"synthetic-v1"});const steps=[...document.querySelectorAll("#demoProgress div")];steps.forEach(x=>x.className="");$("demoRun").disabled=true;for(let i=0;i<demoSteps.length;i++){steps.slice(0,i).forEach(x=>x.className="done");steps[i].className="active";$("demoHeadline").textContent=demoSteps[i][0];$("demoDetail").textContent=demoSteps[i][1];await new Promise(r=>setTimeout(r,850))}steps.forEach(x=>x.className="done");$("demoHeadline").textContent="Verified useful action reached.";$("demoDetail").textContent="The synthetic proof finished without sending an external collection action.";track("first_verified_useful_action",{surface:"proof_demo",dataset:"synthetic-v1"});$("demoRun").disabled=false};
+$("privacyForm").onsubmit=async e=>{
+  e.preventDefault();setNotice("privacyRequestMsg","");
+  const category=$("privacyRequestType").value,email=$("privacyEmail").value.trim().toLowerCase(),message=$("privacyMessage").value.trim(),website=$("privacyWebsite").value.trim();
+  const btn=e.submitter||$("privacyForm").querySelector("button[type=submit]");if(btn)btn.disabled=true;
+  try{
+    const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"privacy_request",category,email,message,website})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||"Request failed");
+    const reference=d.reference?(" Reference: "+d.reference):"";
+    setNotice("privacyRequestMsg","Request received."+reference+" Keep this reference for follow-up.","good");
+    e.target.reset();
+  }catch(err){
+    setNotice("privacyRequestMsg","Request could not be recorded: "+err.message,"bad");
+  }finally{if(btn)btn.disabled=false}
+};
 $("pilotForm").onsubmit=async e=>{e.preventDefault();setNotice("pilotMsg","");const email=$("pilotEmail").value.trim(),first_name=$("pilotName").value.trim(),company=$("pilotCompany").value.trim(),role=$("pilotRole").value,website=$("pilotWebsite").value;if(!email){setNotice("pilotMsg","Enter a business email.","bad");return}const btn=e.submitter||$("pilotForm").querySelector("button[type=submit]");if(btn)btn.disabled=true;try{const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"pilot_request",email,first_name,company,role,website,referrer:document.referrer||null,attribution:acquisition})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Request failed");setNotice("pilotMsg","Pilot request received. Hercules recorded the request for controlled follow-up.","good");e.target.reset()}catch(err){setNotice("pilotMsg","Pilot request could not be recorded: "+err.message,"bad")}finally{if(btn)btn.disabled=false}};
 
 $("authSwitch").onclick=async()=>{if(authMode==="signin"&&!publicSignupOpen){const open=await refreshRegistrationState();if(!open){setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}}authMode=authMode==="signin"?"signup":"signin";$("authTitle").textContent=authMode==="signin"?"Sign in":"Create account";$("authSubmit").textContent=authMode==="signin"?"Sign in":"Create account";$("authSwitch").disabled=false;$("authSwitch").textContent=authMode==="signin"?(publicSignupOpen?"Create account":"Early access — sign-in only"):"Sign in instead";setNotice("authMsg","")};
@@ -649,6 +702,28 @@ Deno.serve(async(req:Request)=>{
         if(!password)return Response.json({ok:false,error:"password_required"},{status:400,headers:{"cache-control":"no-store"}});
         const result=await securePasswordChange(req,password,cleanText((body as any).nonce,128),String((body as any).current_password||""));
         return Response.json(result.body,{status:result.status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+      }
+      if(action==="privacy_request"){
+        if(cleanText((body as any).website,120))return Response.json({ok:true},{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+        const category=cleanText((body as any).category,64);
+        const email=cleanText((body as any).email,254).toLowerCase();
+        const message=cleanText((body as any).message,3000);
+        if(!PRIVACY_REQUEST_CATEGORIES.has(category))return Response.json({ok:false,error:"invalid_request_type"},{status:400,headers:{"cache-control":"no-store"}});
+        if(!validEmail(email))return Response.json({ok:false,error:"invalid_email"},{status:400,headers:{"cache-control":"no-store"}});
+        if(message.length<10)return Response.json({ok:false,error:"request_details_required"},{status:400,headers:{"cache-control":"no-store"}});
+        const recent=await recentPrivacyRequestCount(email);
+        if(recent>=5)return Response.json({ok:false,error:"privacy_request_rate_limited"},{status:429,headers:{"cache-control":"no-store","retry-after":"3600"}});
+        const reference=crypto.randomUUID();
+        await restInsert("hercules_privacy_requests",{
+          public_reference:reference,
+          category,
+          email,
+          message,
+          status:"new",
+          requester_verified:false,
+          metadata:{source:"hercules-launch-request-center",verification_required:true}
+        });
+        return Response.json({ok:true,reference},{status:201,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
       }
       if(action==="marketing_event"){
         const eventName=cleanText((body as any).event_name,96).toLowerCase();
