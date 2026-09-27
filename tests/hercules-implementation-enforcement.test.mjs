@@ -30,6 +30,10 @@ test("machine-readable execution contract is fail-closed and binds canonical rul
   assert.equal(policy.requireBehaviorTestsBeforeImplementation, true);
   assert.equal(policy.preserveOwnerCodeBoundary, true);
   assert.equal(policy.browserRouting?.ownedHerculesFirst, true);
+  assert.equal(policy.browserRouting?.personalSessionHandoff?.explicitOwnerSessionOnly, true);
+  assert.equal(policy.browserRouting?.personalSessionHandoff?.exportPasswords, false);
+  assert.equal(policy.browserRouting?.personalSessionHandoff?.exportCookies, false);
+  assert.equal(policy.browserRouting?.personalSessionHandoff?.bypassHumanVerification, false);
   assert.equal(policy.authorizationRouting?.useAuthorizedAlternativeFirst, true);
   assert.equal(policy.authorizationRouting?.bypassAccessControls, false);
   assert.deepEqual(policy.ownerOnlyBoundaries, [
