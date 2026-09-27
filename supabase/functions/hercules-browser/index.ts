@@ -81,6 +81,29 @@ function transientClosedSession(error:unknown){
     || /target closed/i.test(message);
 }
 
+function transientWorkerFailure(error:unknown){
+  const message=error instanceof Error?error.message:String(error||"");
+  return /worker_http_(?:502|503|504):/i.test(message)
+    || /failed to connect to backend/i.test(message)
+    || /service unavailable/i.test(message)
+    || /bad gateway/i.test(message)
+    || /websocket was closed before the connection was established/i.test(message)
+    || /ws unexpected response[^\n]*(?:502|503|504)/i.test(message);
+}
+function delay(ms:number){
+  return new Promise<void>(resolve=>setTimeout(resolve,ms));
+}
+function withWorkerTelemetry(error:unknown,attempts:number,warm:any){
+  const wrapped=error instanceof Error?error:new Error(String(error||"browser_worker_failed"));
+  (wrapped as any).workerAttempts=Math.max(1,attempts);
+  (wrapped as any).warmup=warm;
+  return wrapped;
+}
+function workerErrorAttempts(error:unknown){
+  const n=Number((error as any)?.workerAttempts||1);
+  return Number.isFinite(n)?Math.max(1,Math.trunc(n)):1;
+}
+
 function detectSecurityChallenge(page:any){
   const title=String(page?.title||"").trim().toLowerCase();
   const text=String(page?.text||"").toLowerCase();
@@ -139,20 +162,44 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
     return result;
   };
 
+  const maxAttempts=3;
+  const retryBudgetMs=20000;
+  const started=Date.now();
   const urls=warmupUrls(w);
-  const warm=await warmWorkers(urls);
-  try{
-    return {result:await run(),attempts:1,warm};
-  }catch(first){
-    if(!urls.length)throw first;
-    const warmRetry=await warmWorkers(urls);
-    return {result:await run(),attempts:2,warm:{attempted:warm.attempted+warmRetry.attempted,responded:warm.responded+warmRetry.responded}};
+  let warm=await warmWorkers(urls);
+  let lastError:unknown=null;
+
+  for(let attempt=1;attempt<=maxAttempts;attempt++){
+    try{
+      return {result:await run(),attempts:attempt,warm};
+    }catch(error){
+      lastError=error;
+      if(!transientWorkerFailure(error)||attempt>=maxAttempts){
+        throw withWorkerTelemetry(error,attempt,warm);
+      }
+
+      const backoffMs=Math.min(4000,1000*(2**(attempt-1)));
+      if(Date.now()-started+backoffMs>retryBudgetMs){
+        throw withWorkerTelemetry(error,attempt,warm);
+      }
+
+      await delay(backoffMs);
+      if(urls.length){
+        const warmRetry=await warmWorkers(urls);
+        warm={
+          attempted:warm.attempted+warmRetry.attempted,
+          responded:warm.responded+warmRetry.responded
+        };
+      }
+    }
   }
+
+  throw withWorkerTelemetry(lastError,maxAttempts,warm);
 }
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.3.0",
+    ok:true,service:"hercules-browser",version:"1.4.0",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,securityChallengeDetection:true,antiBotBypass:false,controlPlane:"Hercules"
   });
@@ -194,6 +241,8 @@ Deno.serve(async(req:Request)=>{
     attempt_count:1,started_at:new Date().toISOString()
   }).select("id").maybeSingle();
 
+  let workerAttemptsObserved=0;
+
   try{
     const endpoint=new URL(w.base_url);
     endpoint.pathname="/v1/run";
@@ -208,18 +257,26 @@ Deno.serve(async(req:Request)=>{
     let workerCall:any;
     try{
       workerCall=await callWorker(endpoint,w,payload,timeoutMs);
+      workerAttemptsObserved+=workerCall.attempts;
     }catch(first){
+      workerAttemptsObserved+=workerErrorAttempts(first);
       if(!body?.sessionId||!targetUrl||!transientClosedSession(first))throw first;
       sessionRecoveryAttempts=1;
       const freshPayload={...payload};
       delete freshPayload.sessionId;
       freshPayload.persistSession=true;
-      workerCall=await callWorker(endpoint,w,freshPayload,timeoutMs);
+      try{
+        workerCall=await callWorker(endpoint,w,freshPayload,timeoutMs);
+        workerAttemptsObserved+=workerCall.attempts;
+      }catch(second){
+        workerAttemptsObserved+=workerErrorAttempts(second);
+        throw second;
+      }
       sessionRecovered=true;
     }
     const result=workerCall.result;
     const securityChallenge=detectSecurityChallenge(result?.page);
-    const totalAttempts=workerCall.attempts+sessionRecoveryAttempts;
+    const totalAttempts=Math.max(1,workerAttemptsObserved);
     if(run?.id && totalAttempts!==1) await admin.from("hercules_browser_runs").update({
       attempt_count:totalAttempts,
       updated_at:new Date().toISOString()
@@ -227,6 +284,7 @@ Deno.serve(async(req:Request)=>{
 
     const summary={
       attempts:totalAttempts,
+      workerAttempts:totalAttempts,
       sessionRecoveryAttempts,
       sessionRecovered,
       warmup:workerCall.warm,
@@ -266,7 +324,11 @@ Deno.serve(async(req:Request)=>{
   }catch(e){
     const message=e instanceof Error?e.message.slice(0,2000):"browser_run_failed";
     if(run?.id) await admin.from("hercules_browser_runs").update({
-      status:"failed",error:message,completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+      status:"failed",
+      error:message,
+      attempt_count:Math.max(1,workerAttemptsObserved),
+      completed_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
     }).eq("id",run.id);
     return out({ok:false,traceId,error:"browser_run_failed",detail:message},502);
   }

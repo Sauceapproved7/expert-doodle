@@ -13,7 +13,7 @@ test("browser control plane performs bounded on-demand warmup instead of persist
   assert.match(browser,/warmupUrls/);
   assert.match(browser,/warmWorkers/);
   assert.match(browser,/AbortSignal\.timeout\(45000\)/);
-  assert.match(browser,/attempts:2/);
+  assert.match(browser,/maxAttempts=3/);
   assert.doesNotMatch(browser,/setInterval\([^)]*fetch/i);
 });
 
@@ -22,6 +22,21 @@ test("worker warmup URLs are controlled by the worker registry",()=>{
   assert.match(migration,/hercules-browser-gateway\.onrender\.com\/health/);
   assert.match(migration,/hercules-browser-api\.onrender\.com/);
   assert.match(migration,/'cold_start_recovery'/);
+});
+
+test("transient CDP startup failures use bounded backoff before retry",()=>{
+  assert.match(browser,/function transientWorkerFailure/);
+  assert.match(browser,/worker_http_\(\?:502\|503\|504\)/);
+  assert.match(browser,/failed to connect to backend/);
+  assert.match(browser,/websocket was closed before the connection was established/);
+  assert.match(browser,/const retryBudgetMs=20000/);
+  assert.match(browser,/await delay\(backoffMs\)/);
+});
+
+test("failed worker retries are preserved in run telemetry",()=>{
+  assert.match(browser,/workerAttemptsObserved/);
+  assert.match(browser,/workerAttempts/);
+  assert.match(browser,/attempt_count:Math\.max\(1,workerAttemptsObserved\)/);
 });
 
 test("browser agent allows enough time for cold-start recovery",()=>{
