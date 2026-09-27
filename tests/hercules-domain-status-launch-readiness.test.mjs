@@ -18,7 +18,7 @@ test("production domain status includes sanitized Shopify cutover state",()=>{
 test("production domain status includes launch readiness gates",()=>{
   assert.match(edge,/hercules_shopify_launch_readiness/);
   assert.match(edge,/launchReadiness:readiness\|\|null/);
-  assert.match(edge,/stage,gates,source,last_error,last_observed_at,last_transition_at,updated_at/);
+  assert.match(edge,/stage,gates,source,last_error,last_observed_at,last_transition_at,storefront_status,storefront_verified_at,storefront_verification,updated_at/);
 });
 
 test("production status does not select Shopify secrets",()=>{
@@ -29,5 +29,5 @@ test("production status does not select Shopify secrets",()=>{
 });
 
 test("production status version advances",()=>{
-  assert.match(edge,/version:'2\.3\.0'/);
+  assert.match(edge,/version:'2\.4\.0'/);
 });
