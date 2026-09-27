@@ -74,3 +74,20 @@ Real-money connectivity is blocked until a later reviewed release defines and te
 the regulated-provider boundary, authorization model, durable storage, reconciliation,
 audit retention, and incident controls. Sandbox passing evidence must not be described
 as production banking certification.
+
+
+## API authentication boundary
+
+v0.3 introduces an authenticated HTTP service for the sandbox bank.
+
+Current controls:
+- verifies Hercules Base access tokens before customer operations;
+- derives customer ownership from the verified token subject;
+- hides accounts owned by other customers;
+- limits sandbox funding to administrator roles;
+- serializes durable mutations so concurrent requests cannot overspend the same balance;
+- rejects oversized or malformed request bodies;
+- keeps external payment rails disabled.
+
+Production use still requires deployment controls such as TLS, rate limiting, secret
+rotation, environment isolation, durable audit retention, and regulated-provider review.
