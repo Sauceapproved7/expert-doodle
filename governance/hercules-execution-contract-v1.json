@@ -28,7 +28,15 @@
     "ownedHerculesFirst": true,
     "fallbackOnlyWhenUnavailableIncompatibleOrIncapable": true,
     "recordFallbackReason": true,
-    "neverClaimUnverifiedBrowserUse": true
+    "neverClaimUnverifiedBrowserUse": true,
+    "personalSessionHandoff": {
+      "explicitOwnerSessionOnly": true,
+      "exportPasswords": false,
+      "exportCookies": false,
+      "exportCredentials": false,
+      "bypassHumanVerification": false,
+      "bypassProviderSecurityControls": false
+    }
   },
   "authorizationRouting": {
     "useAuthorizedAlternativeFirst": true,
