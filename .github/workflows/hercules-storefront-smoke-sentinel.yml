@@ -1,0 +1,27 @@
+name: Hercules Storefront Smoke Sentinel
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-provider-connect/**"
+      - "supabase/functions/hercules-integrations/**"
+      - "supabase/migrations/*hercules_storefront_smoke_sentinel*"
+      - "tests/hercules-storefront-smoke-sentinel.test.mjs"
+      - "docs/HERCULES-STOREFRONT-SMOKE-SENTINEL-V1.md"
+      - ".github/workflows/hercules-storefront-smoke-sentinel.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storefront-smoke-sentinel:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify storefront smoke sentinel
+        run: node --test tests/hercules-storefront-smoke-sentinel.test.mjs
