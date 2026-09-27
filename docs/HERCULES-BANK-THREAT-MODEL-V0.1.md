@@ -35,7 +35,7 @@ No real-money custody or regulated payment rail is in scope for v0.1.
 | Invalid/expired access token | Hercules Base JWT signature, issuer, audience, issued-at, and expiry verification |
 | Bearer token sent over cleartext remote HTTP | First-party client permits HTTP only for loopback endpoints; remote endpoints require HTTPS |
 | Redirect-based credential forwarding | First-party client disables redirects |
-| Hung upstream/service request | First-party client applies a bounded request timeout |
+| Hung upstream/service request | First-party client applies a bounded request timeout |\n| Browser token persistence | Console keeps the bearer token in memory only and removes URL fragments immediately |\n| Third-party browser asset injection | Console uses same-origin assets with a restrictive Content Security Policy |\n| Customer access to owner metrics | Owner overview requires an approved administrator role |
 
 ## Authentication boundary
 
@@ -107,3 +107,14 @@ Binding the service to a non-loopback interface is an explicit deployment choice
 does not make the service internet-safe by itself. Production exposure still requires
 TLS termination, network policy, rate limiting, secret rotation, monitoring, and the
 regulated controls listed above.
+
+
+## Browser console boundary
+
+v0.5 serves owned HTML, CSS, and JavaScript from the same Hercules Bank origin. The
+console can receive a Base access token through the URL fragment, removes that fragment
+with `history.replaceState`, and keeps the token only in process memory for authenticated
+API calls. It does not persist the token in Web Storage or cookies.
+
+The owner overview is authorization-gated by the API; hiding owner controls in the
+browser is presentation only and is never treated as an authorization control.
