@@ -50,5 +50,5 @@ test("public launch instruments marketing and first verified value events",()=>{
 test("public launch preserves owner-bound legal and registration gates",()=>{
   assert.match(launch,/DRAFT — owner review required before general availability/);
   assert.match(launch,/Public account creation is not open yet/);
-  assert.doesNotMatch(launch,/guaranteed recovery/i);
+  assert.match(launch,/not being offered here as .*guaranteed recovery service/i);
 });
