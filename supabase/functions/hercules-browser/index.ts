@@ -64,9 +64,25 @@ async function worker(){
   const {data,error}=await admin.from("hercules_browser_workers").select("*")
     .eq("name","primary").eq("enabled",true).maybeSingle();
   if(error||!data) throw new Error("browser_worker_unavailable");
-  const {data:secret,error:se}=await admin.rpc("hercules_get_secret",{p_id:data.token_secret_ref});
-  if(se||!secret) throw new Error("browser_worker_credential_unavailable");
-  return {...data,token:String(secret)};
+  return data;
+}
+
+async function workerSecret(w:any){
+  const {data:secret,error}=await admin.rpc("hercules_get_secret",{p_id:w.token_secret_ref});
+  if(error||!secret) throw new Error("browser_worker_credential_unavailable");
+  return String(secret);
+}
+
+async function workerToken(w:any){
+  if(String(w?.metadata?.auth_mode||"")==="one_time_broker"){
+    const {data,error}=await admin.rpc("hercules_browser_standalone_token_issue",{
+      p_purpose:"runtime",
+      p_ttl_seconds:90
+    });
+    if(error||!data)throw new Error("browser_worker_broker_token_unavailable");
+    return String(data);
+  }
+  return workerSecret(w);
 }
 function decodeBase64(value:string){
   const raw=atob(value); const bytes=new Uint8Array(raw.length);
@@ -180,9 +196,10 @@ async function warmWorkers(urls:string[]){
 }
 async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
   const run=async()=>{
+    const token=await workerToken(w);
     const r=await fetch(endpoint,{
       method:"POST",
-      headers:{"content-type":"application/json","authorization":"Bearer "+w.token},
+      headers:{"content-type":"application/json","authorization":"Bearer "+token},
       body:JSON.stringify(payload),
       signal:AbortSignal.timeout(timeoutMs+15000)
     });

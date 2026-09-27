@@ -437,6 +437,164 @@ async function autopilotRun(s,input) {
   return state;
 }
 
+
+function transientWorkerSnapshot(error) {
+  const message=error instanceof Error?error.message:String(error||"");
+  return /execution context was destroyed/i.test(message) && /navigation/i.test(message);
+}
+
+async function workerSnapshot(page,maxChars) {
+  const max=clamp(maxChars,1000,100000,30000);
+  for(let attempt=1;attempt<=3;attempt++) {
+    try {
+      return await page.evaluate(limit=>({
+        title:document.title,
+        url:location.href,
+        text:(document.body?.innerText||"").slice(0,limit),
+        links:Array.from(document.querySelectorAll("a[href]")).slice(0,100).map(a=>({
+          text:(a.textContent||"").trim().slice(0,300),
+          href:a.href
+        }))
+      }),max);
+    } catch(error) {
+      if(!transientWorkerSnapshot(error)||attempt===3)throw error;
+      await page.waitForTimeout(250*attempt);
+      await page.waitForLoadState("domcontentloaded",{timeout:3000}).catch(()=>{});
+    }
+  }
+}
+
+async function workerExtract(page,selector) {
+  const loc=page.locator(selector);
+  const count=Math.min(await loc.count(),50);
+  const items=[];
+  for(let i=0;i<count;i++) {
+    items.push(await loc.nth(i).evaluate(el=>({
+      text:(el.innerText||el.textContent||"").trim().slice(0,10000),
+      html:el.outerHTML.slice(0,20000)
+    })));
+  }
+  return items;
+}
+
+async function workerSession(id,persist) {
+  if(id&&sessions.has(id)) {
+    const existing=sessions.get(id);
+    existing.lastUsed=Date.now();
+    return {...existing,id,persist:true};
+  }
+  const fresh=await freshSession();
+  if(persist) return {...fresh,id:fresh.id,persist:true};
+  sessions.delete(fresh.id);
+  return {...fresh,id:null,persist:false};
+}
+
+async function canonicalWorkerRun(input) {
+  const action=String(input?.action||"navigate");
+  const allowed=new Set(["navigate","scrape","screenshot","interact","close_session"]);
+  if(!allowed.has(action))throw Error("unsupported_action");
+
+  if(action==="close_session") {
+    const sessionId=String(input?.sessionId||"");
+    if(!sessionId)throw Error("session_id_required");
+    return {ok:true,action,closed:await closeSession(sessionId)};
+  }
+
+  const timeout=clamp(input?.timeoutMs,1000,MAX_TIMEOUT,30000);
+  const persist=input?.persistSession===true||Boolean(input?.sessionId);
+  const session=await workerSession(input?.sessionId?String(input.sessionId):null,persist);
+
+  try {
+    if(input?.url) {
+      const target=await safeUrl(String(input.url));
+      await session.page.goto(target,{waitUntil:"domcontentloaded",timeout});
+    }
+
+    if(action==="navigate") {
+      return {
+        ok:true,
+        action,
+        sessionId:session.id,
+        page:await workerSnapshot(session.page,input?.maxTextChars)
+      };
+    }
+
+    if(action==="scrape") {
+      const extracted={};
+      for(const raw of (Array.isArray(input?.selectors)?input.selectors.slice(0,25):[])) {
+        const selector=String(raw||"").slice(0,500);
+        if(selector)extracted[selector]=await workerExtract(session.page,selector);
+      }
+      return {
+        ok:true,
+        action,
+        sessionId:session.id,
+        page:await workerSnapshot(session.page,input?.maxTextChars),
+        extracted
+      };
+    }
+
+    if(action==="screenshot") {
+      const png=await session.page.screenshot({fullPage:input?.fullPage!==false,type:"png"});
+      return {
+        ok:true,
+        action,
+        sessionId:session.id,
+        contentType:"image/png",
+        base64:png.toString("base64"),
+        bytes:png.length,
+        page:{title:await session.page.title(),url:session.page.url()}
+      };
+    }
+
+    const steps=Array.isArray(input?.steps)?input.steps.slice(0,AUTOPILOT_MAX_STEPS):[];
+    const outputs=[];
+    for(const rawStep of steps) {
+      const step=rawStep||{};
+      const type=String(step.type||"");
+      const selector=typeof step.selector==="string"?step.selector.slice(0,500):"";
+
+      if(type==="click") {
+        if(!selector)throw Error("selector_required");
+        const boundary=await ownerControlledField(session.page,selector);
+        if(boundary)throw Error("owner_action_required:"+boundary);
+        await session.page.locator(selector).first().click({timeout:Math.min(timeout,10000)});
+        outputs.push({type,selector,ok:true});
+      } else if(type==="type") {
+        if(!selector)throw Error("selector_required");
+        const boundary=await ownerControlledField(session.page,selector);
+        if(boundary)throw Error("owner_action_required:"+boundary);
+        const value=String(step.text||"").slice(0,4000);
+        await session.page.locator(selector).first().fill(value,{timeout:Math.min(timeout,10000)});
+        outputs.push({type,selector,chars:value.length,ok:true});
+      } else if(type==="wait") {
+        const ms=clamp(step.ms,0,5000,500);
+        await session.page.waitForTimeout(ms);
+        outputs.push({type,ms,ok:true});
+      } else if(type==="extract") {
+        if(!selector)throw Error("selector_required");
+        outputs.push({type,selector,items:await workerExtract(session.page,selector)});
+      } else {
+        throw Error("unsupported_step");
+      }
+
+      const visible=await session.page.locator("body").innerText({timeout:3000}).catch(()=>"");
+      const checkpoint=detectOwnerCheckpointText(visible.slice(0,30000));
+      if(checkpoint)throw Error("owner_action_required:"+checkpoint);
+    }
+
+    return {
+      ok:true,
+      action,
+      sessionId:session.id,
+      steps:outputs,
+      page:await workerSnapshot(session.page,input?.maxTextChars)
+    };
+  } finally {
+    if(!session.persist)await session.context.close().catch(()=>{});
+  }
+}
+
 const mime = {
   ".html":"text/html; charset=utf-8",
   ".js":"text/javascript; charset=utf-8",
@@ -492,9 +650,27 @@ http.createServer(async(req,res)=>{
       engine:"playwright-local-chromium",
       pwa:true,
       autopilot:true,
+      workerContract:"v1",
+      sessionReuse:true,
       rawCodeExecution:false,
       antiBotBypass:false
     });
+  }
+
+  if(req.method==="POST"&&url.pathname==="/v1/run") {
+    if(!(await remoteAuthorized(req)))return json(res,401,{ok:false,error:"unauthorized"});
+    try {
+      return json(res,200,await canonicalWorkerRun(await readBody(req)));
+    } catch(error) {
+      const message=error instanceof Error?error.message:"browser_error";
+      const bad=[
+        "invalid_target_url","unsupported_protocol","embedded_credentials_blocked",
+        "private_target_blocked","unsupported_action","unsupported_step",
+        "selector_required","session_id_required","request_too_large"
+      ].includes(message);
+      const ownerBoundary=message.startsWith("owner_action_required:");
+      return json(res,ownerBoundary?409:(bad?400:502),{ok:false,error:message.slice(0,1200)});
+    }
   }
 
   if(req.method==="POST"&&url.pathname==="/api/claim") {
