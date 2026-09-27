@@ -1,0 +1,25 @@
+name: Hercules Shopify Domain Cutover Observer
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*hercules_shopify_domain_cutover_observer*"
+      - "tests/hercules-shopify-domain-cutover-observer.test.mjs"
+      - "docs/HERCULES-SHOPIFY-DOMAIN-CUTOVER-OBSERVER-V1.md"
+      - ".github/workflows/hercules-shopify-domain-cutover-observer.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shopify-domain-cutover-observer:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify Shopify domain cutover observer
+        run: node --test tests/hercules-shopify-domain-cutover-observer.test.mjs
