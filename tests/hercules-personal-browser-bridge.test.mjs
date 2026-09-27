@@ -59,7 +59,7 @@ test("personal browser sessions and commands are service-role controlled and exp
 
 test("service-role command submitter only targets an explicitly connected unexpired session",()=>{
   assert.match(migration,/create or replace function public\.hercules_personal_browser_command_submit/i);
-  assert.match(migration,/status='connected'/i);
+  assert.match(migration,/s\\.status='connected'/i);
   assert.match(migration,/expires_at>now\(\)/i);
   assert.match(migration,/grant execute on function public\.hercules_personal_browser_command_submit/i);
   assert.match(migration,/to service_role/i);
