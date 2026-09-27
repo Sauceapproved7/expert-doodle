@@ -72,3 +72,30 @@ test("Base Auth client fails closed on non-success responses", async () => {
     /authentication|401/i,
   );
 });
+
+
+test("Base Auth client rejects cleartext remote Base Auth endpoints", () => {
+  assert.throws(
+    () => new HerculesBaseAuthClient({
+      baseUrl:"http://base.example.test:8787",
+      fetchImpl:async () => new Response("{}"),
+    }),
+    /HTTPS|loopback/i,
+  );
+});
+
+test("Base Auth client still permits loopback HTTP for local development", async () => {
+  const client=new HerculesBaseAuthClient({
+    baseUrl:"http://127.0.0.1:8787",
+    fetchImpl:async ()=>new Response(JSON.stringify({
+      user:{id:"user-alice",email:"alice@example.test"},
+      access_token:"access-secret",
+      refresh_token:"refresh-secret",
+    }),{status:200}),
+  });
+  const result=await client.signIn({
+    email:"alice@example.test",
+    password:"correct horse battery staple",
+  });
+  assert.equal(result.access_token,"access-secret");
+});
