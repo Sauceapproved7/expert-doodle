@@ -1,0 +1,23 @@
+name: Hercules Launch Hardening
+on:
+  pull_request:
+    paths:
+      - "hercules-runtime/launch-hardening.mjs"
+      - "tests/hercules-launch-hardening.test.mjs"
+      - "docs/HERCULES-LAUNCH-HARDENING-V0.1.md"
+      - ".github/workflows/hercules-launch-hardening.yml"
+permissions:
+  contents: read
+jobs:
+  hardening-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --check hercules-runtime/launch-hardening.mjs
+      - run: node --test tests/hercules-launch-hardening.test.mjs
+      - run: node --test tests/hercules-chat*.test.mjs
+      - run: node --test tests/hercules-forge*.test.mjs
+      - run: node --test tests/hercules-time-machine.test.mjs tests/hercules-unified-execution.test.mjs
