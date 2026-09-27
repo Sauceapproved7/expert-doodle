@@ -46,3 +46,14 @@ Existing protections remain:
 Browser Agent v0.8 narrows the direct page-title shortcut to genuine title-only requests. A composite read-only request such as “return the page title and whether product controls are visible” is not allowed to terminate with the title alone.
 
 Composite observational goals continue through the navigate-first planner, which must return one complete `finish` answer from the already returned page evidence or fall back to the normal browser loop.
+
+
+## Dedicated observation evaluator
+
+Browser Agent v0.9 separates read-only completion from the normal action planner.
+
+For an eligible observation-only goal, Hercules sends the already-returned page evidence to a dedicated evaluator that can only answer three fields: `complete`, `answer`, and `reason`. It has no selector, input, click, type, extract, wait, login, or purchase action schema.
+
+`complete=true` is accepted only with a non-empty answer intended to cover every requested fact directly from the supplied title, text, URL, or links. If the evidence is incomplete, ambiguous, or requires interaction, the evaluator returns incomplete and Hercules falls back to the existing bounded browser loop.
+
+This prevents an action-oriented planner from requesting a redundant scrape when the initial navigation already contains all evidence needed to answer the operator's read-only question.
