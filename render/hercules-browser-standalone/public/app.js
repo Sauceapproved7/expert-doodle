@@ -1,3 +1,19 @@
+async function bootstrapOwnerClaim(){
+  const params=new URLSearchParams(location.hash.startsWith("#")?location.hash.slice(1):location.hash);
+  const access=params.get("access");
+  if(!access)return false;
+  history.replaceState(null,"",location.pathname+location.search);
+  const r=await fetch("/api/claim",{
+    method:"POST",
+    cache:"no-store",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify({access})
+  });
+  const data=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(data.error||"owner_claim_failed");
+  return true;
+}
+
 const $=id=>document.getElementById(id);
 const screen=$("screen");
 const screenMessage=$("screenMessage");
@@ -136,6 +152,11 @@ window.addEventListener("visibilitychange",()=>{
 });
 window.addEventListener("beforeunload",()=>{active=false;clearTimeout(refreshTimer)});
 
+try{
+  await bootstrapOwnerClaim();
+}catch(e){
+  setStatus(e.message);
+}
 await refreshStatus();
 refreshFrame();
 setInterval(refreshStatus,5000);
