@@ -2,7 +2,7 @@
 
 **Status:** Ready for owner creation  
 **Brand:** SauceApproved  
-**Legal entity:** SauceApproved Enterprise LLC  
+**Legal entity:** SauceApproved enterprise LLC  
 **Website:** https://sauceapproved.com
 
 ## Page identity
