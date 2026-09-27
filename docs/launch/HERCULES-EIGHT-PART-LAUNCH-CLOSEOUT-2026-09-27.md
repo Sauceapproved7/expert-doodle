@@ -59,7 +59,7 @@ Completed:
 
 Remaining owner/provider actions:
 - complete Stripe business/identity verification;
-- connect the SauceApproved Enterprise LLC payout bank account;
+- connect the SauceApproved enterprise LLC payout bank account;
 - enter the Stripe secret key only through authenticated Hercules Integrations;
 - verify live/test mode and run controlled checkout/cancel/refund tests.
 
