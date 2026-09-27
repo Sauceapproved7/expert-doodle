@@ -43,13 +43,13 @@ async function sha256(value:string){
     .map(v=>v.toString(16).padStart(2,'0')).join('');
 }
 
-async function internalAuthorized(req:Request,admin:any){
+async function internalAuthorized(req:Request,admin:any,purpose:string){
   const supplied=req.headers.get('x-hercules-internal-key')||'';
   if(!supplied)return false;
 
   const {data}=await admin.from('hercules_internal_service_keys')
     .select('key_sha256,enabled')
-    .eq('purpose','shopify-domain-monitor')
+    .eq('purpose',purpose)
     .eq('enabled',true)
     .limit(1)
     .maybeSingle();
@@ -231,16 +231,181 @@ async function observeShopifyDomains(admin:any,organizationId?:string){
   return {ok:true,status:'observed',store:STORE,shopGid:SHOP_GID,observation};
 }
 
+
+async function storedLaunchReadiness(admin:any){
+  const {data,error}=await admin.rpc('hercules_shopify_launch_readiness_status');
+  if(error)throw error;
+  return data;
+}
+
+async function observeShopifyLaunch(admin:any,organizationId?:string){
+  const connection=await activeShopifyConnection(admin,organizationId);
+  if(!connection){
+    return {
+      ok:true,
+      status:'stored_without_provider_authorization',
+      store:STORE,
+      shopGid:SHOP_GID,
+      readiness:await storedLaunchReadiness(admin)
+    };
+  }
+
+  const token=await shopifyToken(admin,connection);
+  const data=await shopifyGraphql(token,`
+    query HerculesShopifyLaunchReadiness{
+      shop{
+        id
+        myshopifyDomain
+        plan{publicDisplayName partnerDevelopment shopifyPlus}
+      }
+      themes(first:20,roles:[MAIN]){
+        nodes{id name role processing processingFailed updatedAt}
+      }
+      product(id:"gid://shopify/Product/10258238406976"){
+        id
+        title
+        handle
+        status
+        vendor
+        publishedAt
+        onlineStoreUrl
+        variantsCount{count}
+        mediaCount{count}
+        resourcePublicationsV2(first:20,onlyPublished:true){
+          nodes{
+            isPublished
+            publication{
+              id
+              catalog{id title status}
+            }
+          }
+        }
+      }
+      collections(first:50){
+        nodes{
+          id
+          title
+          handle
+          productsCount{count}
+          resourcePublicationsCount(onlyPublished:true){count}
+        }
+      }
+      menus(first:20){
+        nodes{
+          id
+          title
+          handle
+          isDefault
+          items{id title type url}
+        }
+      }
+    }
+  `);
+
+  if(!data?.shop
+    || String(data.shop.id)!==SHOP_GID
+    || String(data.shop.myshopifyDomain).toLowerCase()!==STORE){
+    throw new Error('shopify_launch_production_shop_mismatch');
+  }
+
+  const theme=(data.themes?.nodes||[]).find((item:any)=>String(item.role)==='MAIN')||null;
+  const product=data.product||null;
+  const publicationTitles=(product?.resourcePublicationsV2?.nodes||[])
+    .filter((item:any)=>Boolean(item.isPublished))
+    .map((item:any)=>String(item?.publication?.catalog?.title||'').toLowerCase());
+
+  const collectionNodes=Array.isArray(data.collections?.nodes)?data.collections.nodes:[];
+  const collection=(handle:string)=>{
+    const item=collectionNodes.find((node:any)=>String(node.handle)===handle);
+    return {
+      id:String(item?.id||''),
+      title:String(item?.title||''),
+      productsCount:Number(item?.productsCount?.count||0),
+      publicationsCount:Number(item?.resourcePublicationsCount?.count||0)
+    };
+  };
+
+  const menuNodes=Array.isArray(data.menus?.nodes)?data.menus.nodes:[];
+  const menu=(handle:string)=>{
+    const item=menuNodes.find((node:any)=>String(node.handle)===handle);
+    return {
+      id:String(item?.id||''),
+      isDefault:Boolean(item?.isDefault),
+      items:(Array.isArray(item?.items)?item.items:[]).map((x:any)=>String(x.title||'')).filter(Boolean)
+    };
+  };
+
+  const snapshot={
+    shopGid:SHOP_GID,
+    plan:{
+      publicDisplayName:String(data.shop?.plan?.publicDisplayName||''),
+      partnerDevelopment:Boolean(data.shop?.plan?.partnerDevelopment),
+      shopifyPlus:Boolean(data.shop?.plan?.shopifyPlus)
+    },
+    theme:{
+      id:String(theme?.id||''),
+      name:String(theme?.name||''),
+      role:String(theme?.role||''),
+      processing:Boolean(theme?.processing),
+      processingFailed:Boolean(theme?.processingFailed)
+    },
+    product:{
+      id:String(product?.id||''),
+      title:String(product?.title||''),
+      handle:String(product?.handle||''),
+      status:String(product?.status||''),
+      vendor:String(product?.vendor||''),
+      variantsCount:Number(product?.variantsCount?.count||0),
+      mediaCount:Number(product?.mediaCount?.count||0),
+      publishedAt:product?.publishedAt||null,
+      onlineStoreUrl:product?.onlineStoreUrl||null
+    },
+    channels:{
+      onlineStore:publicationTitles.some((title:string)=>title.includes('for online store')),
+      shop:publicationTitles.some((title:string)=>/for shop$/.test(title)),
+      googleYoutube:publicationTitles.some((title:string)=>title.includes('google & youtube'))
+    },
+    collections:{
+      launchDrop:collection('sauceapproved-launch-drop'),
+      hoodies:collection('sauceapproved-hoodies'),
+      apparel:collection('sauceapproved-apparel')
+    },
+    menus:{
+      main:menu('main-menu'),
+      footer:menu('footer')
+    }
+  };
+
+  const {data:readiness,error}=await admin.rpc('hercules_shopify_launch_readiness_observe',{
+    p_snapshot:snapshot,
+    p_source:'hercules-provider-connect'
+  });
+  if(error)throw error;
+
+  await admin.from('hercules_provider_connections').update({
+    last_error:null,
+    metadata:{
+      ...(connection.metadata||{}),
+      last_launch_readiness_at:new Date().toISOString(),
+      launch_readiness_stage:readiness?.stage||null
+    },
+    updated_at:new Date().toISOString()
+  }).eq('id',connection.id);
+
+  return {ok:true,status:'observed',store:STORE,shopGid:SHOP_GID,readiness};
+}
+
 Deno.serve(async req=>{
   if(req.method==='GET'){
     return j({
       ok:true,
       service:'hercules-provider-connect',
-      version:'1.1.0',
+      version:'1.2.0',
       providers:['shopify','stripe'],
       store:STORE,
       shopGid:SHOP_GID,
-      domainMonitor:true
+      domainMonitor:true,
+      launchReadinessMonitor:true
     });
   }
 
@@ -249,18 +414,27 @@ Deno.serve(async req=>{
   const admin=createClient(U,S,{auth:{persistSession:false}});
 
   if(req.headers.get('x-hercules-internal-key')){
-    if(!await internalAuthorized(req,admin))return j({error:'unauthorized'},401);
-
     const body=await req.json().catch(()=>({}));
-    if(String(body.action||'')!=='monitor_shopify_domain'){
-      return j({error:'internal_action_not_allowed'},400);
-    }
+    const internalAction=String(body.action||'');
+    const purpose=internalAction==='monitor_shopify_domain'
+      ? 'shopify-domain-monitor'
+      : internalAction==='monitor_shopify_launch'
+        ? 'shopify-launch-readiness'
+        : '';
+
+    if(!purpose)return j({error:'internal_action_not_allowed'},400);
+    if(!await internalAuthorized(req,admin,purpose))return j({error:'unauthorized'},401);
 
     try{
-      return j(await observeShopifyDomains(admin));
+      if(internalAction==='monitor_shopify_domain'){
+        return j(await observeShopifyDomains(admin));
+      }
+      return j(await observeShopifyLaunch(admin));
     }catch(error){
       return j({
-        error:'shopify_domain_monitor_failed',
+        error:internalAction==='monitor_shopify_domain'
+          ? 'shopify_domain_monitor_failed'
+          : 'shopify_launch_readiness_monitor_failed',
         detail:error instanceof Error?error.message:String(error)
       },502);
     }
@@ -278,6 +452,19 @@ Deno.serve(async req=>{
       .select('provider,account_key,status,connected_at,last_error,metadata')
       .eq('organization_id',org);
     return j({connections:data||[]});
+  }
+
+  if(action==='shopify_launch_status'){
+    try{
+      return j(await observeShopifyLaunch(admin,org));
+    }catch(error){
+      const stored=await storedLaunchReadiness(admin).catch(()=>null);
+      return j({
+        error:'shopify_launch_status_failed',
+        detail:error instanceof Error?error.message:String(error),
+        stored
+      },502);
+    }
   }
 
   if(action==='shopify_domain_status'){
@@ -366,7 +553,17 @@ Deno.serve(async req=>{
       });
 
       const domain=await observeShopifyDomains(admin,org);
-      return j({ok:true,connection,created_topics:created,domain});
+      let launchReadiness:any=null;
+      try{
+        launchReadiness=await observeShopifyLaunch(admin,org);
+      }catch(error){
+        launchReadiness={
+          ok:false,
+          error:'launch_readiness_observation_failed',
+          detail:error instanceof Error?error.message:String(error)
+        };
+      }
+      return j({ok:true,connection,created_topics:created,domain,launchReadiness});
     }catch(error){
       return j({
         error:'shopify_connect_failed',
