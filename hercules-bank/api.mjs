@@ -125,6 +125,8 @@ export function createHerculesBankApi({
   browserSessions=null,
   complianceOperations=null,
   productionReadinessInputs={},
+  qualificationEvidenceStore=null,
+  currentAdapterQualification=null,
 }={}){
   if(!runtime||typeof runtime.openCustomerAccount!=="function"){
     throw new TypeError("Hercules Bank runtime is required");
@@ -150,6 +152,9 @@ export function createHerculesBankApi({
   )){
     throw new TypeError("complianceOperations is invalid");
   }
+  if(qualificationEvidenceStore!==null&&typeof qualificationEvidenceStore.status!=="function"){
+    throw new TypeError("qualificationEvidenceStore is invalid");
+  }
 
   const allowedAdminRoles=new Set(adminRoles);
   const authOptions={jwtSecret,issuer,audience,nowSeconds};
@@ -168,7 +173,7 @@ export function createHerculesBankApi({
         return send(res,200,{
           ok:true,
           service:"hercules-bank",
-          version:"1.1",
+          version:"1.3",
           mode:runtime.mode,
           currency:runtime.currency,
           externalRails:false,
@@ -292,10 +297,18 @@ export function createHerculesBankApi({
       if(req.method==="GET"&&url.pathname==="/v1/admin/production-readiness"){
         requireAdmin(claims,allowedAdminRoles);
         if(!complianceOperations)return send(res,503,{error:"compliance_operations_unavailable"});
+        const now=new Date(nowSeconds()*1000).toISOString();
+        const qualificationEvidenceStatus=qualificationEvidenceStore
+          ?await qualificationEvidenceStore.status({
+            currentQualification:currentAdapterQualification,
+            now,
+          })
+          :null;
         const dossier=buildFinancialReadinessDossier({
           complianceSummary:complianceOperations.summary(),
           productionInputs:productionReadinessInputs,
-          now:new Date(nowSeconds()*1000).toISOString(),
+          qualificationEvidenceStatus,
+          now,
         });
         return send(res,200,dossier);
       }
