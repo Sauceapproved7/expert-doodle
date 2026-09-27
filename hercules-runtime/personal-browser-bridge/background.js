@@ -1,4 +1,4 @@
-const API="https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-personal-browser-bridge";
+const API="https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-private-bridge";
 const ALLOWED_ACTIONS=new Set(["observe","click","type","navigate","close"]);
 let polling=false;
 
@@ -103,13 +103,13 @@ async function pollLoop(){
       const s=await loadState();
       if(!s.herculesSessionToken||!s.herculesSessionId||!s.tabId||!s.approvedOrigin)break;
       let d;
-      try{d=await post({action:"poll"},s.herculesSessionToken)}catch(e){await new Promise(r=>setTimeout(r,2500));continue}
+      try{d=await post({action:"personal_browser_poll"},s.herculesSessionToken)}catch(e){await new Promise(r=>setTimeout(r,2500));continue}
       const cmd=d.command;
       if(!cmd){await new Promise(r=>setTimeout(r,1200));continue}
       let result;
       try{result=await executeCommand(Number(s.tabId),String(s.approvedOrigin),cmd)}
       catch(e){result={ok:false,error:e.message||String(e)}}
-      await post({action:"complete",command_id:cmd.id,result},s.herculesSessionToken).catch(()=>{});
+      await post({action:"personal_browser_complete",command_id:cmd.id,result},s.herculesSessionToken).catch(()=>{});
       if(cmd.action==="close"){await clearState();break}
     }
   }finally{polling=false}
@@ -138,7 +138,7 @@ chrome.runtime.onMessage.addListener((msg,_sender,sendResponse)=>{
     }
     if(msg.action==="disconnect"){
       const s=await loadState();
-      if(s.herculesSessionToken)await post({action:"disconnect"},s.herculesSessionToken).catch(()=>{});
+      if(s.herculesSessionToken)await post({action:"personal_browser_disconnect"},s.herculesSessionToken).catch(()=>{});
       await clearState();
       return {ok:true};
     }

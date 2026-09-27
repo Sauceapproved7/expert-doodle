@@ -59,8 +59,8 @@ test("personal browser sessions and commands are service-role controlled and exp
 
 test("service-role command submitter only targets an explicitly connected unexpired session",()=>{
   assert.match(migration,/create or replace function public\.hercules_personal_browser_command_submit/i);
-  assert.match(migration,/status='connected'/i);
-  assert.match(migration,/expires_at>now\(\)/i);
+  assert.match(migration,/s\.status\s*=\s*'connected'/i);
+  assert.match(migration,/s\.expires_at\s*>\s*now\(\)/i);
   assert.match(migration,/grant execute on function public\.hercules_personal_browser_command_submit/i);
   assert.match(migration,/to service_role/i);
 });
@@ -71,4 +71,13 @@ test("extension never exports cookies passwords session tokens or one-time codes
   assert.doesNotMatch(background,/sessionStorage/);
   assert.doesNotMatch(background,/\.value\s*[,}]/);
   assert.match(edge,/credential_export_forbidden/);
+});
+
+const privateBridge=await readFile(new URL("../supabase/functions/hercules-private-bridge/index.ts",import.meta.url),"utf8");
+
+test("personal browser protocol is multiplexed through the existing private bridge slot",()=>{
+  assert.match(privateBridge,/handlePersonalBrowserRequest/);
+  assert.match(privateBridge,/isPersonalBrowserAction/);
+  assert.match(privateBridge,/if\(isPersonalBrowserAction\(probeAction\)\)return handlePersonalBrowserRequest\(req\)/);
+  assert.match(background,/hercules-private-bridge/);
 });
