@@ -1,0 +1,122 @@
+{
+  "schema": "sauceapproved.hercules.organic-acquisition",
+  "version": 1,
+  "status": "active_organic_only",
+  "product": "Hercules Revenue Recovery",
+  "offer": "Hercules Revenue Recovery — Founding Pilot",
+  "primaryCta": "founding_pilot",
+  "defaultCampaign": "founding-pilot-organic-v1",
+  "channels": [
+    {
+      "id": "linkedin",
+      "medium": "organic_social",
+      "motion": "founder_proof_post",
+      "cadence": "weekly"
+    },
+    {
+      "id": "youtube",
+      "medium": "organic_video",
+      "motion": "proof_walkthrough",
+      "cadence": "weekly"
+    },
+    {
+      "id": "short_video",
+      "medium": "organic_social",
+      "motion": "proof_cut",
+      "cadence": "2_per_week"
+    },
+    {
+      "id": "x",
+      "medium": "organic_social",
+      "motion": "proof_thread",
+      "cadence": "weekly"
+    },
+    {
+      "id": "seo",
+      "medium": "organic_search",
+      "motion": "problem_solution_article",
+      "cadence": "weekly"
+    },
+    {
+      "id": "partner_referral",
+      "medium": "referral",
+      "motion": "one_workflow_pilot_intro",
+      "cadence": "ongoing"
+    },
+    {
+      "id": "targeted_outbound",
+      "medium": "direct_outreach",
+      "motion": "small_named_account_sequence",
+      "cadence": "bounded"
+    }
+  ],
+  "weeklyProofEngine": [
+    "one_verified_product_proof",
+    "linkedin_founder_post",
+    "youtube_walkthrough",
+    "two_short_vertical_cuts",
+    "x_proof_thread",
+    "seo_article",
+    "sales_proof_asset",
+    "trust_or_build_receipt_update"
+  ],
+  "contentSequence": [
+    "why_overdue_invoices_are_not_all_the_same",
+    "build_receipt_001_three_receivables_three_safe_routes",
+    "why_human_approval_belongs_in_financial_ai",
+    "failure_file_001_evidence_conflict",
+    "hercules_gauntlet_001_messy_receivables_case",
+    "founding_pilot_invitation"
+  ],
+  "attribution": {
+    "model": "first_touch_persisted",
+    "keys": [
+      "source",
+      "medium",
+      "campaign",
+      "content",
+      "attribution_id"
+    ],
+    "queryParameters": [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content"
+    ],
+    "defaultSource": "direct",
+    "defaultMedium": "organic",
+    "defaultCampaign": "founding-pilot-organic-v1"
+  },
+  "tracking": {
+    "destination": "protected_marketing_events",
+    "leadDestination": "protected_marketing_contacts",
+    "conversionEvents": [
+      "landing_view",
+      "proof_demo_started",
+      "pilot_request",
+      "first_verified_useful_action"
+    ],
+    "aggregateView": "hercules_organic_acquisition_funnel_v1",
+    "clientReadAccess": false
+  },
+  "guardrails": [
+    "one_primary_cta",
+    "no_mass_spam",
+    "no_guaranteed_recovery_claims",
+    "no_consumer_or_third_party_collection_positioning",
+    "no_internal_material_in_public_content",
+    "paid_acquisition_disabled"
+  ],
+  "paidAcquisition": {
+    "enabled": false,
+    "unlockConditions": [
+      "demo_comprehension_consistent",
+      "first_verified_useful_action_measured",
+      "paid_conversion_exists",
+      "retention_observable",
+      "attribution_trustworthy",
+      "billing_trustworthy",
+      "claims_legal_privacy_ready"
+    ]
+  }
+}
