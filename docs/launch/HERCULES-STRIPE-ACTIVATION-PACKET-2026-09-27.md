@@ -1,7 +1,7 @@
 # Hercules Stripe Activation Packet — 2026-09-27
 
 **Status:** READY FOR OWNER PAYMENT-AUTHORIZATION STEP  
-**Entity:** SauceApproved Enterprise LLC
+**Entity:** SauceApproved enterprise LLC
 
 ## Canonical pricing
 
@@ -25,7 +25,7 @@ The Hercules Integrations UI now exposes an owner-facing **Stripe Direct** card 
 
 ## Owner-only steps that cannot be automated safely
 
-1. Create or finish the Stripe account for SauceApproved Enterprise LLC.
+1. Create or finish the Stripe account for SauceApproved enterprise LLC.
 2. Complete Stripe identity/business verification.
 3. Connect the approved SauceApproved business payout bank account inside Stripe.
 4. Obtain the appropriate Stripe secret key and enter it only in the authenticated Hercules Integrations Stripe Direct card.
