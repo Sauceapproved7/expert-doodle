@@ -5,23 +5,7 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "hercules-forge/**"
-      - "hercules-deploy/**"
-      - "hercules-hurc/**"
-      - "scripts/security-baseline.mjs"
-      - "SECURITY.md"
-      - "docs/HERCULES-THREAT-MODEL.md"
-      - ".github/workflows/**"
   pull_request:
-    paths:
-      - "hercules-forge/**"
-      - "hercules-deploy/**"
-      - "hercules-hurc/**"
-      - "scripts/security-baseline.mjs"
-      - "SECURITY.md"
-      - "docs/HERCULES-THREAT-MODEL.md"
-      - ".github/workflows/**"
 
 permissions:
   contents: read
