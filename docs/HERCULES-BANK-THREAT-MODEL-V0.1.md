@@ -211,3 +211,25 @@ functions, database credentials, KMS key material, or provider credentials.
 
 The browser can display blockers and green controls but cannot mutate the v1.0 activation
 invariant. No v1.1 route enables external rails.
+
+
+## Adapter qualification boundary
+
+v1.2 adds behavioral proof for production-readiness adapters while preserving the
+fail-closed money boundary.
+
+| Threat | v1.2 control |
+| --- | --- |
+| Adapter environment spoofing | Transactional-store and key-custody production contracts require the literal production environment |
+| Database contract passes without real behavior | Qualification runs health, transaction round-trip, backup, and isolated restore verification |
+| Restore test mutates live data | Qualification accepts restore evidence only when the adapter reports an isolated restore |
+| Exportable signing key hidden behind a valid interface | Qualification inspects key metadata and requires exportable=false |
+| Key rotation triggered during qualification | Qualification checks rotation capability metadata but never calls rotateKey |
+| Provider qualification accidentally moves money | Qualification surface contains health/capability probes only and strips any submitTransfer function |
+| Provider lacks a safe test mode | Qualification requires sandboxOrDryRun=true |
+| Qualification mistaken for go-live authority | Results always keep activationAllowed=false and externalRailsEnabled=false |
+
+Qualification functions may call candidate infrastructure health, transaction, backup,
+restore-verification, signing, and capability-probe methods. Those adapters therefore
+remain privileged server-side dependencies and must never be constructed from browser or
+customer input.
