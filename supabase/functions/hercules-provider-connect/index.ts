@@ -173,11 +173,6 @@ async function ensureStripeCatalog(admin:any,key:string){
       products.data=[...(products.data||[]),product];
     }
 
-    const priceList=await stripeRequest(
-      key,
-      'prices?active=true&limit=100&product='+encodeURIComponent(String(product.id))
-    );
-
     const desired=[
       {
         billing:'monthly',
@@ -195,7 +190,10 @@ async function ensureStripeCatalog(admin:any,key:string){
 
     const priceIds:Record<string,string>={};
     for(const target of desired){
-      let price=(priceList.data||[]).find((item:any)=>item?.lookup_key===target.lookupKey);
+      const priceQuery=new URLSearchParams({active:'true',limit:'10'});
+      priceQuery.append('lookup_keys[]',target.lookupKey);
+      const priceLookup=await stripeRequest(key,'prices?'+priceQuery.toString());
+      let price=(priceLookup.data||[]).find((item:any)=>item?.lookup_key===target.lookupKey);
 
       if(price){
         const compatible=
@@ -213,11 +211,9 @@ async function ensureStripeCatalog(admin:any,key:string){
         form.set('recurring[interval]',target.interval);
         form.set('recurring[interval_count]','1');
         form.set('lookup_key',target.lookupKey);
-        form.append('lookup_keys[]',target.lookupKey);
         form.set('metadata[hercules_plan_code]',String(plan.code));
         form.set('metadata[hercules_billing_period]',target.billing);
         price=await stripeForm(key,'prices',form);
-        priceList.data=[...(priceList.data||[]),price];
       }
 
       priceIds[target.billing]=String(price.id);
@@ -518,7 +514,7 @@ Deno.serve(async req=>{
     return j({
       ok:true,
       service:'hercules-provider-connect',
-      version:'1.2.0',
+      version:'1.3.0',
       providers:['shopify','stripe'],
       store:STORE,
       shopGid:SHOP_GID,
@@ -774,7 +770,7 @@ Deno.serve(async req=>{
         metadata:{
           receiver:STRIPE_RECEIVER,
           webhook_endpoint_id:endpoint.id,
-          livemode:Boolean(account.livemode),
+          livemode:key.startsWith('sk_live_'),
           catalog_ready:true,
           catalog
         }
