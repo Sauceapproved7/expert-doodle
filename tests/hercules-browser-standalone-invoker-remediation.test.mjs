@@ -22,7 +22,7 @@ test("anon receives only narrow schema and column privileges",()=>{
 
 test("RLS constrains anonymous token consumption to live one-use rows",()=>{
   assert.match(migration,/create policy "standalone token anon consume"/i);
-  assert.match(migration,/for update to anon/i);
+  assert.match(migration,/for update\s+to anon/i);
   assert.match(migration,/consumed_at is null/i);
   assert.match(migration,/expires_at > now\(\)/i);
   assert.match(migration,/with check \(consumed_at is not null\)/i);
