@@ -1,0 +1,27 @@
+name: Hercules Browser Cold Start Recovery
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-browser/**"
+      - "supabase/functions/hercules-browser-agent/**"
+      - "supabase/migrations/*hercules_browser_coldstart_recovery*"
+      - "tests/hercules-browser-coldstart-recovery.test.mjs"
+      - "docs/HERCULES-BROWSER-COLDSTART-RECOVERY-V1.md"
+      - ".github/workflows/hercules-browser-coldstart-recovery.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-coldstart-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run Browser cold-start recovery tests
+        run: node --test tests/hercules-browser-coldstart-recovery.test.mjs tests/hercules-browser-agent-operator-bridge.test.mjs
