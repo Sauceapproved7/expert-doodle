@@ -14,6 +14,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <section class="card"><h2>Shopify Direct</h2><p class="muted">First-party Hercules Shopify connection for production webhooks plus automatic <span class="mono">sauceapproved.com</span> attachment/SSL/primary-state monitoring. The connection is locked to Shop GID <span class="mono">gid://shopify/Shop/100002726208</span>.</p><input id="shopclient" class="input" autocomplete="off" placeholder="Shopify Client ID"><input id="shopsecret" class="input" type="password" autocomplete="new-password" placeholder="Shopify Client Secret"><div class="row" style="margin-top:10px"><button id="shopsave" class="btn primary">Save Shopify connection + arm monitor</button><button id="shopstatus" class="btn">Domain status</button></div><div id="shopout" class="status"></div></section>
 <section class="card"><h2>Launch Readiness</h2><p class="muted">One production view of the live storefront and final custom-domain gate.</p><div class="row"><button id="launchstatus" class="btn primary">Refresh launch readiness</button></div><div id="launchsummary" class="launch-summary"></div><details><summary>Raw launch data</summary><div id="launchout" class="status"></div></details></section>
 <section class="card"><h2>Storefront Smoke</h2><p class="muted">Read-only Hercules Browser verification of the live hoodie page, variant controls, and purchase controls. Runs hourly and automatically switches to <span class="mono">sauceapproved.com</span> after verified domain cutover.</p><div class="row"><button id="smokestatus" class="btn">Refresh smoke status</button><button id="smokerun" class="btn primary">Run smoke check now</button></div><div id="smokeout" class="status"></div></section>
+<section class="card"><h2>Launch Decisions</h2><p class="muted">Owner-only decisions that Hercules must not make for you. Review the prepared launch documents, then approve only what you have actually decided. Authentication hardening remains system-evidence gated.</p><div class="row"><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-PRICING-PROPOSAL.md" target="_blank" rel="noopener noreferrer">Pricing proposal</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-TERMS-OF-SERVICE-DRAFT.md" target="_blank" rel="noopener noreferrer">Terms draft</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md" target="_blank" rel="noopener noreferrer">Privacy draft</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-AUTH-SECURITY-REVIEW-2026-09-27.md" target="_blank" rel="noopener noreferrer">Auth review</a></div><div id="decisionrows" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="decisionrefresh" class="btn">Refresh decisions</button></div><div id="decisionout" class="status"></div></section>
 </div></section></main>
 <script type="module">
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.57.4';
@@ -21,6 +22,60 @@ const U='https://xbwuablxhhwsaoomsoco.supabase.co',K='sb_publishable_wB9FvOqAi-J
 let user=null,forgeReady=false;const show=(id,v)=>$(id).classList.toggle('hidden',!v);async function token(){return(await sb.auth.getSession()).data.session?.access_token||''}
 async function call(slug,body){const t=await token();if(!t)throw Error('Sign in required');const r=await fetch(U+'/functions/v1/'+slug,{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+t,'apikey':K},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.detail||('HTTP '+r.status));return d}
 function fmt(x){return JSON.stringify(x,null,2)}
+function decisionState(status){return status==='approved'?'pass':status==='rejected'?'fail':'wait'}
+function renderLaunchDecisions(d){
+  const box=$('decisionrows');box.replaceChildren();
+  const approvals=d?.approvals||{};
+  for(const type of ['pricing','terms','privacy','auth_hardening']){
+    const row=document.createElement('div');row.className='launch-line';
+    const left=document.createElement('div');
+    const title=document.createElement('div');title.className='launch-key';title.textContent=type.replace('_',' ');
+    const current=document.createElement('div');current.className='launch-value '+decisionState(approvals[type]?.status);current.textContent=String(approvals[type]?.status||'pending').toUpperCase();
+    left.append(title,current);
+    const actions=document.createElement('div');actions.className='row';
+    if(type!=='auth_hardening'){
+      const approve=document.createElement('button');approve.className='btn primary';approve.textContent='Approve';
+      approve.onclick=()=>decideLaunch(type,'approved');
+      const reset=document.createElement('button');reset.className='btn';reset.textContent='Reset';
+      reset.onclick=()=>decideLaunch(type,'pending');
+      actions.append(approve,reset);
+    }else{
+      const note=document.createElement('div');note.className='muted';note.textContent='Requires verified leaked-password protection evidence';
+      actions.append(note);
+    }
+    row.append(left,actions);box.append(row);
+  }
+  box.append(launchLine('General public registration',d?.publicRegistrationOpen?'OPEN':'HELD CLOSED',d?.publicRegistrationOpen?'pass':'wait'));
+}
+async function launchDecisionStatus(){
+  try{
+    const d=await call('hercules-private-bridge',{action:'launch_approval_status'});
+    renderLaunchDecisions(d);$('decisionout').textContent=fmt(d);return d
+  }catch(e){
+    $('decisionrows').replaceChildren(launchLine('Decision status','UNAVAILABLE','fail'));
+    $('decisionout').textContent='Launch decisions: '+e.message;throw e
+  }
+}
+async function decideLaunch(type,decision){
+  const verb=decision==='approved'?'APPROVE':'RESET';
+  const phrase=verb+' '+type.replace('_',' ').toUpperCase();
+  const confirmation=window.prompt('Type exactly: '+phrase);
+  if(confirmation===null)return;
+  try{
+    const d=await call('hercules-private-bridge',{
+      action:'launch_approval_decide',
+      approval_type:type,
+      decision,
+      confirmation
+    });
+    $('decisionout').textContent=fmt(d);
+    renderLaunchDecisions(d?.status||{});
+    await launchReadinessStatus().catch(()=>{});
+  }catch(e){
+    $('decisionout').textContent='Launch decision: '+e.message;
+  }
+}
+
 function launchLine(label,value,state=''){
   const row=document.createElement('div');row.className='launch-line';
   const k=document.createElement('div');k.className='launch-key';k.textContent=label;
@@ -48,7 +103,7 @@ function renderLaunchSummary(p){
   );
   if(readiness?.storefront_verified_at)box.append(launchLine('Storefront verified at',String(readiness.storefront_verified_at),'pass'));
 }
-async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),launchReadinessStatus(),storefrontSmokeStatus()])}}
+async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),launchReadinessStatus(),storefrontSmokeStatus(),launchDecisionStatus()])}}
 $('signin').onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error){$('authmsg').textContent=r.error.message;show('authmsg',true)}};
 $('signout').onclick=()=>sb.auth.signOut();
 async function driveStatus(){try{$('gout').textContent=fmt(await call('hercules-drive',{action:'status'}))}catch(e){$('gout').textContent='Drive: '+e.message}}
@@ -71,6 +126,7 @@ $('shopstatus').onclick=shopifyStatus;
 $('launchstatus').onclick=launchReadinessStatus;
 $('smokestatus').onclick=storefrontSmokeStatus;
 $('smokerun').onclick=storefrontSmokeRun;
+$('decisionrefresh').onclick=launchDecisionStatus;
 $('shopsave').onclick=async()=>{
   const clientId=$('shopclient').value.trim(),clientSecret=$('shopsecret').value.trim();
   if(!clientId||!clientSecret){$('shopout').textContent='Shopify: Client ID and Client Secret required';return}
