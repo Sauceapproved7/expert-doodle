@@ -112,6 +112,7 @@ export function bankConsoleHtml(){
             <div><span>Recovery proof</span><strong id="readyRecovery">Missing</strong></div>
             <div><span>Case operations</span><strong id="readyCases">Missing</strong></div>
             <div><span>Provider certification</span><strong id="readyProvider">Missing</strong></div>
+            <div><span>Qualification evidence</span><strong id="readyQualification">Missing</strong></div>
             <div><span>Open blockers</span><strong id="readyBlockers">0</strong></div>
           </div>
           <div id="readinessBlockerList" class="control-list"></div>
@@ -225,6 +226,10 @@ async function refreshProductionReadiness(){
   $("readyRecovery").textContent=label(controls.recovery?.ready);
   $("readyCases").textContent=label(controls.caseOperations?.ready);
   $("readyProvider").textContent=controls.providerCertification?.certified?"Ready":"Missing";
+  const qualification=controls.adapterQualification||{};
+  $("readyQualification").textContent=qualification.ready
+    ?"Fresh"
+    :(qualification.stale?"Expired":(qualification.identityChanged?"Requalify":"Missing"));
   $("readyBlockers").textContent=String(data.blockers?.length||0);
   $("productionLock").textContent="ACTIVATION LOCKED";
   $("readinessBlockerList").textContent="";
