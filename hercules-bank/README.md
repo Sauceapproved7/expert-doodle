@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: durable sandbox ledger core
+## Current maturity: authenticated durable sandbox bank core
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -21,7 +21,11 @@ The runtime currently provides:
 - tamper-evident SHA-256 journal chaining;
 - single-currency transaction enforcement;
 - verified restart snapshots;
-- atomic local state-file replacement with mode `0600` temporary files.
+- atomic local state-file replacement with mode `0600` temporary files;
+- authenticated HTTP API using Hercules Base JWT verification;
+- per-customer account isolation from the verified token subject;
+- admin-only sandbox funding;
+- serialized copy-on-write durable mutations.
 
 ## Core invariant
 
@@ -32,6 +36,17 @@ sum(DEBIT amountMinor) === sum(CREDIT amountMinor)
 ```
 
 No floating-point currency amounts are accepted.
+
+## API boundary
+
+The v0.3 HTTP API uses Hercules Base HS256 access-token verification with explicit
+issuer and audience checks. Customer ownership is derived from the verified JWT
+`sub` claim, never from request-body customer IDs.
+
+Current authenticated routes include customer account creation/list/read,
+statements, internal sandbox transfers, and an admin-only sandbox funding route.
+The external-transfer endpoint is intentionally present only as a fail-closed
+`external_rails_disabled` response.
 
 ## Durability boundary
 
