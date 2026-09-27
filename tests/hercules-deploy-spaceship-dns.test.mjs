@@ -38,7 +38,7 @@ test("client is domain allowlisted and sends credentials only as headers", async
   const seen = [];
   const fetchImpl = async (url, init) => {
     seen.push({url, init});
-    return new Response(JSON.stringify({items:[]}), {
+    return new Response(JSON.stringify({items:[], total:0}), {
       status:200,
       headers:{"content-type":"application/json"},
     });
@@ -67,7 +67,7 @@ test("reconcile deletes only conflicting target records, writes missing Shopify 
     const method = init.method || "GET";
     calls.push({url, method, body:init.body});
     if (method === "GET") {
-      return new Response(JSON.stringify({items:records}), {status:200});
+      return new Response(JSON.stringify({items:records, total:records.length}), {status:200});
     }
     if (method === "DELETE") {
       const deleting = JSON.parse(init.body);
