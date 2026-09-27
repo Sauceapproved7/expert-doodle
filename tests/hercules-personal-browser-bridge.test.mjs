@@ -6,7 +6,7 @@ const root=new URL("../",import.meta.url);
 const manifest=JSON.parse(await readFile(new URL("../hercules-runtime/personal-browser-bridge/manifest.json",import.meta.url),"utf8"));
 const background=await readFile(new URL("../hercules-runtime/personal-browser-bridge/background.js",import.meta.url),"utf8");
 const popup=await readFile(new URL("../hercules-runtime/personal-browser-bridge/popup.js",import.meta.url),"utf8");
-const edge=await readFile(new URL("../supabase/functions/hercules-personal-browser-bridge/index.ts",import.meta.url),"utf8");
+const edge=await readFile(new URL("../supabase/functions/hercules-private-bridge/personal-browser.ts",import.meta.url),"utf8");
 const migration=await readFile(new URL("../supabase/migrations/20260927122500_hercules_personal_browser_bridge_v1.sql",import.meta.url),"utf8");
 
 test("personal browser bridge requests only bounded browser permissions",()=>{
@@ -80,4 +80,33 @@ test("personal browser protocol is multiplexed through the existing private brid
   assert.match(privateBridge,/isPersonalBrowserAction/);
   assert.match(privateBridge,/if\(isPersonalBrowserAction\(probeAction\)\)return handlePersonalBrowserRequest\(req\)/);
   assert.match(background,/hercules-private-bridge/);
+});
+
+
+const integrations=await readFile(new URL("../supabase/functions/hercules-integrations/index.ts",import.meta.url),"utf8");
+
+test("pairing UI and extension use the multiplexed private bridge protocol",()=>{
+  assert.match(background,/functions\/v1\/hercules-private-bridge/);
+  assert.match(background,/action:"personal_browser_connect"/);
+  assert.doesNotMatch(background,/action:"connect"/);
+  assert.match(integrations,/hercules-private-bridge/);
+  assert.match(integrations,/personal_browser_owner_status/);
+  assert.match(integrations,/personal_browser_create_pair/);
+  assert.doesNotMatch(integrations,/hercules-personal-browser-bridge/);
+});
+
+test("personal browser observations strip URL query strings and fragments",()=>{
+  assert.match(background,/function safeUrl\(/);
+  assert.match(background,/return u\.origin\+u\.pathname/);
+  assert.doesNotMatch(background,/href:a\.href/);
+  assert.doesNotMatch(background,/url:location\.href/);
+});
+
+test("injected DOM action carries its own URL sanitizer without relying on extension closures",()=>{
+  const start=background.indexOf("function domAction");
+  const end=background.indexOf("async function executeCommand",start);
+  const block=background.slice(start,end);
+  assert.match(block,/const safePageUrl=/);
+  assert.match(block,/href:safePageUrl\(a\.href\)/);
+  assert.match(block,/url:safePageUrl\(location\.href\)/);
 });
