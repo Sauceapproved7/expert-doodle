@@ -135,3 +135,25 @@ v0.5 adds the Hercules Financial sandbox console on top of the deployable v0.4 s
 
 For public HTTPS deployment, secure session cookies must be enabled and the service must
 remain behind the normal Hercules TLS, rate-limit, monitoring, and abuse-control boundary.
+
+
+## One-command Financial launch
+
+v0.6 adds `startHerculesFinancialService`, which opens durable bank state, connects the
+server-side Hercules Base Auth bridge, enables browser sessions and the Financial
+console, and listens as one service.
+
+Defaults remain local-only. A non-loopback bind fails unless secure browser cookies are
+enabled. The Base Auth bridge also refuses plain remote HTTP; remote authentication
+endpoints must use HTTPS, while loopback HTTP remains available for local development.
+
+CLI deployments use:
+- `HERCULES_BANK_STATE_PATH`
+- `HERCULES_BASE_AUTH_URL`
+- `HERCULES_BASE_JWT_SECRET`
+- optional `HERCULES_BANK_HOST`
+- optional `HERCULES_BANK_PORT`
+- optional `HERCULES_BANK_CURRENCY`
+- optional `HERCULES_BANK_SECURE_COOKIES=true`
+
+External money rails remain disabled.

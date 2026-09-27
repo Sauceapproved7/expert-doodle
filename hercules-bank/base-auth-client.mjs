@@ -8,7 +8,10 @@ function nonEmpty(value,label){
 
 function normalizeBaseUrl(value){
   const url=new URL(nonEmpty(value,"baseUrl"));
-  if(!["http:","https:"].includes(url.protocol))throw new TypeError("baseUrl protocol is not allowed");
+  const loopback=new Set(["127.0.0.1","localhost","::1","[::1]"]);
+  if(url.protocol!=="https:"&&!(url.protocol==="http:"&&loopback.has(url.hostname))){
+    throw new TypeError("Base Auth endpoint must use HTTPS unless it is loopback");
+  }
   url.pathname=url.pathname.replace(/\/$/,"");
   url.search="";
   url.hash="";
