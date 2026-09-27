@@ -1,0 +1,21 @@
+name: Hercules Authority Lease
+on:
+  pull_request:
+    paths:
+      - "hercules-authority/**"
+      - "tests/hercules-authority-lease.test.mjs"
+      - "docs/HERCULES-AUTHORITY-LEASE-V0.1.md"
+      - "governance/owner-code-policy.json"
+      - ".github/workflows/hercules-authority-lease.yml"
+permissions:
+  contents: read
+jobs:
+  authority-lease:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --check hercules-authority/authority-lease.mjs
+      - run: node --test tests/hercules-authority-lease.test.mjs
