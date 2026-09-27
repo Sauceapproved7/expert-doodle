@@ -48,3 +48,21 @@ Required environment:
 - `PLAYWRIGHT_BROWSERS_PATH=0` — required on Render so Chromium is packaged in the deployed artifact instead of only the transient build cache.
 
 Do not promote this service back to primary without an explicit rollback reason and fresh production verification.
+
+
+## Dedicated owner checkpoint start link
+
+The direct runtime also supports a dedicated one-time owner start route for provider-controlled checkpoints.
+
+Required environment for that dedicated handoff deployment:
+- `HERCULES_OWNER_START_TOKEN` — high-entropy start token placed only in the short-lived owner URL.
+- `HERCULES_OWNER_START_URL` — server-configured HTTP(S) target; the browser does not accept a target from the owner URL.
+
+Properties:
+- the start token is valid for at most ten minutes from service start;
+- it is consumed after one successful session creation;
+- the configured target passes the same public-network validation as normal Hercules navigation;
+- a persistent Hercules session is created server-side;
+- the owner is redirected into the existing short-lived handoff console;
+- credentials typed in the handoff are not echoed in API responses or application logs;
+- provider terms, MFA, CAPTCHA, identity, consent, and login controls remain owner-controlled.
