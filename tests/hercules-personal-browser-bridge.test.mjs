@@ -82,3 +82,11 @@ test("personal browser bridge reuses Hercules Integrations instead of consuming 
   assert.match(integrations,/action==='complete'/);
   assert.match(integrations,/hercules_personal_browser_sessions/);
 });
+
+
+test("personal browser observations strip URL query strings and fragments",()=>{
+  assert.match(background,/function safeUrl\(/);
+  assert.match(background,/return u\.origin\+u\.pathname/);
+  assert.doesNotMatch(background,/href:a\.href/);
+  assert.doesNotMatch(background,/url:location\.href/);
+});
