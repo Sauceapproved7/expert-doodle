@@ -138,3 +138,14 @@ test("bank service rejects missing or weak JWT configuration before listening", 
     await rm(root, {recursive:true, force:true});
   }
 });
+
+
+test("bank client rejects cleartext remote endpoints", () => {
+  assert.throws(
+    () => new HerculesBankClient({
+      endpoint:"http://example.com",
+      tokenProvider:async () => bearer("user-alice"),
+    }),
+    /HTTPS|loopback/i,
+  );
+});
