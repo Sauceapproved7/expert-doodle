@@ -62,7 +62,7 @@ test("controlled pilot launch is explicit without opening paid/general registrat
   assert.match(landing,/paid_billing_active:false/);
   assert.match(launchMigration,/controlled-founding-pilot-open/);
   assert.match(launchMigration,/'active'/);
-  assert.match(launchMigration,/"open",true|jsonb_build_object\('open',true/i);
+  assert.match(launchMigration,/'open',true/i);
   assert.match(launchMigration,/public-registration-open/);
   assert.match(launchMigration,/public registration must remain closed/i);
 });
