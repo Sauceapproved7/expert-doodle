@@ -27,7 +27,7 @@ Hercules must protect:
 9. **Staging -> production**: isolated fixture evidence must never be represented as production operating history.
 10. **Forge -> notification transport**: invite/recovery delivery is an external service boundary; one-time lifecycle links are the only credential material intentionally sent to that provider.
 11. **Forge/operator -> Deploy Plane**: deployment requests cross a separate authenticated control boundary; jobs may reference deployment targets but must not carry deployment credentials.
-12. **Deploy Plane -> target adapter**: target adapters are replaceable infrastructure boundaries; adapters may hold provider/host credentials outside persisted deployment jobs.
+12. **Deploy Plane -> target adapter**: target adapters are replaceable infrastructure boundaries; adapters may hold provider/host credentials outside persisted deployment jobs.\n13. **Domain-agent ingress -> authority/provider adapters**: authenticated tasks cross tenant, replay, provider-grant, authority-lease, owner-boundary, AI-routing, and credential-isolation boundaries. The public domain is identity and ingress only; it is never treated as provider permission.
 
 ## Primary threats and required controls
 
