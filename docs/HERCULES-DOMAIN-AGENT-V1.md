@@ -221,15 +221,3 @@ The custom hostname remains **pending** until all three are independently verifi
 3. TLS active for `agent.sauceapproved.com`.
 
 Repository code or a DNS intent record alone is not proof that the hostname is live.
-
-## Production verification — 2026-09-27
-
-The live Supabase-multiplexed Domain Agent backend was independently exercised through the production project before custom-hostname activation.
-
-Verified results:
-- discovery endpoint returned HTTP 200 with schema `hercules.domain-agent.discovery.v1`;
-- health endpoint returned HTTP 200 with schema `hercules.domain-agent.health.v1` and `backendLive: true`;
-- an unauthenticated task-preflight request returned HTTP 401 with `owner_admin_internal_or_api_key_authorization_required`;
-- a request containing raw credential material returned HTTP 400 with `raw_credentials_not_accepted`.
-
-The production identity registry records these checks as current security evidence. The backend front door is operational on the existing Supabase `hercules-private-bridge` endpoint. This does **not** mark `agent.sauceapproved.com` live: hosting alias, DNS authorization, and TLS verification remain separate gates and `customDomainVerified` remains false until those checks succeed.
