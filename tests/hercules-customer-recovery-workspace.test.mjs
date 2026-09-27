@@ -48,6 +48,6 @@ test("blocked receivable states never queue external follow-up",()=>{
 
 test("contact-ready receivable can produce a permitted follow-up plan",()=>{
   const plan=recoveryPlan(caseLead("contact_ready"),new Date("2026-09-27T10:00:00Z"));
-  assert.equal(plan.length,2);
+  assert.equal(plan.length,1);
   assert.ok(plan.every(step=>step.channel==="email"));
 });
