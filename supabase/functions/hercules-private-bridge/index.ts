@@ -137,7 +137,10 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='GET' && requestUrl.searchParams.get('spaceship_authorize')==='1'){
     return handleSpaceshipMcpRequest(req);
   }
-  if(req.method==='GET' && requestUrl.searchParams.get('spaceship_mcp_oauth_callback')==='1'){
+  if(req.method==='GET' && (
+    requestUrl.searchParams.get('spaceship_mcp_oauth_callback')==='1' ||
+    requestUrl.searchParams.get('spaceship_authorize')==='1'
+  )){
     return handleSpaceshipMcpRequest(req);
   }
   if(req.method==='POST'){
