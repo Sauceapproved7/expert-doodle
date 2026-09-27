@@ -76,7 +76,7 @@ async function audit(org:string,uid:string,action:string,id:string|null,changes:
 }
 
 async function launchApprovalStatus(){
-  const [{data:approvals,error:approvalError},{data:gate,error:gateError},{data:release,error:releaseError}]=await Promise.all([
+  const [{data:approvals,error:approvalError},{data:gate,error:gateError},{data:release,error:releaseError},{data:passwordDefense,error:passwordDefenseError}]=await Promise.all([
     admin.from('hercules_launch_approvals')
       .select('approval_type,status,approved_at,evidence,updated_at')
       .order('approval_type'),
@@ -88,9 +88,10 @@ async function launchApprovalStatus(){
     admin.from('hercules_continuity_ledger')
       .select('status,value,verified_at')
       .eq('key','public-registration-open')
-      .maybeSingle()
+      .maybeSingle(),
+    admin.rpc('hercules_password_defense_status')
   ]);
-  if(approvalError||gateError||releaseError)throw new Error('launch_approval_status_failed');
+  if(approvalError||gateError||releaseError||passwordDefenseError)throw new Error('launch_approval_status_failed');
 
   const byType=Object.fromEntries((approvals||[]).map((row:any)=>[
     row.approval_type,
@@ -114,6 +115,8 @@ async function launchApprovalStatus(){
       selfApprovalAllowed:false,
       mode:'system_computed',
       control:'hercules-password-defense-v2',
+      verified:passwordDefense?.ok===true,
+      evidence:passwordDefense||null,
       note:'Launch auth hardening is computed from live Hercules password-defense evidence. The native Supabase warning may remain documented without becoming the launch decision source.'
     }
   };
