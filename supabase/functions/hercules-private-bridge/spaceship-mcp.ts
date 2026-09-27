@@ -364,6 +364,7 @@ export function isSpaceshipMcpAction(action:string){
   return [
     "spaceship_mcp_status",
     "spaceship_mcp_begin",
+    "spaceship_mcp_owner_handoff",
     "spaceship_mcp_handoff_issue",
     "spaceship_mcp_handoff_launch_browser",
     "spaceship_mcp_dns_records_get",
@@ -407,6 +408,10 @@ export async function handleSpaceshipMcpRequest(req:Request){
   try{
     if(action==="spaceship_mcp_status")return json(await status());
     if(action==="spaceship_mcp_begin")return json({ok:true,...await beginAuthorization()});
+    if(action==="spaceship_mcp_owner_handoff"){
+      if(!a)return json({error:"owner_admin_required"},403);
+      return json({ok:true,...await issueHandoff()});
+    }
     if(action==="spaceship_mcp_handoff_issue"){
       if(!internal)return json({error:"internal_dns_control_required"},403);
       return json({ok:true,...await issueHandoff()});
