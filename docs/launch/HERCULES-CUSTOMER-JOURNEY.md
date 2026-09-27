@@ -48,3 +48,16 @@ Never use a success state before post-action verification exists.
 ## Launch-quality rule
 
 The first public workflow should be narrower and finished rather than broad and ambiguous. Unsupported connectors/actions should be unavailable or explicitly labeled, never simulated.
+
+
+## Customer workspace implementation
+
+The authenticated launch workspace implements this journey through the **Recovery Desk** as the default customer view.
+
+- Dashboard and case list read from the live `hercules-revenue-rescue` API.
+- Case intake preserves the invoice/source reference, amount, days overdue, and current case state.
+- Contact-ready cases may queue only explicitly available email/SMS channels.
+- Disputed, active-promise, paid, do-not-contact, unverified-history, and manual-review cases are recorded as human-review-only and cannot queue external follow-up.
+- Customers can record terminal outcomes such as recovered, human handoff, and opt-out through the same API.
+- Empty, unavailable, validation-error, and blocked states are visible in the workspace.
+- Advanced Hercules tools remain available separately, while owner-only operational controls are not part of the customer navigation.
