@@ -20,7 +20,7 @@ test("business email DNS autopilot waits for authorized Spaceship OAuth",()=>{
 
 test("business email DNS autopilot calls only the fail-closed Resend reconciliation action",()=>{
   assert.match(sql,/reconcile_resend_mail_dns/);
-  assert.match(sql,/"replaceCustomConflicts",false|'replaceCustomConflicts',false/);
+  assert.match(sql,/hercules_spaceship_dns_submit\('reconcile_resend_mail', false\)/);
   assert.match(sql,/purpose='spaceship-dns'/);
   assert.match(sql,/hercules-private-bridge/);
   assert.doesNotMatch(sql,/replaceCustomConflicts[^\n]*true/);
