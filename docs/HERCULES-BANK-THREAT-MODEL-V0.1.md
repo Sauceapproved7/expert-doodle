@@ -227,7 +227,7 @@ fail-closed money boundary.
 | Key rotation triggered during qualification | Qualification checks rotation capability metadata but never calls rotateKey |
 | Provider qualification accidentally moves money | Qualification surface contains health/capability probes only and strips any submitTransfer function |
 | Provider lacks a safe test mode | Qualification requires sandboxOrDryRun=true |
-| Qualification mistaken for go-live authority | Results always keep activationAllowed=false and externalRailsEnabled=false |\n| Qualification evidence tampering | Canonical hash chain plus detached signature verification fails closed on reopen |\n| Expired qualification treated as current | Bounded TTL automatically marks evidence stale and downgrades production readiness |\n| New KMS key inherits old qualification | Secret-custody key ID participates in the signed identity fingerprint |\n| Provider or database swap inherits old qualification | Current adapter identity is fingerprint-compared to the latest signed record |\n| Browser fabricates qualification status | Evidence store and current adapter qualification are server-side dependencies only |
+| Qualification mistaken for go-live authority | Results always keep activationAllowed=false and externalRailsEnabled=false |\n| Qualification evidence tampering | Canonical hash chain plus detached signature verification fails closed on reopen |\n| Expired qualification treated as current | Bounded TTL automatically marks evidence stale and downgrades production readiness |\n| New KMS key inherits old qualification | Secret-custody key ID participates in the signed identity fingerprint |\n| Provider or database swap inherits old qualification | Current adapter identity is fingerprint-compared to the latest signed record |\n| Browser fabricates qualification status | Evidence store and current adapter qualification are server-side dependencies only |\n| Readiness regression goes unnoticed | v1.4 compares successive sanitized dossiers and raises critical findings for green-to-blocked drift |\n| Qualification expiration arrives without warning | Sentinel emits a bounded pre-expiry warning and a critical stale finding at expiry |\n| Drift history is altered | Strict event shape, sequence, previous hash, canonical SHA-256 event hash, and head hash fail closed |\n| Customer fabricates drift state | Owner-only route builds the dossier and sentinel inputs server-side |\n| Monitoring is mistaken for activation authority | Sentinel rejects dossiers that do not keep activation and external rails locked |
 
 Qualification functions may call candidate infrastructure health, transaction, backup,
 restore-verification, signing, and capability-probe methods. Those adapters therefore
@@ -250,3 +250,21 @@ automatically returns qualification readiness to blocked.
 
 The browser only receives sanitized status. It cannot sign evidence, select the verifier,
 change the current server-side adapter qualification, or enable external rails.
+
+
+## Readiness drift sentinel boundary
+
+v1.4 monitors sanitized readiness state rather than production credentials or customer
+data. The sentinel persists only control booleans, blocker counts, qualification
+freshness/identity flags, expiry time, and bounded findings.
+
+A new check compares the current sanitized dossier with the last persisted snapshot.
+Previously green overall readiness or individual controls falling blocked becomes a
+critical finding. Qualification expiry can be warned before it becomes stale, and stale
+or identity-changed qualification evidence is critical immediately.
+
+The drift API is owner/admin only. Browser or customer input cannot create the dossier,
+select production dependencies, or modify the sentinel's trust inputs.
+
+The sentinel cannot grant authority. It rejects any dossier that does not contain
+`activationAllowed:false` and `externalRailsEnabled:false`.

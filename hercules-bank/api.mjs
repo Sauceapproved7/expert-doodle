@@ -127,6 +127,7 @@ export function createHerculesBankApi({
   productionReadinessInputs={},
   qualificationEvidenceStore=null,
   currentAdapterQualification=null,
+  readinessDriftSentinel=null,
 }={}){
   if(!runtime||typeof runtime.openCustomerAccount!=="function"){
     throw new TypeError("Hercules Bank runtime is required");
@@ -155,6 +156,9 @@ export function createHerculesBankApi({
   if(qualificationEvidenceStore!==null&&typeof qualificationEvidenceStore.status!=="function"){
     throw new TypeError("qualificationEvidenceStore is invalid");
   }
+  if(readinessDriftSentinel!==null&&typeof readinessDriftSentinel.check!=="function"){
+    throw new TypeError("readinessDriftSentinel is invalid");
+  }
 
   const allowedAdminRoles=new Set(adminRoles);
   const authOptions={jwtSecret,issuer,audience,nowSeconds};
@@ -173,7 +177,7 @@ export function createHerculesBankApi({
         return send(res,200,{
           ok:true,
           service:"hercules-bank",
-          version:"1.3",
+          version:"1.4",
           mode:runtime.mode,
           currency:runtime.currency,
           externalRails:false,
@@ -294,7 +298,10 @@ export function createHerculesBankApi({
         }
       }
 
-      if(req.method==="GET"&&url.pathname==="/v1/admin/production-readiness"){
+      if(
+        req.method==="GET"
+        &&(url.pathname==="/v1/admin/production-readiness"||url.pathname==="/v1/admin/readiness-drift")
+      ){
         requireAdmin(claims,allowedAdminRoles);
         if(!complianceOperations)return send(res,503,{error:"compliance_operations_unavailable"});
         const now=new Date(nowSeconds()*1000).toISOString();
@@ -310,7 +317,12 @@ export function createHerculesBankApi({
           qualificationEvidenceStatus,
           now,
         });
-        return send(res,200,dossier);
+        if(url.pathname==="/v1/admin/production-readiness"){
+          return send(res,200,dossier);
+        }
+        if(!readinessDriftSentinel)return send(res,503,{error:"readiness_drift_unavailable"});
+        const drift=await readinessDriftSentinel.check({dossier,now});
+        return send(res,200,drift);
       }
 
       if(req.method==="POST"&&url.pathname==="/v1/admin/compliance/evidence"){

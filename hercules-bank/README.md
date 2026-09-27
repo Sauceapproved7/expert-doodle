@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: deployable authenticated durable sandbox financial service with signed production qualification evidence
+## Current maturity: deployable authenticated durable sandbox financial service with signed qualification evidence and readiness-drift monitoring
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -289,3 +289,22 @@ v1.3 makes v1.2 adapter qualification durable and freshness-aware.
   `externalRailsEnabled:false`.
 
 See `docs/HERCULES-FINANCIAL-QUALIFICATION-EVIDENCE-V1.3.md`.
+
+
+## Readiness drift sentinel
+
+v1.4 continuously compares sanitized production-readiness state and records a
+tamper-evident drift history.
+
+- green-to-blocked readiness changes are critical findings;
+- individual ready controls falling blocked are critical findings;
+- stale or identity-mismatched qualification evidence is critical;
+- qualification evidence approaching expiration produces an advance warning;
+- drift history persists automatically beside the bank state unless
+  `HERCULES_BANK_READINESS_DRIFT_STATE_PATH` overrides the path;
+- `GET /v1/admin/readiness-drift` is owner/admin only;
+- the Owner console reports Stable, Warning, or Critical drift status;
+- persisted drift state contains sanitized readiness metadata only;
+- every check retains `activationAllowed:false` and `externalRailsEnabled:false`.
+
+See `docs/HERCULES-FINANCIAL-READINESS-DRIFT-V1.4.md`.

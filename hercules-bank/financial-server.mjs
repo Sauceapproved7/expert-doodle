@@ -20,6 +20,7 @@ function endpointFor(address){
 export async function startHerculesFinancialService({
   statePath,
   complianceStatePath,
+  readinessDriftStatePath,
   baseAuthUrl,
   jwtSecret,
   currency="USD",
@@ -36,6 +37,7 @@ export async function startHerculesFinancialService({
   productionReadinessInputs={},
   qualificationEvidenceStore=null,
   currentAdapterQualification=null,
+  readinessDriftSentinel=null,
 }={}){
   required(statePath,"statePath");
   required(baseAuthUrl,"baseAuthUrl");
@@ -51,6 +53,8 @@ export async function startHerculesFinancialService({
   const service=await listenHerculesBankBrowserService({
     statePath,
     complianceStatePath,
+    readinessDriftStatePath,
+    readinessDriftSentinel,
     currency,
     host,
     port,
@@ -79,6 +83,7 @@ async function main(){
   const statePath=required(process.env.HERCULES_BANK_STATE_PATH,"HERCULES_BANK_STATE_PATH");
   const baseAuthUrl=required(process.env.HERCULES_BASE_AUTH_URL,"HERCULES_BASE_AUTH_URL");
   const complianceStatePath=process.env.HERCULES_BANK_COMPLIANCE_STATE_PATH?.trim()||undefined;
+  const readinessDriftStatePath=process.env.HERCULES_BANK_READINESS_DRIFT_STATE_PATH?.trim()||undefined;
   const jwtSecret=required(process.env.HERCULES_BASE_JWT_SECRET,"HERCULES_BASE_JWT_SECRET");
   const host=process.env.HERCULES_BANK_HOST?.trim()||"127.0.0.1";
   const currency=process.env.HERCULES_BANK_CURRENCY?.trim()||"USD";
@@ -89,6 +94,7 @@ async function main(){
   const service=await startHerculesFinancialService({
     statePath,
     complianceStatePath,
+    readinessDriftStatePath,
     baseAuthUrl,
     jwtSecret,
     host,
@@ -105,6 +111,7 @@ async function main(){
     endpoint:service.endpoint,
     browserSessions:true,
     complianceOperations:true,
+    readinessDrift:true,
     externalRails:false,
   }));
 
