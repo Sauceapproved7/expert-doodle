@@ -1,0 +1,30 @@
+name: DA-15 Legal Identity Consistency
+
+on:
+  pull_request:
+    paths:
+      - "docs/**"
+      - "governance/**"
+      - "supabase/functions/hercules-integrations/**"
+      - "tests/da15-legal-identity-consistency.test.mjs"
+      - ".github/workflows/da15-legal-identity-consistency.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legal-identity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Enforce execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
+      - name: Verify legal identity consistency
+        run: node --test tests/da15-legal-identity-consistency.test.mjs
+      - name: Run security baseline
+        run: node scripts/security-baseline.mjs
