@@ -29,4 +29,5 @@ test("Stripe connection is not marked active until canonical catalog sync succee
 test("Stripe catalog automation does not delete or deactivate unrelated Stripe objects",()=>{
   assert.doesNotMatch(edge,/api\.stripe\.com\/v1\/(products|prices)\/[^'\`]+[\s\S]{0,180}method:'DELETE'/);
   assert.doesNotMatch(edge,/active=false/);
+  assert.doesNotMatch(edge,/form\.append\('lookup_keys\\[\\]'/);
 });
