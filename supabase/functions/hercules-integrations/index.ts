@@ -1,7 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 
 const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hercules Integrations</title><style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080808;color:#f5f5f5;font-family:system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:880px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.brand{font-weight:900;letter-spacing:.14em}.card{background:#141414;border:1px solid #303030;border-radius:18px;padding:18px;margin-top:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.input{width:100%;background:#090909;color:#fff;border:1px solid #3a3a3a;border-radius:11px;padding:12px;font-size:16px;margin-top:8px}.btn{border:1px solid #3a3a3a;background:#202020;color:#fff;border-radius:11px;padding:11px 14px;font-weight:750;cursor:pointer}.primary{background:#fff;color:#080808}.muted{color:#aaa}.hidden{display:none}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}.status{white-space:pre-wrap;background:#0b0b0b;border-radius:10px;padding:12px;margin-top:10px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:720px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}</style></head><body><main class="wrap">
+:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#080808;color:#f5f5f5;font-family:system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:880px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.brand{font-weight:900;letter-spacing:.14em}.card{background:#141414;border:1px solid #303030;border-radius:18px;padding:18px;margin-top:16px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.input{width:100%;background:#090909;color:#fff;border:1px solid #3a3a3a;border-radius:11px;padding:12px;font-size:16px;margin-top:8px}.btn{border:1px solid #3a3a3a;background:#202020;color:#fff;border-radius:11px;padding:11px 14px;font-weight:750;cursor:pointer}.primary{background:#fff;color:#080808}.muted{color:#aaa}.hidden{display:none}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;word-break:break-all}.status{white-space:pre-wrap;background:#0b0b0b;border-radius:10px;padding:12px;margin-top:10px}.launch-summary{display:grid;gap:8px;margin-top:10px}.launch-line{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;background:#0b0b0b;border:1px solid #292929;border-radius:10px;padding:10px}.launch-key{color:#aaa}.launch-value{font-weight:800;text-align:right}.pass{color:#b7f7c7}.wait{color:#f4d58d}.fail{color:#ffb0b0}details{margin-top:10px}summary{cursor:pointer;color:#aaa}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:720px){.grid{grid-template-columns:1fr}.wrap{padding:14px}}</style></head><body><main class="wrap">
 <div class="top"><div><div class="brand">HERCULES</div><div class="muted">SauceApproved · Owned Integrations</div></div><button id="signout" class="btn hidden">Sign out</button></div>
 <section id="auth" class="card"><h2>Sign in</h2><input id="email" class="input" type="email" placeholder="Email"><input id="password" class="input" type="password" placeholder="Password"><button id="signin" class="btn primary" style="margin-top:10px">Sign in</button><div id="authmsg" class="status hidden"></div></section>
 <section id="app" class="hidden">
@@ -12,7 +12,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <section class="card"><h2>Spaceship DNS</h2><p class="muted">Secure SauceApproved DNS connection. Create a Spaceship API key with only <span class="mono">dnsrecords:read</span> and <span class="mono">dnsrecords:write</span>. The API secret is shown once by Spaceship.</p><div class="row"><a class="btn" href="https://www.spaceship.com/application/api-manager/" target="_blank" rel="noopener noreferrer">Open Spaceship API Manager</a></div><input id="shipkey" class="input" autocomplete="off" placeholder="Spaceship API Key"><input id="shipsecret" class="input" type="password" autocomplete="new-password" placeholder="Spaceship API Secret"><div class="row" style="margin-top:10px"><button id="shipsave" class="btn primary">Save DNS credentials + continue launch</button><button id="shipstatus" class="btn">Status</button></div><div id="shipout" class="status"></div></section>
 <section class="card"><h2>Production Domain</h2><p class="muted"><span class="mono">sauceapproved.com</span> → Shopify. Status reads live DNS. Once Spaceship credentials are saved, Hercules can reconcile only the required Shopify web-routing records while preserving unrelated DNS.</p><div class="row"><button id="domainstatus" class="btn">Refresh launch status</button><button id="domainreconcile" class="btn primary">Run DNS reconcile</button></div><div id="domainout" class="status"></div></section>
 <section class="card"><h2>Shopify Direct</h2><p class="muted">First-party Hercules Shopify connection for production webhooks plus automatic <span class="mono">sauceapproved.com</span> attachment/SSL/primary-state monitoring. The connection is locked to Shop GID <span class="mono">gid://shopify/Shop/100002726208</span>.</p><input id="shopclient" class="input" autocomplete="off" placeholder="Shopify Client ID"><input id="shopsecret" class="input" type="password" autocomplete="new-password" placeholder="Shopify Client Secret"><div class="row" style="margin-top:10px"><button id="shopsave" class="btn primary">Save Shopify connection + arm monitor</button><button id="shopstatus" class="btn">Domain status</button></div><div id="shopout" class="status"></div></section>
-<section class="card"><h2>Launch Readiness</h2><p class="muted">One production view of the paid plan, MAIN theme, anchor hoodie, Online Store + Shop publication, launch collections, navigation, and final custom-domain gate.</p><div class="row"><button id="launchstatus" class="btn primary">Refresh launch readiness</button></div><div id="launchout" class="status"></div></section>
+<section class="card"><h2>Launch Readiness</h2><p class="muted">One production view of the live storefront and final custom-domain gate.</p><div class="row"><button id="launchstatus" class="btn primary">Refresh launch readiness</button></div><div id="launchsummary" class="launch-summary"></div><details><summary>Raw launch data</summary><div id="launchout" class="status"></div></details></section>
 </div></section></main>
 <script type="module">
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.57.4';
@@ -20,6 +20,33 @@ const U='https://xbwuablxhhwsaoomsoco.supabase.co',K='sb_publishable_wB9FvOqAi-J
 let user=null,forgeReady=false;const show=(id,v)=>$(id).classList.toggle('hidden',!v);async function token(){return(await sb.auth.getSession()).data.session?.access_token||''}
 async function call(slug,body){const t=await token();if(!t)throw Error('Sign in required');const r=await fetch(U+'/functions/v1/'+slug,{method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+t,'apikey':K},body:JSON.stringify(body)});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.detail||('HTTP '+r.status));return d}
 function fmt(x){return JSON.stringify(x,null,2)}
+function launchLine(label,value,state=''){
+  const row=document.createElement('div');row.className='launch-line';
+  const k=document.createElement('div');k.className='launch-key';k.textContent=label;
+  const v=document.createElement('div');v.className='launch-value '+state;v.textContent=value;
+  row.append(k,v);return row;
+}
+function renderLaunchSummary(p){
+  const box=$('launchsummary');box.replaceChildren();
+  const readiness=p?.launchReadiness||{},g=readiness?.gates||{},cut=p?.shopifyCutover||{},cred=p?.credentialState||{},launch=p?.launch||{};
+  const storefrontReady=Boolean(g.storefrontReady),storefrontVerified=readiness?.storefront_status==='verified',domainComplete=Boolean(g.domainComplete);
+  const overall=storefrontReady&&storefrontVerified&&domainComplete?'READY':storefrontReady&&storefrontVerified?'READY EXCEPT DOMAIN':'BLOCKED';
+  const overallState=overall==='READY'?'pass':overall==='READY EXCEPT DOMAIN'?'wait':'fail';
+  const dnsReady=Boolean(launch?.readiness?.dnsReady);
+  let next='No blocker detected';
+  if(cred?.status!=='configured')next='Authorize Spaceship DNS with dnsrecords:read + dnsrecords:write';
+  else if(!dnsReady)next='Automatic DNS reconcile / propagation';
+  else if(cut?.stage!=='complete')next='Shopify custom-domain + SSL cutover';
+  box.append(
+    launchLine('Overall',overall,overallState),
+    launchLine('Live storefront',storefrontVerified?'VERIFIED':'UNVERIFIED',storefrontVerified?'pass':'fail'),
+    launchLine('Storefront gates',storefrontReady?'PASS':'FAIL',storefrontReady?'pass':'fail'),
+    launchLine('Custom domain',domainComplete?'COMPLETE':String(cut?.stage||'waiting').toUpperCase(),domainComplete?'pass':'wait'),
+    launchLine('Spaceship DNS',cred?.status==='configured'?'AUTHORIZED':'AUTHORIZATION NEEDED',cred?.status==='configured'?'pass':'wait'),
+    launchLine('Next action',next,overall==='READY'?'pass':'wait')
+  );
+  if(readiness?.storefront_verified_at)box.append(launchLine('Storefront verified at',String(readiness.storefront_verified_at),'pass'));
+}
 async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),launchReadinessStatus()])}}
 $('signin').onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error){$('authmsg').textContent=r.error.message;show('authmsg',true)}};
 $('signout').onclick=()=>sb.auth.signOut();
@@ -36,7 +63,7 @@ async function domainStatus(){try{const d=await call('hercules-domains',{action:
 async function waitDns(requestId){for(let i=0;i<35;i++){await new Promise(r=>setTimeout(r,2000));const d=await call('hercules-domains',{action:'production_reconcile_result',organization_id:ORG,request_id:requestId});if(d?.result?.ready)return d.result}throw Error('DNS reconciliation is still processing')}
 async function reconcileDomain(){const q=await call('hercules-domains',{action:'production_reconcile',organization_id:ORG,confirm_domain:'sauceapproved.com'});if(q?.already_ready){await domainStatus();return q}if(!q?.queued||!q?.request_id)throw Error('DNS reconcile was not queued');$('domainout').textContent='DNS reconciliation queued. Verifying provider result…';const result=await waitDns(q.request_id);$('domainout').textContent=fmt(result);await domainStatus();return result}
 async function shopifyStatus(){try{$('shopout').textContent=fmt(await call('hercules-provider-connect',{action:'shopify_domain_status'}))}catch(e){$('shopout').textContent='Shopify: '+e.message}}
-async function launchReadinessStatus(){try{$('launchout').textContent=fmt(await call('hercules-provider-connect',{action:'shopify_launch_status'}))}catch(e){$('launchout').textContent='Launch: '+e.message}}
+async function launchReadinessStatus(){try{const d=await call('hercules-domains',{action:'production_status',organization_id:ORG});const p=d?.production||{};renderLaunchSummary(p);$('launchout').textContent=fmt(p)}catch(e){$('launchsummary').replaceChildren(launchLine('Launch status','UNAVAILABLE','fail'));$('launchout').textContent='Launch: '+e.message}}
 $('shopstatus').onclick=shopifyStatus;
 $('launchstatus').onclick=launchReadinessStatus;
 $('shopsave').onclick=async()=>{

@@ -46,7 +46,9 @@ test("owner readiness status can use stored state before direct provider authori
 test("Integrations exposes launch readiness without exposing credentials",()=>{
   assert.match(ui,/Launch Readiness/);
   assert.match(ui,/id="launchstatus"/);
-  assert.match(ui,/action:'shopify_launch_status'/);
+  assert.match(ui,/action:'production_status'/);
+  assert.match(ui,/hercules-domains/);
   assert.match(ui,/launchReadinessStatus\(\)/);
+  assert.match(ui,/renderLaunchSummary/);
   assert.doesNotMatch(ui,/shpat_[A-Za-z0-9]/);
 });
