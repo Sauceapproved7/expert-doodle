@@ -1,6 +1,6 @@
 # Hercules Revenue Recovery — Founding Pilot Offer v1
 
-**Status:** Packaged and executable; commercial activation remains owner/release gated.  
+**Status:** Controlled pilot applications are open; paid/general activation remains owner/release gated.  
 **Product:** Hercules Revenue Recovery  
 **Initial market:** U.S. businesses managing their own commercial receivables.
 
@@ -116,13 +116,14 @@ This offer depends only on:
 
 The offer does not require speculative integrations or unfinished future features.
 
-## Activation dependencies
+## Paid/general activation dependencies
 
-The package is ready, but paid/general activation remains fail-closed behind:
+Controlled pilot intake is open. Paid subscriptions, general account creation, and post-pilot conversion remain fail-closed behind:
 - owner pricing approval;
 - owner Terms approval;
 - owner Privacy approval;
 - verified authentication hardening; and
-- explicit owner public-release approval.
+- explicit owner public-release approval;
+- verified live payment-provider and paid checkout/refund/payout path.
 
 Those controls are intentionally outside this offer document.

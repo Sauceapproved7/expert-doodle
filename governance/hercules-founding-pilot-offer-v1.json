@@ -3,7 +3,7 @@
   "version": 1,
   "offerName": "Hercules Revenue Recovery — Founding Pilot",
   "product": "Hercules Revenue Recovery",
-  "status": "packaged_release_gated",
+  "status": "controlled_pilot_open",
   "deliveryMode": "controlled_founding_pilot",
   "market": "US_B2B_OWN_RECEIVABLES",
   "targetCustomer": {
@@ -62,10 +62,11 @@
     "pilotPriceNote": "No pilot price is active until the owner explicitly approves the commercial terms.",
     "postPilotProposal": {
       "plan": "Starter",
-      "monthlyUsd": 99,
+      "monthlyUsd": 49,
       "billingPeriod": "monthly",
       "status": "proposal_only",
-      "source": "docs/launch/HERCULES-PRICING-PROPOSAL.md"
+      "source": "docs/launch/HERCULES-PRICING-PROPOSAL.md",
+      "annualUsd": 490
     }
   },
   "dataHandling": {
@@ -88,5 +89,13 @@
     "owner_privacy_approval",
     "auth_hardening_verification",
     "explicit_public_release_approval"
-  ]
+  ],
+  "launchState": {
+    "controlledPilotApplicationsOpen": true,
+    "publicAccountRegistrationOpen": false,
+    "paidBillingActive": false,
+    "mode": "controlled_founding_pilot",
+    "scope": "US_B2B_OWN_RECEIVABLES"
+  },
+  "activationAppliesTo": "paid_general_activation_only"
 }
