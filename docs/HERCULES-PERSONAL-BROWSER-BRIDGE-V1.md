@@ -4,7 +4,7 @@ Date: 2026-09-27
 
 ## Purpose
 
-Hercules Personal Browser Bridge is the first-party owner-session path for websites that require the owner's existing logged-in browser session. It complements the owned Hercules Browser; it does not replace it.
+Hercules Personal Browser Bridge is the first-party owner-session path for websites that require the owner's existing logged-in browser session. It complements the owned Hercules Browser; it does not replace it. In production, the bridge API is hosted inside the existing `hercules-integrations` Edge Function so it consumes no additional Supabase function slot.
 
 ## Security model
 
@@ -18,6 +18,12 @@ Hercules Personal Browser Bridge is the first-party owner-session path for websi
 - Commands are restricted to: observe, click, type, navigate, close.
 - Navigation is restricted to the explicitly approved origin.
 - Command submission is service-role only.
+
+## Production endpoint
+
+`https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-integrations`
+
+GET renders the authenticated Hercules Integrations UI. POST/OPTIONS carry the bounded Personal Browser Bridge API.
 
 ## Pairing flow
 
