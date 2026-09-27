@@ -1,0 +1,25 @@
+name: Hercules Production Domain UI
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-integrations/**"
+      - "tests/hercules-domain-launch-ui.test.mjs"
+      - "docs/HERCULES-PRODUCTION-DOMAIN-UI-V1.md"
+      - ".github/workflows/hercules-domain-launch-ui.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-domain-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run production-domain UI tests
+        run: node --test tests/hercules-domain-launch-ui.test.mjs
