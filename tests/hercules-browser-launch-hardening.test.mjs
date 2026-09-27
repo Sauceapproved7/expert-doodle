@@ -4,13 +4,12 @@ import {readFile,readdir} from "node:fs/promises";
 
 const root=new URL("../",import.meta.url);
 const routing=JSON.parse(await readFile(new URL("../governance/browser-routing-policy.json",import.meta.url),"utf8"));
-const migrationName=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
+const migrationNames=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
   .filter(x=>x.includes("hercules_browser_runtime_monitor_v2"))
-  .sort()
-  .at(-1);
-const migration=migrationName
-  ? await readFile(new URL("../supabase/migrations/"+migrationName,import.meta.url),"utf8")
-  : "";
+  .sort();
+const migration=(await Promise.all(
+  migrationNames.map(name=>readFile(new URL("../supabase/migrations/"+name,import.meta.url),"utf8"))
+)).join("\n");
 
 test("Hercules Browser remains the default owned browser route",()=>{
   assert.equal(routing.defaultBrowser,"hercules-browser");
