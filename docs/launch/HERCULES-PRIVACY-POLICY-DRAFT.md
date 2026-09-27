@@ -1,11 +1,11 @@
-# Hercules Privacy Policy — FINAL CANDIDATE v0.2
+# Hercules Privacy Policy — FINAL CANDIDATE v0.3
 
 **Status:** FINAL CANDIDATE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE  
 **Company:** SauceApproved enterprise LLC  
 **Product:** Hercules / Hercules Revenue Recovery  
 **Owner/legal review required before publication**
 
-This draft describes the data categories and processing expected for the current Hercules launch architecture. It must be checked against the final production configuration, providers, retention rules, and customer-facing workflow before publication.
+This candidate describes the verified current Hercules launch architecture. It is not effective until SauceApproved enterprise LLC affirmatively approves and publishes it.
 
 ## 1. Scope
 
@@ -22,6 +22,7 @@ It does not govern a third party's independent service or website.
 ## 2. Information Hercules may process
 
 ### Account and identity information
+
 Examples include:
 - account identifier;
 - email address;
@@ -30,6 +31,7 @@ Examples include:
 - role and authorization evidence.
 
 ### Business and workspace information
+
 Examples include:
 - business/workspace name;
 - plan and entitlement information;
@@ -37,6 +39,7 @@ Examples include:
 - connected-provider configuration and status.
 
 ### Receivable and workflow information
+
 Depending on the customer's use, this may include:
 - invoice or receivable identifiers;
 - balances, dates, and aging information;
@@ -47,6 +50,7 @@ Depending on the customer's use, this may include:
 Customers should not provide information that is unnecessary for the supported workflow.
 
 ### Communications and generated content
+
 Hercules may process:
 - user instructions;
 - drafts or messages created through supported features;
@@ -54,6 +58,7 @@ Hercules may process:
 - customer support communications.
 
 ### Audit, proof, and security information
+
 Hercules may maintain:
 - action and approval history;
 - evidence and integrity digests;
@@ -63,6 +68,7 @@ Hercules may maintain:
 - service health and incident records.
 
 ### Usage and technical information
+
 Examples include:
 - product usage counters;
 - feature usage;
@@ -73,6 +79,7 @@ Examples include:
 - device/browser/network information made available by the service infrastructure.
 
 ### Billing information
+
 If paid billing is enabled, Hercules may receive billing identifiers, plan status, subscription status, invoices, or payment status from the payment provider.
 
 Payment-card details should be handled by the payment provider rather than stored directly by Hercules unless the production architecture is explicitly changed and reviewed.
@@ -95,27 +102,32 @@ Information may be used to:
 
 ## 4. AI-assisted processing
 
-Some Hercules features may send selected input to an AI provider or AI-routing layer when the user invokes an AI-assisted capability.
+Some Hercules features send selected input to an AI-routing layer when the user invokes an AI-assisted capability.
 
-The verified Hercules AI routing path may send the user's prompt, applicable project context, bounded recent conversation context, and an internal system instruction through the SauceApproved G4F routing layer to an allowlisted provider.
+The verified production AI route may send the user's prompt, applicable project context, bounded recent conversation context, and an internal system instruction through the SauceApproved G4F routing layer.
 
-The currently verified allowlist includes LLM7, Yqcloud, and KiloCode. Provider selection may use failover, so more than one provider may receive an attempted request when an earlier route fails.
+The launch allowlist is:
+1. LLM7;
+2. KiloCode.
 
-Provider retention and model-training terms remain subject to the provider's current policies and any applicable account settings. Hercules must not publish a stronger "no training" or fixed-retention claim unless provider-specific evidence supports it.
+Provider selection may use failover, so both providers can receive an attempted request when the earlier route fails.
+
+Hercules does not claim that all AI providers prohibit training or retain prompts for a fixed universal period. Provider-specific policies govern downstream processing. Current provider evidence is documented in the production data-flow verification artifact and must be rechecked when the provider chain changes.
 
 ## 5. Service providers and subprocessors
-
-Hercules relies on infrastructure and technology providers to operate the service.
 
 Verified production infrastructure and eligible processing routes currently include:
 
 - **Supabase** — authentication, database, serverless/Edge Functions, workspace and entitlement state, audit/evidence records, monitoring, and launch controls;
-- **Render** — hosting for the Hercules Browser gateway/API and related owned browser runtime;
+- **Render** — hosting for the standalone Hercules Browser and related SauceApproved services;
 - **Railway** — hosting for the SauceApproved G4F AI-routing service;
-- **LLM7, Yqcloud, and KiloCode** — allowlisted AI providers that may receive a bounded request when selected by the Hercules AI routing/failover chain;
+- **LLM7** — allowlisted AI provider;
+- **KiloCode** — allowlisted AI provider whose service may route a request to downstream model providers under Kilo/provider terms;
 - **GitHub** — source control, CI/security/provenance checks, and release/source evidence for Hercules code.
 
-Browserless is used as software/runtime within the SauceApproved-controlled Render browser service rather than as a separately hosted external Browserless account in the verified launch path.
+The canonical browser path uses SauceApproved's standalone Playwright/Chromium service on Render. Browserless is not a separately hosted external processor in the current canonical browser path.
+
+Yqcloud is not part of the launch provider allowlist.
 
 Stripe is **not yet connected** to Hercules. If Stripe is activated for paid launch, this policy must be updated to identify the live payment flow before the `privacy` approval is recorded.
 
@@ -144,7 +156,7 @@ Hercules retains information for periods reasonably necessary to:
 
 Different categories may have different retention periods.
 
-Before publication, the launch team must verify that any specific retention duration stated publicly is actually enforced by production code, configuration, or documented operational procedure.
+Hercules does not publish a universal AI-provider retention period because downstream provider policies differ.
 
 ## 8. Deletion and export
 
@@ -194,14 +206,14 @@ A monitored privacy/contact channel must be configured before publication. Until
 
 ---
 
-## Launch verification blockers in this draft
+## Launch verification blockers in this candidate
 
 Before publication:
-- inventory the production subprocessors that actually receive customer data;
-- verify AI-provider retention/training settings;
-- confirm customer-data deletion/export workflow;
-- confirm retention practices against production behavior;
+- confirm the customer-data deletion/export workflow;
+- confirm internal retention practices against production behavior;
 - configure a monitored privacy contact;
 - confirm state/regional privacy disclosures for the launch market;
 - confirm payment-provider data handling if billing is activated;
 - ensure public statements match the final Terms of Service and live product.
+
+The AI-provider privacy evidence review is no longer an open blocker for the current two-provider launch chain, but any provider-chain change requires a new review.
