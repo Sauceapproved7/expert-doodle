@@ -149,3 +149,11 @@ test("internal handoff launcher revokes the handoff if browser queueing fails",(
   assert.match(mcp,/status:"revoked"/);
   assert.match(mcp,/browser_submit_failed/);
 });
+
+
+test("Private Bridge routes the public handoff GET before generic bridge status",()=>{
+  assert.match(bridge,/spaceship_authorize/);
+  const handoffRoute=bridge.indexOf("spaceship_authorize");
+  const genericGet=bridge.indexOf("if(req.method==='GET'){");
+  assert.ok(handoffRoute>=0&&genericGet>handoffRoute);
+});
