@@ -152,7 +152,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.4.0",
+    ok:true,service:"hercules-browser",version:"1.3.0",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,securityChallengeDetection:true,antiBotBypass:false,controlPlane:"Hercules"
   });
