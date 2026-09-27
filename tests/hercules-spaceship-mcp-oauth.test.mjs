@@ -79,3 +79,12 @@ test("successful OAuth callback triggers existing launch autopilot",()=>{
   assert.match(mcp,/status:"configured"/);
   assert.match(mcp,/provider:"spaceship-mcp"/);
 });
+
+
+test("dynamic registration accepts safe field-name variants without exposing secret values",()=>{
+  assert.ok(mcp.includes('regBody?.client_id||regBody?.clientId'));
+  assert.ok(mcp.includes('regBody?.client_secret||regBody?.clientSecret'));
+  assert.match(mcp,/registration_response_fields/);
+  assert.doesNotMatch(mcp,/JSON\.stringify\(reg\)/);
+  assert.doesNotMatch(mcp,/clientSecret[^\n]*throw new Error/);
+});

@@ -100,12 +100,18 @@ async function ensureRegistration(){
     signal:AbortSignal.timeout(15000)
   });
   const reg=await response.json().catch(()=>({}));
-  if(!response.ok||!reg?.client_id||!reg?.client_secret)throw new Error("spaceship_mcp_dynamic_registration_failed:"+response.status);
+  const regBody=reg?.data&&typeof reg.data==="object"?reg.data:reg;
+  const clientId=String(regBody?.client_id||regBody?.clientId||"").trim();
+  const clientSecret=String(regBody?.client_secret||regBody?.clientSecret||"").trim();
+  if(!response.ok||!clientId||!clientSecret){
+    const registration_response_fields=Object.keys(regBody&&typeof regBody==="object"?regBody:{}).sort().slice(0,32).join(",");
+    throw new Error("spaceship_mcp_dynamic_registration_failed:"+response.status+":registration_response_fields="+registration_response_fields);
+  }
   const {data,error}=await admin.rpc("hercules_spaceship_mcp_store_registration",{
-    p_client_id:String(reg.client_id),p_client_secret:String(reg.client_secret),p_redirect_uri:CALLBACK
+    p_client_id:clientId,p_client_secret:clientSecret,p_redirect_uri:CALLBACK
   });
   if(error||data!==true)throw new Error("spaceship_mcp_registration_store_failed");
-  return {clientId:String(reg.client_id),clientSecret:String(reg.client_secret),redirectUri:CALLBACK,discovered};
+  return {clientId,clientSecret,redirectUri:CALLBACK,discovered};
 }
 async function beginAuthorization(){
   const reg=await ensureRegistration();
