@@ -82,7 +82,7 @@ test("Shopify reconciliation deletes only conflicting managed records, saves des
         : finalRecords;
       return new Response(JSON.stringify({items, total:items.length}), {status:200});
     }
-    return new Response("", {status:204});
+    return new Response(null, {status:204});
   };
 
   const client = new SpaceshipDnsClient({
