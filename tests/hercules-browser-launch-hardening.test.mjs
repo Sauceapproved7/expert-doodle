@@ -3,6 +3,14 @@ import assert from "node:assert/strict";
 import {readFile,readdir} from "node:fs/promises";
 
 const root=new URL("../",import.meta.url);
+const browser=await readFile(new URL("../supabase/functions/hercules-browser/index.ts",import.meta.url),"utf8");
+const monitorV3Name=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
+  .filter(x=>x.endsWith("_hercules_browser_runtime_monitor_v3.sql"))
+  .sort()
+  .at(-1);
+const monitorV3=monitorV3Name
+  ? await readFile(new URL("../supabase/migrations/"+monitorV3Name,import.meta.url),"utf8")
+  : "";
 const routing=JSON.parse(await readFile(new URL("../governance/browser-routing-policy.json",import.meta.url),"utf8"));
 const migrationName=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
   .filter(x=>x.endsWith("_hercules_browser_runtime_monitor_v2.sql"))
@@ -65,4 +73,15 @@ test("browser agent re-checks goal completion after each action before planning 
   assert.match(agent,/aiObserve\(goal,after,history\)/);
   assert.match(agent,/post_action_observation_complete/);
   assert.match(agent,/decision:"finish"[\s\S]*observationSource:"post_action"/);
+});
+
+
+test("page interaction failures are not classified as transient browser infrastructure failures",()=>{
+  assert.match(browser,/function workerActionFailure/);
+  assert.match(browser,/locator\\\.|waiting for locator|element is not visible|strict mode violation/i);
+  assert.match(browser,/worker_action_failed/);
+  assert.match(browser,/workerFailureCode/);
+  assert.match(monitorV3,/worker_http_\(502\|503\|504\)/i);
+  assert.match(monitorV3,/locator\\\.|waiting for locator|element is not visible|strict mode violation/i);
+  assert.match(monitorV3,/transient_upstream_failure_detected/i);
 });
