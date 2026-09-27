@@ -208,16 +208,51 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
 <section id="app" class="hidden">
   <div class="appgrid">
     <aside class="panel sidebar">
-      <button class="btn sidebtn active" data-view="homeView">Home / Chat</button>
+      <button class="btn sidebtn active" data-view="recoveryView">Recovery Desk</button>
+      <button class="btn sidebtn" data-view="homeView">Hercules AI</button>
+      <div class="tag" style="margin:18px 10px 6px">Advanced tools</div>
       <button class="btn sidebtn" data-view="knowledgeView">Knowledge</button>
-      <a class="btn sidebtn" href="/hercules-wallet/">Wallet · Testnet</a>
       <button class="btn sidebtn" data-view="builderView">Builder</button>
-      <button class="btn sidebtn" data-view="forgeView">Forge / Deployments</button>
+      <button class="btn sidebtn" data-view="forgeView">Deployments</button>
       <button class="btn sidebtn" data-view="statusView">System Status</button>
-      <a class="btn sidebtn" href="https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-web" target="_blank" rel="noopener">Owner Console</a>
+      <a class="btn sidebtn" href="/hercules-wallet/">Wallet · Testnet</a>
     </aside>
     <main class="workspace">
-      <section class="view active" id="homeView">
+      <section class="view active" id="recoveryView">
+        <div class="viewhead"><div><div class="tag">Hercules Revenue Recovery</div><h1>Recovery Desk</h1><div class="muted">Add a receivable, establish its current state, and let Hercules route only what is safe to act on.</div></div><div class="row"><span class="pill" id="recoveryState"><span class="dot"></span>Loading cases</span><button class="btn" id="recoveryRefresh">Refresh</button></div></div>
+        <div class="three" id="recoverySummary"></div>
+        <div class="two" style="margin-top:14px">
+          <form class="panel" id="recoveryForm">
+            <div class="tag">Add receivable</div><h2 style="margin:7px 0 8px">Start with what is known.</h2><p class="muted">Hercules stores the source reference and case state. Blocked states remain human-review only and do not queue external follow-up.</p>
+            <label class="tag" style="display:block;margin-top:14px">Customer / account</label><input class="input" id="recoveryCustomer" maxlength="160" placeholder="Acme Supply">
+            <label class="tag" style="display:block;margin-top:14px">Invoice reference</label><input class="input" id="recoveryInvoice" maxlength="120" placeholder="INV-1042" required>
+            <div class="two">
+              <label class="tag" style="display:block;margin-top:14px">Amount (USD)<input class="input" id="recoveryAmount" type="number" min="0" step="0.01" placeholder="8400.00" required></label>
+              <label class="tag" style="display:block;margin-top:14px">Days overdue<input class="input" id="recoveryDaysOverdue" type="number" min="0" step="1" value="1" required></label>
+            </div>
+            <label class="tag" style="display:block;margin-top:14px">Current case state</label>
+            <select class="input" id="recoveryCaseState">
+              <option value="contact_ready">Contact ready</option>
+              <option value="disputed">Disputed</option>
+              <option value="promise_active">Active payment promise</option>
+              <option value="paid">Paid/closed</option>
+              <option value="do_not_contact">Do not contact</option>
+              <option value="unverified_history">Unverified history</option>
+              <option value="manual_review">Manual review</option>
+            </select>
+            <div class="notice" id="recoveryGuidance">Contact-ready cases can queue only the channels you provide below.</div>
+            <label class="tag" style="display:block;margin-top:14px">Email</label><input class="input" id="recoveryEmail" type="email" maxlength="254" placeholder="customer@example.com">
+            <label class="tag" style="display:block;margin-top:14px">Phone</label><input class="input" id="recoveryPhone" maxlength="40" placeholder="+1 555 555 0123">
+            <label class="tag" style="display:block;margin-top:14px">Source</label>
+            <select class="input" id="recoverySource"><option value="inbound">Imported receivable</option><option value="quote_sent">Quote / invoice sent</option><option value="missed_call">Missed call</option><option value="abandoned_cart">Abandoned checkout</option></select>
+            <button class="btn primary" style="width:100%;margin-top:14px" id="recoverySubmit" type="submit">Add to Recovery Desk</button>
+            <div class="notice hidden" id="recoveryFormResult"></div>
+          </form>
+          <div class="panel"><div class="tag">Cases</div><h2 style="margin:7px 0 8px">What needs attention now.</h2><p class="muted">Contact-ready cases can have permitted follow-up queued. Disputes, active promises, paid cases, do-not-contact, unverified history, and manual-review cases stay blocked from external follow-up.</p><div class="results" id="recoveryLeads"></div></div>
+        </div>
+      </section>
+
+      <section class="view" id="homeView">
         <div class="viewhead"><div><div class="tag">Hercules</div><h1>What do you want done?</h1><div class="muted">Ask a question or give Hercules a concrete goal.</div></div><span class="pill" id="aiStatus"><span class="dot"></span>AI ready check</span></div>
         <div class="panel chat"><div class="messages" id="messages"></div><div class="composer"><textarea class="input" id="chatPrompt" placeholder="Ask Hercules to research, plan, build, fix, deploy, or verify something."></textarea><div class="row" style="justify-content:space-between;margin-top:9px"><span class="muted code" id="projectLabel">Command workspace</span><button class="btn primary" id="sendChat">Send to Hercules</button></div></div></div>
       </section>
@@ -292,7 +327,71 @@ $("authSwitch").onclick=async()=>{if(authMode==="signin"&&!publicSignupOpen){con
 $("authSubmit").onclick=async()=>{setNotice("authMsg","");if(authMode==="signup"&&!await refreshRegistrationState()){authMode="signin";$("authTitle").textContent="Sign in";$("authSubmit").textContent="Sign in";setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}const email=$("email").value.trim(),password=$("password").value;const q=authMode==="signin"?await sb.auth.signInWithPassword({email,password}):await sb.auth.signUp({email,password});if(q.error){setNotice("authMsg",q.error.message,"bad");return}if(authMode==="signup"&&!q.data.session){setNotice("authMsg","Check your email to confirm the account, then sign in.","good");return}await bootApp()};
 $("signOut").onclick=async()=>{await sb.auth.signOut();user=null;project=null;orgId=null;orgSlug=null;switchRoot("landing")};
 
-document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",async()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===b.dataset.view));if(b.dataset.view==="knowledgeView")await loadKnowledgeStats();if(b.dataset.view==="forgeView")await loadDeployments();if(b.dataset.view==="statusView")await loadStatus()}));
+const BLOCKED_RECOVERY_STATES=new Set(["disputed","promise_active","paid","do_not_contact","unverified_history","manual_review"]);
+function recoveryCaseLabel(state){return ({contact_ready:"Contact ready",disputed:"Disputed",promise_active:"Active payment promise",paid:"Paid/closed",do_not_contact:"Do not contact",unverified_history:"Unverified history",manual_review:"Manual review"})[state]||"Manual review"}
+function recoveryGuidance(){const state=$("recoveryCaseState").value;const blocked=BLOCKED_RECOVERY_STATES.has(state);$("recoveryGuidance").textContent=blocked?"Human review required — Hercules will record this case but will not queue external follow-up.":"Contact-ready cases can queue only the email/SMS channels you explicitly provide."; $("recoveryGuidance").className="notice "+(blocked?"warn":"good")}
+$("recoveryCaseState").onchange=recoveryGuidance;
+function money(cents,currency="USD"){try{return new Intl.NumberFormat(undefined,{style:"currency",currency:currency||"USD"}).format(Number(cents||0)/100)}catch{return "$"+(Number(cents||0)/100).toFixed(2)}}
+function recoveryCaseCard(row){
+  const box=document.createElement("div");box.className="result";
+  const head=document.createElement("div");head.className="row";head.style.justifyContent="space-between";
+  const h=document.createElement("h3");h.textContent=(row.first_name||row.email||row.phone||"Receivable")+" · "+money(row.estimated_value_cents,row.currency);
+  const state=String(row.context?.caseState||"manual_review");const blocked=BLOCKED_RECOVERY_STATES.has(state);
+  const pill=document.createElement("span");pill.className="pill";pill.textContent=blocked?"Human review required":recoveryCaseLabel(state);
+  head.append(h,pill);
+  const p=document.createElement("p");p.textContent=[row.external_key||"No invoice reference",recoveryCaseLabel(state),row.status||"new",row.next_follow_up_at?("Next action "+new Date(row.next_follow_up_at).toLocaleString()):"No external follow-up queued"].join(" · ");
+  const actions=document.createElement("div");actions.className="row";actions.style.marginTop="10px";
+  if(!["won","lost","opted_out","human_handoff","booked"].includes(String(row.status||""))){
+    for(const [signal,label] of [["won","Mark recovered"],["human_requested","Needs human"],["opt_out","Do not contact"]]){
+      const b=document.createElement("button");b.type="button";b.className="btn small";b.textContent=label;b.dataset.recoverySignal=signal;b.dataset.leadId=row.id;b.dataset.amountCents=String(row.estimated_value_cents||0);actions.appendChild(b)
+    }
+  }
+  box.append(head,p,actions);return box
+}
+async function loadRecovery(){
+  const summary=$("recoverySummary"),list=$("recoveryLeads");summary.textContent="";list.textContent="";$("recoveryState").innerHTML="<span class='dot'></span>Loading cases";
+  try{
+    const oid=await ensureOrg();
+    const [dash,leadData]=await Promise.all([
+      fetchFn("hercules-revenue-rescue",{method:"POST",body:JSON.stringify({action:"dashboard",organizationId:oid})}),
+      fetchFn("hercules-revenue-rescue",{method:"POST",body:JSON.stringify({action:"leads",organizationId:oid,limit:50})})
+    ]);
+    const m=dash.metrics||{},rows=leadData.leads||[];
+    summary.append(kpi("Receivables",m.total_leads??0),kpi("Recovered",money(m.recovered_revenue_cents,m.currency||"USD")),kpi("Queued follow-up",m.queued_actions??0));
+    if(!rows.length){const empty=document.createElement("div");empty.className="result";const h=document.createElement("h3");h.textContent="No recovery cases yet.";const p=document.createElement("p");p.textContent="Add the first receivable on the left. Hercules will preserve its source reference and route it from the current case state.";empty.append(h,p);list.appendChild(empty)}
+    else rows.forEach(row=>list.appendChild(recoveryCaseCard(row)));
+    $("recoveryState").innerHTML="<span class='dot good'></span>"+rows.length+" case"+(rows.length===1?"":"s");
+  }catch(e){
+    const error=document.createElement("div");error.className="notice bad";error.textContent="Recovery Desk unavailable: "+e.message;list.appendChild(error);$("recoveryState").innerHTML="<span class='dot bad'></span>Recovery Desk unavailable";
+  }
+}
+$("recoveryRefresh").onclick=loadRecovery;
+$("recoveryForm").onsubmit=async e=>{
+  e.preventDefault();setNotice("recoveryFormResult","");
+  const state=$("recoveryCaseState").value,email=$("recoveryEmail").value.trim(),phone=$("recoveryPhone").value.trim(),invoice=$("recoveryInvoice").value.trim(),customer=$("recoveryCustomer").value.trim();
+  const amount=Math.round(Number($("recoveryAmount").value||0)*100),days=Math.max(0,Math.trunc(Number($("recoveryDaysOverdue").value||0)));
+  if(!invoice){setNotice("recoveryFormResult","Invoice reference is required.","bad");return}
+  if(!Number.isInteger(amount)||amount<0){setNotice("recoveryFormResult","Enter a valid non-negative amount.","bad");return}
+  if(state==="contact_ready"&&!email&&!phone){setNotice("recoveryFormResult","Contact-ready cases need an email or phone. Otherwise choose Manual review.","bad");return}
+  const blocked=BLOCKED_RECOVERY_STATES.has(state),channels=blocked?["internal"]:[...(email?["email"]:[]),...(phone?["sms"]:[])];
+  const btn=$("recoverySubmit");btn.disabled=true;btn.textContent="Adding…";
+  try{
+    const oid=await ensureOrg();
+    const d=await fetchFn("hercules-revenue-rescue",{method:"POST",body:JSON.stringify({action:"ingest",organizationId:oid,lead:{source:$("recoverySource").value,externalKey:invoice,firstName:customer||null,email:email||null,phone:phone||null,currency:"USD",estimatedValueCents:amount,allowedChannels:channels,context:{caseState:state,invoiceRef:invoice,daysOverdue:days}}})});
+    const msg=blocked||Number(d.queuedActions||0)===0?"Case recorded. Human review required; no external follow-up was queued.":"Case recorded. "+d.queuedActions+" permitted follow-up action"+(d.queuedActions===1?" was":"s were")+" queued.";
+    setNotice("recoveryFormResult",msg,blocked?"warn":"good");track("first_verified_useful_action",{surface:"recovery_desk",project_id:project?.id||null});e.target.reset();$("recoveryDaysOverdue").value="1";recoveryGuidance();await loadRecovery()
+  }catch(err){setNotice("recoveryFormResult","Case could not be added: "+err.message,"bad")}
+  finally{btn.disabled=false;btn.textContent="Add to Recovery Desk"}
+};
+$("recoveryLeads").onclick=async e=>{
+  const btn=e.target.closest("[data-recovery-signal]");if(!btn)return;btn.disabled=true;
+  try{const oid=await ensureOrg();await fetchFn("hercules-revenue-rescue",{method:"POST",body:JSON.stringify({action:"signal",organizationId:oid,leadId:btn.dataset.leadId,signal:btn.dataset.recoverySignal,amountCents:Number(btn.dataset.amountCents||0)})});await loadRecovery()}
+  catch(err){const x=document.createElement("div");x.className="notice bad";x.textContent="Case update failed: "+err.message;$("recoveryLeads").prepend(x)}
+  finally{btn.disabled=false}
+};
+recoveryGuidance();
+
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",async()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===b.dataset.view));if(b.dataset.view==="recoveryView")await loadRecovery();if(b.dataset.view==="knowledgeView")await loadKnowledgeStats();if(b.dataset.view==="forgeView")await loadDeployments();if(b.dataset.view==="statusView")await loadStatus()}));
 
 async function ensureProject(){
   const q=await sb.from("hercules_projects").select("id,name,goal,created_at").order("created_at",{ascending:true}).limit(1).maybeSingle();
@@ -345,7 +444,7 @@ function statusRow(label,value,tone){const x=document.createElement("div");x.cla
 async function loadStatus(){const cards=$("statusCards"),ctrl=$("controlStatus"),reg=$("registryStatus");cards.textContent="";ctrl.textContent="";reg.textContent="";const results=await Promise.allSettled([fetchFn("hercules-control-plane",{method:"GET"}),fetchFn("hercules-deployment-broker",{method:"GET"}),fetchFn("hercules-knowledge-registry",{method:"POST",body:JSON.stringify({action:"stats",org_slug:orgSlug})}),fetchFn("hercules-forge-builder",{method:"GET"})]);const c=results[0].status==="fulfilled"?results[0].value:null,b=results[1].status==="fulfilled"?results[1].value:null,k=results[2].status==="fulfilled"?results[2].value:null,f=results[3].status==="fulfilled"?results[3].value:null;cards.append(kpi("Control plane",c?.ok?"Operational":"Unavailable"),kpi("Forge Builder",f?.ok?"Operational":"Unavailable"),kpi("Knowledge entries",k?.total??"Unavailable"));ctrl.append(statusRow("Service",c?.service||"unreachable",c?.ok?"good":"bad"),statusRow("Mode",c?.mode||"—",c?.ok?"good":"warn"),statusRow("Queued commands",c?.commandQueue?.queued??"—",c?.ok?"good":"warn"),statusRow("Running commands",c?.commandQueue?.running??"—",c?.ok?"good":"warn"),statusRow("Deployment broker",b?.ok?"reachable":"unreachable",b?.ok?"good":"bad"));reg.append(statusRow("Registry",k?.ok?"reachable":"unreachable",k?.ok?"good":"bad"),statusRow("Entries",k?.total??"—",k?.ok?"good":"warn"),statusRow("Forge service",f?.service||"unreachable",f?.ok?"good":"bad"));const healthy=Boolean(c?.ok&&k?.ok&&f?.ok);$("livePill").innerHTML="<span class='dot "+(healthy?"good":"warn")+"'></span>"+(healthy?"Core services live":"Partial status");}
 $("refreshStatus").onclick=loadStatus;
 
-async function bootApp(){const s=(await sb.auth.getSession()).data.session;if(!s){switchRoot("auth");return}user=s.user;switchRoot("app");try{await ensureOrg();await ensureProject();$("projectLabel").textContent=project.name;await loadMessages();const pending=sessionStorage.getItem("hercules_pending_prompt");if(pending){$("chatPrompt").value=pending;sessionStorage.removeItem("hercules_pending_prompt")}await Promise.allSettled([loadKnowledgeStats(),loadStatus()]);$("aiStatus").innerHTML="<span class='dot good'></span>AI workspace ready"}catch(e){$("aiStatus").innerHTML="<span class='dot bad'></span>Setup issue";addMessage("meta","Workspace setup issue: "+e.message)}}
+async function bootApp(){const s=(await sb.auth.getSession()).data.session;if(!s){switchRoot("auth");return}user=s.user;switchRoot("app");try{await ensureOrg();await ensureProject();$("projectLabel").textContent=project.name;const pending=sessionStorage.getItem("hercules_pending_prompt");if(pending){$("chatPrompt").value=pending;sessionStorage.removeItem("hercules_pending_prompt")}await Promise.allSettled([loadRecovery(),loadMessages(),loadKnowledgeStats(),loadStatus()]);$("aiStatus").innerHTML="<span class='dot good'></span>AI workspace ready"}catch(e){$("aiStatus").innerHTML="<span class='dot bad'></span>Setup issue";addMessage("meta","Workspace setup issue: "+e.message);const list=$("recoveryLeads");if(list){list.textContent="";const x=document.createElement("div");x.className="notice bad";x.textContent="Recovery Desk unavailable: "+e.message;list.appendChild(x)}}}
 sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")===false)switchRoot("landing")});
 (async()=>{const s=(await sb.auth.getSession()).data.session;if(s){user=s.user;$("openHercules").textContent="Open Hercules"}switchRoot("landing")})();
 </script>
@@ -355,7 +454,7 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.4.0",product:"Hercules Revenue Recovery",presentation:"marketing-launch-surface",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.5.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",owned_runtime:true,marketing_tracking:true,pilot_intake:true});
   }
   if(req.method==="POST"){
     const len=Number(req.headers.get("content-length")||"0");
