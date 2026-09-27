@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 7,
+  "version": 8,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -286,6 +286,12 @@
     {
       "id": "systemd",
       "name": "systemd service manager",
+      "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "spaceship",
+      "name": "Spaceship registrar and DNS External API",
       "ownership": "third-party-infrastructure",
       "packagedAsHerculesCode": false
     }
