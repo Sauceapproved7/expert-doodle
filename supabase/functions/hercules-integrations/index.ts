@@ -167,7 +167,7 @@ $('shopsave').onclick=async()=>{
 };
 
 $('shipstatus').onclick=spaceshipStatus;
-$('shipoauth').onclick=async()=>{try{const d=await call('hercules-private-bridge',{action:'spaceship_mcp_owner_handoff'});if(!d?.handoffUrl)throw Error('Secure handoff unavailable');location.href=d.handoffUrl}catch(e){$('shipout').textContent='Spaceship: '+e.message}};
+$('shipoauth').onclick=async()=>{try{const d=await call('hercules-private-bridge',{action:'spaceship_mcp_begin'});if(!d?.authorizationUrl)throw Error('Secure authorization unavailable');location.href=d.authorizationUrl}catch(e){$('shipout').textContent='Spaceship: '+e.message}};
 $('domainstatus').onclick=domainStatus;
 $('domainreconcile').onclick=async()=>{try{await reconcileDomain()}catch(e){$('domainout').textContent='Domain: '+e.message}};
 $('shipsave').onclick=async()=>{const apiKey=$('shipkey').value.trim(),apiSecret=$('shipsecret').value.trim();if(!apiKey||!apiSecret){$('shipout').textContent='Spaceship: API key and secret required';return}try{const d=await call('hercules-private-bridge',{action:'configure_spaceship_dns',api_key:apiKey,api_secret:apiSecret});$('shipkey').value='';$('shipsecret').value='';$('shipout').textContent=fmt(d);await spaceshipStatus();await reconcileDomain()}catch(e){$('shipkey').value='';$('shipsecret').value='';$('shipout').textContent='Spaceship: '+e.message;await domainStatus().catch(()=>{})}};
