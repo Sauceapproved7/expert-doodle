@@ -29,17 +29,37 @@ async function publicRegistrationOpen(){
 
 async function run(){
   const started=Date.now();
-  const launch=await fetch(U+'/functions/v1/hercules-launch?health=1',{signal:AbortSignal.timeout(10_000)})
-    .then(async r=>({ok:r.ok&&(await r.json()).ok===true,status:r.status}))
-    .catch(()=>({ok:false,status:0}));
+  const [launch,passwordProbe]=await Promise.all([
+    fetch(U+'/functions/v1/hercules-launch?health=1',{signal:AbortSignal.timeout(10_000)})
+      .then(async r=>({ok:r.ok&&(await r.json()).ok===true,status:r.status}))
+      .catch(()=>({ok:false,status:0})),
+    fetch(U+'/functions/v1/hercules-launch?password_defense_probe=compromised',{signal:AbortSignal.timeout(10_000)})
+      .then(async r=>{
+        const body=await r.json().catch(()=>({}));
+        return {
+          ok:Boolean(r.ok&&body?.ok===true&&body?.password_defense==='hercules-password-defense-v2'&&body?.result?.error==='compromised_password'),
+          status:r.status,
+          control:body?.password_defense||null,
+          probe:body?.probe||null
+        };
+      })
+      .catch(()=>({ok:false,status:0,control:null,probe:null}))
+  ]);
 
-  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals}]=await Promise.all([
+  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
     db.from('hercules_devbrain_fabric_checks').select('overall_ok,checked_at').eq('organization_id',ORG).order('checked_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_release_queue').select('release_id,status,environment,admission_decision,flight_record_hash,updated_at').eq('organization_id',ORG).eq('environment','production').eq('status','verified').eq('admission_decision','allow').order('updated_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_recovery_snapshots').select('snapshot_id,status,verified_at,recovery_region').eq('organization_id',ORG).eq('status','verified').order('verified_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_security_events').select('*',{count:'exact',head:true}).eq('organization_id',ORG).eq('severity','critical').eq('disposition','open'),
-    db.from('hercules_launch_approvals').select('approval_type,status,approved_at').order('approval_type')
+    db.from('hercules_launch_approvals').select('approval_type,status,approved_at').order('approval_type'),
+    db.rpc('hercules_password_defense_status')
   ]);
+  const passwordDefense={
+    ok:Boolean(!passwordDefenseError&&passwordDefenseDb?.ok===true&&passwordProbe.ok===true),
+    control:'hercules-password-defense-v2',
+    database:passwordDefenseError?{ok:false,error:'status_unavailable'}:passwordDefenseDb,
+    browserProbe:passwordProbe
+  };
 
   const devbrainFresh=Boolean(devbrain?.overall_ok&&Date.now()-new Date(devbrain.checked_at).getTime()<24*60*60*1000);
   const technical={
@@ -51,9 +71,10 @@ async function run(){
   };
 
   const commercial=Object.fromEntries((approvals||[]).map((x:any)=>[x.approval_type,x.status==='approved']));
-  const requiredCommercial=['auth_hardening','pricing','privacy','terms'];
+  commercial.auth_hardening=passwordDefense.ok;
+  const requiredOwnerCommercial=['pricing','privacy','terms'];
   const technicalOk=Object.values(technical).every(Boolean);
-  const commercialOk=requiredCommercial.every(k=>commercial[k]===true);
+  const commercialOk=passwordDefense.ok&&requiredOwnerCommercial.every(k=>commercial[k]===true);
 
   const checks={
     technical,
@@ -62,7 +83,8 @@ async function run(){
       release_id:release?.release_id||null,
       recovery_snapshot_id:recovery?.snapshot_id||null,
       recovery_region:recovery?.recovery_region||null,
-      devbrain_checked_at:devbrain?.checked_at||null
+      devbrain_checked_at:devbrain?.checked_at||null,
+      password_defense:passwordDefense
     },
     duration_ms:Date.now()-started
   };
@@ -89,7 +111,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.1.0',
+      version:'1.2.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt
