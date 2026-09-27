@@ -13,6 +13,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <section class="card"><h2>Production Domain</h2><p class="muted"><span class="mono">sauceapproved.com</span> → Shopify. Status reads live DNS. Once Spaceship credentials are saved, Hercules can reconcile only the required Shopify web-routing records while preserving unrelated DNS.</p><div class="row"><button id="domainstatus" class="btn">Refresh launch status</button><button id="domainreconcile" class="btn primary">Run DNS reconcile</button></div><div id="domainout" class="status"></div></section>
 <section class="card"><h2>Shopify Direct</h2><p class="muted">First-party Hercules Shopify connection for production webhooks plus automatic <span class="mono">sauceapproved.com</span> attachment/SSL/primary-state monitoring. The connection is locked to Shop GID <span class="mono">gid://shopify/Shop/100002726208</span>.</p><input id="shopclient" class="input" autocomplete="off" placeholder="Shopify Client ID"><input id="shopsecret" class="input" type="password" autocomplete="new-password" placeholder="Shopify Client Secret"><div class="row" style="margin-top:10px"><button id="shopsave" class="btn primary">Save Shopify connection + arm monitor</button><button id="shopstatus" class="btn">Domain status</button></div><div id="shopout" class="status"></div></section>
 <section class="card"><h2>Launch Readiness</h2><p class="muted">One production view of the live storefront and final custom-domain gate.</p><div class="row"><button id="launchstatus" class="btn primary">Refresh launch readiness</button></div><div id="launchsummary" class="launch-summary"></div><details><summary>Raw launch data</summary><div id="launchout" class="status"></div></details></section>
+<section class="card"><h2>Storefront Smoke</h2><p class="muted">Read-only Hercules Browser verification of the live hoodie page, variant controls, and purchase controls. Runs hourly and automatically switches to <span class="mono">sauceapproved.com</span> after verified domain cutover.</p><div class="row"><button id="smokestatus" class="btn">Refresh smoke status</button><button id="smokerun" class="btn primary">Run smoke check now</button></div><div id="smokeout" class="status"></div></section>
 </div></section></main>
 <script type="module">
 import{createClient}from'https://esm.sh/@supabase/supabase-js@2.57.4';
@@ -47,7 +48,7 @@ function renderLaunchSummary(p){
   );
   if(readiness?.storefront_verified_at)box.append(launchLine('Storefront verified at',String(readiness.storefront_verified_at),'pass'));
 }
-async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),launchReadinessStatus()])}}
+async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),launchReadinessStatus(),storefrontSmokeStatus()])}}
 $('signin').onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error){$('authmsg').textContent=r.error.message;show('authmsg',true)}};
 $('signout').onclick=()=>sb.auth.signOut();
 async function driveStatus(){try{$('gout').textContent=fmt(await call('hercules-drive',{action:'status'}))}catch(e){$('gout').textContent='Drive: '+e.message}}
@@ -64,8 +65,12 @@ async function waitDns(requestId){for(let i=0;i<35;i++){await new Promise(r=>set
 async function reconcileDomain(){const q=await call('hercules-domains',{action:'production_reconcile',organization_id:ORG,confirm_domain:'sauceapproved.com'});if(q?.already_ready){await domainStatus();return q}if(!q?.queued||!q?.request_id)throw Error('DNS reconcile was not queued');$('domainout').textContent='DNS reconciliation queued. Verifying provider result…';const result=await waitDns(q.request_id);$('domainout').textContent=fmt(result);await domainStatus();return result}
 async function shopifyStatus(){try{$('shopout').textContent=fmt(await call('hercules-provider-connect',{action:'shopify_domain_status'}))}catch(e){$('shopout').textContent='Shopify: '+e.message}}
 async function launchReadinessStatus(){try{const d=await call('hercules-domains',{action:'production_status',organization_id:ORG});const p=d?.production||{};renderLaunchSummary(p);$('launchout').textContent=fmt(p)}catch(e){$('launchsummary').replaceChildren(launchLine('Launch status','UNAVAILABLE','fail'));$('launchout').textContent='Launch: '+e.message}}
+async function storefrontSmokeStatus(){try{const d=await call('hercules-provider-connect',{action:'storefront_smoke_status'});$('smokeout').textContent=fmt(d)}catch(e){$('smokeout').textContent='Smoke: '+e.message}}
+async function storefrontSmokeRun(){try{const d=await call('hercules-provider-connect',{action:'storefront_smoke_run'});$('smokeout').textContent=fmt(d);setTimeout(()=>storefrontSmokeStatus().catch(()=>{}),3000)}catch(e){$('smokeout').textContent='Smoke: '+e.message}}
 $('shopstatus').onclick=shopifyStatus;
 $('launchstatus').onclick=launchReadinessStatus;
+$('smokestatus').onclick=storefrontSmokeStatus;
+$('smokerun').onclick=storefrontSmokeRun;
 $('shopsave').onclick=async()=>{
   const clientId=$('shopclient').value.trim(),clientSecret=$('shopsecret').value.trim();
   if(!clientId||!clientSecret){$('shopout').textContent='Shopify: Client ID and Client Secret required';return}

@@ -467,6 +467,32 @@ Deno.serve(async req=>{
     }
   }
 
+  if(action==='storefront_smoke_status'){
+    try{
+      const {data,error}=await admin.rpc('hercules_storefront_smoke_status');
+      if(error)throw error;
+      return j({ok:true,smoke:data});
+    }catch(error){
+      return j({
+        error:'storefront_smoke_status_failed',
+        detail:error instanceof Error?error.message:String(error)
+      },502);
+    }
+  }
+
+  if(action==='storefront_smoke_run'){
+    try{
+      const {data,error}=await admin.rpc('hercules_storefront_smoke_submit');
+      if(error)throw error;
+      return j({ok:true,queued:data!==null,request_id:data??null});
+    }catch(error){
+      return j({
+        error:'storefront_smoke_run_failed',
+        detail:error instanceof Error?error.message:String(error)
+      },502);
+    }
+  }
+
   if(action==='shopify_domain_status'){
     try{
       return j(await observeShopifyDomains(admin,org));
