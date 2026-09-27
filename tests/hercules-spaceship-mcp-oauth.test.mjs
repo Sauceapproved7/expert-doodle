@@ -9,11 +9,14 @@ const oauthMigration=await readFile(new URL("../supabase/migrations/202609271025
 const bridgeMigration=await readFile(new URL("../supabase/migrations/20260927103500_hercules_spaceship_mcp_bridge_integration_v1.sql",import.meta.url),"utf8");
 
 test("Spaceship MCP OAuth uses official discovery and dynamic registration",()=>{
-  assert.match(mcp,/https:\/\/mcp\.spaceship\.com\/\.well-known\/oauth-protected-resource/);
-  assert.match(mcp,/https:\/\/id\.service\.spaceship\.com\/\.well-known\/oauth-authorization-server/);
-  assert.match(mcp,/registration_endpoint/);
-  assert.match(mcp,/token_endpoint/);
-  assert.match(mcp,/authorization_endpoint/);
+  assert.ok(mcp.includes('const RESOURCE_META="https://mcp.spaceship.com/.well-known/oauth-protected-resource"'));
+  assert.ok(mcp.includes('const AUTH_META="https://id.service.spaceship.com/.well-known/oauth-authorization-server"'));
+  assert.ok(mcp.includes('const AUTHORIZATION_ENDPOINT="https://id.service.spaceship.com/connect/authorize"'));
+  assert.ok(mcp.includes('const TOKEN_ENDPOINT="https://id.service.spaceship.com/connect/token"'));
+  assert.ok(mcp.includes('const REGISTRATION_ENDPOINT="https://mcp.spaceship.com/register"'));
+  assert.match(mcp,/spaceship_oauth_metadata_endpoint_mismatch/);
+  assert.doesNotMatch(mcp,/fetch\(url,/);
+  assert.doesNotMatch(mcp,/fetch\(endpoint,/);
   assert.match(mcp,/code_challenge_method.*S256/);
   assert.match(mcp,/openid offline_access mcp\.spaceship\.com/);
 });
@@ -60,7 +63,7 @@ test("DNS controller prefers OAuth MCP through Private Bridge and retains API-ke
 });
 
 test("bridge correction updates the callback and service-role OAuth launcher",()=>{
-  assert.match(bridgeMigration,/hercules-private-bridge\?spaceship_mcp_oauth_callback=1/);
+  assert.ok(bridgeMigration.includes("p_redirect_uri <> 'https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-private-bridge?spaceship_mcp_oauth_callback=1'"));
   assert.match(bridgeMigration,/create or replace function public\.hercules_spaceship_mcp_begin/);
   assert.match(bridgeMigration,/spaceship_mcp_begin/);
 });
