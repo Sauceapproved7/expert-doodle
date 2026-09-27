@@ -14,7 +14,10 @@ The service owns its Chromium runtime through Playwright and exposes an installa
 - Long-lived isolated browser session with automatic cleanup.
 - Live browser surface delivered as screenshots with bounded click, key, text, scroll, back, forward, and reload controls.
 - Installable PWA shell with offline application assets.
-- Owner authentication is server-side using an HttpOnly, Secure, SameSite=Strict cookie. The owner key is never shipped to client JavaScript.
+- Owner authentication is server-side using an HttpOnly, Secure, SameSite=Strict cookie.
+- Initial owner bootstrap uses a URL fragment that is POSTed once over TLS and scrubbed from browser history, so the bootstrap secret is not sent in request URLs, referrers, or Render access logs.
+- Server-to-server automation uses a separate `HERCULES_BROWSER_RUNTIME_TOKEN` bearer credential.
+- Neither the owner key nor the runtime token is shipped to client JavaScript.
 
 ## Autonomous execution
 
@@ -42,7 +45,7 @@ Those boundaries are deliberately not bypassed or fabricated.
 
 ## Independence
 
-Opera is not a dependency. Hercules Browser can be opened directly as its own installed application, while Hercules services can also drive the same browser runtime through the server-side API.
+Opera is not a dependency. Hercules Browser can be opened directly as its own installed application, while Hercules services can also drive the same browser runtime through the server-side API using the separate runtime credential. No Opera extension or browser connector is required.
 
 ## Security
 
