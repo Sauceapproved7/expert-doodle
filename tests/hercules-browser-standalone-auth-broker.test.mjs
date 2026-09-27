@@ -6,8 +6,8 @@ const migration=await readFile(
   new URL("../supabase/migrations/20260927165000_hercules_browser_standalone_auth_broker_v1.sql",import.meta.url),
   "utf8"
 );
-const edge=await readFile(
-  new URL("../supabase/functions/hercules-browser-standalone-auth/index.ts",import.meta.url),
+const verifier=await readFile(
+  new URL("../supabase/migrations/20260927171000_hercules_browser_standalone_postgrest_verifier_v1.sql",import.meta.url),
   "utf8"
 );
 
@@ -42,10 +42,13 @@ test("dispatcher keeps bearer tokens inside Supabase and only permits browser AP
   assert.match(migration,/\/api\/new-session/);
 });
 
-test("public verifier validates format and consumes via service-role RPC",()=>{
-  assert.match(edge,/verify_jwt/i);
-  assert.match(edge,/hercules_browser_standalone_token_consume/);
-  assert.match(edge,/^[^\n]*token/i);
-  assert.match(edge,/service_role|SUPABASE_SECRET_KEYS|SUPABASE_SERVICE_ROLE_KEY/);
-  assert.doesNotMatch(edge,/console\.log\([^\n]*token/i);
+test("PostgREST verifier is a narrow one-time-token boundary",()=>{
+  assert.match(verifier,/create or replace function public\.hercules_browser_standalone_token_consume_public/i);
+  assert.match(verifier,/security definer/i);
+  assert.match(verifier,/set search_path\s*=\s*public,\s*pg_temp/i);
+  assert.match(verifier,/p_token[^\n]*\^\[0-9a-fA-F\]\{64\}\$/i);
+  assert.match(verifier,/public\.hercules_browser_standalone_token_consume\(p_token\)/i);
+  assert.match(verifier,/revoke all on function public\.hercules_browser_standalone_token_consume_public\(text\) from public,authenticated/i);
+  assert.match(verifier,/grant execute on function public\.hercules_browser_standalone_token_consume_public\(text\) to anon,service_role/i);
+  assert.doesNotMatch(verifier,/select\s+\*\s+from\s+private\.hercules_browser_standalone_tokens/i);
 });
