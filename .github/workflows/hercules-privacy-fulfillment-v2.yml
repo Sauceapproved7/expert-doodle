@@ -1,0 +1,33 @@
+name: Hercules Privacy Fulfillment v2
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*hercules_privacy_fulfillment_v2*"
+      - "supabase/functions/hercules-private-bridge/**"
+      - "docs/launch/HERCULES-DATA-RIGHTS-OPERATIONS-V2.md"
+      - "docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md"
+      - "tests/hercules-privacy-fulfillment-v2.test.mjs"
+      - ".github/workflows/hercules-privacy-fulfillment-v2.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  privacy-fulfillment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Enforce execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
+      - name: Enforce owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify privacy fulfillment
+        run: node --test tests/hercules-privacy-fulfillment-v2.test.mjs
+      - name: Run security baseline
+        run: node scripts/security-baseline.mjs
