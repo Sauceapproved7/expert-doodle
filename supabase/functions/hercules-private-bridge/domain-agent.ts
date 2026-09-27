@@ -435,7 +435,7 @@ async function invokeOwnerSession(service:string,authorizationHeader:string,body
   return payload;
 }
 
-async function dispatchProvider(principal:Principal,body:any){
+async function dispatchProvider(principal:Principal,body:any,requestId:string){
   const capability=String(body.capability||'').trim().toLowerCase();
   const adapter=PROVIDER_ADAPTERS[capability];
   if(!adapter)throw Object.assign(new Error('execution_adapter_unavailable'),{status:422});
@@ -458,6 +458,12 @@ async function dispatchProvider(principal:Principal,body:any){
     throw error;
   }
 
+  const usage=await recordUsage(principal,requestId,{
+    kind:'provider_adapter',
+    provider:adapter.provider,
+    capability
+  });
+
   let result:any;
   if(adapter.ownerSession){
     if(!principal.authorizationHeader){
@@ -474,7 +480,7 @@ async function dispatchProvider(principal:Principal,body:any){
   }else{
     result=await invokeInternal(adapter.service,String(adapter.purpose),{action:adapter.action});
   }
-  return {adapter,grant,result};
+  return {adapter,grant,result,usage};
 }
 
 async function enqueueInternal(principal:Principal,body:any,requestId:string){
@@ -694,7 +700,7 @@ export async function handleDomainAgentRequest(req:Request){
       if(!adapter)return out({error:'execution_adapter_unavailable'},422);
       let dispatched:any;
       try{
-        dispatched=await dispatchProvider(principal,body);
+        dispatched=await dispatchProvider(principal,body,requestId);
       }catch(error){
         const e:any=error;
         if(Number(e?.status)===409){
@@ -727,7 +733,7 @@ export async function handleDomainAgentRequest(req:Request){
         throw error;
       }
 
-      const usage=await recordUsage(principal,requestId,{kind:'provider_adapter',provider:adapter.provider,capability});
+      const usage=dispatched.usage;
       const response={
         schema:'hercules.domain-agent.execution.v1',
         ok:true,
