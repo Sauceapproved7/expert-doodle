@@ -56,6 +56,7 @@ export function validateTransactionalFinancialStoreAdapter(adapter){
   if(!adapter||typeof adapter!=="object")throw new TypeError("transactional financial store adapter is required");
   const id=nonEmpty(adapter.id,"store id");
   const environment=nonEmpty(adapter.environment,"store environment",32);
+  if(environment!=="production")throw new TypeError("transactional financial store environment must be production");
   for(const method of ["withTransaction","healthCheck","createBackup","verifyRestore"]){
     if(typeof adapter[method]!=="function")throw new TypeError(method+" backup-capable transactional store method is required");
   }
@@ -76,6 +77,7 @@ export function validateSecretCustodyAdapter(adapter){
   }
   const providerId=nonEmpty(adapter.providerId,"secret custody providerId");
   const environment=nonEmpty(adapter.environment,"secret custody environment",32);
+  if(environment!=="production")throw new TypeError("secret custody environment must be production");
   for(const method of ["signDigest","describeKey","rotateKey"]){
     if(typeof adapter[method]!=="function")throw new TypeError(method+" secret custody method is required");
   }
