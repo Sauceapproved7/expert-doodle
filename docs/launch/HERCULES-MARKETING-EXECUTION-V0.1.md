@@ -49,3 +49,8 @@ Primary activation event:
 ## Launch release rule
 
 The marketing surface may ship while public registration stays closed. General availability remains fail-closed until the existing launch gate has verified required pricing, terms, privacy, authentication hardening, and explicit public-release approval.
+
+
+## Provenance note
+
+The pull request carries the repository-required provenance attestation checklist. No third-party code is added by this marketing launch increment.
