@@ -133,6 +133,21 @@ export class HerculesBankLedger {
     return this.#transactions.slice();
   }
 
+  snapshot() {
+    const transactions = this.#transactions.map((transaction) => ({
+      ...transaction,
+      entries: transaction.entries.map((entry) => ({...entry})),
+    }));
+    return {
+      schema:"sauceapproved.hercules.bank-ledger-snapshot",
+      version:1,
+      currency:this.#currency,
+      accounts:[...this.#accounts.values()].map((account) => ({...account})),
+      transactions,
+      headHash:transactions.at(-1)?.hash ?? null,
+    };
+  }
+
   post({idempotencyKey, reference, entries}) {
     const key = assertNonEmptyString(idempotencyKey, "idempotencyKey");
     const normalizedReference = assertNonEmptyString(reference, "reference");
