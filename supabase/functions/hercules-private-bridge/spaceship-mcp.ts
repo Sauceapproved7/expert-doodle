@@ -126,15 +126,45 @@ async function issueHandoff(){
   const handoffToken=randomToken(32);
   const tokenHash=await sha256hex(handoffToken);
   const expiresAt=new Date(Date.now()+15*60*1000).toISOString();
-  const {error}=await admin.from("hercules_spaceship_auth_handoffs").insert({
+  const {data,error}=await admin.from("hercules_spaceship_auth_handoffs").insert({
     token_sha256:tokenHash,
     status:"issued",
     expires_at:expiresAt,
     metadata:{provider:"spaceship-mcp",domain:DOMAIN}
-  });
-  if(error)throw new Error("spaceship_handoff_issue_failed");
+  }).select("id").single();
+  if(error||!data?.id)throw new Error("spaceship_handoff_issue_failed");
   const handoffUrl=U+"/functions/v1/hercules-private-bridge?spaceship_authorize=1&handoff_token="+encodeURIComponent(handoffToken);
-  return {provider:"spaceship-mcp",domain:DOMAIN,status:"issued",handoffUrl,expiresAt,secretExposure:false};
+  return {provider:"spaceship-mcp",domain:DOMAIN,status:"issued",handoffId:String(data.id),handoffUrl,expiresAt,secretExposure:false};
+}
+
+async function launchBrowserHandoff(){
+  const issued=await issueHandoff();
+  const handoffUrl=String(issued.handoffUrl);
+  const handoffId=String(issued.handoffId);
+  const request={
+    action:"navigate",
+    url:handoffUrl,
+    timeoutMs:30000,
+    maxTextChars:20000,
+    persistSession:true
+  };
+  const {data:browserRequestId,error}=await admin.rpc("hercules_browser_submit",{p_request:request});
+  if(error||!browserRequestId){
+    await admin.from("hercules_spaceship_auth_handoffs").update({
+      status:"revoked",
+      metadata:{provider:"spaceship-mcp",domain:DOMAIN,last_error:"browser_submit_failed"},
+      updated_at:new Date().toISOString()
+    }).eq("id",handoffId);
+    throw new Error("browser_submit_failed");
+  }
+  return {
+    provider:"spaceship-mcp",
+    domain:DOMAIN,
+    status:"browser_queued",
+    browserRequestId:Number(browserRequestId),
+    expiresAt:issued.expiresAt,
+    secretExposure:false
+  };
 }
 
 async function findHandoff(token:string){
@@ -335,6 +365,7 @@ export function isSpaceshipMcpAction(action:string){
     "spaceship_mcp_status",
     "spaceship_mcp_begin",
     "spaceship_mcp_handoff_issue",
+    "spaceship_mcp_handoff_launch_browser",
     "spaceship_mcp_dns_records_get",
     "spaceship_mcp_dns_records_save",
     "spaceship_mcp_dns_records_delete"
@@ -379,6 +410,10 @@ export async function handleSpaceshipMcpRequest(req:Request){
     if(action==="spaceship_mcp_handoff_issue"){
       if(!internal)return json({error:"internal_dns_control_required"},403);
       return json({ok:true,...await issueHandoff()});
+    }
+    if(action==="spaceship_mcp_handoff_launch_browser"){
+      if(!internal)return json({error:"internal_dns_control_required"},403);
+      return json({ok:true,...await launchBrowserHandoff()});
     }
     const toolMap:Record<string,string>={
       spaceship_mcp_dns_records_get:"dns_records_get",
