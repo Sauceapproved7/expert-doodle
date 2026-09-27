@@ -26,6 +26,16 @@ No real-money custody or regulated payment rail is in scope for v0.1.
 | Journal alteration/reordering | Sequence + previous hash + canonical SHA-256 transaction hash |
 | Partial commit | Validation and projected-balance checks occur before journal mutation |
 | Unknown account posting | Account lookup fails closed |
+| Local state-file corruption | JSON parse + snapshot schema + journal hash-chain + replay verification |
+| Partial local state-file write | Same-directory temporary file followed by atomic rename |
+
+## Filesystem boundary
+
+v0.2 adds a local atomic snapshot store. The filesystem is external infrastructure:
+the bank runtime validates data before and after persistence but does not claim the
+host filesystem itself as Hercules-owned technology. File permissions and atomic
+rename reduce local corruption exposure; they do not replace encrypted storage,
+multi-writer database transactions, backups, or disaster recovery.
 
 ## Explicit non-goals
 
@@ -37,7 +47,7 @@ v0.1 does not claim to solve:
 - ACH, wires, RTP/FedNow, card issuance/acquiring, checks, or cash handling;
 - external settlement or reconciliation;
 - production authentication/authorization;
-- database durability, replication, backup, or disaster recovery;
+- multi-writer database transactions, replication, backup, or disaster recovery;
 - secrets, signing keys, HSM/KMS custody;
 - fraud scoring, chargebacks, disputes, or consumer-regulation workflows.
 
