@@ -175,3 +175,23 @@ security model.
 - Aggregate liability math fails closed if it exceeds the safe integer range.
 - All values remain sandbox test balances. External deposits, ACH, wires, cards,
   RTP/FedNow, and cash controls remain disabled.
+
+
+## Regulated-money boundary
+
+v0.8 adds a fail-closed regulated-money readiness and provider boundary while keeping
+all live external execution disabled.
+
+- reviewed evidence is required for partner authorization, jurisdiction authorization,
+  identity verification, AML, sanctions, transaction monitoring, reconciliation,
+  disputes, incident response, retention, and legal review;
+- the initial reviewed jurisdiction scope is explicitly `US-CT`;
+- deposit programs additionally require custodial-ownership recordkeeping and
+  deposit-insurance disclosure review;
+- production provider endpoints must use HTTPS;
+- settlement reconciliation detects missing, unexpected, duplicate, amount-mismatched,
+  and currency-mismatched provider records;
+- readiness-green does not mean execution-enabled;
+- `HerculesRegulatedRailBoundary.executeTransfer()` remains hard-locked in v0.8.
+
+See `docs/HERCULES-FINANCIAL-REGULATED-BOUNDARY-V0.8.md` for design sources and limits.

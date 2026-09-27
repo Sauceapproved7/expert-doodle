@@ -38,7 +38,7 @@ No real-money custody or regulated payment rail is in scope for v0.1.
 | Hung upstream/service request | First-party client applies a bounded request timeout |
 | Customer access to owner metrics | Owner overview requires an approved administrator role |
 | UI-only owner hiding treated as authorization | Admin endpoints independently enforce role authorization |
-| Aggregate sandbox liability overflow | Safe-integer accumulation fails closed |
+| Aggregate sandbox liability overflow | Safe-integer accumulation fails closed |\n| Regulatory checkbox bypass | Readiness requires structured approved evidence with a reference and review timestamp; booleans are insufficient |\n| Unreviewed jurisdiction expansion | v0.8 supports only the explicit reviewed US-CT scope |\n| False deposit-insurance representation | Deposit readiness requires separate custodial-record and disclosure-review evidence and creates no insurance claim |\n| Provider traffic over insecure transport | Production provider adapter endpoints require HTTPS |\n| Settlement divergence | Reconciliation fails on missing, unexpected, duplicate, amount-mismatched, or currency-mismatched records |\n| Premature live-money activation | Readiness never enables execution; v0.8 executeTransfer is hard-locked |
 
 ## Authentication boundary
 
@@ -153,3 +153,18 @@ The overview deliberately omits raw journal records and exposes only account sum
 customer/account counts, currency, mode, external-rail status, and aggregate sandbox
 liabilities. Funding remains sandbox-only and retains the existing admin-role and CSRF
 requirements.
+
+
+## Regulated-money boundary
+
+v0.8 introduces a reviewed-evidence readiness gate, a bounded regulated-provider adapter
+contract, and external-settlement reconciliation. These controls are preparatory only.
+
+A green readiness result is not a license determination, regulatory approval, bank
+charter, FDIC-insurance determination, or permission to transmit money. The initial
+software scope is `US-CT`, and any expansion requires a new reviewed jurisdiction
+evidence record and code change.
+
+The live provider submission path remains impossible through
+`HerculesRegulatedRailBoundary` because `executeTransfer()` always fails closed with
+`live_rail_execution_locked`.
