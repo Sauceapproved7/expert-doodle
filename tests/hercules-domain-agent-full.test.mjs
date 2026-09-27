@@ -68,3 +68,12 @@ test("bridge advertises execution and commercial Domain Agent capabilities",()=>
   assert.match(bridge,/domain_agent_usage/);
   assert.match(bridge,/domain_agent_api/);
 });
+
+test("commercial layer includes managed customer domain-agent identities",()=>{
+  assert.match(migration,/hercules_domain_agent_identities/);
+  assert.match(migration,/domain_agent_custom_identities/);
+  assert.match(migration,/agent\.sauceapproved\.com/);
+  assert.match(migration,/hercules-sauceapproved\.netlify\.app/);
+  assert.match(migration,/hercules_domain_agent_identity_status/);
+  assert.match(agent,/domain_agent_identity_status/);
+});
