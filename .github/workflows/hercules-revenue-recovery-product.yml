@@ -1,0 +1,20 @@
+name: Hercules Revenue Recovery Product
+on:
+  pull_request:
+    paths:
+      - "hercules-recovery/**"
+      - "tests/hercules-revenue-recovery-product.test.mjs"
+      - "docs/HERCULES-REVENUE-RECOVERY-PRODUCT-V0.4.md"
+      - ".github/workflows/hercules-revenue-recovery-product.yml"
+permissions:
+  contents: read
+jobs:
+  revenue-recovery-product:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --check hercules-recovery/customer-case.mjs
+      - run: node --test tests/hercules-recovery.test.mjs tests/hercules-recovery-graph.test.mjs tests/hercules-recovery-route.test.mjs tests/hercules-revenue-recovery-product.test.mjs
