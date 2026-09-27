@@ -9,7 +9,7 @@ test("route prefers custom domain only when active and SSL-ready",()=>{
   assert.match(sql,/create or replace function public\.hercules_storefront_route/);
   assert.match(sql,/domain_name='sauceapproved\.com'/);
   assert.match(sql,/status='active'/);
-  assert.match(sql,/ssl_status in \('active','enabled','valid','ready'\)/);
+  assert.match(sql,/lower\(coalesce\(v_domain\.ssl_status,''\)\) in \('active','enabled','valid','ready'\)/);
   assert.match(sql,/shopify_current_primary_domain/);
   assert.match(sql,/myshopify\.com/);
   assert.match(sql,/mode.*fallback_myshopify/s);
