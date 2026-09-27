@@ -74,6 +74,20 @@ function compactPage(payload:any){
     })):[]
   };
 }
+function detectSecurityVerification(page:any){
+  const title=String(page?.title||"");
+  const text=String(page?.text||"");
+  const url=String(page?.url||"");
+  const haystack=(title+"\n"+text+"\n"+url).toLowerCase();
+  const cloudflare=/just a moment|performing security verification|verify you are not a bot|__cf_chl|cf_chl|challenge-platform/.test(haystack);
+  const captcha=/\bcaptcha\b|hcaptcha|recaptcha/.test(haystack);
+  if(!cloudflare&&!captcha)return {required:false,kind:null,provider:null};
+  return {
+    required:true,
+    kind:captcha?"captcha":"anti_bot_verification",
+    provider:cloudflare?"cloudflare":"unknown"
+  };
+}
 function deterministicObservation(goal:string,page:any,inputKeys:string[]){
   if(inputKeys.length>0)return null;
   const g=String(goal||"").toLowerCase();
@@ -243,10 +257,37 @@ async function aiObserve(goal:string,page:any,history:any[]){
 async function updateRun(runId:string,patch:any){
   await db.from("hercules_browser_agent_runs").update({...patch,updated_at:new Date().toISOString()}).eq("run_id",runId);
 }
+async function blockForSecurityVerification(runId:string,history:any[],page:any,sessionId:string,verification:any,step:number){
+  history.push({
+    step,
+    decision:"blocked",
+    reason:"security_verification_required",
+    url:page?.url||"",
+    verification,
+    preserveSession:true
+  });
+  await updateRun(runId,{
+    status:"blocked",
+    steps:history,
+    error:"security_verification_required",
+    result:{page,verification,sessionId,preserveSession:true},
+    completed_at:new Date().toISOString()
+  });
+  return out({
+    ok:false,
+    runId,
+    status:"verification_required",
+    error:"security_verification_required",
+    verification,
+    page,
+    steps:history,
+    preserveSession:true
+  },409);
+}
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.9.0",
+    ok:true,service:"hercules-browser-agent",version:"1.0.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,highImpactAutonomy:false
@@ -310,6 +351,10 @@ Deno.serve(async(req:Request)=>{
     if(!sessionId)throw new Error("browser_session_missing");
     let page=compactPage(nav);
     if(!domainAllowed(page.url||startUrl,allowedDomains))throw new Error("top_level_domain_not_allowed");
+    const initialVerification=detectSecurityVerification(page);
+    if(initialVerification.required){
+      return await blockForSecurityVerification(runId,history,page,sessionId,initialVerification,1);
+    }
 
     const deterministic=deterministicObservation(goal,page,inputKeys);
     if(deterministic){
@@ -375,6 +420,10 @@ Deno.serve(async(req:Request)=>{
         });
       }
       page=compactPage(scrape);
+      const scrapeVerification=detectSecurityVerification(page);
+      if(scrapeVerification.required){
+        return await blockForSecurityVerification(runId,history,page,sessionId,scrapeVerification,i+1);
+      }
       if(!domainAllowed(page.url||startUrl,allowedDomains)){
         history.push({step:i+1,decision:"blocked",url:page.url,reason:"top_level_domain_not_allowed"});
         await updateRun(runId,{status:"blocked",steps:history,error:"top_level_domain_not_allowed",completed_at:new Date().toISOString()});
@@ -442,6 +491,10 @@ Deno.serve(async(req:Request)=>{
         acted=await browserCall({action:"interact",sessionId,timeoutMs:30000,maxTextChars:16000,steps:[step]});
       }
       const after=compactPage(acted);
+      const afterVerification=detectSecurityVerification(after);
+      if(afterVerification.required){
+        return await blockForSecurityVerification(runId,history,after,sessionId,afterVerification,i+1);
+      }
       record.afterUrl=after.url;
       const observedStep=acted?.result?.steps?.[0];
       if(observedStep?.type==="extract"&&Array.isArray(observedStep?.items)){
