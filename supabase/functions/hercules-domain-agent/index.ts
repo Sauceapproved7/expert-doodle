@@ -198,19 +198,19 @@ async function recordAudit(args:{
   missingCapabilities?:string[];
   reasonCodes?:string[];
 }){
-  const {error}=await admin.schema('private').from('hercules_domain_agent_audit').insert({
-    organization_id:args.organizationId,
-    request_id:args.requestId,
-    principal_type:args.principalType,
-    action:args.action,
-    provider:args.provider??null,
-    account_key:args.accountKey??null,
-    disposition:args.disposition,
-    decision_sha256:args.decisionSha256,
-    authorization_evidence_sha256:args.authorizationEvidenceSha256??null,
-    required_capabilities:args.requiredCapabilities??[],
-    missing_capabilities:args.missingCapabilities??[],
-    reason_codes:args.reasonCodes??[]
+  const {error}=await admin.rpc('hercules_domain_agent_record_audit',{
+    p_organization_id:args.organizationId,
+    p_request_id:args.requestId,
+    p_principal_type:args.principalType,
+    p_action:args.action,
+    p_provider:args.provider??null,
+    p_account_key:args.accountKey??null,
+    p_disposition:args.disposition,
+    p_decision_sha256:args.decisionSha256,
+    p_authorization_evidence_sha256:args.authorizationEvidenceSha256??null,
+    p_required_capabilities:args.requiredCapabilities??[],
+    p_missing_capabilities:args.missingCapabilities??[],
+    p_reason_codes:args.reasonCodes??[]
   });
   if(error)throw new Error('authorization_audit_failed:'+error.message);
 }
