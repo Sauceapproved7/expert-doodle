@@ -293,6 +293,35 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
     </div>
   </section>
 
+  <section class="section" id="proof-overdue-invoices">
+    <div class="tag">Receivables proof · 001</div>
+    <h2>Why overdue invoices are not all the same.</h2>
+    <p class="muted">A late invoice, a disputed invoice, and an invoice with an active payment promise can all appear overdue while requiring different next steps. Hercules separates the evidence before follow-up is allowed.</p>
+    <div class="grid3" style="margin-top:18px">
+      <div class="card">
+        <div class="tag">Late invoice</div>
+        <h3>Evidence supports routine follow-up.</h3>
+        <p class="muted">When the due date has passed and the record shows no dispute or active promise, Hercules can prepare a controlled follow-up path while keeping consequential external action approval-gated.</p>
+      </div>
+      <div class="card">
+        <div class="tag">Disputed invoice</div>
+        <h3>Stop the reminder loop.</h3>
+        <p class="muted">A dispute changes the job. Hercules routes the case to human review instead of treating the balance like an ordinary late payment.</p>
+      </div>
+      <div class="card">
+        <div class="tag">Active payment promise</div>
+        <h3>Hold, verify, then decide.</h3>
+        <p class="muted">If the evidence shows a current payment promise, Hercules preserves the promise state and avoids unnecessary follow-up until the promised date can be verified.</p>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:18px">
+      <div class="tag">Operating principle</div>
+      <h3>Evidence first. Human review where the evidence changes the risk.</h3>
+      <p class="muted">This is workflow evidence using synthetic receivable states, not a claim that every business should use the same collections process or that Hercules guarantees recovery outcomes.</p>
+      <a class="btn primary" href="?utm_source=seo&amp;utm_medium=organic_search&amp;utm_campaign=founding-pilot-organic-v1&amp;utm_content=proof-overdue-invoices-001#pilot" style="margin-top:14px">Request a founding pilot</a>
+    </div>
+  </section>
+
   <section class="section" id="build-receipt-001">
     <div class="tag">Build Receipt #001</div><h2>Three receivables. Three safe routes.</h2>
     <div class="proof">
