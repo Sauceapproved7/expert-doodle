@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: deployable authenticated durable sandbox financial service with production-readiness and adapter-qualification controls
+## Current maturity: deployable authenticated durable sandbox financial service with signed production qualification evidence
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -269,3 +269,23 @@ introducing live credentials or external money movement.
   `externalRailsEnabled:false`.
 
 See `docs/HERCULES-FINANCIAL-ADAPTER-QUALIFICATION-V1.2.md`.
+
+
+## Qualification evidence lifecycle
+
+v1.3 makes v1.2 adapter qualification durable and freshness-aware.
+
+- successful qualification results are bound to a sanitized adapter-identity fingerprint;
+- every record is SHA-256 hash chained and signed by a caller-supplied server-side signer;
+- reopen requires signature verification for every stored record;
+- evidence carries a bounded expiration time and becomes a blocker when stale;
+- store, key ID, provider identity, endpoint, or bound capability changes require
+  requalification;
+- production readiness now requires fresh matching qualification evidence;
+- the Owner console reports Fresh, Expired, Requalify, or Missing qualification evidence;
+- browser/customer input cannot create the signer, verifier, evidence store, or current
+  adapter qualification;
+- qualification evidence never changes `activationAllowed:false` or
+  `externalRailsEnabled:false`.
+
+See `docs/HERCULES-FINANCIAL-QUALIFICATION-EVIDENCE-V1.3.md`.
