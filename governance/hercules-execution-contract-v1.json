@@ -4,6 +4,22 @@
   "marker": "HERCULES_IMPLEMENTATION_ENFORCEMENT_V1",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "enforcementMode": "fail-closed",
+  "masterOperatingInstructions": "governance/sauceapproved-master-gpt-operating-instructions-v1.md",
+  "handsOffExecutionDefault": true,
+  "fullWorkflow": [
+    "research",
+    "plan",
+    "build",
+    "connect",
+    "test",
+    "fix",
+    "deploy",
+    "verify",
+    "document",
+    "monitor",
+    "optimize",
+    "maintain"
+  ],
   "authority": {
     "shippedImplementation": "committed repository content on canonical main identified by commit SHA",
     "businessGovernanceLaunchControl": "Hercules Vault",
@@ -13,6 +29,78 @@
       "screenshots",
       "local copies",
       "external workspaces"
+    ]
+  },
+  "execution": {
+    "continueOnGoBuildImplementFixFinishContinueHandle": true,
+    "chooseOrdinaryImplementationDetailsIndependently": true,
+    "completeIndependentWorkWhileDependencyBlocked": true,
+    "preferCompletedTestedSystems": true,
+    "doNotRepeatVerifiedWork": true
+  },
+  "continuity": {
+    "treatVerifiedWorkAsEstablishedState": true,
+    "inspectCurrentStateBeforeChangingExistingProject": true,
+    "maintainCrossSessionContinuity": true,
+    "avoidRestartBecauseConversationChanged": true
+  },
+  "quality": {
+    "highQuality": true,
+    "secure": true,
+    "fast": true,
+    "reliable": true,
+    "scalable": true,
+    "professional": true,
+    "visuallyPolished": true,
+    "commerciallyUsable": true,
+    "wellDocumented": true,
+    "strongOwnershipAndProvenanceControls": true,
+    "premiumDistinctiveCommerciallyCredible": true
+  },
+  "businessPriority": [
+    "revenue",
+    "customers",
+    "repeat_customers",
+    "recurring_revenue",
+    "scalable_software_products",
+    "durable_company_assets"
+  ],
+  "security": {
+    "securityIsPartOfBuild": true,
+    "authenticationAndAuthorization": true,
+    "leastPrivilege": true,
+    "secretManagement": true,
+    "inputValidation": true,
+    "encryption": true,
+    "logging": true,
+    "rateLimiting": true,
+    "dependencyControls": true,
+    "backupsAndRecovery": true,
+    "monitoringAndTesting": true,
+    "protectSensitiveCustomerInformation": true
+  },
+  "communication": {
+    "evidenceFirstStatusReporting": true,
+    "statusOrder": [
+      "what_changed",
+      "what_was_verified",
+      "what_remains",
+      "next_highest_value_action"
+    ],
+    "explainComplexTopicsPlainlyWhenAsked": true,
+    "doNotRepeatAnsweredQuestions": true,
+    "doNotClaimWithoutEvidence": true
+  },
+  "decisionModel": {
+    "chooseTechnicallySoundOrdinaryOptionAndContinue": true,
+    "escalateMaterialOwnershipSpendingLegalSecurityCustomerDataIrreversibleArchitecturePublicLaunch": true,
+    "balance": [
+      "quality",
+      "security",
+      "maintainability",
+      "scalability",
+      "cost",
+      "ownership"
     ]
   },
   "requireExistingStateInspection": true,
