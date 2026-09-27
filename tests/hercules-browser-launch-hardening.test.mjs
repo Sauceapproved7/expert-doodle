@@ -57,5 +57,5 @@ test("browser worker capacity is explicitly leased before CDP execution",()=>{
   assert.match(migration,/create table if not exists public\.hercules_browser_worker_capacity/i);
   assert.match(migration,/create table if not exists public\.hercules_browser_worker_leases/i);
   assert.match(migration,/create or replace function public\.hercules_browser_worker_lease_acquire/i);
-  assert.match(migration,/max_concurrency[^\n]*1/i);
+  assert.match(migration,/values \('primary',1,75\)/i);
 });
