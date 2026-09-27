@@ -28,6 +28,23 @@ No real-money custody or regulated payment rail is in scope for v0.1.
 | Unknown account posting | Account lookup fails closed |
 | Local state-file corruption | JSON parse + snapshot schema + journal hash-chain + replay verification |
 | Partial local state-file write | Same-directory temporary file followed by atomic rename |
+| Forged customer ownership | Account ownership derives only from a verified JWT subject |
+| Cross-customer account reads | API returns not-found for accounts not owned by the token subject |
+| Unauthorized sandbox minting | Funding endpoint requires an approved administrator role |
+| Oversized or malformed API bodies | Bounded JSON body reader fails closed |
+| Invalid/expired access token | Hercules Base JWT signature, issuer, audience, issued-at, and expiry verification |
+
+## Authentication boundary
+
+v0.3 reuses the Hercules Base access-token contract. The bank runtime does not
+issue passwords, refresh tokens, or independent banking credentials. It verifies
+Base-issued bearer tokens and binds account ownership to the token subject.
+Authorization failures are returned without exposing whether another customer's
+account exists.
+
+This local API does not itself provide TLS termination, distributed rate limiting,
+device binding, MFA, or regulated identity verification. Those remain separate
+production-edge and compliance requirements.
 
 ## Filesystem boundary
 
