@@ -72,3 +72,12 @@ test("extension never exports cookies passwords session tokens or one-time codes
   assert.doesNotMatch(background,/\.value\s*[,}]/);
   assert.match(edge,/credential_export_forbidden/);
 });
+
+const privateBridge=await readFile(new URL("../supabase/functions/hercules-private-bridge/index.ts",import.meta.url),"utf8");
+
+test("personal browser protocol is multiplexed through the existing private bridge slot",()=>{
+  assert.match(privateBridge,/handlePersonalBrowserRequest/);
+  assert.match(privateBridge,/isPersonalBrowserAction/);
+  assert.match(privateBridge,/if\(isPersonalBrowserAction\(probeAction\)\)return handlePersonalBrowserRequest\(req\)/);
+  assert.match(background,/hercules-private-bridge/);
+});
