@@ -231,3 +231,22 @@ v1.0 defines the next production boundary without enabling real-money execution.
   `externalRailsEnabled:false`.
 
 See `docs/HERCULES-FINANCIAL-PRODUCTION-READINESS-V1.0.md`.
+
+
+## Production readiness dossier
+
+v1.1 exposes the v1.0 readiness evaluator through a sanitized owner-only status surface.
+
+- `GET /v1/admin/production-readiness` derives regulated readiness from the current
+  compliance registry;
+- missing production infrastructure is reported as explicit blockers;
+- transactional-store and key-custody function references are stripped before a response
+  reaches the browser;
+- the Owner console shows transactional store, key custody, recovery proof, case
+  operations, provider certification, and blocker status;
+- the dossier contains no database credentials, key material, provider secrets, or raw
+  adapter functions;
+- green readiness still returns `activationAllowed:false` and
+  `externalRailsEnabled:false`.
+
+See `docs/HERCULES-FINANCIAL-READINESS-DOSSIER-V1.1.md`.
