@@ -44,3 +44,15 @@ test("organic system keeps paid acquisition off and does not depend on internal 
   assert.equal(config.paidAcquisition.enabled,false);
   assert.equal(config.tracking.destination,"protected_marketing_events");
 });
+
+
+test("public launch includes first educational proof asset with tracked pilot CTA",()=>{
+  assert.match(launch,/id="proof-overdue-invoices"/);
+  assert.match(launch,/Why overdue invoices are not all the same\./);
+  assert.match(launch,/late invoice/i);
+  assert.match(launch,/disputed invoice/i);
+  assert.match(launch,/active payment promise/i);
+  assert.match(launch,/human review/i);
+  assert.match(launch,/utm_content=proof-overdue-invoices-001/);
+  assert.match(launch,/Request a founding pilot/);
+});
