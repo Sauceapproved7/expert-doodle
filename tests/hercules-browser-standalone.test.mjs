@@ -28,12 +28,14 @@ test("PWA is installable as a standalone Hercules Browser app", () => {
   assert.match(sw, /CACHE_NAME/);
 });
 
-test("owner access stays server-side and never exposes the runtime secret", () => {
-  assert.match(server, /HERCULES_BROWSER_OWNER_KEY/);
+test("owner access uses brokered one-time claims and local HttpOnly sessions", () => {
+  assert.doesNotMatch(server, /HERCULES_BROWSER_OWNER_KEY|HERCULES_BROWSER_RUNTIME_TOKEN/);
+  assert.match(server, /uiSessions/);
   assert.match(server, /HttpOnly/);
   assert.match(server, /SameSite=Strict/);
   assert.match(server, /Secure/);
-  assert.match(server, /createHash\(["']sha256["']\)/);
+  assert.match(server, /randomBytes\(/);
+  assert.match(server, /remoteAuthorized/);
   assert.doesNotMatch(html, /HERCULES_BROWSER_OWNER_KEY|HERCULES_BROWSER_RUNTIME_TOKEN/);
   assert.doesNotMatch(app, /HERCULES_BROWSER_OWNER_KEY|HERCULES_BROWSER_RUNTIME_TOKEN/);
 });
@@ -93,12 +95,14 @@ test("owner bootstrap keeps the secret out of request URLs", () => {
 });
 
 
-test("server-to-server automation uses a separate runtime credential", () => {
-  assert.match(server, /HERCULES_BROWSER_RUNTIME_TOKEN/);
+test("server-to-server automation verifies one-time broker tokens remotely", () => {
+  assert.match(server, /AUTH_VERIFY_URL/);
   assert.match(server, /authorization/i);
   assert.match(server, /Bearer /);
-  assert.match(server, /internalAuthorized/);
-  assert.match(server, /ownerAuthorized\(req\).*internalAuthorized\(req\)|internalAuthorized\(req\).*ownerAuthorized\(req\)/s);
+  assert.match(server, /remoteAuthorized/);
+  assert.match(server, /fetch\(AUTH_VERIFY_URL/);
+  assert.match(server, /ownerAuthorized\(req\).*remoteAuthorized\(req\)|remoteAuthorized\(req\).*ownerAuthorized\(req\)/s);
+  assert.doesNotMatch(server, /HERCULES_BROWSER_RUNTIME_TOKEN/);
   assert.doesNotMatch(html, /HERCULES_BROWSER_RUNTIME_TOKEN/);
   assert.doesNotMatch(app, /HERCULES_BROWSER_RUNTIME_TOKEN/);
 });

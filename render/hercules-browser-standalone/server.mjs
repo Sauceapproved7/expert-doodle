@@ -4,12 +4,11 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import dns from "node:dns/promises";
 import net from "node:net";
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { chromium } from "playwright-core";
 
 const PORT = Number(process.env.PORT || 10000);
-const OWNER_KEY = String(process.env.HERCULES_BROWSER_OWNER_KEY || "");
-const RUNTIME_TOKEN = String(process.env.HERCULES_BROWSER_RUNTIME_TOKEN || "");
+const AUTH_VERIFY_URL = "https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-browser-standalone-auth";
 const PUBLIC_DIR = fileURLToPath(new URL("./public/", import.meta.url));
 const MAX_BODY = 256 * 1024;
 const MAX_TIMEOUT = 60000;
@@ -21,6 +20,7 @@ const VIEWPORT = { width: 1280, height: 800 };
 
 const sessions = new Map();
 const autopilotIntents = new Map();
+const uiSessions = new Map();
 const dnsCache = new Map();
 let browserPromise = null;
 let ownerSessionId = null;
@@ -49,18 +49,21 @@ function securityHeaders(extra={}) {
   };
 }
 
-function digest(v) {
-  return createHash("sha256").update(String(v||"")).digest();
-}
-
-function sameSecret(a,b) {
-  const x=digest(a), y=digest(b);
-  return timingSafeEqual(x,y);
-}
-
-function ownerCookieValue() {
-  if(!OWNER_KEY)return "";
-  return createHmac("sha256",OWNER_KEY).update("hercules-browser-owner-cookie-v1").digest("base64url");
+async function verifyBrokerToken(token,expectedPurpose) {
+  const value=String(token||"");
+  if(!/^[0-9a-f]{64}$/i.test(value))return false;
+  try{
+    const response=await fetch(AUTH_VERIFY_URL,{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({token:value}),
+      signal:AbortSignal.timeout(7000)
+    });
+    const data=await response.json().catch(()=>({}));
+    return response.ok && data?.ok===true && data?.purpose===expectedPurpose;
+  }catch{
+    return false;
+  }
 }
 
 function cookie(req,name) {
@@ -74,27 +77,35 @@ function cookie(req,name) {
 }
 
 function ownerAuthorized(req) {
-  const supplied=cookie(req,"hb_owner");
-  const expected=ownerCookieValue();
-  return Boolean(supplied&&expected&&sameSecret(supplied,expected));
+  const id=cookie(req,"hb_owner");
+  if(!id)return false;
+  const session=uiSessions.get(id);
+  if(!session)return false;
+  if(session.expiresAt<=Date.now()){
+    uiSessions.delete(id);
+    return false;
+  }
+  session.lastUsed=Date.now();
+  return true;
 }
 
-function internalAuthorized(req) {
+async function remoteAuthorized(req) {
   const header=String(req.headers.authorization||"");
   const prefix="Bearer ";
-  if(!RUNTIME_TOKEN || !header.startsWith(prefix))return false;
-  return sameSecret(header.slice(prefix.length),RUNTIME_TOKEN);
+  if(!header.startsWith(prefix))return false;
+  return verifyBrokerToken(header.slice(prefix.length),"runtime");
 }
 
 async function claim(req,res) {
   const input=await readBody(req);
   const access=String(input?.access||"");
-  if(!OWNER_KEY || !access || !sameSecret(access,OWNER_KEY)) {
+  if(!(await verifyBrokerToken(access,"owner"))) {
     return json(res,401,{ok:false,error:"owner_access_denied"});
   }
-  const value=ownerCookieValue();
+  const id=randomBytes(32).toString("base64url");
+  uiSessions.set(id,{createdAt:Date.now(),lastUsed:Date.now(),expiresAt:Date.now()+30*24*60*60*1000});
   return json(res,200,{ok:true},{
-    "set-cookie":`hb_owner=${encodeURIComponent(value)}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict`
+    "set-cookie":`hb_owner=${encodeURIComponent(id)}; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict`
   });
 }
 
@@ -332,9 +343,7 @@ async function executeManualAction(s,input) {
 }
 
 function makeResumeToken(intentId) {
-  const nonce=randomBytes(18).toString("base64url");
-  const sig=createHmac("sha256",OWNER_KEY||"unconfigured").update(intentId+":"+nonce).digest("base64url");
-  return nonce+"."+sig;
+  return intentId+"."+randomBytes(24).toString("base64url");
 }
 
 async function autopilotRun(s,input) {
@@ -452,8 +461,10 @@ async function staticFile(res,path) {
 }
 
 setInterval(async()=>{
-  const cutoff=Date.now()-SESSION_TTL;
+  const now=Date.now();
+  const cutoff=now-SESSION_TTL;
   for(const [id,s] of sessions)if(s.lastUsed<cutoff)await closeSession(id);
+  for(const [id,session] of uiSessions)if(session.expiresAt<=now)uiSessions.delete(id);
 },60000).unref();
 
 async function shutdown() {
@@ -494,7 +505,7 @@ http.createServer(async(req,res)=>{
     url.pathname.startsWith("/api/") &&
     url.pathname!=="/api/claim" &&
     !ownerAuthorized(req) &&
-    !internalAuthorized(req)
+    !(await remoteAuthorized(req))
   ) {
     return json(res,401,{ok:false,error:"browser_auth_required"});
   }
