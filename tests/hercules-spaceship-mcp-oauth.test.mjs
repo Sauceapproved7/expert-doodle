@@ -100,8 +100,7 @@ test("Spaceship public OAuth clients work without a client secret",()=>{
 
 test("public-client migration allows an empty registration secret and clears stale secret refs",async()=>{
   const publicClientMigration=await readFile(new URL("../supabase/migrations/20260927105800_hercules_spaceship_mcp_public_client_v1.sql",import.meta.url),"utf8");
-  assert.match(publicClientMigration,/length\(trim\(coalesce\(p_client_secret,''\)\)\) > 0/);
+  assert.match(publicClientMigration,/length\(trim\(coalesce\(p_client_secret,''\)\)\) > 0[\s\S]*and length\(trim\(coalesce\(p_client_secret,''\)\)\) < 8/);
   assert.match(publicClientMigration,/v_ref := null/);
   assert.match(publicClientMigration,/client_secret_secret_ref=v_ref/);
-  assert.doesNotMatch(publicClientMigration,/length\(trim\(coalesce\(p_client_secret,''\)\)\) < 8/);
 });
