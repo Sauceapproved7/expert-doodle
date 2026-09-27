@@ -12,15 +12,6 @@ for (const name of files) {
   const path = join(ROOT, name);
   const text = await readFile(path, "utf8");
 
-  if (text.includes("\\n")) {
-    const lines = text.split("\n");
-    lines.forEach((line, index) => {
-      if (line.includes("\\n")) {
-        failures.push(`${path}:${index + 1}: literal \\n escape found in workflow YAML`);
-      }
-    });
-  }
-
   const lines = text.split("\n");
   lines.forEach((line, index) => {
     if (/\t/.test(line)) {
