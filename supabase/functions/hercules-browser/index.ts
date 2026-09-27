@@ -81,6 +81,26 @@ function transientClosedSession(error:unknown){
     || /target closed/i.test(message);
 }
 
+function detectSecurityChallenge(page:any){
+  const title=String(page?.title||"").trim().toLowerCase();
+  const text=String(page?.text||"").toLowerCase();
+  const url=String(page?.url||"").toLowerCase();
+  const cloudflare=
+    title==="just a moment..." ||
+    /performing security verification/.test(text) ||
+    /verify you are not a bot/.test(text) ||
+    /performance and security by cloudflare/.test(text) ||
+    /__cf_chl_|\/cdn-cgi\/challenge-platform/.test(url);
+  if(!cloudflare)return null;
+  return {
+    detected:true,
+    provider:"cloudflare",
+    kind:"security_verification",
+    humanVerificationRequired:true,
+    bypassAttempted:false
+  };
+}
+
 function warmupUrls(w:any){
   const raw=Array.isArray(w?.metadata?.warmup_urls)?w.metadata.warmup_urls:[];
   const urls:string[]=[];
@@ -134,7 +154,7 @@ Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
     ok:true,service:"hercules-browser",version:"1.3.0",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
-    sessionReuse:true,controlPlane:"Hercules"
+    sessionReuse:true,securityChallengeDetection:true,antiBotBypass:false,controlPlane:"Hercules"
   });
   if(req.method!=="POST") return out({error:"method_not_allowed"},405);
 
@@ -198,6 +218,7 @@ Deno.serve(async(req:Request)=>{
       sessionRecovered=true;
     }
     const result=workerCall.result;
+    const securityChallenge=detectSecurityChallenge(result?.page);
     const totalAttempts=workerCall.attempts+sessionRecoveryAttempts;
     if(run?.id && totalAttempts!==1) await admin.from("hercules_browser_runs").update({
       attempt_count:totalAttempts,
@@ -217,10 +238,15 @@ Deno.serve(async(req:Request)=>{
       linkCount:Array.isArray(result?.page?.links)?result.page.links.length:0,
       stepCount:Array.isArray(result?.steps)?result.steps.length:0,
       sessionId:result?.sessionId||null,
-      bytes:result?.bytes||null
+      bytes:result?.bytes||null,
+      securityChallenge
     };
     if(run?.id) await admin.from("hercules_browser_runs").update({
-      status:"succeeded",result:{summary},completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+      status:securityChallenge?"blocked":"succeeded",
+      result:{summary},
+      error:securityChallenge?"human_verification_required":null,
+      completed_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
     }).eq("id",run.id);
 
     if(action==="screenshot"&&typeof result?.base64==="string"){
@@ -229,7 +255,14 @@ Deno.serve(async(req:Request)=>{
         "content-type":"image/png","cache-control":"no-store","x-hercules-trace-id":traceId
       }});
     }
-    return out({ok:true,traceId,action,result});
+    return out({
+      ok:true,
+      traceId,
+      action,
+      status:securityChallenge?"blocked":"succeeded",
+      securityChallenge,
+      result
+    });
   }catch(e){
     const message=e instanceof Error?e.message.slice(0,2000):"browser_run_failed";
     if(run?.id) await admin.from("hercules_browser_runs").update({
