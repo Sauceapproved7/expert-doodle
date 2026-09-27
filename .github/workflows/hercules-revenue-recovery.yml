@@ -2,12 +2,22 @@ name: Hercules Revenue Recovery
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "hercules-recovery/**"
+      - "tests/hercules-recovery*.test.mjs"
+      - "docs/HERCULES-REVENUE-RECOVERY-V0.1.md"
+      - ".github/workflows/hercules-revenue-recovery.yml"
+      - "scripts/verify-workflow-files.mjs"
+      - ".github/workflows/hercules-workflow-syntax-gate.yml"
   pull_request:
     paths:
       - "hercules-recovery/**"
       - "tests/hercules-recovery*.test.mjs"
       - "docs/HERCULES-REVENUE-RECOVERY-V0.1.md"
       - ".github/workflows/hercules-revenue-recovery.yml"
+      - "scripts/verify-workflow-files.mjs"
+      - ".github/workflows/hercules-workflow-syntax-gate.yml"
 
 permissions:
   contents: read
@@ -20,8 +30,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - name: Check recovery source syntax
-        run: |\n          node --check hercules-recovery/recovery-core.mjs\n          node --check hercules-recovery/recovery-graph.mjs
+        run: |
+          node --check hercules-recovery/recovery-core.mjs
+          node --check hercules-recovery/recovery-graph.mjs
           node --check hercules-recovery/recovery-route.mjs
+
+      - name: Verify workflow files before recovery tests
+        run: node scripts/verify-workflow-files.mjs
 
       - name: Verify recovery decision contract
         run: node --test tests/hercules-recovery*.test.mjs
