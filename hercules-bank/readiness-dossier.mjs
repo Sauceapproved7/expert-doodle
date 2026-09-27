@@ -11,6 +11,7 @@ function controlState(ready,extra={}){
 export function buildFinancialReadinessDossier({
   complianceSummary,
   productionInputs={},
+  qualificationEvidenceStatus=null,
   now=new Date().toISOString(),
 }={}){
   const regulatedReadiness=(
@@ -39,11 +40,22 @@ export function buildFinancialReadinessDossier({
   const caseOperations=details.caseOperations;
   const providerCertification=details.providerCertification;
 
+  const qualificationBlockers=[];
+  if(!qualificationEvidenceStatus||typeof qualificationEvidenceStatus!=="object"){
+    qualificationBlockers.push("adapterQualification: qualification evidence is missing");
+  }else if(qualificationEvidenceStatus.ready!==true){
+    const supplied=Array.isArray(qualificationEvidenceStatus.blockers)&&qualificationEvidenceStatus.blockers.length
+      ? qualificationEvidenceStatus.blockers
+      : ["qualification evidence is not ready"];
+    qualificationBlockers.push(...supplied.map((item)=>"adapterQualification: "+item));
+  }
+  const combinedBlockers=[...result.blockers,...qualificationBlockers];
+
   return Object.freeze({
-    ready:result.ready,
+    ready:combinedBlockers.length===0,
     activationAllowed:false,
     externalRailsEnabled:false,
-    blockers:Object.freeze([...result.blockers]),
+    blockers:Object.freeze(combinedBlockers),
     controls:Object.freeze({
       regulatedMoney:controlState(details.regulated?.ready===true,{
         blockerCount:Array.isArray(regulatedReadiness.blockers)?regulatedReadiness.blockers.length:0,
@@ -67,6 +79,13 @@ export function buildFinancialReadinessDossier({
       providerCertification:Object.freeze({
         certified:providerCertification?.certified===true,
         blockerCount:Array.isArray(providerCertification?.blockers)?providerCertification.blockers.length:0,
+      }),
+      adapterQualification:controlState(qualificationEvidenceStatus?.ready===true,{
+        stale:qualificationEvidenceStatus?.stale===true,
+        identityChanged:qualificationEvidenceStatus?.identityChanged===true,
+        qualifiedAt:qualificationEvidenceStatus?.qualifiedAt??null,
+        expiresAt:qualificationEvidenceStatus?.expiresAt??null,
+        blockerCount:Array.isArray(qualificationEvidenceStatus?.blockers)?qualificationEvidenceStatus.blockers.length:qualificationBlockers.length,
       }),
     }),
     compliance:Object.freeze({
