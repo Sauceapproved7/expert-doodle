@@ -53,3 +53,12 @@ The Edge Function uses custom authentication because scheduled internal calls ca
 The connected Admin GraphQL schema exposes domain reads and web-presence mutations, but does not expose a public mutation that creates a custom Domain resource or directly changes the shop primary domain. Hercules therefore monitors attachment, SSL, and primary status rather than fabricating an unsupported private API.
 
 The server-side Hercules Browser was also tested against Shopify Domains and encountered the provider's connection-verification challenge. That protection is not bypassed.
+
+
+## Secure owner onboarding
+
+Hercules Integrations now includes a `Shopify Direct` card. It accepts the Shopify Client ID and Client Secret over the authenticated Hercules surface, sends them directly to `hercules-provider-connect`, clears both input fields after submission, and stores the client secret plus exchanged access token in Vault.
+
+A successful connection immediately verifies the fixed production Shop GID, registers the existing Hercules Shopify webhooks when missing, and records a sanitized domain observation.
+
+The UI does not display or return stored Shopify credentials.
