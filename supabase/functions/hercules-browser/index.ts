@@ -74,6 +74,13 @@ function decodeBase64(value:string){
   return bytes;
 }
 
+function transientClosedSession(error:unknown){
+  const message=error instanceof Error?error.message:String(error||"");
+  return /target page, context or browser has been closed/i.test(message)
+    || /browser has been closed/i.test(message)
+    || /target closed/i.test(message);
+}
+
 function warmupUrls(w:any){
   const raw=Array.isArray(w?.metadata?.warmup_urls)?w.metadata.warmup_urls:[];
   const urls:string[]=[];
@@ -125,7 +132,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.2.0",
+    ok:true,service:"hercules-browser",version:"1.3.0",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,controlPlane:"Hercules"
   });
@@ -176,15 +183,31 @@ Deno.serve(async(req:Request)=>{
       persistSession:body?.persistSession===true,
       sessionId:body?.sessionId||undefined
     };
-    const workerCall=await callWorker(endpoint,w,payload,timeoutMs);
+    let sessionRecoveryAttempts=0;
+    let sessionRecovered=false;
+    let workerCall:any;
+    try{
+      workerCall=await callWorker(endpoint,w,payload,timeoutMs);
+    }catch(first){
+      if(!body?.sessionId||!targetUrl||!transientClosedSession(first))throw first;
+      sessionRecoveryAttempts=1;
+      const freshPayload={...payload};
+      delete freshPayload.sessionId;
+      freshPayload.persistSession=true;
+      workerCall=await callWorker(endpoint,w,freshPayload,timeoutMs);
+      sessionRecovered=true;
+    }
     const result=workerCall.result;
-    if(run?.id && workerCall.attempts!==1) await admin.from("hercules_browser_runs").update({
-      attempt_count:workerCall.attempts,
+    const totalAttempts=workerCall.attempts+sessionRecoveryAttempts;
+    if(run?.id && totalAttempts!==1) await admin.from("hercules_browser_runs").update({
+      attempt_count:totalAttempts,
       updated_at:new Date().toISOString()
     }).eq("id",run.id);
 
     const summary={
-      attempts:workerCall.attempts,
+      attempts:totalAttempts,
+      sessionRecoveryAttempts,
+      sessionRecovered,
       warmup:workerCall.warm,
       engine:w.metadata?.engine||"unknown",
       action,
