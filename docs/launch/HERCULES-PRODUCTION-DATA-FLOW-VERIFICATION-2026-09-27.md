@@ -25,27 +25,27 @@ Potential data categories handled in this layer:
 - audit, security, release, recovery, and operational telemetry;
 - billing/subscription metadata when payment billing is activated.
 
-### Render
+### Render / standalone Hercules Browser
 
-Verified active Hercules services include:
-- `hercules-browser-gateway`;
-- `hercules-browser-api`;
-- SauceApproved Forge hosting services.
+The canonical Hercules browser worker is `hercules-browser-standalone`, hosted in the SauceApproved Render workspace.
 
-The browser gateway is the production browser control route and uses a Render-hosted Browserless upstream. It can receive:
+Verified runtime characteristics:
+- engine: `playwright-local-chromium`;
+- owned standalone PWA and server-side browser API;
+- one-time Supabase broker authentication;
+- session reuse and bounded autopilot;
+- private-network targets blocked;
+- raw-code execution disabled;
+- anti-bot bypass disabled.
+
+Browser requests can process:
 - authorized target URLs;
 - browser interaction steps;
 - page content required for the requested browser operation;
-- transient session state;
+- transient/persistent session state required by Hercules workflows;
 - technical request/error telemetry.
 
-The gateway blocks private-network targets and does not expose raw-code execution.
-
-### Browserless
-
-The current `hercules-browser-api` upstream is based on the Browserless project and is hosted on the SauceApproved Render account. Browser workloads traverse the Hercules gateway before reaching this upstream.
-
-Because the service is hosted in SauceApproved's Render workspace, Browserless is currently an upstream software/runtime dependency; Render remains the external hosting provider for this path.
+Gateway v2 remains a rollback path. Browserless is no longer the canonical browser runtime for the verified production path.
 
 ### Railway / SauceApproved G4F routing
 
@@ -53,10 +53,11 @@ The deployed Hercules AI function routes supported AI requests through:
 
 `https://sauceapproved-g4f-production.up.railway.app/v1/chat/completions`
 
-The configured provider chain is:
+The production provider chain is:
 1. LLM7
-2. Yqcloud
-3. KiloCode
+2. KiloCode
+
+Yqcloud was removed from the launch allowlist because a current provider privacy/retention policy could not be independently verified.
 
 Potential data sent through this path:
 - the user's Hercules prompt;
@@ -66,28 +67,54 @@ Potential data sent through this path:
 
 A provider that is not selected for a successful request may still receive an attempted request if an earlier provider in the failover chain fails.
 
+### AI-provider privacy evidence
+
+#### LLM7
+
+The LLM7 privacy policy reviewed on 2026-09-27 is dated July 10, 2026. It states:
+- account/email data is retained while an account exists;
+- token/usage logs are retained as necessary to operate, secure, and account for the service;
+- verified deletion/account-deletion requests are targeted for deletion or anonymization within 30 days;
+- residual backups may persist for up to 90 days.
+
+The reviewed policy does not provide a blanket no-training guarantee for Hercules prompts. Hercules therefore makes no such claim.
+
+Evidence source:
+- `https://github.com/chigwell/llm7.io/blob/main/PRIVACY.md`
+
+#### Kilo Code
+
+The Kilo Code privacy materials reviewed on 2026-09-27 are dated May 29, 2026. They state that prompts/conversation content may be routed to selected AI providers to generate responses and that provider-specific handling applies. Kilo's terms also acknowledge that some AI models may use Customer Data for training unless the applicable model/provider path is configured otherwise.
+
+Hercules therefore does not claim that all Kilo-routed prompts are excluded from model training.
+
+Evidence sources:
+- `https://kilo.ai/privacy`
+- `https://kilo.ai/privacy/apps`
+- `https://kilo.ai/terms`
+
+#### Railway
+
+Railway hosts the SauceApproved G4F routing service. Railway's current DPA states that it purges or anonymizes customer data/customer content when a customer deletes its Railway account and supports data portability and erasure requests.
+
+Evidence source:
+- `https://railway.com/legal/dpa`
+
 ### GitHub
 
 Canonical Hercules source is stored in `Sauceapproved7/expert-doodle`.
 
-Current GitHub use includes source control, pull requests, CI/security/provenance checks, and release/source evidence. The pending Hercules GitHub App is not yet configured and its inactive finalizer has been paused.
-
-Customer receivable data should not be intentionally stored in the source repository.
+Current GitHub use includes source control, pull requests, CI/security/provenance checks, and release/source evidence. Customer receivable data should not be intentionally stored in the source repository.
 
 ### Lovable
 
-The production deployment broker currently health-checks `hercules-forge-command.lovable.app` as a deployment/hosting lane. The verified broker code shown during this review performs a host check without sending customer prompt or receivable content in that health request.
+The production deployment broker may health-check SauceApproved Lovable deployment lanes without sending customer receivable content in the verified health request.
 
 Any future path that sends build artifacts or customer-derived content to Lovable must be re-verified before the public Privacy Policy describes that flow.
 
 ## Connected-but-not-active provider records
 
-The Hercules provider registry currently contains pending/credential-required records for:
-- `github_forge`;
-- Google Drive knowledge vault;
-- Shopify production integration.
-
-A pending record is not evidence that customer data is currently flowing to that provider through Hercules. Public privacy disclosures should distinguish live processing from planned or optional integrations.
+Pending or credential-required provider records are not evidence that customer data is currently flowing to that provider through Hercules. Public privacy disclosures must distinguish live processing from planned or optional integrations.
 
 ## Payment processing
 
@@ -100,22 +127,15 @@ Before a paid public launch:
 - verify webhook signing and event processing;
 - update the public Privacy Policy/subprocessor list to reflect the live payment flow.
 
-## AI retention/training verification still required
+## AI retention/training conclusion
 
-The current runtime verifies the routing path and provider names, but it does **not** by itself establish the downstream providers' current retention or model-training policies.
+Current evidence is sufficient to describe the verified LLM7, Kilo Code, Railway, Supabase, Render, and GitHub paths without claiming universal no-training or zero-retention behavior.
 
-Before final Privacy approval, verify current contractual/policy terms for:
-- Railway as hosting infrastructure;
-- LLM7;
-- Yqcloud;
-- KiloCode;
-- any additional provider added to the production chain.
-
-Do not state "no training" or a fixed retention period without provider-specific evidence.
+Any additional AI provider added to the production chain requires a fresh privacy/retention review before becoming launch-eligible.
 
 ## Customer deletion/export verification still required
 
-The current Privacy draft describes access/export/deletion rights conditionally. Before making a public operational commitment:
+Before making a public operational commitment:
 - identify the supported request channel;
 - verify the exact deletion path for customer workspace data;
 - define treatment of required audit/security/legal records;
@@ -124,4 +144,6 @@ The current Privacy draft describes access/export/deletion rights conditionally.
 
 ## Launch conclusion
 
-This artifact narrows the remaining Privacy work to policy/contract verification and customer-rights operations. It does not mark the `privacy` launch approval as approved.
+The AI-provider evidence gap has been narrowed by removing Yqcloud and documenting the remaining live provider policies. Remaining Privacy work is customer-rights operations, a monitored privacy contact, launch-market disclosures, and the payment-provider flow once billing is activated.
+
+This artifact does not mark the `privacy` launch approval as approved.
