@@ -8,7 +8,7 @@ const agent=await readFile(
 );
 
 test("browser agent exposes session recovery version",()=>{
-  assert.match(agent,/version:"0\\.7\\.0"/);
+  assert.match(agent,/version:"0\.7\.0"/);
   assert.match(agent,/transientClosedBrowser/);
   assert.match(agent,/target page, context or browser has been closed/i);
 });
