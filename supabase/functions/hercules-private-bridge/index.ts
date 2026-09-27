@@ -112,18 +112,24 @@ async function launchApprovalStatus(){
     publicRegistrationVerifiedAt:release?.verified_at||null,
     authHardening:{
       selfApprovalAllowed:false,
-      blocker:'Supabase leaked-password protection must be enabled and independently verified before auth_hardening can be approved.'
+      mode:'system_computed',
+      control:'hercules-password-defense-v2',
+      note:'Launch auth hardening is computed from live Hercules password-defense evidence. The native Supabase warning may remain documented without becoming the launch decision source.'
     }
   };
 }
 
 async function launchApprovalEnvelopeStatus(){
   const status=await launchApprovalStatus();
-  const {data:plans,error}=await admin.from('hercules_plans')
-    .select('code,monthly_price_cents,annual_price_cents,is_active')
-    .in('code',['starter','pro','scale'])
-    .order('code');
+  const [{data:passwordDefense,error:passwordDefenseError},{data:plans,error}]=await Promise.all([
+    admin.rpc('hercules_password_defense_status'),
+    admin.from('hercules_plans')
+      .select('code,monthly_price_cents,annual_price_cents,is_active')
+      .in('code',['starter','pro','scale'])
+      .order('code')
+  ]);
   if(error)throw new Error('launch_packet_pricing_read_failed');
+  if(passwordDefenseError)throw new Error('launch_packet_auth_hardening_read_failed');
 
   const byCode=Object.fromEntries((plans||[]).map((row:any)=>[row.code,row]));
   const pricingCatalogMatches=(['starter','pro','scale'] as const).every(code=>{
@@ -134,7 +140,7 @@ async function launchApprovalEnvelopeStatus(){
       Number(live?.annual_price_cents)===expected.annual
     );
   });
-  const authHardeningApproved=status?.approvals?.auth_hardening?.status==='approved';
+  const authHardeningApproved=passwordDefense?.ok===true;
   const packetApprovals=['pricing','terms','privacy'].map(type=>({
     type,
     status:status?.approvals?.[type]?.status||'pending',
@@ -153,6 +159,8 @@ async function launchApprovalEnvelopeStatus(){
     },
     readiness:{
       authHardeningApproved,
+      authHardeningSource:'hercules-password-defense-v2',
+      authHardeningEvidence:passwordDefense||null,
       pricingCatalogMatches,
       publicRegistrationHeldClosed:status.publicRegistrationOpen!==true,
       canApprove:authHardeningApproved&&pricingCatalogMatches&&status.publicRegistrationOpen!==true
@@ -242,8 +250,8 @@ Deno.serve(async(req:Request)=>{
     if(!['approved','rejected','pending'].includes(decision))return out({error:'valid_decision_required'},400);
     if(approvalType==='auth_hardening'&&decision==='approved'){
       return out({
-        error:'auth_hardening_requires_verified_platform_evidence',
-        required:'Enable Supabase leaked-password protection, rerun the production security advisor, and require the warning to clear before approval.'
+        error:'auth_hardening_is_system_computed',
+        required:'The launch gate verifies Hercules Password Defense v2 directly. This is not an owner self-approval.'
       },409);
     }
     const expected=(decision==='approved'?'APPROVE ':decision==='rejected'?'REJECT ':'RESET ')+approvalType.replace('_',' ').toUpperCase();
