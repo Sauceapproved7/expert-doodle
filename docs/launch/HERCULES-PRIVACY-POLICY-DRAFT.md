@@ -1,7 +1,7 @@
 # Hercules Privacy Policy — FINAL CANDIDATE v0.2
 
 **Status:** FINAL CANDIDATE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE  
-**Company:** SauceApproved Enterprise LLC  
+**Company:** SauceApproved enterprise LLC  
 **Product:** Hercules / Hercules Revenue Recovery  
 **Owner/legal review required before publication**
 
@@ -123,7 +123,7 @@ Pending or optional integrations are not evidence that customer data is currentl
 
 ## 6. Sharing
 
-SauceApproved Enterprise LLC may disclose information:
+SauceApproved enterprise LLC may disclose information:
 - to service providers acting on its behalf;
 - at the customer's direction;
 - when necessary to provide a requested integration;
