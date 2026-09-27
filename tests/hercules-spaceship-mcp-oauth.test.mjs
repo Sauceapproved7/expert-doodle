@@ -134,3 +134,18 @@ test("Private Bridge top-level GET router forwards Spaceship handoff requests",(
   const genericGetIndex=bridge.indexOf("if(req.method==='GET'){");
   assert.ok(handoffIndex>=0&&genericGetIndex>handoffIndex,"handoff routing must run before generic GET status");
 });
+
+
+test("internal handoff launcher keeps the opaque token inside Hercules and queues Hercules Browser",()=>{
+  assert.match(mcp,/spaceship_mcp_handoff_launch_browser/);
+  assert.match(mcp,/hercules_browser_submit/);
+  assert.match(mcp,/action:"navigate"/);
+  assert.match(mcp,/persistSession:true/);
+  assert.match(mcp,/browserRequestId/);
+  assert.doesNotMatch(mcp,/browserRequestId.*handoffUrl/s);
+});
+
+test("internal handoff launcher revokes the handoff if browser queueing fails",()=>{
+  assert.match(mcp,/status:"revoked"/);
+  assert.match(mcp,/browser_submit_failed/);
+});
