@@ -51,8 +51,8 @@ const executionMigration=await readFile(
   new URL("../supabase/migrations/20260927203000_hercules_privacy_data_rights_execution_v1.sql",import.meta.url),
   "utf8"
 );
-const privacyOps=await readFile(
-  new URL("../supabase/functions/hercules-privacy-ops/index.ts",import.meta.url),
+const privateBridge=await readFile(
+  new URL("../supabase/functions/hercules-private-bridge/index.ts",import.meta.url),
   "utf8"
 );
 
@@ -79,11 +79,14 @@ test("privacy deletion execution is exact-request-bound and fail closed",()=>{
   assert.doesNotMatch(executionMigration,/delete from public\.hercules_billing/i);
 });
 
-test("privacy ops requires authenticated owner confirmation before deletion",()=>{
-  assert.match(privacyOps,/owner_or_admin_required/i);
-  assert.match(privacyOps,/owner_required/i);
-  assert.match(privacyOps,/privacy_export/i);
-  assert.match(privacyOps,/privacy_deletion_plan/i);
-  assert.match(privacyOps,/privacy_delete_user_content/i);
-  assert.match(privacyOps,/explicit_confirmation_required/i);
+test("private bridge hosts privacy operations when provider function slots are exhausted",()=>{
+  assert.match(privateBridge,/owner_or_admin_required|owner_or_admin_required/i);
+  assert.match(privateBridge,/owner_required/i);
+  assert.match(privateBridge,/privacy_export/i);
+  assert.match(privateBridge,/privacy_deletion_plan/i);
+  assert.match(privateBridge,/privacy_delete_user_content/i);
+  assert.match(privateBridge,/explicit_confirmation_required/i);
+  assert.match(privateBridge,/hercules_privacy_request_export/i);
+  assert.match(privateBridge,/hercules_privacy_request_deletion_plan/i);
+  assert.match(privateBridge,/hercules_privacy_request_delete_user_content/i);
 });
