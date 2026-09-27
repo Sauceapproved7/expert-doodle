@@ -13,28 +13,34 @@ test("private bridge multiplexes Hercules Domain Agent before generic routes",()
   assert.match(bridge,/if\(isDomainAgentAction\(probeAction\)\)return handleDomainAgentRequest\(req\)/);
 });
 
-test("domain agent reuses production grant and audit RPCs without decrypting secrets",()=>{
+test("domain agent reuses production grant and audit RPCs without taking provider credential custody",()=>{
   assert.match(agent,/hercules_domain_agent_resolve_provider_grant/);
   assert.match(agent,/hercules_domain_agent_record_audit/);
-  assert.doesNotMatch(agent,/hercules_get_secret/);
-  assert.doesNotMatch(agent,/access_secret_ref|secret_ref|signing_secret_ref/);
+  assert.match(agent,/hercules_internal_service_keys/);
+  assert.match(agent,/hercules_get_secret/);
+  assert.doesNotMatch(agent,/hercules_provider_connections/);
+  assert.doesNotMatch(agent,/access_secret_ref|signing_secret_ref/);
+  assert.doesNotMatch(agent,/x-shopify-access-token|api\.stripe\.com|oauth2\.googleapis\.com/);
 });
 
-test("domain agent accepts only owner-admin or Hercules internal authorization for POST",()=>{
+test("domain agent accepts owner-admin, Hercules internal, or scoped tenant API-key authorization",()=>{
   assert.match(agent,/ownerOrAdmin/);
   assert.match(agent,/internalAuthorized/);
+  assert.match(agent,/apiKeyPrincipal/);
   assert.match(agent,/domain-agent-control/);
   assert.match(agent,/x-hercules-internal-key/);
-  assert.match(agent,/owner_admin_or_internal_authorization_required/);
+  assert.match(agent,/x-hercules-api-key/);
+  assert.match(agent,/owner_admin_internal_or_api_key_authorization_required/);
 });
 
 test("public discovery is honest about multiplex deployment and execution state",()=>{
   assert.match(agent,/hercules\.domain-agent\.discovery\.v1/);
   assert.match(agent,/agent\.sauceapproved\.com/);
   assert.match(agent,/hercules-private-bridge/);
-  assert.match(agent,/automaticRefresh:false/);
+  assert.match(agent,/automaticRefresh:true/);
+  assert.match(agent,/providerNativeRefresh:true/);
   assert.match(agent,/refreshMetadata:true/);
-  assert.match(agent,/executionAdapters:false/);
+  assert.match(agent,/executionAdapters:true/);
   assert.match(agent,/customDomainVerified:false/);
 });
 

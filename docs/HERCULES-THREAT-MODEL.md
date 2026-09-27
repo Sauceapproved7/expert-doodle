@@ -29,6 +29,12 @@ Hercules must protect:
 11. **Forge/operator -> Deploy Plane**: deployment requests cross a separate authenticated control boundary; jobs may reference deployment targets but must not carry deployment credentials.
 12. **Deploy Plane -> target adapter**: target adapters are replaceable infrastructure boundaries; adapters may hold provider/host credentials outside persisted deployment jobs.\n13. **Domain-agent ingress -> authority/provider adapters**: authenticated tasks cross tenant, replay, provider-grant, authority-lease, owner-boundary, AI-routing, and credential-isolation boundaries. The public domain is identity and ingress only; it is never treated as provider permission.
 
+14. **Domain-agent public front door -> private bridge**: `agent.sauceapproved.com` is a public TLS routing boundary. The front door may forward owner JWTs or scoped tenant API keys, but it strips Hercules internal-control headers and never contains service-role or provider credentials.
+15. **Domain-agent -> internal service delegation**: the Domain Agent may retrieve only Hercules-owned internal service-control keys from Vault to call already-authorized Hercules services. Provider credentials remain in provider-specific services and are not read by the Domain Agent.
+16. **Domain-agent -> execution ledger -> background runner -> worker runtime**: execution eligibility, tenant entitlement, metering, idempotency, job state, runtime isolation, and audit evidence are separate controls. A successful authorization decision does not permit an arbitrary workload.
+17. **Tenant API key -> Domain Agent**: customer API keys are hashed at rest, resolved server-side, bound to one organization, expiry/status checked, and must carry explicit `domain-agent:read`, `domain-agent:execute`, `domain-agent:*`, or `*` scope as appropriate.
+18. **Commercial plan -> execution allowance**: subscription state and monthly execution limits are authorization-adjacent commercial controls. SauceApproved's founder control-plane entitlement is explicitly marked as an internal owner entitlement and must not be inherited by customer tenants.
+
 ## Primary threats and required controls
 
 ### Authentication and session compromise
@@ -65,6 +71,11 @@ Controls: constant-time Deploy Plane control-token checks, bounded request bodie
 Controls: stable HTTPS agent identity, tenant binding, provider/tenant matching, credential-free provider-grant records, authorization-evidence hash binding, authority-lease subject and intent binding, scope/impact/time evaluation, explicit owner-only boundaries, automatic refresh only for refreshable grants, pre-routing authorization, credential-isolated adapters, bounded request bodies, constant-time control-token checks, tenant-scoped idempotency, and deterministic audit fingerprints. Reusing an idempotency key for a different task fails closed.
 
 The domain name itself grants no provider authority. Missing consent, revoked grants, insufficient scopes, 2FA, identity verification, legal consent, and payment boundaries must not be inferred or bypassed.
+
+### Domain-agent API, execution and commercial isolation
+Controls: raw credential-shaped task fields are rejected at ingress; tenant API keys are stored only as hashes and resolved through scoped lookup; owner/admin JWTs remain tenant-bound; internal service delegation is limited to named Hercules service keys; safe internal workloads use an explicit allowlist, deny-by-default network policy, ephemeral filesystem and explicit secret allowlisting; provider actions are dispatched only through existing provider-specific Hercules services after live grant resolution; provider-native refresh is permitted only for already-authorized refreshable grants; monthly usage is recorded idempotently under an advisory lock before execution; customer entitlements derive from active plans while the SauceApproved founder workspace uses a separately marked internal entitlement.
+
+The Netlify front door is not a trust anchor. It cannot grant provider authority, cannot inject Hercules internal authorization, and must strip any incoming `x-hercules-internal-key`. A custom hostname is not considered live until hosting alias, DNS and TLS are independently verified.
 
 ### Audit tampering
 Controls: hash-chained audit events and retained head checkpoint. This is tamper-evident application storage, not an independent hardware/external trust anchor.

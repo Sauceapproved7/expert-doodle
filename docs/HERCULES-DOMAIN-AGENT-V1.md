@@ -1,6 +1,6 @@
 # Hercules Domain Agent V1
 
-**Status:** implementation candidate  
+**Status:** production control plane; custom hostname activation pending external domain authorization  
 **Canonical repository:** `Sauceapproved7/expert-doodle`  
 **Primary owned identity:** `https://agent.sauceapproved.com`
 
@@ -182,3 +182,42 @@ The intended public topology is:
 - durable tenant-scoped state — grants, idempotency, evidence, and audit history.
 
 Public DNS, TLS, production hosting, and provider callback configuration must be independently verified before the domain agent is represented as live.
+
+
+## Production execution and commercial controls
+
+The live Domain Agent backend is multiplexed through `hercules-private-bridge` and does not consume a separate Supabase Edge Function slot.
+
+Authenticated POST operations accept:
+- an active owner/admin session;
+- the Vault-backed `domain-agent-control` Hercules internal service key; or
+- a tenant API key whose stored SHA-256 hash resolves to the same organization and whose scopes include `domain-agent:read`, `domain-agent:execute`, `domain-agent:*`, or `*` as required.
+
+Raw passwords, provider secrets, access/refresh tokens, cookies, OTP/MFA values, CAPTCHA material and similar credential fields are rejected at Domain Agent ingress.
+
+Safe internal execution is restricted to the allowlist:
+- `benchmark.echo`
+- `crypto.sha256`
+- `runtime.capabilities`
+- `runtime.selftest`
+
+These jobs are stored in the existing Hercules execution ledger with tenant-scoped idempotency and are processed through the existing background-runner/worker-runtime chain. Arbitrary shell, browser-control, or provider-secret execution is not exposed.
+
+Provider execution is capability-specific and uses existing provider services only after live grant resolution:
+- `shopify.domain.observe` -> `hercules-provider-connect`;
+- `shopify.launch.read` -> `hercules-provider-connect`;
+- `github.bridge.verify` -> `hercules-github-app`;
+- `knowledge.read` -> `hercules-drive`.
+
+Automatic refresh means provider-native refresh of an already-authorized grant. It does not acquire new consent. Missing/revoked grants, insufficient scopes, 2FA, identity verification, legal consent and payment boundaries return an owner-action-required state.
+
+Starter, Pro and Scale plan records include Domain Agent API, provider-refresh and custom-identity entitlements plus monthly execution limits. SauceApproved's own workspace has a separately marked founder/internal entitlement so the control plane does not depend on a customer trial subscription.
+
+A managed identity record exists for the intended `agent.sauceapproved.com` hostname. It targets the existing `hercules-sauceapproved.netlify.app` site. The front-door proxy is staged for `/.well-known/hercules-agent.json`, `/health`, and `/v1/*`, and strips Hercules internal-control headers before forwarding to the private bridge.
+
+The custom hostname remains **pending** until all three are independently verified:
+1. Netlify custom-domain alias attached to the existing Hercules site.
+2. Spaceship DNS CNAME `agent` -> `hercules-sauceapproved.netlify.app`.
+3. TLS active for `agent.sauceapproved.com`.
+
+Repository code or a DNS intent record alone is not proof that the hostname is live.
