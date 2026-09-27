@@ -1,0 +1,27 @@
+name: Hercules Authenticated Definer Retirement
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-launch/**"
+      - "hercules-chat/hercules-chat-edge.ts"
+      - "supabase/migrations/*hercules_authenticated_definer_retirement*"
+      - "tests/hercules-authenticated-definer-retirement.test.mjs"
+      - "docs/HERCULES-AUTHENTICATED-DEFINER-RETIREMENT-V1.md"
+      - ".github/workflows/hercules-authenticated-definer-retirement.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  authenticated-definer-retirement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run authenticated SECURITY DEFINER retirement tests
+        run: node --test tests/hercules-authenticated-definer-retirement.test.mjs tests/hercules-public-registration-gate.test.mjs tests/hercules-explicit-public-release-gate.test.mjs

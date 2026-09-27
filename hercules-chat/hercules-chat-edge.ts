@@ -439,8 +439,12 @@ Deno.serve(async (req: Request) => {
     if (action === "usage") {
       const rows = await rest(
         req,
-        "rpc/hercules_chat_current_usage",
-        { method: "POST", body: "{}" },
+        "rpc/hercules_chat_current_usage_internal",
+        {
+          method: "POST",
+          body: JSON.stringify({ p_user_id: userId }),
+        },
+        true,
       );
       return json({ usage: Array.isArray(rows) ? rows[0] ?? null : rows });
     }
