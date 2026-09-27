@@ -406,7 +406,7 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
       <div class="tag" style="margin:18px 10px 6px">Advanced tools</div>
       <button class="btn sidebtn" data-view="knowledgeView">Knowledge</button>
       <button class="btn sidebtn" data-view="builderView">Builder</button>\n      <button class="btn sidebtn" data-view="adStudioView">Ad Studio</button>
-      <button class="btn sidebtn" data-view="forgeView">Deployments</button>
+      <button class="btn sidebtn" data-view="forgeView">Deployments</button>\n      <button class="btn sidebtn" data-view="domainAgentView">Domain Agent</button>
       <button class="btn sidebtn" data-view="statusView">System Status</button>
       <a class="btn sidebtn" href="/hercules-wallet/">Wallet · Testnet</a>
     </aside>
@@ -472,6 +472,49 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
       <section class="view" id="forgeView">
         <div class="viewhead"><div><div class="tag">Forge</div><h1>Deployments</h1><div class="muted">Real Hercules-owned deployment history and release evidence.</div></div><button class="btn" id="refreshDeployments">Refresh</button></div>
         <div class="panel"><div id="deploymentSummary" class="three"></div><div class="results" id="deploymentList"></div></div>
+      </section>
+
+      <section class="view" id="domainAgentView">
+        <div class="viewhead">
+          <div><div class="tag">Hercules Control Plane</div><h1>Domain Agent</h1><div class="muted">Your persistent Hercules identity, authorization, execution, usage, and API access—inside your app.</div></div>
+          <div class="row"><span class="pill" id="domainAgentState"><span class="dot"></span>Loading</span><button class="btn" id="domainAgentRefresh">Refresh</button></div>
+        </div>
+        <div class="three" id="domainAgentSummary"></div>
+        <div class="two" style="margin-top:14px">
+          <div class="panel">
+            <div class="tag">Managed identity</div><h2 style="margin:7px 0 10px">agent.sauceapproved.com</h2>
+            <div id="domainAgentIdentity"></div>
+            <div class="notice" style="margin-top:12px">The hostname is not shown as live until hosting alias, DNS, and TLS are independently verified.</div>
+          </div>
+          <div class="panel">
+            <div class="tag">Safe execution</div><h2 style="margin:7px 0 10px">Hercules self-test</h2>
+            <p class="muted">Runs the allowlisted runtime.selftest through the existing Hercules execution ledger, background runner, and Worker Runtime.</p>
+            <button class="btn primary" id="domainAgentSelfTest" style="margin-top:12px">Run self-test</button>
+            <div class="notice hidden" id="domainAgentExecution"></div>
+          </div>
+        </div>
+        <div class="two" style="margin-top:14px">
+          <div class="panel">
+            <div class="tag">Provider authorization</div><h2 style="margin:7px 0 10px">Grant status</h2>
+            <label class="tag">Provider</label>
+            <select class="input" id="domainAgentProvider">
+              <option value="shopify">Shopify</option>
+              <option value="github_forge">GitHub Forge</option>
+              <option value="google_drive">Google Drive</option>
+            </select>
+            <label class="tag" style="display:block;margin-top:12px">Account key</label>
+            <input class="input" id="domainAgentAccountKey" maxlength="512" value="azymhc-x0.myshopify.com">
+            <button class="btn" id="domainAgentCheckGrant" style="margin-top:12px">Check authorization</button>
+            <div class="notice hidden" id="domainAgentProviders"></div>
+          </div>
+          <div class="panel">
+            <div class="tag">Commercial API</div><h2 style="margin:7px 0 10px">Tenant API key</h2>
+            <p class="muted">Issue a scoped Domain Agent key. The secret is returned once; Hercules stores only its hash.</p>
+            <label class="tag">Key name</label><input class="input" id="domainAgentKeyName" maxlength="80" value="Hercules Domain Agent">
+            <div class="row" style="margin-top:12px"><button class="btn primary" id="domainAgentIssueKey">Issue key</button><button class="btn" id="domainAgentRevokeKey">Revoke last key</button></div>
+            <div class="notice hidden code" id="domainAgentApiKey"></div>
+          </div>
+        </div>
       </section>
 
       <section class="view" id="statusView">
@@ -626,7 +669,7 @@ $("recoveryLeads").onclick=async e=>{
 };
 recoveryGuidance();
 
-document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",async()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===b.dataset.view));if(b.dataset.view==="recoveryView")await loadRecovery();if(b.dataset.view==="knowledgeView")await loadKnowledgeStats();if(b.dataset.view==="adStudioView")ensureAdStudioLoaded();if(b.dataset.view==="forgeView")await loadDeployments();if(b.dataset.view==="statusView")await loadStatus()}));
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",async()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===b.dataset.view));if(b.dataset.view==="recoveryView")await loadRecovery();if(b.dataset.view==="knowledgeView")await loadKnowledgeStats();if(b.dataset.view==="adStudioView")ensureAdStudioLoaded();if(b.dataset.view==="forgeView")await loadDeployments();if(b.dataset.view==="domainAgentView")await loadDomainAgent();if(b.dataset.view==="statusView")await loadStatus()}));
 
 async function ensureProject(){
   const q=await sb.from("hercules_projects").select("id,name,goal,created_at").order("created_at",{ascending:true}).limit(1).maybeSingle();
@@ -675,11 +718,47 @@ function kpi(label,value){const x=document.createElement("div");x.className="car
 async function loadDeployments(){const list=$("deploymentList"),sum=$("deploymentSummary");list.textContent="";sum.textContent="";try{const oid=await ensureOrg();if(!oid)throw new Error("No active Hercules organization.");const d=await fetchFn("hercules-deploy",{method:"POST",body:JSON.stringify({action:"history",organization_id:oid})});const rows=d.deployments||[];sum.append(kpi("Releases",rows.length),kpi("Latest version",rows[0]?.version||"—"),kpi("Latest runtime",rows[0]?.metadata?.runtime||"—"));if(!rows.length){list.textContent="No deployments recorded yet.";return}for(const r of rows.slice(0,25)){const box=document.createElement("div");box.className="result deployrow";const left=document.createElement("div");const h=document.createElement("h3");h.textContent=(r.name||r.slug)+" · v"+safe(r.version);const p=document.createElement("p");p.textContent=safe(r.deployed_at)+" · "+safe(r.metadata?.runtime||r.metadata?.format);left.append(h,p);const a=document.createElement("a");a.className="btn small";a.textContent="Open";a.target="_blank";a.rel="noopener";a.href=r.public_url||"#";box.append(left,a);list.appendChild(box)}}catch(e){setNotice("deploymentList","Deployment history unavailable: "+e.message,"bad")}}
 $("refreshDeployments").onclick=loadDeployments;
 
+let domainAgentLastKeyId=null;
+async function domainAgentCall(payload){const oid=await ensureOrg();return fetchFn("hercules-private-bridge",{method:"POST",body:JSON.stringify({...payload,organization_id:oid})})}
+function domainAgentLine(label,value,tone){return statusRow(label,safe(value),tone)}
+async function loadDomainAgent(){
+  const sum=$("domainAgentSummary"),identity=$("domainAgentIdentity");sum.textContent="";identity.textContent="";$("domainAgentState").innerHTML="<span class='dot'></span>Loading";
+  try{
+    const [usageData,identityData]=await Promise.all([
+      domainAgentCall({action:"domain_agent_usage_status",request_id:"ui-usage-"+crypto.randomUUID()}),
+      domainAgentCall({action:"domain_agent_identity_status",request_id:"ui-identity-"+crypto.randomUUID()})
+    ]);
+    const usage=usageData.usage||{},ids=identityData.identities?.identities||[],id=ids[0]||{};
+    sum.append(
+      kpi("Plan",usage.plan_code||"—"),
+      kpi("Executions",String(usage.executions_used??0)+(usage.execution_limit==null?" / ∞":" / "+usage.execution_limit)),
+      kpi("Agent identity",id.hostname||"agent.sauceapproved.com")
+    );
+    const live=id.hosting_alias_status==="configured"&&id.dns_status==="verified"&&id.ssl_status==="active";
+    identity.append(
+      domainAgentLine("Hosting alias",id.hosting_alias_status||"pending",id.hosting_alias_status==="configured"?"good":"warn"),
+      domainAgentLine("DNS",id.dns_status||"pending",id.dns_status==="verified"?"good":"warn"),
+      domainAgentLine("TLS",id.ssl_status||"pending",id.ssl_status==="active"?"good":"warn"),
+      domainAgentLine("Target",id.target_host||"Hercules app","")
+    );
+    $("domainAgentState").innerHTML="<span class='dot "+(live?"good":"warn")+"'></span>"+(live?"Identity live":"Core live · domain pending");
+  }catch(e){
+    $("domainAgentState").innerHTML="<span class='dot bad'></span>Unavailable";
+    identity.append(domainAgentLine("Domain Agent","Unavailable","bad"));
+    setNotice("domainAgentExecution","Domain Agent unavailable: "+e.message,"bad");
+  }
+}
+$("domainAgentRefresh").onclick=loadDomainAgent;
+$("domainAgentSelfTest").onclick=async()=>{setNotice("domainAgentExecution","Running Hercules self-test…","warn");try{const d=await domainAgentCall({action:"domain_agent_execute",request_id:"ui-selftest-"+crypto.randomUUID(),workload_type:"runtime.selftest",input:{}});const ok=d.execution_performed===true&&d.job?.status==="succeeded";setNotice("domainAgentExecution",ok?"Self-test succeeded · "+safe(d.job?.trace_id):"Self-test accepted · "+safe(d.job?.status),ok?"good":"warn");await loadDomainAgent()}catch(e){setNotice("domainAgentExecution",e.message,"bad")}};
+$("domainAgentCheckGrant").onclick=async()=>{setNotice("domainAgentProviders","Checking authorization…","warn");try{const provider=$("domainAgentProvider").value,account=$("domainAgentAccountKey").value.trim();const d=await domainAgentCall({action:"domain_agent_grant_status",request_id:"ui-grant-"+crypto.randomUUID(),provider,account_key:account||null,required_capabilities:provider==="shopify"?["shopify.domain.observe"]:provider==="github_forge"?["github.bridge.verify"]:["knowledge.read"]});const g=d.grant||{};const text=g.status==="ready"?"Authorized · "+(g.capabilities||[]).join(", "):(g.status||"authorization unresolved")+" · "+(g.reason_codes||[]).join(", ");setNotice("domainAgentProviders",text,g.execution_eligible?"good":"warn")}catch(e){setNotice("domainAgentProviders",e.message,"bad")}};
+$("domainAgentIssueKey").onclick=async()=>{setNotice("domainAgentApiKey","Issuing scoped key…","warn");try{const d=await domainAgentCall({action:"domain_agent_api_key_issue",name:$("domainAgentKeyName").value.trim()||"Hercules Domain Agent",scopes:["domain-agent:read","domain-agent:execute"]});domainAgentLastKeyId=d.api_key?.id||null;setNotice("domainAgentApiKey","Copy now — shown once:\n"+safe(d.api_key_secret)+"\n\nKey ID: "+safe(domainAgentLastKeyId),"good")}catch(e){setNotice("domainAgentApiKey",e.message,"bad")}};
+$("domainAgentRevokeKey").onclick=async()=>{if(!domainAgentLastKeyId){setNotice("domainAgentApiKey","Issue a key in this session before using revoke here.","warn");return}try{await domainAgentCall({action:"domain_agent_api_key_revoke",api_key_id:domainAgentLastKeyId});setNotice("domainAgentApiKey","Key revoked: "+domainAgentLastKeyId,"good");domainAgentLastKeyId=null}catch(e){setNotice("domainAgentApiKey",e.message,"bad")}};
+
 function statusRow(label,value,tone){const x=document.createElement("div");x.className="statusline";const a=document.createElement("span");a.textContent=label;const b=document.createElement("span");b.className="pill";const dot=document.createElement("span");dot.className="dot "+(tone||"");b.append(dot,document.createTextNode(safe(value)));x.append(a,b);return x}
 async function loadStatus(){const cards=$("statusCards"),ctrl=$("controlStatus"),reg=$("registryStatus");cards.textContent="";ctrl.textContent="";reg.textContent="";const results=await Promise.allSettled([fetchFn("hercules-control-plane",{method:"GET"}),fetchFn("hercules-deployment-broker",{method:"GET"}),fetchFn("hercules-knowledge-registry",{method:"POST",body:JSON.stringify({action:"stats",org_slug:orgSlug})}),fetchFn("hercules-forge-builder",{method:"GET"})]);const c=results[0].status==="fulfilled"?results[0].value:null,b=results[1].status==="fulfilled"?results[1].value:null,k=results[2].status==="fulfilled"?results[2].value:null,f=results[3].status==="fulfilled"?results[3].value:null;cards.append(kpi("Control plane",c?.ok?"Operational":"Unavailable"),kpi("Forge Builder",f?.ok?"Operational":"Unavailable"),kpi("Knowledge entries",k?.total??"Unavailable"));ctrl.append(statusRow("Service",c?.service||"unreachable",c?.ok?"good":"bad"),statusRow("Mode",c?.mode||"—",c?.ok?"good":"warn"),statusRow("Queued commands",c?.commandQueue?.queued??"—",c?.ok?"good":"warn"),statusRow("Running commands",c?.commandQueue?.running??"—",c?.ok?"good":"warn"),statusRow("Deployment broker",b?.ok?"reachable":"unreachable",b?.ok?"good":"bad"));reg.append(statusRow("Registry",k?.ok?"reachable":"unreachable",k?.ok?"good":"bad"),statusRow("Entries",k?.total??"—",k?.ok?"good":"warn"),statusRow("Forge service",f?.service||"unreachable",f?.ok?"good":"bad"));const healthy=Boolean(c?.ok&&k?.ok&&f?.ok);$("livePill").innerHTML="<span class='dot "+(healthy?"good":"warn")+"'></span>"+(healthy?"Core services live":"Partial status");}
 $("refreshStatus").onclick=loadStatus;
 
-async function bootApp(){const s=(await sb.auth.getSession()).data.session;if(!s){switchRoot("auth");return}user=s.user;switchRoot("app");try{await ensureOrg();await ensureProject();$("projectLabel").textContent=project.name;const pending=sessionStorage.getItem("hercules_pending_prompt");if(pending){$("chatPrompt").value=pending;sessionStorage.removeItem("hercules_pending_prompt")}await Promise.allSettled([loadRecovery(),loadMessages(),loadKnowledgeStats(),loadStatus()]);$("aiStatus").innerHTML="<span class='dot good'></span>AI workspace ready"}catch(e){$("aiStatus").innerHTML="<span class='dot bad'></span>Setup issue";addMessage("meta","Workspace setup issue: "+e.message);const list=$("recoveryLeads");if(list){list.textContent="";const x=document.createElement("div");x.className="notice bad";x.textContent="Recovery Desk unavailable: "+e.message;list.appendChild(x)}}}
+async function bootApp(){const s=(await sb.auth.getSession()).data.session;if(!s){switchRoot("auth");return}user=s.user;switchRoot("app");try{await ensureOrg();await ensureProject();$("projectLabel").textContent=project.name;const pending=sessionStorage.getItem("hercules_pending_prompt");if(pending){$("chatPrompt").value=pending;sessionStorage.removeItem("hercules_pending_prompt")}await Promise.allSettled([loadRecovery(),loadMessages(),loadKnowledgeStats(),loadDomainAgent(),loadStatus()]);$("aiStatus").innerHTML="<span class='dot good'></span>AI workspace ready"}catch(e){$("aiStatus").innerHTML="<span class='dot bad'></span>Setup issue";addMessage("meta","Workspace setup issue: "+e.message);const list=$("recoveryLeads");if(list){list.textContent="";const x=document.createElement("div");x.className="notice bad";x.textContent="Recovery Desk unavailable: "+e.message;list.appendChild(x)}}}
 sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")===false)switchRoot("landing")});
 (async()=>{const s=(await sb.auth.getSession()).data.session;if(s){user=s.user;$("openHercules").textContent="Open Hercules"}switchRoot("landing")})();
 </script>
@@ -699,7 +778,7 @@ Deno.serve(async(req:Request)=>{
     },{status:200,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
   }
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.8.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",controlled_pilot_open:true,paid_billing_active:false,public_account_registration_open:false,owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.8.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",controlled_pilot_open:true,paid_billing_active:false,public_account_registration_open:false,owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true,domain_agent:true});
   }
   if(req.method==="POST"){
     const len=Number(req.headers.get("content-length")||"0");
