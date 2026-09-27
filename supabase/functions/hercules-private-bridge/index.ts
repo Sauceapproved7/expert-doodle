@@ -227,8 +227,8 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
-    return out({ok:true,service:'hercules-private-bridge',version:'1.3.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api'],
+    return out({ok:true,service:'hercules-private-bridge',version:'1.4.0',status:'ready',
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -423,6 +423,65 @@ Deno.serve(async(req:Request)=>{
     const {data,error}=await admin.rpc('hercules_privacy_request_preview',{p_public_reference:reference});
     if(error)return out({error:'privacy_request_preview_failed',detail:error.message},500);
     return out(data||{ok:false,error:'privacy_request_preview_empty'},data?.ok===false?409:200);
+  }
+
+  if(action==='privacy_export'){
+    const reference=String(b.reference||'').trim().toLowerCase();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reference))return out({error:'valid_reference_required'},400);
+    const {data,error}=await admin.rpc('hercules_privacy_request_export',{p_public_reference:reference});
+    if(error)return out({error:'privacy_export_failed',detail:error.message},500);
+    if(data?.ok===false)return out(data,409);
+    const now=new Date().toISOString();
+    await admin.from('hercules_privacy_requests')
+      .update({status:'in_progress',updated_at:now})
+      .eq('public_reference',reference);
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'privacy.request.export.generated',
+      resource_type:'hercules_privacy_request',
+      resource_id:reference,
+      changes:{schema_version:data?.schema_version||null,size_bytes:data?.size_bytes||null},
+      metadata:{source:'hercules-private-bridge-v1.4.0',secret_exposure:false}
+    });
+    return out(data);
+  }
+
+  if(action==='privacy_deletion_plan'){
+    const reference=String(b.reference||'').trim().toLowerCase();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reference))return out({error:'valid_reference_required'},400);
+    const {data,error}=await admin.rpc('hercules_privacy_request_deletion_plan',{p_public_reference:reference});
+    if(error)return out({error:'privacy_deletion_plan_failed',detail:error.message},500);
+    return out(data||{ok:false,error:'privacy_deletion_plan_empty'},data?.ok===false?409:200);
+  }
+
+  if(action==='privacy_delete_user_content'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const reference=String(b.reference||'').trim().toLowerCase();
+    if(!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reference))return out({error:'valid_reference_required'},400);
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+    const expected='DELETE '+reference.toUpperCase();
+    if(confirmation!==expected)return out({error:'explicit_confirmation_required',expected},400);
+    const {data,error}=await admin.rpc('hercules_privacy_request_delete_user_content',{
+      p_public_reference:reference,
+      p_confirmation:confirmation
+    });
+    if(error)return out({error:'privacy_delete_user_content_failed',detail:error.message},500);
+    if(data?.ok===false)return out(data,409);
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'privacy.request.user_content_deleted',
+      resource_type:'hercules_privacy_request',
+      resource_id:reference,
+      changes:{
+        deleted:data?.deleted||{},
+        full_account_deletion_complete:false,
+        preserved_for_review:data?.preserved_for_review||[]
+      },
+      metadata:{source:'hercules-private-bridge-v1.4.0',explicit_confirmation:true,secret_exposure:false}
+    });
+    return out(data);
   }
 
   if(action==='spaceship_dns_status'){

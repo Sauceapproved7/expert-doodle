@@ -6,7 +6,7 @@
 
 ## Controls
 
-The v2 workflow adds three service-role-only controls behind an authenticated Hercules owner/admin Edge Function:
+The v2 workflow adds three service-role-only controls behind the authenticated Hercules Private Bridge. The bridge route is used so production does not require another Supabase Edge Function slot:
 
 1. **Verified export package** — produces an inline JSON package for verified access/export/deletion requests, capped at 5 MiB. It includes user-scoped Hercules content and excludes protected audit/security/billing-review records.
 2. **Deletion plan** — returns exact row counts, preserved classes, and an exact request-bound confirmation phrase.
@@ -41,7 +41,7 @@ Preserving these records is fail-closed. Their final treatment requires the appl
 
 - Database functions are revoked from `PUBLIC`, `anon`, and `authenticated`.
 - Only `service_role` can invoke the database controls.
-- The Edge Function independently authenticates the caller.
+- The Hercules Private Bridge independently authenticates the caller.
 - Export and plan require owner/admin access.
 - Destructive content deletion requires the `owner` role.
 - Deletion is bound to one verified `privacy_deletion` request and one exact confirmation phrase.
