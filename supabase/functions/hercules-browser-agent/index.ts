@@ -150,6 +150,24 @@ function directSatisfaction(goal:string,page:any,history:any[]){
   return null;
 }
 
+function postActionSatisfaction(goal:string,before:any,after:any,decision:string){
+  if(decision!=="click")return null;
+  const g=String(goal||"").toLowerCase();
+  const beforeUrl=String(before?.url||"").trim();
+  const afterUrl=String(after?.url||"").trim();
+  const title=String(after?.title||"").trim();
+  if(!beforeUrl||!afterUrl||beforeUrl===afterUrl||!title)return null;
+
+  const asksFollow=/(?:\bfollow(?:ed|ing)?\b|\bopen\b|\bgo to\b|\bvisit\b)/.test(g)
+    && /(?:\blink\b|learn more|destination|target page)/.test(g);
+  const asksDestinationTitle=/(?:destination|target|resulting|opened)?\s*(?:page\s*)?title\b/.test(g);
+
+  if(asksFollow&&asksDestinationTitle){
+    return {answer:title.slice(0,12000),reason:"destination_title_satisfied"};
+  }
+  return null;
+}
+
 function stripFence(v:string){
   let s=String(v||"").trim();
   if(s.startsWith("```")){
@@ -277,7 +295,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.10.0",
+    ok:true,service:"hercules-browser-agent",version:"0.11.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,securityChallengeDetection:true,highImpactAutonomy:false
@@ -567,6 +585,37 @@ Deno.serve(async(req:Request)=>{
         await updateRun(runId,{status:"blocked",error:"top_level_domain_not_allowed",result:{page:after},completed_at:new Date().toISOString()});
         await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
         return out({ok:false,runId,status:"blocked",error:"top_level_domain_not_allowed",page:after,steps:history});
+      }
+
+      const postAction=postActionSatisfaction(goal,page,after,plan.decision);
+      if(postAction){
+        finalAnswer=postAction.answer;
+        history.push({
+          step:history.length+1,
+          decision:"finish",
+          reason:postAction.reason,
+          answer:finalAnswer.slice(0,4000),
+          url:after.url,
+          observationSource:"post_action"
+        });
+        await updateRun(runId,{
+          status:"succeeded",
+          steps:history,
+          result:{answer:finalAnswer,page:after,provider:"deterministic",model:"post-action-evaluator",convergence:postAction.reason},
+          completed_at:new Date().toISOString()
+        });
+        await browserCall({action:"close_session",sessionId,timeoutMs:10000}).catch(()=>null);
+        return out({
+          ok:true,
+          runId,
+          status:"succeeded",
+          answer:finalAnswer,
+          page:after,
+          steps:history,
+          provider:"deterministic",
+          model:"post-action-evaluator",
+          convergence:postAction.reason
+        });
       }
 
       try{
