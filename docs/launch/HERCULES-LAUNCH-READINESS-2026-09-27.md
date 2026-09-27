@@ -23,6 +23,21 @@ Latest live DevBrain check passed at 2026-09-27T03:18:36.610526Z.
 
 The browser check was repaired after the production worker cut over from a direct Browserless endpoint to the Hercules Browser gateway. The repaired probe now exercises the live Hercules Browser path rather than a provider-specific health URL.
 
+### Hercules Browser launch certification
+
+The owned Hercules Browser path now has a dedicated production certification artifact:
+
+`docs/launch/HERCULES-BROWSER-LAUNCH-CERTIFICATION-2026-09-27.md`
+
+Current certified browser state:
+- Hercules Browser 1.5.3 / Edge Function v14 — ACTIVE
+- Browser Agent 0.12.0 / Edge Function v16 — ACTIVE
+- six-request concurrent submission test: 6/6 succeeded through single-worker admission control
+- live Browser Agent named-link flow: succeeded and converged after reaching the requested destination
+- runtime monitor classifier 2.2: healthy, with fresh successful probe, zero transient failures, zero retry exhaustions, and zero stale runs
+- safe personal-session handoff remains explicit-owner-only with no password/cookie export and no human-verification bypass
+- final browser hardening merge: `7851a526ca6d7cd180419bd84eb4794af20f551f`
+
 ### Production SLOs
 
 Latest evaluation at 2026-09-27T03:20:00.212295Z:
