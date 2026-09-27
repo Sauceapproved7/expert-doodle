@@ -1,7 +1,9 @@
 import {
   SHOPIFY_DNS_RECORDS,
+  RESEND_MAIL_DNS_RECORDS,
   SpaceshipDnsClient,
   planShopifyDnsReconciliation,
+  planResendMailDnsReconciliation,
 } from "./spaceship-dns.mjs";
 
 const U = Deno.env.get("SUPABASE_URL") || "";
@@ -10,7 +12,12 @@ const S =
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
   "";
 const DOMAIN = "sauceapproved.com";
-const ACTIONS = new Set(["inspect_shopify_dns", "reconcile_shopify_dns"]);
+const ACTIONS = new Set([
+  "inspect_shopify_dns",
+  "reconcile_shopify_dns",
+  "inspect_resend_mail_dns",
+  "reconcile_resend_mail_dns",
+]);
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -203,19 +210,50 @@ function managedRecord(record: Record<string,unknown>) {
   const group = groupRaw && typeof groupRaw === "object"
     ? String(groupRaw.type || "unknown")
     : String(groupRaw || "unknown");
-  const value = type === "CNAME"
-    ? String(record?.cname || "")
-    : String(record?.address || "");
-  return {type, name:String(record?.name || ""), value, group};
+  const result: Record<string,unknown> = {
+    type,
+    name:String(record?.name || ""),
+    group,
+  };
+  if (type === "CNAME") result.value=String(record?.cname || "");
+  else if (type === "TXT") result.value=String(record?.value || "");
+  else if (type === "MX") {
+    result.value=String(record?.exchange || "");
+    result.preference=Number(record?.preference);
+  } else result.value=String(record?.address || "");
+  return result;
 }
 
-function planSummary(plan: ReturnType<typeof planShopifyDnsReconciliation>, current: Record<string,unknown>[]) {
-  const managedKeys = new Set(["A:@", "AAAA:@", "CNAME:www"]);
+function dnsConfig(action: string) {
+  if (action === "inspect_resend_mail_dns" || action === "reconcile_resend_mail_dns") {
+    return {
+      desired:RESEND_MAIL_DNS_RECORDS,
+      planner:planResendMailDnsReconciliation,
+      label:"resend_mail",
+    };
+  }
+  return {
+    desired:SHOPIFY_DNS_RECORDS,
+    planner:planShopifyDnsReconciliation,
+    label:"shopify",
+  };
+}
+
+function planSummary(
+  plan: ReturnType<typeof planShopifyDnsReconciliation>,
+  current: Record<string,unknown>[],
+  desired: ReadonlyArray<Record<string,unknown>>,
+  label: string,
+) {
+  const managedKeys = new Set(desired.map((record) =>
+    String(record.type || "").toUpperCase() + ":" + String(record.name || "").toLowerCase()
+  ));
   return {
     domain:DOMAIN,
+    lane:label,
     ready:plan.ready,
     safeToApply:plan.safeToApply,
-    desired:SHOPIFY_DNS_RECORDS,
+    desired,
     currentManaged:current
       .filter((record) => managedKeys.has(String(record.type || "").toUpperCase() + ":" + String(record.name || "").toLowerCase()))
       .map(managedRecord),
@@ -224,7 +262,6 @@ function planSummary(plan: ReturnType<typeof planShopifyDnsReconciliation>, curr
     missingCount:plan.saveRecords.length,
   };
 }
-
 export async function handleSpaceshipDnsRequest(req: Request) {
   if (req.method !== "POST") return json({error:"method_not_allowed"}, 405);
   if (!U || !S) return json({error:"runtime_configuration_missing"}, 503);
@@ -235,7 +272,8 @@ export async function handleSpaceshipDnsRequest(req: Request) {
   if (!ACTIONS.has(action)) return json({error:"unsupported_action"}, 400);
 
   const replaceCustomConflicts = body?.replaceCustomConflicts === true;
-  if (action === "inspect_shopify_dns" && replaceCustomConflicts) {
+  const inspectAction = action.startsWith("inspect_");
+  if (inspectAction && replaceCustomConflicts) {
     return json({error:"replace_flag_not_allowed_for_inspect"}, 400);
   }
 
@@ -244,27 +282,27 @@ export async function handleSpaceshipDnsRequest(req: Request) {
 
   try {
     const {client,mode} = await providerClient(req);
+    const config=dnsConfig(action);
+    const current = await client.listRecords(DOMAIN);
+    const preflight = config.planner(current.items);
+    const before = planSummary(preflight, current.items, config.desired, config.label);
 
-    if (action === "inspect_shopify_dns") {
-      const current = await client.listRecords(DOMAIN);
-      const plan = planShopifyDnsReconciliation(current.items);
-      const summary = {...planSummary(plan, current.items),providerMode:mode};
-      await finishRun(traceId, plan.blockingConflicts.length ? "conflict" : "succeeded", summary);
+    if (inspectAction) {
+      const summary={...before,providerMode:mode};
+      await finishRun(traceId, preflight.blockingConflicts.length ? "conflict" : "succeeded", summary);
       return json({ok:true, traceId, action, summary});
     }
 
-    const current = await client.listRecords(DOMAIN);
-    const preflight = planShopifyDnsReconciliation(current.items);
-    const before = planSummary(preflight, current.items);
-
     if (preflight.blockingConflicts.length) {
-      await finishRun(traceId, "conflict", before, "provider_managed_or_unknown_conflict");
-      return json({ok:false, traceId, error:"dns_conflict", summary:before}, 409);
+      const summary={...before,providerMode:mode};
+      await finishRun(traceId, "conflict", summary, "provider_managed_or_unknown_conflict");
+      return json({ok:false, traceId, error:"dns_conflict", summary}, 409);
     }
 
     if (preflight.deleteRecords.length && !replaceCustomConflicts) {
-      await finishRun(traceId, "conflict", before, "custom_conflict_requires_explicit_replacement");
-      return json({ok:false, traceId, error:"custom_conflict_requires_explicit_replacement", summary:before}, 409);
+      const summary={...before,providerMode:mode};
+      await finishRun(traceId, "conflict", summary, "custom_conflict_requires_explicit_replacement");
+      return json({ok:false, traceId, error:"custom_conflict_requires_explicit_replacement", summary}, 409);
     }
 
     let deletedCount=0, savedCount=0;
@@ -278,9 +316,9 @@ export async function handleSpaceshipDnsRequest(req: Request) {
     }
 
     const after = await client.listRecords(DOMAIN);
-    const verification = planShopifyDnsReconciliation(after.items);
+    const verification = config.planner(after.items);
     const summary = {
-      ...planSummary(verification, after.items),
+      ...planSummary(verification, after.items, config.desired, config.label),
       providerMode:mode,
       changed:Boolean(deletedCount||savedCount),
       deletedCount,
