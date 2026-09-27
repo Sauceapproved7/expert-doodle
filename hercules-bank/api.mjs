@@ -157,7 +157,7 @@ export function createHerculesBankApi({
         return send(res,200,{
           ok:true,
           service:"hercules-bank",
-          version:"0.5",
+          version:"0.7",
           mode:runtime.mode,
           currency:runtime.currency,
           externalRails:false,
@@ -245,6 +245,28 @@ export function createHerculesBankApi({
         return send(res,200,{
           from:publicAccount(result.from),
           to:publicAccount(result.to,{includeCustomerId:false}),
+        });
+      }
+
+      if(req.method==="GET"&&url.pathname==="/v1/admin/overview"){
+        requireAdmin(claims,allowedAdminRoles);
+        const metadata=runtime.snapshot().accounts??[];
+        const accounts=metadata.map((entry)=>publicAccount(runtime.getAccount(entry.id)));
+        let totalCustomerBalanceMinor=0;
+        for(const account of accounts){
+          totalCustomerBalanceMinor+=account.balanceMinor;
+          if(!Number.isSafeInteger(totalCustomerBalanceMinor)){
+            throw new RangeError("sandbox liability total exceeds safe integer range");
+          }
+        }
+        return send(res,200,{
+          mode:runtime.mode,
+          currency:runtime.currency,
+          externalRails:false,
+          accountCount:accounts.length,
+          customerCount:new Set(accounts.map((account)=>account.customerId)).size,
+          totalCustomerBalanceMinor,
+          accounts,
         });
       }
 

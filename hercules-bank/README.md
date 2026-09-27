@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: deployable authenticated durable sandbox bank core
+## Current maturity: deployable authenticated durable sandbox financial service with customer and owner consoles
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -157,3 +157,21 @@ CLI deployments use:
 - optional `HERCULES_BANK_SECURE_COOKIES=true`
 
 External money rails remain disabled.
+
+
+## Owner control boundary
+
+v0.7 adds an owner/admin control center without weakening the v0.5 browser-session
+security model.
+
+- `GET /v1/admin/overview` requires an approved administrator role and returns only
+  bounded sandbox account summaries, customer/account counts, and aggregate sandbox
+  liabilities. Raw journal internals are not exposed.
+- The browser shows Owner controls only after the server authorizes the admin overview.
+  Hiding the owner navigation is presentation only; server-side authorization remains
+  authoritative.
+- Sandbox funding continues through the existing admin-only endpoint and requires the
+  browser CSRF token for cookie-authenticated sessions.
+- Aggregate liability math fails closed if it exceeds the safe integer range.
+- All values remain sandbox test balances. External deposits, ACH, wires, cards,
+  RTP/FedNow, and cash controls remain disabled.
