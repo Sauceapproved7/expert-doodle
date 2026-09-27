@@ -107,3 +107,19 @@ Binding the service to a non-loopback interface is an explicit deployment choice
 does not make the service internet-safe by itself. Production exposure still requires
 TLS termination, network policy, rate limiting, secret rotation, monitoring, and the
 regulated controls listed above.
+
+
+## Browser session boundary
+
+v0.5 adds a browser console without exposing Hercules Base bearer credentials to page
+JavaScript. The bank service stores Base access and refresh tokens in process memory and
+issues only an opaque HttpOnly SameSite=Strict browser cookie.
+
+State-changing browser requests require a separate CSRF value held only in page memory.
+The value rotates after session restoration. Logout removes the bank-side session and
+requests revocation of the Base refresh token.
+
+The browser session store is intentionally memory-only. A process restart logs browser
+sessions out rather than persisting bearer or refresh credentials to disk. Public HTTPS
+deployments must enable Secure cookies and keep the service behind the Hercules network,
+TLS, rate-limit, monitoring, and abuse-control boundary.
