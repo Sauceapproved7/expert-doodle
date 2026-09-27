@@ -97,11 +97,15 @@ test("owner bootstrap keeps the secret out of request URLs", () => {
 
 test("server-to-server automation verifies one-time broker tokens remotely", () => {
   assert.match(server, /AUTH_VERIFY_URL/);
+  assert.match(server, /rest\/v1\/rpc\/hercules_browser_standalone_token_consume_public/);
+  assert.match(server, /SUPABASE_PUBLISHABLE_KEY/);
+  assert.match(server, /apikey/);
   assert.match(server, /authorization/i);
   assert.match(server, /Bearer /);
   assert.match(server, /remoteAuthorized/);
   assert.match(server, /fetch\(AUTH_VERIFY_URL/);
   assert.match(server, /ownerAuthorized\(req\).*remoteAuthorized\(req\)|remoteAuthorized\(req\).*ownerAuthorized\(req\)/s);
+  assert.doesNotMatch(server, /functions\/v1\/hercules-browser-standalone-auth/);
   assert.doesNotMatch(server, /HERCULES_BROWSER_RUNTIME_TOKEN/);
   assert.doesNotMatch(html, /HERCULES_BROWSER_RUNTIME_TOKEN/);
   assert.doesNotMatch(app, /HERCULES_BROWSER_RUNTIME_TOKEN/);

@@ -8,7 +8,8 @@ import { randomBytes } from "node:crypto";
 import { chromium } from "playwright-core";
 
 const PORT = Number(process.env.PORT || 10000);
-const AUTH_VERIFY_URL = "https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-browser-standalone-auth";
+const AUTH_VERIFY_URL = "https://xbwuablxhhwsaoomsoco.supabase.co/rest/v1/rpc/hercules_browser_standalone_token_consume_public";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_wB9FvOqAi-JhUQuJrHvczg_C_V4RgCt";
 const PUBLIC_DIR = fileURLToPath(new URL("./public/", import.meta.url));
 const MAX_BODY = 256 * 1024;
 const MAX_TIMEOUT = 60000;
@@ -55,8 +56,11 @@ async function verifyBrokerToken(token,expectedPurpose) {
   try{
     const response=await fetch(AUTH_VERIFY_URL,{
       method:"POST",
-      headers:{"content-type":"application/json"},
-      body:JSON.stringify({token:value}),
+      headers:{
+        "content-type":"application/json",
+        "apikey":SUPABASE_PUBLISHABLE_KEY
+      },
+      body:JSON.stringify({p_token:value}),
       signal:AbortSignal.timeout(7000)
     });
     const data=await response.json().catch(()=>({}));
