@@ -78,3 +78,27 @@ test("edge function bounds bodies and sends no-store security headers",()=>{
   assert.match(edge,/'cache-control':'no-store'/i);
   assert.match(edge,/'x-content-type-options':'nosniff'/i);
 });
+
+test("production discovery does not claim refresh or execution before adapters are wired",()=>{
+  assert.match(edge,/automaticRefresh:false/);
+  assert.match(edge,/executionAdapters:false/);
+  assert.match(edge,/refreshMetadata:true/);
+});
+
+test("domain-agent decisions are recorded in a private credential-free audit table",()=>{
+  assert.match(migration,/create table if not exists private\.hercules_domain_agent_audit/i);
+  assert.match(migration,/decision_sha256 text not null/i);
+  assert.match(migration,/authorization_evidence_sha256 text/i);
+  assert.match(migration,/enable row level security/i);
+  assert.match(migration,/revoke all on table private\.hercules_domain_agent_audit from public, anon, authenticated/i);
+  assert.doesNotMatch(migration,/task_input|raw_payload|access_token|refresh_token\s+text|client_secret\s+text/i);
+  assert.match(edge,/hercules_domain_agent_audit/);
+  assert.match(edge,/recordAudit/);
+});
+
+test("domain-agent internal control key is generated in-database and vaulted",()=>{
+  assert.match(migration,/domain-agent-control/);
+  assert.match(migration,/extensions\.gen_random_bytes\(32\)/i);
+  assert.match(migration,/hercules_store_secret/);
+  assert.match(migration,/key_sha256/);
+});
