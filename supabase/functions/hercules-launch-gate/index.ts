@@ -46,12 +46,26 @@ async function run(){
       .catch(()=>({ok:false,status:0,control:null,probe:null}))
   ]);
 
-  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
+  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:paymentEvidence},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
     db.from('hercules_devbrain_fabric_checks').select('overall_ok,checked_at').eq('organization_id',ORG).order('checked_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_release_queue').select('release_id,status,environment,admission_decision,flight_record_hash,updated_at').eq('organization_id',ORG).eq('environment','production').eq('status','verified').eq('admission_decision','allow').order('updated_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_recovery_snapshots').select('snapshot_id,status,verified_at,recovery_region').eq('organization_id',ORG).eq('status','verified').order('verified_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_security_events').select('*',{count:'exact',head:true}).eq('organization_id',ORG).eq('severity','critical').eq('disposition','open'),
     db.from('hercules_launch_approvals').select('approval_type,status,approved_at').order('approval_type'),
+    db.from('hercules_provider_connections')
+      .select('account_key,status,connected_at,access_secret_ref,signing_secret_ref,metadata,updated_at')
+      .eq('organization_id',ORG)
+      .eq('provider','stripe')
+      .eq('status','active')
+      .not('access_secret_ref','is',null)
+      .not('signing_secret_ref','is',null)
+      .order('updated_at',{ascending:false})
+      .limit(1)
+      .maybeSingle(),
+    db.from('hercules_continuity_ledger')
+      .select('status,value,provenance,verified_at')
+      .eq('key','paid-billing-path-verified')
+      .maybeSingle(),
     db.rpc('hercules_password_defense_status')
   ]);
   const passwordDefense={
@@ -70,11 +84,30 @@ async function run(){
     no_open_critical_events:Number(critical||0)===0
   };
 
+  const paymentProviderReady=Boolean(
+    stripe?.account_key &&
+    stripe?.connected_at &&
+    stripe?.metadata?.catalog_ready===true &&
+    stripe?.metadata?.livemode===true &&
+    stripe?.metadata?.webhook_endpoint_id
+  );
+  const paymentEvidenceValue=paymentEvidence?.value||{};
+  const paymentPathVerified=Boolean(
+    paymentEvidence?.status==='active' &&
+    paymentEvidence?.verified_at &&
+    paymentEvidenceValue?.provider==='stripe' &&
+    paymentEvidenceValue?.checkoutVerified===true &&
+    paymentEvidenceValue?.refundVerified===true &&
+    paymentEvidenceValue?.payoutStateVerified===true
+  );
+
   const commercial=Object.fromEntries((approvals||[]).map((x:any)=>[x.approval_type,x.status==='approved']));
   commercial.auth_hardening=passwordDefense.ok;
+  commercial.payment_provider_ready=paymentProviderReady;
+  commercial.payment_path_verified=paymentPathVerified;
   const requiredOwnerCommercial=['pricing','privacy','terms'];
   const technicalOk=Object.values(technical).every(Boolean);
-  const commercialOk=passwordDefense.ok&&requiredOwnerCommercial.every(k=>commercial[k]===true);
+  const commercialOk=passwordDefense.ok&&paymentProviderReady&&paymentPathVerified&&requiredOwnerCommercial.every(k=>commercial[k]===true);
 
   const checks={
     technical,
@@ -84,7 +117,19 @@ async function run(){
       recovery_snapshot_id:recovery?.snapshot_id||null,
       recovery_region:recovery?.recovery_region||null,
       devbrain_checked_at:devbrain?.checked_at||null,
-      password_defense:passwordDefense
+      password_defense:passwordDefense,
+      payment:{
+        provider:'stripe',
+        providerReady:paymentProviderReady,
+        accountKey:stripe?.account_key||null,
+        connectedAt:stripe?.connected_at||null,
+        livemode:Boolean(stripe?.metadata?.livemode===true),
+        catalogReady:Boolean(stripe?.metadata?.catalog_ready===true),
+        webhookConfigured:Boolean(stripe?.metadata?.webhook_endpoint_id),
+        pathVerified:paymentPathVerified,
+        pathVerifiedAt:paymentEvidence?.verified_at||null,
+        pathProvenance:paymentEvidence?.provenance||null
+      }
     },
     duration_ms:Date.now()-started
   };
@@ -111,7 +156,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.2.0',
+      version:'1.3.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt
