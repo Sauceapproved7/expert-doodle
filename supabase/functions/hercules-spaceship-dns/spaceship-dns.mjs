@@ -13,7 +13,6 @@ export const RESEND_MAIL_DNS_RECORDS = Object.freeze([
   Object.freeze({type:"MX", name:"send", exchange:"feedback-smtp.us-east-1.amazonses.com", preference:10, ttl:3600}),
   Object.freeze({type:"TXT", name:"send", value:"v=spf1 include:amazonses.com ~all", ttl:3600}),
   Object.freeze({type:"CNAME", name:"rsend", cname:"send.forge.rmta.net", ttl:3600}),
-  Object.freeze({type:"MX", name:"@", exchange:"inbound-smtp.us-east-1.amazonaws.com", preference:10, ttl:3600}),
 ]);
 
 const MANAGED_KEYS = new Set(SHOPIFY_DNS_RECORDS.map((record) => recordKey(record)));
