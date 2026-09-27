@@ -44,3 +44,21 @@ test("Integrations UI uses password input and clears credentials after submit",(
   assert.match(integrations,/dnsrecords:read/);
   assert.match(integrations,/dnsrecords:write/);
 });
+
+
+test("one-time Spaceship credential drop validates before Vault storage",()=>{
+  assert.match(bridge,/SPACESHIP_CREDENTIAL_DROP_PURPOSE='spaceship-dns-credential-drop-v1'/);
+  assert.match(bridge,/validateSpaceshipExternalPair/);
+  assert.match(bridge,/https:\/\/spaceship\.dev\/api\/v1\/dns\/records\/sauceapproved\.com/);
+  assert.match(bridge,/'X-API-Key'/);
+  assert.match(bridge,/'X-API-Secret'/);
+  const validateIndex=bridge.indexOf("validateSpaceshipExternalPair(apiKey,apiSecret)");
+  const storeIndex=bridge.indexOf("hercules_spaceship_dns_configure_credentials");
+  assert.ok(validateIndex>=0&&storeIndex>validateIndex);
+  assert.match(bridge,/status:'starting'/);
+  assert.match(bridge,/status:'completed'/);
+  assert.match(bridge,/hercules_domain_launch_autopilot_tick/);
+  assert.match(bridge,/hercules_business_email_dns_autopilot_tick/);
+  assert.match(bridge,/Spaceship rejected this API key and secret/);
+  assert.match(bridge,/dnsrecords:read and\/or dnsrecords:write/);
+});
