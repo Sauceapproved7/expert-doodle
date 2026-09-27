@@ -2,6 +2,7 @@ import http from "node:http";
 
 import {verifyJwtHs256} from "../hercules-base/auth-core.mjs";
 import {bankConsoleAsset} from "./console.mjs";
+import {buildFinancialReadinessDossier} from "./readiness-dossier.mjs";
 
 const MAX_BODY_BYTES = 64 * 1024;
 const DEFAULT_ADMIN_ROLES = Object.freeze(["owner", "admin", "staging_admin"]);
@@ -123,6 +124,7 @@ export function createHerculesBankApi({
   adminRoles=DEFAULT_ADMIN_ROLES,
   browserSessions=null,
   complianceOperations=null,
+  productionReadinessInputs={},
 }={}){
   if(!runtime||typeof runtime.openCustomerAccount!=="function"){
     throw new TypeError("Hercules Bank runtime is required");
@@ -166,7 +168,7 @@ export function createHerculesBankApi({
         return send(res,200,{
           ok:true,
           service:"hercules-bank",
-          version:"0.9",
+          version:"1.1",
           mode:runtime.mode,
           currency:runtime.currency,
           externalRails:false,
@@ -285,6 +287,17 @@ export function createHerculesBankApi({
         if(req.method==="GET"){
           return send(res,200,complianceOperations.summary());
         }
+      }
+
+      if(req.method==="GET"&&url.pathname==="/v1/admin/production-readiness"){
+        requireAdmin(claims,allowedAdminRoles);
+        if(!complianceOperations)return send(res,503,{error:"compliance_operations_unavailable"});
+        const dossier=buildFinancialReadinessDossier({
+          complianceSummary:complianceOperations.summary(),
+          productionInputs:productionReadinessInputs,
+          now:new Date(nowSeconds()*1000).toISOString(),
+        });
+        return send(res,200,dossier);
       }
 
       if(req.method==="POST"&&url.pathname==="/v1/admin/compliance/evidence"){
