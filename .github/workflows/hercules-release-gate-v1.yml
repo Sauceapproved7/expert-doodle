@@ -9,6 +9,9 @@ on:
       - "docs/HERCULES-RELEASE-GATE-V1.md"
       - ".github/workflows/hercules-release-gate-v1.yml"
       - "governance/owner-code-policy.json"
+      - "scripts/verify-owner-code-only.mjs"
+      - "scripts/security-baseline.mjs"
+      - "scripts/release-evidence.mjs"
   workflow_dispatch:
 
 permissions:
@@ -22,5 +25,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Enforce owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
+      - name: Verify release gate policy
+        run: node scripts/hercules-release-gate.mjs --verify-policy
       - name: Test fail-closed release gate contract
         run: node --test tests/hercules-release-gate-v1.test.mjs
