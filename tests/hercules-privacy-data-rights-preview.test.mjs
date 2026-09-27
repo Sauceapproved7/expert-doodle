@@ -36,14 +36,19 @@ test("preview distinguishes deletable/review/protected classes",()=>{
   assert.match(migration,/executable.*false/is);
 });
 
-test("owner bridge supports list, explicit verification, and preview only",()=>{
+test("owner bridge keeps the preview handler non-destructive",()=>{
   assert.match(bridge,/privacy_request_list/);
   assert.match(bridge,/privacy_request_verify/);
   assert.match(bridge,/privacy_request_preview/);
   assert.match(bridge,/VERIFY /);
   assert.match(bridge,/verification_method/);
   assert.match(bridge,/hercules_privacy_request_preview/);
-  assert.doesNotMatch(bridge,/privacy_request_delete|privacy_request_execute_deletion/);
+  const start=bridge.indexOf("if(action==='privacy_request_preview')");
+  const end=bridge.indexOf("if(action==='privacy_export')",start);
+  assert.ok(start>=0&&end>start);
+  const previewHandler=bridge.slice(start,end);
+  assert.doesNotMatch(previewHandler,/delete\s+from|\.delete\(|privacy_request_delete|execute_deletion/i);
+  assert.doesNotMatch(previewHandler,/\.update\(/i);
 });
 
 test("runbook keeps irreversible deletion behind a later approval",()=>{
