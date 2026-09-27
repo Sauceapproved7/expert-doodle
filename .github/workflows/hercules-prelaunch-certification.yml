@@ -1,0 +1,21 @@
+name: Hercules Pre-Launch Certification
+on:
+  pull_request:
+    paths:
+      - "hercules-*/**"
+      - "tests/hercules-prelaunch-certification.test.mjs"
+      - "docs/HERCULES-PRELAUNCH-CERTIFICATION-V0.1.md"
+      - ".github/workflows/hercules-prelaunch-certification.yml"
+permissions:
+  contents: read
+jobs:
+  certify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --test tests/hercules-prelaunch-certification.test.mjs
+      - run: node --test tests/hercules-recovery*.test.mjs
+      - run: node --test tests/hercules-time-machine.test.mjs tests/hercules-unified-execution.test.mjs tests/hercules-command-surface.test.mjs tests/hercules-customer-foundation.test.mjs tests/hercules-launch-hardening.test.mjs tests/hercules-production-ops-readiness.test.mjs
