@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Hercules Personal Browser Bridge",
+  "version": "1.0.0",
+  "description": "Owner-controlled bridge for an explicitly approved browser tab.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://xbwuablxhhwsaoomsoco.supabase.co/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Hercules Personal Browser Bridge"
+  }
+}
