@@ -51,9 +51,11 @@ test("main guard accepts a merged PR only when every required gate is green", as
 test("runtime workflow can restore the previous tree without rewriting history", async () => {
   const workflow = await readFile(".github/workflows/hercules-main-integrity-guard.yml","utf8");
   assert.match(workflow,/push:[\s\S]*branches:[\s\S]*- main/);
-  assert.match(workflow,/contents:\s*write/);
+  assert.match(workflow,/permissions:[\s\S]*contents:\s*read/);
+  assert.match(workflow,/main-guard-runtime:[\s\S]*permissions:[\s\S]*contents:\s*write/);
   assert.match(workflow,/pull-requests:\s*read/);
   assert.match(workflow,/checks:\s*read/);
+  assert.match(workflow,/if:\s*always\(\)[\s\S]*github\.event_name == 'push'/);
   assert.match(workflow,/git commit-tree/);
   assert.match(workflow,/CURRENT[\s\S]*AFTER/);
   assert.match(workflow,/main-guard-contract/);
