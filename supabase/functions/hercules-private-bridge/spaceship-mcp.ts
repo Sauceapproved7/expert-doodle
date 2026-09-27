@@ -122,6 +122,92 @@ async function beginAuthorization(){
   url.searchParams.set("resource","https://mcp.spaceship.com/");
   return {authorizationUrl:url.toString(),provider:"spaceship-mcp",status:"authorization_required",scope:SCOPE};
 }
+async function issueHandoff(){
+  const handoffToken=randomToken(32);
+  const tokenHash=await sha256hex(handoffToken);
+  const expiresAt=new Date(Date.now()+15*60*1000).toISOString();
+  const {error}=await admin.from("hercules_spaceship_auth_handoffs").insert({
+    token_sha256:tokenHash,
+    status:"issued",
+    expires_at:expiresAt,
+    metadata:{provider:"spaceship-mcp",domain:DOMAIN}
+  });
+  if(error)throw new Error("spaceship_handoff_issue_failed");
+  const handoffUrl=U+"/functions/v1/hercules-private-bridge?spaceship_authorize=1&handoff_token="+encodeURIComponent(handoffToken);
+  return {provider:"spaceship-mcp",domain:DOMAIN,status:"issued",handoffUrl,expiresAt,secretExposure:false};
+}
+
+async function findHandoff(token:string){
+  if(token.length<32||token.length>256)throw new Error("spaceship_handoff_token_invalid");
+  const tokenHash=await sha256hex(token);
+  const {data,error}=await admin.from("hercules_spaceship_auth_handoffs")
+    .select("id,status,authorization_url,expires_at,launched_at,last_opened_at,completed_at")
+    .eq("token_sha256",tokenHash).maybeSingle();
+  if(error||!data)throw new Error("spaceship_handoff_not_found");
+  if(new Date(data.expires_at).getTime()<=Date.now()){
+    await admin.from("hercules_spaceship_auth_handoffs").update({status:"expired",updated_at:new Date().toISOString()}).eq("id",data.id);
+    throw new Error("spaceship_handoff_expired");
+  }
+  if(data.status==="revoked")throw new Error("spaceship_handoff_revoked");
+  return data;
+}
+
+async function launchHandoff(token:string){
+  let handoff=await findHandoff(token);
+  if(handoff.status==="completed"){
+    return {completed:true,authorizationUrl:null};
+  }
+  if(handoff.authorization_url){
+    await admin.from("hercules_spaceship_auth_handoffs").update({
+      last_opened_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }).eq("id",handoff.id);
+    return {completed:false,authorizationUrl:String(handoff.authorization_url)};
+  }
+  if(handoff.status==="starting")throw new Error("spaceship_handoff_initializing");
+  const now=new Date().toISOString();
+  const {data:claimed,error:claimError}=await admin.from("hercules_spaceship_auth_handoffs").update({
+    status:"starting",last_opened_at:now,updated_at:now
+  }).eq("id",handoff.id).eq("status","issued").select("id").maybeSingle();
+  if(claimError)throw new Error("spaceship_handoff_claim_failed");
+  if(!claimed){
+    handoff=await findHandoff(token);
+    if(handoff.authorization_url)return {completed:false,authorizationUrl:String(handoff.authorization_url)};
+    throw new Error("spaceship_handoff_initializing");
+  }
+  try{
+    const started=await beginAuthorization();
+    await admin.from("hercules_spaceship_auth_handoffs").update({
+      status:"launched",
+      authorization_url:started.authorizationUrl,
+      launched_at:now,
+      last_opened_at:now,
+      updated_at:now
+    }).eq("id",handoff.id);
+    return {completed:false,authorizationUrl:started.authorizationUrl};
+  }catch(error){
+    await admin.from("hercules_spaceship_auth_handoffs").update({
+      status:"issued",
+      metadata:{provider:"spaceship-mcp",domain:DOMAIN,last_error:"authorization_start_failed"},
+      updated_at:new Date().toISOString()
+    }).eq("id",handoff.id);
+    throw error;
+  }
+}
+
+async function markLatestHandoffComplete(){
+  const {data}=await admin.from("hercules_spaceship_auth_handoffs")
+    .select("id")
+    .in("status",["starting","launched"])
+    .gt("expires_at",new Date().toISOString())
+    .order("launched_at",{ascending:false,nullsFirst:false})
+    .limit(1).maybeSingle();
+  if(!data?.id)return;
+  await admin.from("hercules_spaceship_auth_handoffs").update({
+    status:"completed",
+    completed_at:new Date().toISOString(),
+    updated_at:new Date().toISOString()
+  }).eq("id",data.id);
+}
 async function postToken(params:URLSearchParams){
   const r=await fetch(TOKEN_ENDPOINT,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded","accept":"application/json"},body:params.toString(),signal:AbortSignal.timeout(15000)});
   const body=await r.json().catch(()=>({}));
@@ -157,6 +243,7 @@ async function completeCallback(url:URL){
     p_scope:String(token.scope||SCOPE)
   });
   if(error||data!==true)throw new Error("spaceship_mcp_authorization_store_failed");
+  await markLatestHandoffComplete();
   const {data:autopilot}=await admin.rpc("hercules_domain_launch_autopilot_tick");
   return {ok:true,provider:"spaceship-mcp",status:"configured",autopilot:autopilot||null};
 }
@@ -247,6 +334,7 @@ export function isSpaceshipMcpAction(action:string){
   return [
     "spaceship_mcp_status",
     "spaceship_mcp_begin",
+    "spaceship_mcp_handoff_issue",
     "spaceship_mcp_dns_records_get",
     "spaceship_mcp_dns_records_save",
     "spaceship_mcp_dns_records_delete"
@@ -255,6 +343,18 @@ export function isSpaceshipMcpAction(action:string){
 
 export async function handleSpaceshipMcpRequest(req:Request){
   const url=new URL(req.url);
+  if(req.method==="GET"&&url.searchParams.get("spaceship_authorize")==="1"){
+    try{
+      const handoffToken=String(url.searchParams.get("handoff_token")||"");
+      const result=await launchHandoff(handoffToken);
+      if(result.completed)return html("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Hercules · Spaceship connected</title></head><body><main><h1>Spaceship is already connected</h1><p>Hercules is continuing the SauceApproved domain launch automatically.</p></main></body></html>");
+      return Response.redirect(String(result.authorizationUrl),302);
+    }catch(e){
+      const message=e instanceof Error?e.message:"spaceship_handoff_failed";
+      const statusCode=message==="spaceship_handoff_initializing"?409:400;
+      return html("<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Hercules · Spaceship authorization</title></head><body><main><h1>Authorization link unavailable</h1><p>"+message.replace(/[<>&]/g,"")+"</p></main></body></html>",statusCode);
+    }
+  }
   if(req.method==="GET"&&url.searchParams.get("spaceship_mcp_oauth_callback")==="1"){
     try{
       const result=await completeCallback(url);
@@ -276,6 +376,10 @@ export async function handleSpaceshipMcpRequest(req:Request){
   try{
     if(action==="spaceship_mcp_status")return json(await status());
     if(action==="spaceship_mcp_begin")return json({ok:true,...await beginAuthorization()});
+    if(action==="spaceship_mcp_handoff_issue"){
+      if(!internal)return json({error:"internal_dns_control_required"},403);
+      return json({ok:true,...await issueHandoff()});
+    }
     const toolMap:Record<string,string>={
       spaceship_mcp_dns_records_get:"dns_records_get",
       spaceship_mcp_dns_records_save:"dns_records_save",
