@@ -91,3 +91,14 @@ test("owner bootstrap keeps the secret out of request URLs", () => {
   assert.doesNotMatch(server, /searchParams\.get\(["']access["']\)/);
   assert.doesNotMatch(server, /pathname===["']\/claim["']/);
 });
+
+
+test("server-to-server automation uses a separate runtime credential", () => {
+  assert.match(server, /HERCULES_BROWSER_RUNTIME_TOKEN/);
+  assert.match(server, /authorization/i);
+  assert.match(server, /Bearer /);
+  assert.match(server, /internalAuthorized/);
+  assert.match(server, /ownerAuthorized\(req\).*internalAuthorized\(req\)|internalAuthorized\(req\).*ownerAuthorized\(req\)/s);
+  assert.doesNotMatch(html, /HERCULES_BROWSER_RUNTIME_TOKEN/);
+  assert.doesNotMatch(app, /HERCULES_BROWSER_RUNTIME_TOKEN/);
+});
