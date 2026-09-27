@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 const filed="SauceApproved enterprise LLC";
-const wrong="SauceApproved Enterprise LLC";
+const wrong=["SauceApproved","Enterprise","LLC"].join(" ");
 const files=[
   "docs/launch/HERCULES-PRICING-PROPOSAL.md",
   "docs/launch/HERCULES-TERMS-OF-SERVICE-DRAFT.md",
