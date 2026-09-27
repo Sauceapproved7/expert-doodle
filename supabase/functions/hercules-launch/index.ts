@@ -55,7 +55,7 @@ async function existingPilot(email:string){
   return Array.isArray(rows)&&rows.length>0;
 }
 function cleanText(v:unknown,max=240){return String(v??"").trim().slice(0,max)}
-function validEmail(v:string){return v.length<=254&&/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v)}
+function validEmail(v:string){return v.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)}
 const PUBLIC_MARKETING_EVENTS=new Set(["cta_open_product","proof_demo_interest","pilot_interest","proof_demo_started","first_verified_useful_action"]);
 function safeMarketingProperties(value:unknown){
   const input=value&&typeof value==="object"?value as Record<string,unknown>:{};
@@ -386,7 +386,7 @@ Deno.serve(async(req:Request)=>{
         if(!user)return Response.json({error:"authenticated_user_required"},{status:401,headers:{"cache-control":"no-store"}});
         const orgName=String((body as any)?.org_name||"").trim();
         const orgSlug=String((body as any)?.org_slug||"").trim();
-        if(!orgName||orgName.length>120||!/^\\w/.test(orgName)){
+        if(!orgName||orgName.length>120||!/^\w/.test(orgName)){
           return Response.json({error:"valid_organization_name_required"},{status:400,headers:{"cache-control":"no-store"}});
         }
         if(!/^[a-z0-9][a-z0-9-]{1,62}$/.test(orgSlug)){
