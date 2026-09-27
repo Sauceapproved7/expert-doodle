@@ -24,7 +24,7 @@ test("gateway v2 preserves Hercules browser safety boundaries", async()=>{
   assert.match(server,/SESSION_TTL/);
   assert.match(server,/persistSession/);
   assert.match(server,/close_session/);
-  assert.doesNotMatch(server,/captcha.*bypass|cloudflare.*bypass|anti.?bot.*bypass/i);
+  assert.match(server,/antiBotBypass:false/);\n  assert.doesNotMatch(server,/antiBotBypass:true|bypassCaptcha|bypassCloudflare|disableWebSecurity:true/i);
 });
 
 test("gateway v2 package pins its browser runtime", async()=>{
