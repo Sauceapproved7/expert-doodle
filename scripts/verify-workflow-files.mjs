@@ -26,8 +26,11 @@ for (const name of files) {
     if (/\t/.test(line)) {
       failures.push(`${path}:${index + 1}: tab indentation is not allowed`);
     }
-    if (/^\s*run:\s*\|\\n/.test(line)) {
-      failures.push(`${path}:${index + 1}: malformed run block scalar`);
+    if (/^\s*run:\s*[|>]\\n/.test(line)) {
+      failures.push(`${path}:${index + 1}: malformed run block scalar contains a literal \\n escape`);
+    }
+    if (/^\s*(?:env|with|steps|jobs|permissions|on):\s*\\n/.test(line)) {
+      failures.push(`${path}:${index + 1}: malformed YAML structure contains a literal \\n escape`);
     }
   });
 
