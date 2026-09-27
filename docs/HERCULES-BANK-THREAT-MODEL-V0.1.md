@@ -38,7 +38,7 @@ No real-money custody or regulated payment rail is in scope for v0.1.
 | Hung upstream/service request | First-party client applies a bounded request timeout |
 | Customer access to owner metrics | Owner overview requires an approved administrator role |
 | UI-only owner hiding treated as authorization | Admin endpoints independently enforce role authorization |
-| Aggregate sandbox liability overflow | Safe-integer accumulation fails closed |\n| Regulatory checkbox bypass | Readiness requires structured approved evidence with a reference and review timestamp; booleans are insufficient |\n| Unreviewed jurisdiction expansion | v0.8 supports only the explicit reviewed US-CT scope |\n| False deposit-insurance representation | Deposit readiness requires separate custodial-record and disclosure-review evidence and creates no insurance claim |\n| Provider traffic over insecure transport | Production provider adapter endpoints require HTTPS |\n| Settlement divergence | Reconciliation fails on missing, unexpected, duplicate, amount-mismatched, or currency-mismatched records |\n| Premature live-money activation | Readiness never enables execution; v0.8 executeTransfer is hard-locked |
+| Aggregate sandbox liability overflow | Safe-integer accumulation fails closed |\n| Regulatory checkbox bypass | Readiness requires structured approved evidence with a reference and review timestamp; booleans are insufficient |\n| Unreviewed jurisdiction expansion | v0.8 supports only the explicit reviewed US-CT scope |\n| False deposit-insurance representation | Deposit readiness requires separate custodial-record and disclosure-review evidence and creates no insurance claim |\n| Provider traffic over insecure transport | Production provider adapter endpoints require HTTPS |\n| Settlement divergence | Reconciliation fails on missing, unexpected, duplicate, amount-mismatched, or currency-mismatched records |\n| Premature live-money activation | Readiness never enables execution; v0.8 executeTransfer is hard-locked |\n| Compliance event-field injection | Restore rejects any event whose top-level shape differs from the canonical hashed event schema |\n| Compliance evidence tampering | Sequence, previous hash, SHA-256 event hash, derived-state replay, and head hash are verified on load |\n| Sensitive KYC/provider-secret persistence | v0.9 state stores review references, provider metadata, and reconciliation summaries only |\n| Unauthorized compliance mutation | Compliance API routes require admin role; cookie-authenticated writes also require CSRF |
 
 ## Authentication boundary
 
@@ -168,3 +168,18 @@ evidence record and code change.
 The live provider submission path remains impossible through
 `HerculesRegulatedRailBoundary` because `executeTransfer()` always fails closed with
 `live_rail_execution_locked`.
+
+
+## Compliance operations boundary
+
+v0.9 adds durable compliance operations without converting Hercules into a regulated
+identity repository. The persistent registry deliberately excludes KYC documents,
+government identifiers, bank credentials, provider secrets, and raw settlement data.
+
+Administrative API calls derive the actor from the authenticated Hercules Base subject.
+The browser dashboard is observational: it displays evidence/readiness state and retains
+the Live Money Locked state. It has no route or control that can unlock external rails.
+
+The compliance state file is local-process durability, not a compliance-grade
+multi-writer database, records-retention system, HSM/KMS, or evidence archive. Those
+remain production prerequisites.
