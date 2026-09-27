@@ -1,0 +1,25 @@
+name: Hercules Trigger Function Lockdown
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*hercules_trigger_function_lockdown*"
+      - "tests/hercules-trigger-function-lockdown.test.mjs"
+      - "docs/HERCULES-TRIGGER-FUNCTION-LOCKDOWN-V1.md"
+      - ".github/workflows/hercules-trigger-function-lockdown.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-function-lockdown:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify trigger function lockdown
+        run: node --test tests/hercules-trigger-function-lockdown.test.mjs
