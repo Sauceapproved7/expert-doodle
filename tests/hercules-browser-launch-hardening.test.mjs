@@ -5,7 +5,7 @@ import {readFile,readdir} from "node:fs/promises";
 const root=new URL("../",import.meta.url);
 const routing=JSON.parse(await readFile(new URL("../governance/browser-routing-policy.json",import.meta.url),"utf8"));
 const migrationName=(await readdir(new URL("../supabase/migrations/",import.meta.url)))
-  .filter(x=>x.endsWith("_hercules_browser_runtime_monitor_v2.sql"))
+  .filter(x=>x.includes("hercules_browser_runtime_monitor_v2"))
   .sort()
   .at(-1);
 const migration=migrationName
