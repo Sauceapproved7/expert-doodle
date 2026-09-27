@@ -11,12 +11,13 @@ export function buildDevBrainBrowserProbe() {
 }
 
 export function evaluateDevBrainBrowserProbe(status, payload) {
-  const ok =
+  const ok = Boolean(
     Number(status) >= 200 &&
     Number(status) < 300 &&
     payload?.ok === true &&
     payload?.result &&
-    typeof payload.result === "object";
+    typeof payload.result === "object"
+  );
 
   return Object.freeze({
     ok,
