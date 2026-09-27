@@ -128,10 +128,11 @@ test("successful Spaceship callback completes the most recent handoff and resume
 
 
 test("Private Bridge top-level GET router forwards Spaceship handoff requests",()=>{
-  assert.match(bridge,/requestUrl\.searchParams\.get\('spaceship_authorize'\)==='1'/);
-  assert.match(bridge,/return handleSpaceshipMcpRequest\(req\)/);
-  const handoffIndex=bridge.indexOf("requestUrl.searchParams.get('spaceship_authorize')==='1'");
-  const genericGetIndex=bridge.indexOf("if(req.method==='GET'){");
+  const router=bridge.slice(bridge.indexOf("Deno.serve(async(req:Request)=>{"));
+  assert.match(router,/requestUrl\.searchParams\.get\('spaceship_authorize'\)==='1'/);
+  assert.match(router,/return handleSpaceshipMcpRequest\(req\)/);
+  const handoffIndex=router.indexOf("requestUrl.searchParams.get('spaceship_authorize')==='1'");
+  const genericGetIndex=router.indexOf("if(req.method==='GET'){");
   assert.ok(handoffIndex>=0&&genericGetIndex>handoffIndex,"handoff routing must run before generic GET status");
 });
 
