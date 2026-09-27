@@ -183,7 +183,7 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
           <div class="feature"><span>Unsafe cases</span><span class="pill">human review only</span></div>
           <div class="feature"><span>External action</span><span class="pill">approval gated</span></div>
         </div>
-        <p class="muted" style="margin-top:14px">Commercial terms remain owner-gated. Current pricing material is a proposal, not active billing. Hercules is not offered here as consumer debt collection, third-party collections, credit scoring, legal collections, or guaranteed recovery.</p>
+        <p class="muted" style="margin-top:14px">Commercial terms remain owner-gated. Current pricing material is a proposal, not active billing. Hercules is not being offered here as consumer debt collection, third-party collections, credit scoring, legal collections, or a guaranteed recovery service.</p>
       </div>
     </div>
   </section>
