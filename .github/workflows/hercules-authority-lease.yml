@@ -9,9 +9,11 @@ on:
       - "tests/hercules-domain-agent-production-registry.test.mjs"
       - "tests/hercules-domain-agent-private-bridge.test.mjs"
       - "tests/hercules-domain-agent-full.test.mjs"
+      - "tests/hercules-domain-agent-front-door.test.mjs"
       - "supabase/functions/hercules-domain-agent/**"
       - "supabase/functions/hercules-private-bridge/domain-agent.ts"
       - "supabase/functions/hercules-private-bridge/index.ts"
+      - "netlify/edge-functions/domain-agent-proxy.ts"
       - "supabase/migrations/20260927181500_hercules_domain_agent_registry_v1.sql"
       - "supabase/migrations/20260927200000_hercules_domain_agent_full_v1.sql"
       - "docs/HERCULES-AUTHORITY-LEASE-V0.1.md"
@@ -39,5 +41,6 @@ jobs:
       - run: node --test tests/hercules-domain-agent-production-registry.test.mjs
       - run: node --test tests/hercules-domain-agent-private-bridge.test.mjs
       - run: node --test tests/hercules-domain-agent-full.test.mjs
+      - run: node --test tests/hercules-domain-agent-front-door.test.mjs
       - run: node scripts/verify-owner-code-only.mjs
       - run: node scripts/verify-hercules-execution-contract.mjs
