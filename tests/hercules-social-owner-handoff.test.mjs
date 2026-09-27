@@ -24,7 +24,7 @@ test("DA-24 handoff preserves owner-only and automatable work boundaries", () =>
 });
 
 test("DA-24 handoff exposes only the prepared public company-page package", () => {
-  assert.match(ui, /SauceApproved Enterprise LLC/);
+  assert.match(ui, /SauceApproved enterprise LLC/);
   assert.match(ui, /Software Development/);
   assert.match(ui, /Privately Held/);
   assert.match(ui, /Verifiable AI software that helps businesses recover cash, keep control, and prove every action\./);
