@@ -130,7 +130,7 @@ test("browser agent recovers from planner locator timeouts without crashing the 
   const agent=await readFile(new URL("../supabase/functions/hercules-browser-agent/index.ts",import.meta.url),"utf8");
   assert.match(agent,/function recoverablePlannerLocatorFailure\(error:unknown,decision:string\)/);
   assert.match(agent,/decision==="click"\|\|decision==="extract"/);
-  assert.match(agent,/locator\.[a-z]+:[\\s\\S]*Timeout/i);
+  assert.match(agent,/Timeout\s+\d+ms\s+exceeded/i);
   assert.match(agent,/decision:"action_failed"/);
   assert.match(agent,/continue;/);
   assert.match(agent,/Do not repeat a selector whose recent history records action_failed/);
