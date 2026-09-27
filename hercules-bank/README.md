@@ -2,7 +2,7 @@
 
 Hercules Bank is the owned financial-core runtime inside the Hercules platform.
 
-## Current maturity: deployable authenticated durable sandbox financial service with customer, owner, and compliance operations
+## Current maturity: deployable authenticated durable sandbox financial service with production-readiness proof controls
 
 The current implementation is deliberately **not** a chartered bank, deposit account,
 money-transmission service, payment processor, or custodian. It does not hold customer
@@ -211,3 +211,23 @@ v0.9 operationalizes the v0.8 readiness model while keeping external execution l
 - `HERCULES_BANK_COMPLIANCE_STATE_PATH` may override the default compliance-state path.
 
 See `docs/HERCULES-FINANCIAL-COMPLIANCE-OPERATIONS-V0.9.md`.
+
+
+## Production-readiness proof
+
+v1.0 defines the next production boundary without enabling real-money execution.
+
+- production storage must implement atomic transactions, health checks, backup creation,
+  and verified restore;
+- secret/key custody must be non-exportable and support signing, key inspection, and
+  rotation;
+- recovery evidence requires recent tested restore proof plus reviewed RPO/RTO;
+- fraud, disputes, returns, complaints, and case-retention operations require reviewed
+  evidence;
+- provider certification requires authorization, regulatory scope, security,
+  data-protection, audit-rights, continuity, incident, reconciliation, and exit-plan
+  evidence;
+- a fully green v1.0 result still returns `activationAllowed:false` and
+  `externalRailsEnabled:false`.
+
+See `docs/HERCULES-FINANCIAL-PRODUCTION-READINESS-V1.0.md`.

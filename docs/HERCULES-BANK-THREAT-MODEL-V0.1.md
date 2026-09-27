@@ -38,7 +38,7 @@ No real-money custody or regulated payment rail is in scope for v0.1.
 | Hung upstream/service request | First-party client applies a bounded request timeout |
 | Customer access to owner metrics | Owner overview requires an approved administrator role |
 | UI-only owner hiding treated as authorization | Admin endpoints independently enforce role authorization |
-| Aggregate sandbox liability overflow | Safe-integer accumulation fails closed |\n| Regulatory checkbox bypass | Readiness requires structured approved evidence with a reference and review timestamp; booleans are insufficient |\n| Unreviewed jurisdiction expansion | v0.8 supports only the explicit reviewed US-CT scope |\n| False deposit-insurance representation | Deposit readiness requires separate custodial-record and disclosure-review evidence and creates no insurance claim |\n| Provider traffic over insecure transport | Production provider adapter endpoints require HTTPS |\n| Settlement divergence | Reconciliation fails on missing, unexpected, duplicate, amount-mismatched, or currency-mismatched records |\n| Premature live-money activation | Readiness never enables execution; v0.8 executeTransfer is hard-locked |\n| Compliance event-field injection | Restore rejects any event whose top-level shape differs from the canonical hashed event schema |\n| Compliance evidence tampering | Sequence, previous hash, SHA-256 event hash, derived-state replay, and head hash are verified on load |\n| Sensitive KYC/provider-secret persistence | v0.9 state stores review references, provider metadata, and reconciliation summaries only |\n| Unauthorized compliance mutation | Compliance API routes require admin role; cookie-authenticated writes also require CSRF |
+| Aggregate sandbox liability overflow | Safe-integer accumulation fails closed |\n| Regulatory checkbox bypass | Readiness requires structured approved evidence with a reference and review timestamp; booleans are insufficient |\n| Unreviewed jurisdiction expansion | v0.8 supports only the explicit reviewed US-CT scope |\n| False deposit-insurance representation | Deposit readiness requires separate custodial-record and disclosure-review evidence and creates no insurance claim |\n| Provider traffic over insecure transport | Production provider adapter endpoints require HTTPS |\n| Settlement divergence | Reconciliation fails on missing, unexpected, duplicate, amount-mismatched, or currency-mismatched records |\n| Premature live-money activation | Readiness never enables execution; v0.8 executeTransfer is hard-locked |\n| Compliance event-field injection | Restore rejects any event whose top-level shape differs from the canonical hashed event schema |\n| Compliance evidence tampering | Sequence, previous hash, SHA-256 event hash, derived-state replay, and head hash are verified on load |\n| Sensitive KYC/provider-secret persistence | v0.9 state stores review references, provider metadata, and reconciliation summaries only |\n| Unauthorized compliance mutation | Compliance API routes require admin role; cookie-authenticated writes also require CSRF |\n| Non-transactional production storage | Production-readiness adapter requires atomic transaction capability plus health, backup, and restore verification |\n| Exportable financial signing key | Secret-custody adapter rejects secret-export functions and requires non-exportable signing/rotation interfaces |\n| Untested disaster recovery | Readiness requires recent restore evidence and bounded reviewed RPO/RTO |\n| Missing financial case handling | Fraud, disputes, returns, complaints, and case-retention evidence are mandatory |\n| Provider concentration / lock-in with no exit plan | Provider certification requires reviewed business continuity and exit-plan evidence |\n| Readiness mistaken for activation | v1.0 hard-codes activationAllowed:false and externalRailsEnabled:false |
 
 ## Authentication boundary
 
@@ -183,3 +183,18 @@ the Live Money Locked state. It has no route or control that can unlock external
 The compliance state file is local-process durability, not a compliance-grade
 multi-writer database, records-retention system, HSM/KMS, or evidence archive. Those
 remain production prerequisites.
+
+
+## Production-readiness boundary
+
+v1.0 validates contracts and reviewed evidence for production infrastructure and
+operations. It does not instantiate a production database, KMS/HSM, regulated provider,
+or external payment rail.
+
+The secret-custody interface deliberately excludes secret-export methods. The
+transactional-store interface requires atomic mutation and backup/restore capabilities
+without accepting database credentials into readiness evidence.
+
+A green composite result means only that the defined readiness evidence is present.
+It is not permission to transmit funds. v1.0 returns `activationAllowed:false` and
+`externalRailsEnabled:false` unconditionally.
