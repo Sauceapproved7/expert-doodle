@@ -7,6 +7,8 @@ on:
       - "supabase/functions/hercules-personal-browser-bridge/**"
       - "supabase/migrations/*hercules_personal_browser_bridge*.sql"
       - "tests/hercules-personal-browser-bridge.test.mjs"
+      - "tests/hercules-personal-browser-ui-multiplex.test.mjs"
+      - "supabase/functions/hercules-integrations/**"
       - ".github/workflows/hercules-personal-browser-bridge.yml"
   workflow_dispatch:
 
@@ -25,4 +27,4 @@ jobs:
       - name: Enforce owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
       - name: Verify personal browser bridge
-        run: node --test tests/hercules-personal-browser-bridge.test.mjs
+        run: node --test tests/hercules-personal-browser-bridge.test.mjs tests/hercules-personal-browser-ui-multiplex.test.mjs
