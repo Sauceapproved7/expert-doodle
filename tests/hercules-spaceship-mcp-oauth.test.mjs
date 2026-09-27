@@ -8,6 +8,7 @@ const dns=await readFile(new URL("../supabase/functions/hercules-private-bridge/
 const oauthMigration=await readFile(new URL("../supabase/migrations/20260927102500_hercules_spaceship_mcp_oauth_v1.sql",import.meta.url),"utf8");
 const bridgeMigration=await readFile(new URL("../supabase/migrations/20260927103500_hercules_spaceship_mcp_bridge_integration_v1.sql",import.meta.url),"utf8");
 const publicOauthMigration=await readFile(new URL("../supabase/migrations/20260927110000_hercules_spaceship_public_oauth_v1.sql",import.meta.url),"utf8");
+const handoffMigration=await readFile(new URL("../supabase/migrations/20260927111500_hercules_spaceship_auth_handoff_v1.sql",import.meta.url),"utf8");
 
 test("Spaceship MCP OAuth uses official discovery and dynamic registration",()=>{
   assert.ok(mcp.includes('const RESOURCE_META="https://mcp.spaceship.com/.well-known/oauth-protected-resource"'));
@@ -89,4 +90,38 @@ test("successful OAuth callback triggers existing launch autopilot",()=>{
   assert.match(mcp,/hercules_domain_launch_autopilot_tick/);
   assert.match(mcp,/status:"configured"/);
   assert.match(mcp,/provider:"spaceship-mcp"/);
+});
+
+
+test("Hercules issues expiring one-time Spaceship authorization handoffs",()=>{
+  assert.match(handoffMigration,/create table if not exists public\.hercules_spaceship_auth_handoffs/);
+  assert.match(handoffMigration,/token_sha256 text not null unique/);
+  assert.match(handoffMigration,/expires_at timestamptz not null/);
+  assert.match(handoffMigration,/status text not null default 'issued'/);
+  assert.match(handoffMigration,/enable row level security/);
+  assert.match(handoffMigration,/revoke all on table public\.hercules_spaceship_auth_handoffs from public, anon, authenticated/);
+});
+
+test("Private Bridge handoff route is internal-only to issue and public only with opaque token",()=>{
+  assert.match(mcp,/spaceship_mcp_handoff_issue/);
+  assert.match(mcp,/internal_dns_control_required/);
+  assert.match(mcp,/spaceship_authorize/);
+  assert.match(mcp,/handoff_token/);
+  assert.match(mcp,/hercules_spaceship_auth_handoffs/);
+  assert.match(mcp,/Response\.redirect/);
+  assert.match(mcp,/authorization_url/);
+});
+
+test("handoff reuses an existing authorization URL and does not rotate PKCE state on repeated opens",()=>{
+  assert.match(mcp,/if\(handoff\.authorization_url\)/);
+  assert.match(mcp,/return Response\.redirect\(String\(handoff\.authorization_url\)/);
+  const beginIndex=mcp.indexOf("const started=await beginAuthorization()");
+  const reuseIndex=mcp.indexOf("if(handoff.authorization_url)");
+  assert.ok(reuseIndex>=0&&beginIndex>reuseIndex);
+});
+
+test("successful Spaceship callback completes the most recent handoff and resumes autopilot",()=>{
+  assert.match(mcp,/markLatestHandoffComplete/);
+  assert.match(mcp,/hercules_domain_launch_autopilot_tick/);
+  assert.match(mcp,/status:"configured"/);
 });
