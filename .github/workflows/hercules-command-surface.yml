@@ -1,0 +1,20 @@
+name: Hercules Command Surface
+on:
+  pull_request:
+    paths:
+      - "hercules-runtime/command-surface.mjs"
+      - "tests/hercules-command-surface.test.mjs"
+      - "docs/HERCULES-COMMAND-SURFACE-V0.1.md"
+      - ".github/workflows/hercules-command-surface.yml"
+permissions:
+  contents: read
+jobs:
+  command-surface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --check hercules-runtime/command-surface.mjs
+      - run: node --test tests/hercules-command-surface.test.mjs tests/hercules-unified-execution.test.mjs
