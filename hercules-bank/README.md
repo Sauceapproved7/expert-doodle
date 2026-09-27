@@ -117,3 +117,21 @@ The command-line service reads `HERCULES_BANK_STATE_PATH`,
 `HERCULES_BASE_JWT_SECRET`, optional `HERCULES_BANK_HOST`,
 `HERCULES_BANK_PORT`, and `HERCULES_BANK_CURRENCY`. It prints service metadata only,
 never the JWT secret.
+
+
+## Browser customer experience
+
+v0.5 adds the Hercules Financial sandbox console on top of the deployable v0.4 service.
+
+- Browser sign-in is forwarded server-to-server to Hercules Base.
+- Hercules Base access and refresh tokens stay in bank-service process memory.
+- The browser receives only an opaque `bank_session` cookie with `HttpOnly` and `SameSite=Strict`.
+- Cookie-authenticated mutations require an in-memory `X-Bank-CSRF` value.
+- Session restoration rotates the CSRF value.
+- Expired Base access tokens refresh server-side.
+- Logout removes the browser session and requests Base refresh-token revocation.
+- The console exposes sandbox accounts, balances, statements, account creation, and internal transfers.
+- No real deposit, ACH, wire, card, RTP/FedNow, or cash controls are exposed.
+
+For public HTTPS deployment, secure session cookies must be enabled and the service must
+remain behind the normal Hercules TLS, rate-limit, monitoring, and abuse-control boundary.
