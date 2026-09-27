@@ -1,0 +1,26 @@
+name: Hercules Browser Agent Operator Bridge
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-browser-agent/**"
+      - "supabase/migrations/*hercules_browser_agent_operator_bridge*"
+      - "tests/hercules-browser-agent-operator-bridge.test.mjs"
+      - "docs/HERCULES-BROWSER-AGENT-OPERATOR-BRIDGE-V1.md"
+      - ".github/workflows/hercules-browser-agent-operator-bridge.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-agent-operator-bridge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run Browser Agent operator bridge tests
+        run: node --test tests/hercules-browser-agent-operator-bridge.test.mjs
