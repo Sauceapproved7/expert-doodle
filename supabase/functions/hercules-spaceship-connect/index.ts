@@ -163,6 +163,21 @@ async function audit(userId:string, action:string, metadata:any = {}) {
   });
 }
 
+async function mergeDomainMetadata(patch:any) {
+  const {data,error} = await admin
+    .from("hercules_domains")
+    .select("metadata")
+    .eq("id",DOMAIN_ID)
+    .maybeSingle();
+  if (error) throw error;
+  const current = data?.metadata && typeof data.metadata === "object" ? data.metadata : {};
+  const {error:updateError} = await admin
+    .from("hercules_domains")
+    .update({metadata:{...current,...patch},updated_at:new Date().toISOString()})
+    .eq("id",DOMAIN_ID);
+  if (updateError) throw updateError;
+}
+
 async function statusPayload() {
   const conn = await connection();
   const {data:domain} = await admin
@@ -275,17 +290,14 @@ Deno.serve(async (req:Request) => {
       },{onConflict:"organization_id,provider,account_key"})
       .select("provider,account_key,status,connected_at,metadata").single();
       if (error) throw error;
-      await admin.from("hercules_domains").update({
-        metadata:{
-          source:"owner_purchase",
-          connection_intent:"shopify",
-          dns_adapter:"hercules-deploy/spaceship-dns.mjs",
-          dns_adapter_status:"ready",
-          external_authorization:"active",
-          registrar:"spaceship",
-        },
-        updated_at:new Date().toISOString(),
-      }).eq("id",DOMAIN_ID);
+      await mergeDomainMetadata({
+        source:"owner_purchase",
+        connection_intent:"shopify",
+        dns_adapter:"hercules-deploy/spaceship-dns.mjs",
+        dns_adapter_status:"ready",
+        external_authorization:"active",
+        registrar:"spaceship",
+      });
       await audit(owner.user.id,"domain.spaceship.connected",{permissions:["dnsrecords:read","dnsrecords:write"]});
       return json({ok:true,connection:conn});
     } catch (e) {
@@ -344,18 +356,15 @@ Deno.serve(async (req:Request) => {
         .eq("name",target.name)
         .eq("value",value);
       }
-      await admin.from("hercules_domains").update({
-        metadata:{
-          source:"owner_purchase",
-          connection_intent:"shopify",
-          dns_adapter:"hercules-deploy/spaceship-dns.mjs",
-          dns_adapter_status:"applied_verified",
-          external_authorization:"active",
-          registrar:"spaceship",
-          dns_verified_at:now,
-        },
-        updated_at:now,
-      }).eq("id",DOMAIN_ID);
+      await mergeDomainMetadata({
+        source:"owner_purchase",
+        connection_intent:"shopify",
+        dns_adapter:"hercules-deploy/spaceship-dns.mjs",
+        dns_adapter_status:"applied_verified",
+        external_authorization:"active",
+        registrar:"spaceship",
+        dns_verified_at:now,
+      });
       await admin.from("hercules_provider_connections").update({
         last_error:null,
         metadata:{
