@@ -52,3 +52,10 @@ test("browser monitor functions are service-role only",()=>{
   assert.match(migration,/revoke all on function public\.hercules_browser_runtime_monitor\(\)[\s\S]*from public, anon, authenticated/i);
   assert.match(migration,/grant execute on function public\.hercules_browser_runtime_monitor\(\)[\s\S]*to service_role/i);
 });
+
+test("browser worker capacity is explicitly leased before CDP execution",()=>{
+  assert.match(migration,/create table if not exists public\.hercules_browser_worker_capacity/i);
+  assert.match(migration,/create table if not exists public\.hercules_browser_worker_leases/i);
+  assert.match(migration,/create or replace function public\.hercules_browser_worker_lease_acquire/i);
+  assert.match(migration,/max_concurrency[^\n]*1/i);
+});
