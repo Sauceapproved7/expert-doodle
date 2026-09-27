@@ -87,19 +87,30 @@ Remaining Privacy approval work:
 - add the payment processor once connected;
 - ensure final public wording matches the live architecture.
 
-## Owner action 6 — Correct Shopify/domain authorization
+## Owner action 6 — Spaceship registrar authorization
 
-The currently connected Shopify connector reports a store domain different from the canonical Hercules/SauceApproved production-store target recorded in project state.
+The earlier Shopify-domain ambiguity is resolved. Live Shopify Admin data confirms one production shop:
 
-Do **not** make production-domain changes until the intended store is explicitly authorized.
+- Shop GID: `gid://shopify/Shop/100002726208`;
+- original myshopify domain: `azymhc-x0.myshopify.com`;
+- current primary domain: `sauceapproved-2.myshopify.com`;
+- current primary-domain SSL: enabled.
 
-Current domain state:
-- `sauceapproved.com`: owned, but connection status is still pending;
-- SSL status: not yet verified in Hercules;
-- intended target in Hercules state: the production Shopify store;
-- automated Spaceship navigation is currently blocked by Cloudflare verification.
+These domains are the same Shopify shop identity, not separate stores. The same shop contains the expected active Printify SauceApproved hoodie with 29 variants.
 
-Owner authorization/login may be required to finish registrar/Shopify DNS verification.
+Current custom-domain state:
+- `sauceapproved.com`: owned and registered in Hercules, connection still pending;
+- public A records currently resolve to `34.216.117.25` and `54.149.79.189`;
+- no apex AAAA is currently published;
+- no `www` CNAME is currently published;
+- nameservers are `launch1.spaceship.net` and `launch2.spaceship.net`;
+- desired Shopify records remain A `@` → `23.227.38.65`, AAAA `@` → `2620:0127:f00f:5::`, and CNAME `www` → `shops.myshopify.com`.
+
+Hercules Domain Launch Controller v1 is deployed, and Hercules Integrations now automatically continues from secure Spaceship credential setup into DNS reconciliation and provider-result verification.
+
+The only remaining owner-only domain action is legitimate Spaceship authorization: create/authorize a least-privilege API credential with `dnsrecords:read` and `dnsrecords:write` and submit it through Hercules Integrations. Do not paste registrar secrets into chat.
+
+Automated browser navigation remains blocked by Spaceship's Cloudflare verification and must not be bypassed. After authorized DNS access is available, Hercules handles DNS reconciliation, then verifies Shopify custom-domain recognition and SSL before any primary-domain cutover.
 
 ## Administrative follow-up — IRS/EIN naming
 
