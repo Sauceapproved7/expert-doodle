@@ -1,0 +1,25 @@
+name: Hercules Browser Agent Stale Reaper
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*hercules_browser_agent_stale_reaper*"
+      - "tests/hercules-browser-agent-stale-reaper.test.mjs"
+      - "docs/HERCULES-BROWSER-AGENT-STALE-REAPER-V1.md"
+      - ".github/workflows/hercules-browser-agent-stale-reaper.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-agent-stale-reaper:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify Browser Agent stale reaper
+        run: node --test tests/hercules-browser-agent-stale-reaper.test.mjs
