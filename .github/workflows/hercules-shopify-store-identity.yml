@@ -1,0 +1,24 @@
+name: Hercules Shopify Store Identity Lock
+
+on:
+  pull_request:
+    paths:
+      - "governance/shopify-production-store.json"
+      - "tests/hercules-shopify-store-identity.test.mjs"
+      - "docs/launch/HERCULES-SHOPIFY-STORE-IDENTITY-RESOLUTION-2026-09-27.md"
+      - ".github/workflows/hercules-shopify-store-identity.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shopify-store-identity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify production Shopify identity lock
+        run: node --test tests/hercules-shopify-store-identity.test.mjs
