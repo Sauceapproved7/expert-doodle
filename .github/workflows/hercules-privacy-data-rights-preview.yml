@@ -1,0 +1,33 @@
+name: Hercules Privacy Data Rights Preview
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*hercules_privacy_data_rights_preview*"
+      - "supabase/functions/hercules-private-bridge/**"
+      - "docs/launch/HERCULES-DATA-RIGHTS-OPERATIONS-V1.md"
+      - "docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md"
+      - "tests/hercules-privacy-data-rights-preview.test.mjs"
+      - ".github/workflows/hercules-privacy-data-rights-preview.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  privacy-data-rights-preview:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Enforce execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
+      - name: Enforce owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Test privacy data-rights preview
+        run: node --test tests/hercules-privacy-data-rights-preview.test.mjs
+      - name: Run security baseline
+        run: node scripts/security-baseline.mjs
