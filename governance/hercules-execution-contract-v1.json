@@ -1,0 +1,68 @@
+{
+  "schema": "sauceapproved.hercules.execution-contract",
+  "version": 1,
+  "marker": "HERCULES_IMPLEMENTATION_ENFORCEMENT_V1",
+  "canonicalRepository": "Sauceapproved7/expert-doodle",
+  "enforcementMode": "fail-closed",
+  "authority": {
+    "shippedImplementation": "committed repository content on canonical main identified by commit SHA",
+    "businessGovernanceLaunchControl": "Hercules Vault",
+    "supportingOnlyUntilCommitted": [
+      "chat transcripts",
+      "drafts",
+      "screenshots",
+      "local copies",
+      "external workspaces"
+    ]
+  },
+  "requireExistingStateInspection": true,
+  "forbidDuplicateRebuilds": true,
+  "requireEvidenceBeforeCompletion": true,
+  "requireBehaviorTestsBeforeImplementation": true,
+  "preserveOwnerCodeBoundary": true,
+  "preserveProvenance": true,
+  "preserveSecurityGates": true,
+  "preserveEnvironmentBoundaries": true,
+  "neverWeakenGateToPass": true,
+  "browserRouting": {
+    "ownedHerculesFirst": true,
+    "fallbackOnlyWhenUnavailableIncompatibleOrIncapable": true,
+    "recordFallbackReason": true,
+    "neverClaimUnverifiedBrowserUse": true
+  },
+  "authorizationRouting": {
+    "useAuthorizedAlternativeFirst": true,
+    "completeAllNonOwnerWorkBeforeStopping": true,
+    "bypassAccessControls": false,
+    "bypassCaptchaOrAntiBot": false,
+    "bypass2FA": false,
+    "treatMissingConsentAsGranted": false,
+    "evadeProviderRestrictions": false
+  },
+  "ownerOnlyBoundaries": [
+    "payments",
+    "private_credentials_or_2fa",
+    "identity_verification",
+    "legally_binding_consent",
+    "required_permission_grants",
+    "irreversible_high_impact_owner_decisions",
+    "physical_world_actions",
+    "information_only_the_owner_possesses"
+  ],
+  "completionEvidence": {
+    "implemented": "committed artifact plus applicable tests",
+    "merged": "GitHub reports merged on unchanged exact head",
+    "deployed": "deployment target reports current deployed state",
+    "healthy": "current health evidence, not assumption",
+    "blocked": "specific observed boundary with all safe surrounding work completed"
+  },
+  "requiredAgentEntrySurfaces": [
+    "AGENTS.md",
+    ".github/copilot-instructions.md",
+    "CONTRIBUTING.md",
+    ".github/PULL_REQUEST_TEMPLATE.md"
+  ],
+  "verifier": "scripts/verify-hercules-execution-contract.mjs",
+  "test": "tests/hercules-implementation-enforcement.test.mjs",
+  "workflow": ".github/workflows/hercules-implementation-enforcement.yml"
+}
