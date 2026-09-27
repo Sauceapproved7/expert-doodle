@@ -77,3 +77,12 @@ test("commercial layer includes managed customer domain-agent identities",()=>{
   assert.match(migration,/hercules_domain_agent_identity_status/);
   assert.match(agent,/domain_agent_identity_status/);
 });
+
+test("provider usage is reserved before the provider side effect",()=>{
+  const fn=agent.slice(agent.indexOf("async function dispatchProvider"),agent.indexOf("async function enqueueInternal"));
+  const usage=fn.indexOf("recordUsage(");
+  const internal=fn.indexOf("invokeInternal(");
+  const owner=fn.indexOf("invokeOwnerSession(");
+  assert.ok(usage>=0);
+  assert.ok((internal<0||usage<internal)&&(owner<0||usage<owner));
+});
