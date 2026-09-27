@@ -229,7 +229,7 @@ function credentialDropPage(token:string,opts:{error?:string;success?:string}={}
     ? '<div class="msg ok">'+opts.success+'</div>'
     : opts.error
       ? '<div class="msg err">'+opts.error+'</div>'
-      : '<div class="msg">Enter the least-privilege Spaceship API key and one-time secret. They are written directly to Hercules Vault and cleared from this form after submission.</div>';
+      : '<div class="msg">Create a fresh Spaceship API key with <code>dnsrecords:read</code> and <code>dnsrecords:write</code>. Hercules validates the pair against Spaceship before anything is stored.</div><p><a href="https://www.spaceship.com/application/api-manager/" rel="noreferrer">Open Spaceship API Manager</a></p>';
   const form=(opts.success||!safe)?'':(
     '<form method="post" action="?spaceship_credentials=1&handoff_token='+safe+'" autocomplete="off">'+
     '<label>Spaceship API Key<input name="api_key" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="512"></label>'+
