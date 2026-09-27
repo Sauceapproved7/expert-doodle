@@ -8,6 +8,13 @@ const S=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default||Deno.env
 const admin=createClient(U,S,{auth:{persistSession:false}});
 const H={'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'};
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:H});
+const LAUNCH_APPROVALS=['pricing','terms','privacy','auth_hardening'] as const;
+const LAUNCH_DOCS={
+  pricing:'docs/launch/HERCULES-PRICING-PROPOSAL.md',
+  terms:'docs/launch/HERCULES-TERMS-OF-SERVICE-DRAFT.md',
+  privacy:'docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md',
+  auth_hardening:'docs/launch/HERCULES-AUTH-SECURITY-REVIEW-2026-09-27.md'
+} as const;
 
 async function actor(req:Request){
   const h=req.headers.get('authorization')||'', token=h.startsWith('Bearer ')?h.slice(7):'';
@@ -51,14 +58,88 @@ async function audit(org:string,uid:string,action:string,id:string|null,changes:
   });
 }
 
+async function launchApprovalStatus(){
+  const [{data:approvals,error:approvalError},{data:gate,error:gateError},{data:release,error:releaseError}]=await Promise.all([
+    admin.from('hercules_launch_approvals')
+      .select('approval_type,status,approved_by,approved_at,evidence,updated_at')
+      .order('approval_type'),
+    admin.from('hercules_launch_gate_checks')
+      .select('technical_ok,commercial_ok,launch_ready,checks,checked_at')
+      .order('checked_at',{ascending:false})
+      .limit(1)
+      .maybeSingle(),
+    admin.from('hercules_continuity_ledger')
+      .select('status,value,verified_at')
+      .eq('key','public-registration-open')
+      .maybeSingle()
+  ]);
+  if(approvalError||gateError||releaseError)throw new Error('launch_approval_status_failed');
+
+  const byType=Object.fromEntries((approvals||[]).map((row:any)=>[
+    row.approval_type,
+    {
+      status:row.status,
+      approvedAt:row.approved_at||null,
+      approvedBy:row.approved_by||null,
+      evidence:row.evidence||{},
+      updatedAt:row.updated_at||null,
+      document:(LAUNCH_DOCS as any)[row.approval_type]||null
+    }
+  ]));
+
+  return {
+    ok:true,
+    approvals:byType,
+    required:[...LAUNCH_APPROVALS],
+    gate:gate||null,
+    publicRegistrationOpen:Boolean(release?.status==='active'&&release?.value?.open===true),
+    publicRegistrationVerifiedAt:release?.verified_at||null,
+    authHardening:{
+      selfApprovalAllowed:false,
+      blocker:'Supabase leaked-password protection must be enabled and independently verified before auth_hardening can be approved.'
+    }
+  };
+}
+
+async function refreshLaunchGate(){
+  try{
+    const {data:keyRow}=await admin.from('hercules_internal_service_keys')
+      .select('secret_ref,enabled')
+      .eq('purpose','agent-coordinator')
+      .eq('enabled',true)
+      .limit(1)
+      .maybeSingle();
+    if(!keyRow?.secret_ref)return {ok:false,error:'launch_gate_internal_key_missing'};
+    const {data:key,error:keyError}=await admin.rpc('hercules_get_secret',{p_id:keyRow.secret_ref});
+    if(keyError||!key)return {ok:false,error:'launch_gate_internal_key_unavailable'};
+    const response=await fetch(U+'/functions/v1/hercules-launch-gate',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-hercules-internal-key':String(key)},
+      body:'{}',
+      signal:AbortSignal.timeout(20000)
+    });
+    const body=await response.json().catch(()=>({}));
+    return {
+      ok:response.ok,
+      status:response.status,
+      launchReady:Boolean(body?.check?.launch_ready),
+      commercialOk:Boolean(body?.check?.commercial_ok),
+      technicalOk:Boolean(body?.check?.technical_ok),
+      checkedAt:body?.check?.checked_at||null
+    };
+  }catch{
+    return {ok:false,error:'launch_gate_refresh_failed'};
+  }
+}
+
 Deno.serve(async(req:Request)=>{
   if(req.method==='POST' && req.headers.get('x-hercules-internal-key')){
     return handleSpaceshipDnsRequest(req);
   }
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
-    return out({ok:true,service:'hercules-private-bridge',version:'1.0.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state'],
+    return out({ok:true,service:'hercules-private-bridge',version:'1.1.0',status:'ready',
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -66,6 +147,62 @@ Deno.serve(async(req:Request)=>{
   const a=await actor(req); if(!a)return out({error:'owner_or_admin_required'},403);
   const org=String(a.m.organization_id), uid=String(a.user.id);
   const b=await req.json().catch(()=>({})), action=String(b.action||'status');
+
+  if(action==='launch_approval_status'){
+    try{return out(await launchApprovalStatus())}
+    catch{return out({error:'launch_approval_status_failed'},500)}
+  }
+
+  if(action==='launch_approval_decide'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const approvalType=String(b.approval_type||'').trim();
+    const decision=String(b.decision||'').trim();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+    if(!LAUNCH_APPROVALS.includes(approvalType as any))return out({error:'valid_approval_type_required'},400);
+    if(!['approved','rejected','pending'].includes(decision))return out({error:'valid_decision_required'},400);
+    if(approvalType==='auth_hardening'&&decision==='approved'){
+      return out({
+        error:'auth_hardening_requires_verified_platform_evidence',
+        required:'Enable Supabase leaked-password protection, rerun the production security advisor, and require the warning to clear before approval.'
+      },409);
+    }
+    const expected=(decision==='approved'?'APPROVE ':decision==='rejected'?'REJECT ':'RESET ')+approvalType.replace('_',' ').toUpperCase();
+    if(confirmation!==expected)return out({error:'explicit_confirmation_required',expected},400);
+
+    const now=new Date().toISOString();
+    const evidence={
+      source:'hercules-launch-owner-decision-center-v1',
+      document:(LAUNCH_DOCS as any)[approvalType],
+      confirmationVerified:true,
+      decision,
+      decidedAt:now
+    };
+    const patch=decision==='approved'
+      ? {status:'approved',approved_by:uid,approved_at:now,evidence,updated_at:now}
+      : decision==='rejected'
+        ? {status:'rejected',approved_by:uid,approved_at:now,evidence,updated_at:now}
+        : {status:'pending',approved_by:null,approved_at:null,evidence,updated_at:now};
+
+    const {data,error}=await admin.from('hercules_launch_approvals')
+      .update(patch)
+      .eq('approval_type',approvalType)
+      .select('approval_type,status,approved_by,approved_at,evidence,updated_at')
+      .maybeSingle();
+    if(error||!data)return out({error:'launch_approval_update_failed'},500);
+
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'launch.approval.'+decision,
+      resource_type:'hercules_launch_approval',
+      resource_id:approvalType,
+      changes:{approval_type:approvalType,status:decision,document:(LAUNCH_DOCS as any)[approvalType]},
+      metadata:{source:'hercules-launch-owner-decision-center-v1',explicit_confirmation:true}
+    });
+
+    const gateRefresh=await refreshLaunchGate();
+    return out({ok:true,approval:data,gateRefresh,status:await launchApprovalStatus()});
+  }
 
   if(action==='spaceship_dns_status'){
     const {data,error}=await admin.from('hercules_spaceship_dns_credentials')
