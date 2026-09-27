@@ -206,9 +206,162 @@ async function refreshLaunchGate(){
   }
 }
 
+
+const SPACESHIP_CREDENTIAL_DROP_PURPOSE='spaceship-dns-credential-drop-v1';
+const CREDENTIAL_HTML_HEADERS=new Headers({
+  'content-type':'text/html; charset=UTF-8',
+  'cache-control':'no-store, no-cache, must-revalidate',
+  'pragma':'no-cache',
+  'x-content-type-options':'nosniff',
+  'x-frame-options':'DENY',
+  'referrer-policy':'no-referrer',
+  'strict-transport-security':'max-age=31536000; includeSubDomains',
+  'permissions-policy':'camera=(), microphone=(), geolocation=()',
+  'content-security-policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'"
+});
+async function sha256Hex(value:string){
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
+}
+function credentialDropPage(token:string,opts:{error?:string;success?:string}={}){
+  const safe=/^[0-9a-f]{64}$/.test(token)?token:'';
+  const message=opts.success
+    ? '<div class="msg ok">'+opts.success+'</div>'
+    : opts.error
+      ? '<div class="msg err">'+opts.error+'</div>'
+      : '<div class="msg">Enter the least-privilege Spaceship API key and one-time secret. They are written directly to Hercules Vault and cleared from this form after submission.</div>';
+  const form=(opts.success||!safe)?'':(
+    '<form method="post" action="?spaceship_credentials=1&handoff_token='+safe+'" autocomplete="off">'+
+    '<label>Spaceship API Key<input name="api_key" autocomplete="off" autocapitalize="off" spellcheck="false" required maxlength="512"></label>'+
+    '<label>Spaceship API Secret<input name="api_secret" type="password" autocomplete="new-password" required maxlength="1024"></label>'+
+    '<button type="submit">Securely save + continue launch</button>'+
+    '</form>'+
+    '<p class="fine">Required permissions: <code>dnsrecords:read</code> and <code>dnsrecords:write</code>. This handoff expires and can be used once.</p>'
+  );
+  const html='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>Hercules · Spaceship DNS</title><style>'+
+    ':root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#090909;color:#f5f5f5;font-family:system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:560px;margin:0 auto;padding:28px 18px}.brand{font-weight:900;letter-spacing:.14em}.card{margin-top:18px;background:#151515;border:1px solid #333;border-radius:18px;padding:20px}h1{font-size:24px;margin:8px 0}p{color:#bbb;line-height:1.5}.msg{background:#0d0d0d;border:1px solid #333;border-radius:12px;padding:12px;margin:14px 0}.ok{border-color:#2f6f44;color:#c9f7d6}.err{border-color:#7c3535;color:#ffd0d0}label{display:block;margin:14px 0;color:#ddd;font-weight:700}input{display:block;width:100%;margin-top:7px;background:#080808;color:#fff;border:1px solid #444;border-radius:11px;padding:13px;font-size:16px}button{width:100%;border:0;border-radius:11px;padding:13px 16px;font-size:16px;font-weight:850;background:#fff;color:#080808}.fine{font-size:13px}code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}'+
+    '</style></head><body><main class="wrap"><div class="brand">HERCULES</div><div class="card"><h1>Spaceship DNS secure setup</h1><p>For <strong>sauceapproved.com</strong></p>'+
+    message+form+'</div></main></body></html>';
+  return new Response(html,{status:opts.error?400:200,headers:CREDENTIAL_HTML_HEADERS});
+}
+async function findCredentialDrop(token:string){
+  if(!/^[0-9a-f]{64}$/.test(token))return null;
+  const hash=await sha256Hex(token);
+  const now=new Date().toISOString();
+  const {data,error}=await admin.from('hercules_spaceship_auth_handoffs')
+    .select('id,status,expires_at,metadata')
+    .eq('token_sha256',hash)
+    .in('status',['issued','launched'])
+    .gt('expires_at',now)
+    .contains('metadata',{purpose:SPACESHIP_CREDENTIAL_DROP_PURPOSE})
+    .maybeSingle();
+  if(error||!data)return null;
+  return data;
+}
+
+async function validateSpaceshipExternalPair(apiKey:string,apiSecret:string){
+  const endpoint='https://spaceship.dev/api/v1/dns/records/sauceapproved.com?take=1&skip=0&orderBy=type';
+  async function probe(key:string,secret:string){
+    try{
+      const response=await fetch(endpoint,{
+        method:'GET',
+        headers:{'X-API-Key':key,'X-API-Secret':secret},
+        signal:AbortSignal.timeout(15000)
+      });
+      return response.status;
+    }catch{
+      return 0;
+    }
+  }
+  const normal=await probe(apiKey,apiSecret);
+  if(normal===200)return {ok:true,apiKey,apiSecret,normalized:false};
+  if(normal===403)return {ok:false,reason:'scope'};
+  if(normal!==401&&normal!==0)return {ok:false,reason:'provider'};
+
+  const swapped=await probe(apiSecret,apiKey);
+  if(swapped===200)return {ok:true,apiKey:apiSecret,apiSecret:apiKey,normalized:true};
+  if(swapped===403)return {ok:false,reason:'scope'};
+  if(swapped===401)return {ok:false,reason:'credentials'};
+  return {ok:false,reason:'provider'};
+}
+
+async function handleSpaceshipCredentialDrop(req:Request,requestUrl:URL){
+  const token=String(requestUrl.searchParams.get('handoff_token')||'').trim().toLowerCase();
+  const row=await findCredentialDrop(token);
+  if(!row)return credentialDropPage('',{error:'This secure handoff is invalid, expired, or already used.'});
+  const now=new Date().toISOString();
+
+  if(req.method==='GET'){
+    const patch:any={status:'launched',last_opened_at:now,updated_at:now};
+    if(row.status==='issued')patch.launched_at=now;
+    await admin.from('hercules_spaceship_auth_handoffs').update(patch).eq('id',row.id).in('status',['issued','launched']);
+    return credentialDropPage(token);
+  }
+
+  if(req.method!=='POST')return new Response('Method not allowed',{status:405,headers:CREDENTIAL_HTML_HEADERS});
+  const form=await req.formData().catch(()=>null);
+  let apiKey=String(form?.get('api_key')||'').trim();
+  let apiSecret=String(form?.get('api_secret')||'').trim();
+  if(!apiKey||!apiSecret||apiKey.length>512||apiSecret.length>1024){
+    apiKey=''; apiSecret='';
+    return credentialDropPage(token,{error:'Both the Spaceship API key and one-time secret are required.'});
+  }
+
+  const {data:claimed,error:claimError}=await admin.from('hercules_spaceship_auth_handoffs').update({
+    status:'starting',last_opened_at:now,updated_at:now
+  }).eq('id',row.id).in('status',['issued','launched']).select('id').maybeSingle();
+  if(claimError||!claimed){
+    apiKey=''; apiSecret='';
+    return credentialDropPage('',{error:'This secure handoff was already used or expired.'});
+  }
+
+  const validated=await validateSpaceshipExternalPair(apiKey,apiSecret);
+  if(!validated.ok){
+    apiKey=''; apiSecret='';
+    await admin.from('hercules_spaceship_auth_handoffs').update({status:'launched',updated_at:new Date().toISOString()}).eq('id',row.id).eq('status','starting');
+    const message=validated.reason==='scope'
+      ? 'Spaceship accepted the credential pair, but the key is missing dnsrecords:read and/or dnsrecords:write.'
+      : validated.reason==='credentials'
+        ? 'Spaceship rejected this API key and secret. Create a fresh API key in Spaceship API Manager and try again.'
+        : 'Spaceship credential validation is temporarily unavailable. Retry this handoff without creating another key.';
+    return credentialDropPage(token,{error:message});
+  }
+
+  apiKey=validated.apiKey;
+  apiSecret=validated.apiSecret;
+  const {data:configured,error:configureError}=await admin.rpc('hercules_spaceship_dns_configure_credentials',{
+    p_api_key:apiKey,p_api_secret:apiSecret
+  });
+  apiKey=''; apiSecret='';
+  if(configureError||configured!==true){
+    await admin.from('hercules_spaceship_auth_handoffs').update({status:'launched',updated_at:new Date().toISOString()}).eq('id',row.id).eq('status','starting');
+    return credentialDropPage(token,{error:'Hercules could not store the validated credentials. You can retry this handoff.'});
+  }
+
+  const [domainTick,emailTick]=await Promise.all([
+    admin.rpc('hercules_domain_launch_autopilot_tick'),
+    admin.rpc('hercules_business_email_dns_autopilot_tick')
+  ]);
+  await admin.from('hercules_spaceship_auth_handoffs').update({
+    status:'completed',completed_at:new Date().toISOString(),updated_at:new Date().toISOString(),
+    metadata:{...(row.metadata||{}),secret_exposure:false,credentials_stored:true,autopilot_started:true}
+  }).eq('id',row.id).eq('status','starting');
+
+  const domainStarted=!domainTick.error;
+  const emailStarted=!emailTick.error;
+  return credentialDropPage('',{success:
+    'Credentials secured in Hercules Vault. Domain launch automation '+(domainStarted?'started':'will retry automatically')+
+    '; business-email DNS automation '+(emailStarted?'started.':'will retry automatically.')
+  });
+}
+
 Deno.serve(async(req:Request)=>{
   const requestUrl=new URL(req.url);
   if(isDomainAgentGet(req,requestUrl))return handleDomainAgentRequest(req);
+  if(requestUrl.searchParams.get('spaceship_credentials')==='1'){
+    return handleSpaceshipCredentialDrop(req,requestUrl);
+  }
   if(req.method==='GET' && requestUrl.searchParams.get('spaceship_authorize')==='1'){
     return handleSpaceshipMcpRequest(req);
   }
