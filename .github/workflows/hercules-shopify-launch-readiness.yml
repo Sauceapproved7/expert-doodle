@@ -1,0 +1,27 @@
+name: Hercules Shopify Launch Readiness
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-provider-connect/**"
+      - "supabase/functions/hercules-integrations/**"
+      - "supabase/migrations/*hercules_shopify_launch_readiness*"
+      - "tests/hercules-shopify-launch-readiness*.test.mjs"
+      - "docs/HERCULES-SHOPIFY-LAUNCH-READINESS-V1.md"
+      - ".github/workflows/hercules-shopify-launch-readiness.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  shopify-launch-readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify Shopify launch readiness
+        run: node --test tests/hercules-shopify-launch-readiness.test.mjs tests/hercules-shopify-domain-monitor.test.mjs tests/hercules-shopify-provider-onboarding-ui.test.mjs
