@@ -1,0 +1,217 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const U = Deno.env.get("SUPABASE_URL")!;
+const S = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}").default || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const admin = createClient(U, S, { auth: { persistSession: false } });
+
+const ACTIONS = new Set(["navigate","scrape","screenshot","interact","close_session"]);
+const PRIVATE_HOST = /^(localhost|0\.0\.0\.0|127(?:\.\d{1,3}){3}|10(?:\.\d{1,3}){3}|192\.168(?:\.\d{1,3}){2}|169\.254(?:\.\d{1,3}){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|\[?::1\]?)$/i;
+
+function out(body: unknown, status=200, extra: Record<string,string>={}) {
+  return new Response(JSON.stringify(body), {status, headers:{
+    "content-type":"application/json; charset=utf-8","cache-control":"no-store",
+    "x-content-type-options":"nosniff","referrer-policy":"no-referrer",...extra
+  }});
+}
+function safeUrl(raw: unknown) {
+  if (typeof raw !== "string" || !raw || raw.length > 2048) throw new Error("invalid_target_url");
+  const u = new URL(raw);
+  if (!["http:","https:"].includes(u.protocol)) throw new Error("unsupported_protocol");
+  const h=u.hostname.toLowerCase();
+  if(!h || h.endsWith(".local") || h.endsWith(".internal") || PRIVATE_HOST.test(h)) throw new Error("private_target_blocked");
+  return u.toString();
+}
+function clamp(v: unknown,min:number,max:number,fallback:number){
+  const n=Number(v); return Number.isFinite(n)?Math.max(min,Math.min(max,Math.trunc(n))):fallback;
+}
+function normalizeSteps(input: unknown,maxSteps:number){
+  if(!Array.isArray(input)) return [];
+  return input.slice(0,maxSteps).map((s:any)=>{
+    const type=String(s?.type||"");
+    if(!["click","type","wait","extract"].includes(type)) throw new Error("unsupported_step");
+    const selector=typeof s?.selector==="string"?s.selector.slice(0,500):"";
+    if(["click","type","extract"].includes(type)&&!selector) throw new Error("selector_required");
+    if(type==="type") return {type,selector,text:String(s?.text||"").slice(0,4000)};
+    if(type==="wait") return {type,ms:clamp(s?.ms,0,5000,500)};
+    return {type,selector};
+  });
+}
+function normalizeSelectors(input: unknown){
+  if(!Array.isArray(input)) return [];
+  return input.slice(0,25).map(x=>String(x||"").slice(0,500)).filter(Boolean);
+}
+async function actor(req: Request){
+  const h=req.headers.get("authorization")||"";
+  const token=h.startsWith("Bearer ")?h.slice(7):"";
+  if(!token) return null;
+  const {data,error}=await admin.auth.getUser(token);
+  return error||!data.user?null:data.user;
+}
+async function sha256(value:string){
+  const hash=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,"0")).join("");
+}
+async function internalAuthorized(req:Request){
+  const key=req.headers.get("x-hercules-internal-key")||"";
+  if(!key) return false;
+  const digest=await sha256(key);
+  const {data,error}=await admin.from("hercules_internal_service_keys")
+    .select("key_sha256,enabled").eq("purpose","browser-gateway").eq("enabled",true).maybeSingle();
+  return !error && Boolean(data?.key_sha256) && data.key_sha256===digest;
+}
+async function worker(){
+  const {data,error}=await admin.from("hercules_browser_workers").select("*")
+    .eq("name","primary").eq("enabled",true).maybeSingle();
+  if(error||!data) throw new Error("browser_worker_unavailable");
+  const {data:secret,error:se}=await admin.rpc("hercules_get_secret",{p_id:data.token_secret_ref});
+  if(se||!secret) throw new Error("browser_worker_credential_unavailable");
+  return {...data,token:String(secret)};
+}
+function decodeBase64(value:string){
+  const raw=atob(value); const bytes=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) bytes[i]=raw.charCodeAt(i);
+  return bytes;
+}
+
+function warmupUrls(w:any){
+  const raw=Array.isArray(w?.metadata?.warmup_urls)?w.metadata.warmup_urls:[];
+  const urls:string[]=[];
+  for(const value of raw.slice(0,4)){
+    try{
+      const safe=safeUrl(String(value||""));
+      if(!urls.includes(safe))urls.push(safe);
+    }catch{}
+  }
+  return urls;
+}
+async function warmWorkers(urls:string[]){
+  if(!urls.length)return {attempted:0,responded:0};
+  const settled=await Promise.allSettled(urls.map(async url=>{
+    const r=await fetch(url,{method:"GET",redirect:"manual",signal:AbortSignal.timeout(45000)});
+    await r.body?.cancel().catch(()=>{});
+    return r.status;
+  }));
+  return {
+    attempted:urls.length,
+    responded:settled.filter(x=>x.status==="fulfilled").length
+  };
+}
+async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
+  const run=async()=>{
+    const r=await fetch(endpoint,{
+      method:"POST",
+      headers:{"content-type":"application/json","authorization":"Bearer "+w.token},
+      body:JSON.stringify(payload),
+      signal:AbortSignal.timeout(timeoutMs+15000)
+    });
+    const text=await r.text();
+    let result:any;
+    try{result=JSON.parse(text)}catch{result={raw:text.slice(0,2000)}}
+    if(!r.ok)throw new Error("worker_http_"+r.status+":"+String(result?.error||text).slice(0,1200));
+    return result;
+  };
+
+  const urls=warmupUrls(w);
+  const warm=await warmWorkers(urls);
+  try{
+    return {result:await run(),attempts:1,warm};
+  }catch(first){
+    if(!urls.length)throw first;
+    const warmRetry=await warmWorkers(urls);
+    return {result:await run(),attempts:2,warm:{attempted:warm.attempted+warmRetry.attempted,responded:warm.responded+warmRetry.responded}};
+  }
+}
+
+Deno.serve(async(req:Request)=>{
+  if(req.method==="GET") return out({
+    ok:true,service:"hercules-browser",version:"1.2.0",
+    actions:Array.from(ACTIONS),rawCodeExecution:false,
+    sessionReuse:true,controlPlane:"Hercules"
+  });
+  if(req.method!=="POST") return out({error:"method_not_allowed"},405);
+
+  const user=await actor(req);
+  const internalOk=user?false:await internalAuthorized(req);
+  if(!user&&!internalOk) return out({error:"unauthorized"},401);
+
+  const body=await req.json().catch(()=>({}));
+  const action=String(body?.action||"navigate");
+  if(!ACTIONS.has(action)) return out({error:"unsupported_action"},400);
+
+  let targetUrl:string|null=null;
+  if(action!=="close_session"){
+    if(body?.url){
+      try{targetUrl=safeUrl(body.url)}catch(e){return out({error:e instanceof Error?e.message:"invalid_target_url"},400)}
+    } else if(!body?.sessionId) {
+      return out({error:"target_url_or_session_id_required"},400);
+    }
+  } else if(!body?.sessionId) return out({error:"session_id_required"},400);
+
+  const w=await worker().catch(()=>null);
+  if(!w) return out({error:"browser_worker_unavailable"},503);
+  const maxSteps=clamp(w.max_steps,1,50,25);
+  const timeoutMs=clamp(body?.timeoutMs,1000,Math.min(Number(w.max_duration_ms||60000),60000),30000);
+  const maxTextChars=clamp(body?.maxTextChars,1000,100000,30000);
+  let steps:any[]=[]; let selectors:string[]=[];
+  try{steps=normalizeSteps(body?.steps,maxSteps);selectors=normalizeSelectors(body?.selectors)}
+  catch(e){return out({error:e instanceof Error?e.message:"invalid_request"},400)}
+
+  const traceId=crypto.randomUUID();
+  const allowedDomains=targetUrl?[new URL(targetUrl).hostname.toLowerCase()]:[];
+  const {data:run}=await admin.from("hercules_browser_runs").insert({
+    trace_id:traceId,requested_by:user?.id||null,mode:"safe",status:"running",
+    target_url:targetUrl,allowed_domains:allowedDomains,
+    request:{action,stepCount:steps.length,selectorCount:selectors.length,timeoutMs,maxTextChars,
+      sessionId:body?.sessionId||null,persistSession:body?.persistSession===true},
+    attempt_count:1,started_at:new Date().toISOString()
+  }).select("id").maybeSingle();
+
+  try{
+    const endpoint=new URL(w.base_url);
+    endpoint.pathname="/v1/run";
+    const payload:any={
+      action,url:targetUrl||undefined,timeoutMs,maxTextChars,steps,selectors,
+      fullPage:body?.fullPage!==false,
+      persistSession:body?.persistSession===true,
+      sessionId:body?.sessionId||undefined
+    };
+    const workerCall=await callWorker(endpoint,w,payload,timeoutMs);
+    const result=workerCall.result;
+    if(run?.id && workerCall.attempts!==1) await admin.from("hercules_browser_runs").update({
+      attempt_count:workerCall.attempts,
+      updated_at:new Date().toISOString()
+    }).eq("id",run.id);
+
+    const summary={
+      attempts:workerCall.attempts,
+      warmup:workerCall.warm,
+      engine:w.metadata?.engine||"unknown",
+      action,
+      title:result?.page?.title||null,
+      url:result?.page?.url||targetUrl,
+      textChars:String(result?.page?.text||"").length,
+      linkCount:Array.isArray(result?.page?.links)?result.page.links.length:0,
+      stepCount:Array.isArray(result?.steps)?result.steps.length:0,
+      sessionId:result?.sessionId||null,
+      bytes:result?.bytes||null
+    };
+    if(run?.id) await admin.from("hercules_browser_runs").update({
+      status:"succeeded",result:{summary},completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }).eq("id",run.id);
+
+    if(action==="screenshot"&&typeof result?.base64==="string"){
+      const bytes=decodeBase64(result.base64);
+      return new Response(bytes,{status:200,headers:{
+        "content-type":"image/png","cache-control":"no-store","x-hercules-trace-id":traceId
+      }});
+    }
+    return out({ok:true,traceId,action,result});
+  }catch(e){
+    const message=e instanceof Error?e.message.slice(0,2000):"browser_run_failed";
+    if(run?.id) await admin.from("hercules_browser_runs").update({
+      status:"failed",error:message,completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+    }).eq("id",run.id);
+    return out({ok:false,traceId,error:"browser_run_failed",detail:message},502);
+  }
+});
