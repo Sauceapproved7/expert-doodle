@@ -130,7 +130,7 @@ $('stripesave').onclick=async()=>{
   const key=$('stripekey').value.trim();
   if(!key){$('stripeout').textContent='Stripe: secret key required';return}
   try{
-    const d=await call('hercules-provider-connect',{action:'configure_stripe',secret_key:key,stripe_secret_key:key});
+    const d=await call('hercules-provider-connect',{action:'configure_stripe',secret_key:key});
     $('stripekey').value='';
     $('stripeout').textContent=fmt(d);
     await stripeStatus();
