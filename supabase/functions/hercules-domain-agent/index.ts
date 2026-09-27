@@ -142,7 +142,8 @@ function discovery(){
     },
     capabilities:{
       providerGrantReuse:true,
-      automaticRefresh:true,
+      automaticRefresh:false,
+      refreshMetadata:true,
       tenantIsolation:true,
       ownerBoundaryDetection:true,
       credentialIsolation:true,
@@ -182,6 +183,38 @@ async function decisionHash(value:unknown){
   return sha256(JSON.stringify(value));
 }
 
+
+async function recordAudit(args:{
+  organizationId:string;
+  requestId:string;
+  principalType:'owner-admin'|'hercules-internal';
+  action:'task_preflight'|'grant_status';
+  provider?:string|null;
+  accountKey?:string|null;
+  disposition:string;
+  decisionSha256:string;
+  authorizationEvidenceSha256?:string|null;
+  requiredCapabilities?:string[];
+  missingCapabilities?:string[];
+  reasonCodes?:string[];
+}){
+  const {error}=await admin.schema('private').from('hercules_domain_agent_audit').insert({
+    organization_id:args.organizationId,
+    request_id:args.requestId,
+    principal_type:args.principalType,
+    action:args.action,
+    provider:args.provider??null,
+    account_key:args.accountKey??null,
+    disposition:args.disposition,
+    decision_sha256:args.decisionSha256,
+    authorization_evidence_sha256:args.authorizationEvidenceSha256??null,
+    required_capabilities:args.requiredCapabilities??[],
+    missing_capabilities:args.missingCapabilities??[],
+    reason_codes:args.reasonCodes??[]
+  });
+  if(error)throw new Error('authorization_audit_failed:'+error.message);
+}
+
 Deno.serve(async(req:Request)=>{
   try{
     const url=new URL(req.url);
@@ -213,6 +246,8 @@ Deno.serve(async(req:Request)=>{
     }
 
     const principal=await resolveOrganization(req,body);
+    const requestId=String(body.request_id||crypto.randomUUID()).trim().slice(0,128);
+    const principalType=principal.internal?'hercules-internal':'owner-admin';
 
     if(action==='task_preflight' && body.owner_boundary!=null){
       const boundary=String(body.owner_boundary);
@@ -224,23 +259,55 @@ Deno.serve(async(req:Request)=>{
         disposition:'OWNER_ACTION_REQUIRED',
         status:'owner_action_required',
         organization_id:principal.organizationId,
+        request_id:requestId,
         owner_boundary:boundary,
         execution_eligible:false,
         execution_authority:false,
         reason_codes:['OWNER_ONLY_BOUNDARY']
       };
-      return out({...response,decision_sha256:await decisionHash(response)},409);
+      const decisionSha256=await decisionHash(response);
+      await recordAudit({
+        organizationId:principal.organizationId,
+        requestId,
+        principalType,
+        action:'task_preflight',
+        provider:body.provider==null?null:String(body.provider).trim().toLowerCase(),
+        accountKey:body.account_key==null?null:String(body.account_key).trim(),
+        disposition:'OWNER_ACTION_REQUIRED',
+        decisionSha256,
+        requiredCapabilities:strings(body.required_capabilities,'required_capabilities'),
+        missingCapabilities:[],
+        reasonCodes:['OWNER_ONLY_BOUNDARY']
+      });
+      return out({...response,decision_sha256:decisionSha256},409);
     }
 
     const grant=await resolveGrant(principal.organizationId,body);
 
     if(action==='grant_status'){
-      return out({
+      const response={
         ok:true,
         service:'hercules-domain-agent',
         organization_id:principal.organizationId,
+        request_id:requestId,
         grant
+      };
+      const decisionSha256=await decisionHash(response);
+      await recordAudit({
+        organizationId:principal.organizationId,
+        requestId,
+        principalType,
+        action:'grant_status',
+        provider:grant?.provider??null,
+        accountKey:grant?.account_key??null,
+        disposition:String(grant?.status||'unresolved'),
+        decisionSha256,
+        authorizationEvidenceSha256:grant?.authorization_evidence_sha256??null,
+        requiredCapabilities:grant?.required_capabilities??[],
+        missingCapabilities:grant?.missing_capabilities??[],
+        reasonCodes:grant?.reason_codes??['AUTHORIZATION_UNRESOLVED']
       });
+      return out({...response,decision_sha256:decisionSha256});
     }
 
     const eligible=Boolean(grant?.execution_eligible);
@@ -252,6 +319,7 @@ Deno.serve(async(req:Request)=>{
       disposition,
       status,
       organization_id:principal.organizationId,
+      request_id:requestId,
       provider:grant?.provider??null,
       account_key:grant?.account_key??null,
       connection_ref:grant?.connection_ref??null,
@@ -267,8 +335,23 @@ Deno.serve(async(req:Request)=>{
       carries_credentials:false,
       reason_codes:grant?.reason_codes??['AUTHORIZATION_UNRESOLVED']
     };
+    const decisionSha256=await decisionHash(response);
+    await recordAudit({
+      organizationId:principal.organizationId,
+      requestId,
+      principalType,
+      action:'task_preflight',
+      provider:grant?.provider??null,
+      accountKey:grant?.account_key??null,
+      disposition,
+      decisionSha256,
+      authorizationEvidenceSha256:grant?.authorization_evidence_sha256??null,
+      requiredCapabilities:grant?.required_capabilities??[],
+      missingCapabilities:grant?.missing_capabilities??[],
+      reasonCodes:grant?.reason_codes??['AUTHORIZATION_UNRESOLVED']
+    });
     return out(
-      {...response,decision_sha256:await decisionHash(response)},
+      {...response,decision_sha256:decisionSha256},
       eligible?200:ownerRequired?409:403
     );
   }catch(error){
