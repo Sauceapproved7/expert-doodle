@@ -46,11 +46,11 @@ as $$
     where singleton=true
   ),
   latest_run as (
-    select trace_id, status, error, created_at, completed_at, summary
+    select trace_id, status, error, started_at, completed_at, summary
     from public.hercules_spaceship_dns_runs
     where action='reconcile_shopify_dns'
       and domain='sauceapproved.com'
-    order by created_at desc
+    order by started_at desc
     limit 1
   ),
   domain_row as (
@@ -58,7 +58,7 @@ as $$
     from public.hercules_domains
     where domain_name='sauceapproved.com'
       and status <> 'removed'
-    order by created_at desc
+    order by started_at desc
     limit 1
   )
   select jsonb_build_object(
@@ -158,8 +158,8 @@ begin
     from public.hercules_spaceship_dns_runs
    where action='reconcile_shopify_dns'
      and domain='sauceapproved.com'
-     and created_at >= coalesce(v_configured_at, v_now - interval '7 days')
-   order by created_at desc
+     and started_at >= coalesce(v_configured_at, v_now - interval '7 days')
+   order by started_at desc
    limit 1;
 
   if found then
@@ -179,7 +179,7 @@ begin
         v_state.stage := 'dns_propagation';
         v_state.dns_probe_ids := null;
       end if;
-    elsif v_run.status='running' and v_run.created_at > v_now - interval '10 minutes' then
+    elsif v_run.status='running' and v_run.started_at > v_now - interval '10 minutes' then
       update public.hercules_domain_launch_autopilot
       set stage='dns_reconcile',
           last_error=null,
@@ -216,7 +216,7 @@ begin
     end if;
   end if;
 
-  if not found or (v_run.status='running' and v_run.created_at <= v_now - interval '10 minutes') then
+  if not found or (v_run.status='running' and v_run.started_at <= v_now - interval '10 minutes') then
     v_submit_id := public.hercules_spaceship_dns_submit('reconcile', true);
 
     update public.hercules_domain_launch_autopilot
