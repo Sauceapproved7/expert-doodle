@@ -1,0 +1,25 @@
+name: Hercules Storefront Smoke Readiness Sync
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*hercules_storefront_smoke_readiness_sync*"
+      - "tests/hercules-storefront-smoke-readiness-sync.test.mjs"
+      - "docs/HERCULES-STOREFRONT-SMOKE-READINESS-SYNC-V1.md"
+      - ".github/workflows/hercules-storefront-smoke-readiness-sync.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storefront-smoke-readiness-sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify storefront smoke readiness sync
+        run: node --test tests/hercules-storefront-smoke-readiness-sync.test.mjs
