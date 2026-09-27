@@ -2,6 +2,10 @@ const API="https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-privat
 const ALLOWED_ACTIONS=new Set(["observe","click","type","navigate","close"]);
 let polling=false;
 
+function safeUrl(value){
+  try{const u=new URL(String(value||""));return u.origin+u.pathname}catch{return ""}
+}
+
 async function post(body,sessionToken=""){
   const headers={"content-type":"application/json"};
   if(sessionToken)headers["x-hercules-personal-session"]=sessionToken;
@@ -16,6 +20,7 @@ async function saveState(v){await chrome.storage.local.set(v)}
 async function clearState(){await chrome.storage.local.remove(["herculesSessionToken","herculesSessionId","approvedOrigin","tabId"])}
 
 function domAction(command){
+  const safePageUrl=(value)=>{try{const u=new URL(String(value||""),location.href);return u.origin+u.pathname}catch{return ""}};
   const {action,payload={}}=command;
   const sensitive=(el)=>{
     if(!el)return false;
@@ -36,7 +41,7 @@ function domAction(command){
   const safeObservation=()=>{
     const challenge=[...document.querySelectorAll("iframe,form,div,button")].find(humanChallenge);
     if(challenge)return {ok:false,error:"human_verification_required"};
-    const links=[...document.querySelectorAll("a[href]")].slice(0,80).map(a=>({text:redactText((a.innerText||"").trim()).slice(0,180),href:a.href}));
+    const links=[...document.querySelectorAll("a[href]")].slice(0,80).map(a=>({text:redactText((a.innerText||"").trim()).slice(0,180),href:safePageUrl(a.href)}));
     const buttons=[...document.querySelectorAll("button,[role=button],input[type=submit]")].slice(0,80).map((b,i)=>({index:i,text:redactText((b.innerText||b.getAttribute("aria-label")||b.value||"").trim()).slice(0,180)}));
     const fields=[...document.querySelectorAll("input,textarea,select")].slice(0,80).map((el,i)=>({
       index:i,
@@ -46,7 +51,7 @@ function domAction(command){
       placeholder:redactText(String(el.placeholder||"")).slice(0,160),
       sensitive:sensitive(el)
     }));
-    return {ok:true,url:location.href,title:redactText(document.title),text:redactText((document.body?.innerText||"").slice(0,16000)),links,buttons,fields};
+    return {ok:true,url:safePageUrl(location.href),title:redactText(document.title),text:redactText((document.body?.innerText||"").slice(0,16000)),links,buttons,fields};
   };
 
   if(action==="observe")return safeObservation();
@@ -84,7 +89,7 @@ async function executeCommand(tabId,approvedOrigin,command){
     const target=new URL(String(command.payload?.url||""),tab.url);
     if(target.protocol!=="https:"||target.origin!==approvedOrigin)return {ok:false,error:"navigation_outside_approved_origin"};
     await chrome.tabs.update(tabId,{url:target.href});
-    return {ok:true,url:target.href};
+    return {ok:true,url:safeUrl(target.href)};
   }
   if(command.action==="close"){
     await chrome.tabs.remove(tabId);
@@ -121,7 +126,7 @@ chrome.runtime.onMessage.addListener((msg,_sender,sendResponse)=>{
       const permitted=await chrome.permissions.contains({origins:[msg.origin+"/*"]});
       if(!permitted)return {ok:false,error:"site_permission_required"};
       const d=await post({
-        action:"connect",
+        action:"personal_browser_connect",
         pair_token:String(msg.pairToken||""),
         approved_origin:String(msg.origin||""),
         approved_tab_title:String(msg.title||"").slice(0,240),
