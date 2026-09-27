@@ -17,6 +17,8 @@ test("Spaceship MCP OAuth uses official discovery and dynamic registration",()=>
   assert.match(mcp,/const TOKEN_ENDPOINT="https:\/\/id\.service\.spaceship\.com\/connect\/token"/);
   assert.match(mcp,/const REGISTRATION_ENDPOINT="https:\/\/mcp\.spaceship\.com\/register"/);
   assert.match(mcp,/spaceship_oauth_metadata_endpoint_mismatch/);
+  assert.doesNotMatch(mcp,/fetch\(url,/);
+  assert.doesNotMatch(mcp,/fetch\(endpoint,/);
   assert.match(mcp,/code_challenge_method.*S256/);
   assert.match(mcp,/openid offline_access mcp\.spaceship\.com/);
 });
