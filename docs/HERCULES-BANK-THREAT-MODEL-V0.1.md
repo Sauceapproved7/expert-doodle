@@ -33,6 +33,9 @@ No real-money custody or regulated payment rail is in scope for v0.1.
 | Unauthorized sandbox minting | Funding endpoint requires an approved administrator role |
 | Oversized or malformed API bodies | Bounded JSON body reader fails closed |
 | Invalid/expired access token | Hercules Base JWT signature, issuer, audience, issued-at, and expiry verification |
+| Bearer token sent over cleartext remote HTTP | First-party client permits HTTP only for loopback endpoints; remote endpoints require HTTPS |
+| Redirect-based credential forwarding | First-party client disables redirects |
+| Hung upstream/service request | First-party client applies a bounded request timeout |
 
 ## Authentication boundary
 
@@ -91,3 +94,16 @@ Current controls:
 
 Production use still requires deployment controls such as TLS, rate limiting, secret
 rotation, environment isolation, durable audit retention, and regulated-provider review.
+
+
+## Service deployment boundary
+
+v0.4 adds a first-party launcher and client SDK. The launcher binds to loopback by
+default and requires the Base JWT signing secret before listening. The client requests
+a fresh bearer token from its configured token provider for each operation and does not
+write that token to Hercules Bank state.
+
+Binding the service to a non-loopback interface is an explicit deployment choice and
+does not make the service internet-safe by itself. Production exposure still requires
+TLS termination, network policy, rate limiting, secret rotation, monitoring, and the
+regulated controls listed above.
