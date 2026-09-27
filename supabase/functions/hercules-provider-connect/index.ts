@@ -270,6 +270,7 @@ async function observeShopifyLaunch(admin:any,organizationId?:string){
         publishedAt
         onlineStoreUrl
         variantsCount{count}
+        variants(first:100){nodes{id availableForSale inventoryPolicy}}
         mediaCount{count}
         resourcePublicationsV2(first:20,onlyPublished:true){
           nodes{
@@ -310,6 +311,9 @@ async function observeShopifyLaunch(admin:any,organizationId?:string){
 
   const theme=(data.themes?.nodes||[]).find((item:any)=>String(item.role)==='MAIN')||null;
   const product=data.product||null;
+  const variantNodes=Array.isArray(product?.variants?.nodes)?product.variants.nodes:[];
+  const sellableVariantsCount=variantNodes.filter((variant:any)=>Boolean(variant?.availableForSale)).length;
+  const continueSellingVariantsCount=variantNodes.filter((variant:any)=>String(variant?.inventoryPolicy||'')==='CONTINUE').length;
   const publicationTitles=(product?.resourcePublicationsV2?.nodes||[])
     .filter((item:any)=>Boolean(item.isPublished))
     .map((item:any)=>String(item?.publication?.catalog?.title||'').toLowerCase());
@@ -356,6 +360,8 @@ async function observeShopifyLaunch(admin:any,organizationId?:string){
       status:String(product?.status||''),
       vendor:String(product?.vendor||''),
       variantsCount:Number(product?.variantsCount?.count||0),
+      sellableVariantsCount,
+      continueSellingVariantsCount,
       mediaCount:Number(product?.mediaCount?.count||0),
       publishedAt:product?.publishedAt||null,
       onlineStoreUrl:product?.onlineStoreUrl||null
