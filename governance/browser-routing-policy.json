@@ -41,6 +41,16 @@
       "explicit-owner-session-connection",
       "provider-accepted-authenticated-session",
       "preserve-provider-security-controls"
+    ],
+    "implementation": "hercules-personal-browser-bridge",
+    "pairing": "explicit-short-lived-owner-pairing",
+    "siteScope": "explicit-approved-origin-only",
+    "commandAllowlist": [
+      "observe",
+      "click",
+      "type",
+      "navigate",
+      "close"
     ]
   },
   "capacityPolicy": {
