@@ -87,8 +87,9 @@ function transientWorkerFailure(error:unknown){
     || /failed to connect to backend/i.test(message)
     || /service unavailable/i.test(message)
     || /bad gateway/i.test(message)
+    || /too many requests/i.test(message)
     || /websocket was closed before the connection was established/i.test(message)
-    || /ws unexpected response[^\n]*(?:502|503|504)/i.test(message);
+    || /ws unexpected response[^\n]*(?:429|502|503|504)/i.test(message);
 }
 function delay(ms:number){
   return new Promise<void>(resolve=>setTimeout(resolve,ms));
@@ -102,6 +103,28 @@ function withWorkerTelemetry(error:unknown,attempts:number,warm:any){
 function workerErrorAttempts(error:unknown){
   const n=Number((error as any)?.workerAttempts||1);
   return Number.isFinite(n)?Math.max(1,Math.trunc(n)):1;
+}
+
+async function acquireWorkerLease(workerName:string,traceId:string,waitBudgetMs=25000){
+  const started=Date.now();
+  while(Date.now()-started<waitBudgetMs){
+    const {data,error}=await admin.rpc("hercules_browser_worker_lease_acquire",{
+      p_worker_name:workerName,
+      p_trace_id:traceId,
+      p_ttl_seconds:75
+    });
+    if(error) throw new Error("browser_capacity_lease_failed");
+    if(data) return String(data);
+    await delay(350);
+  }
+  throw new Error("browser_capacity_busy");
+}
+async function releaseWorkerLease(leaseId:string|null,traceId:string){
+  if(!leaseId)return;
+  await admin.rpc("hercules_browser_worker_lease_release",{
+    p_lease_id:leaseId,
+    p_trace_id:traceId
+  }).catch(()=>null);
 }
 
 function detectSecurityChallenge(page:any){
@@ -199,7 +222,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.4.0",
+    ok:true,service:"hercules-browser",version:"1.5.0",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,securityChallengeDetection:true,antiBotBypass:false,controlPlane:"Hercules"
   });
@@ -237,13 +260,16 @@ Deno.serve(async(req:Request)=>{
     trace_id:traceId,requested_by:user?.id||null,mode:"safe",status:"running",
     target_url:targetUrl,allowed_domains:allowedDomains,
     request:{action,stepCount:steps.length,selectorCount:selectors.length,timeoutMs,maxTextChars,
+      source:typeof body?.source==="string"?body.source.slice(0,120):null,
       sessionId:body?.sessionId||null,persistSession:body?.persistSession===true},
     attempt_count:1,started_at:new Date().toISOString()
   }).select("id").maybeSingle();
 
   let workerAttemptsObserved=0;
+  let workerLeaseId:string|null=null;
 
   try{
+    workerLeaseId=await acquireWorkerLease(String(w.name||"primary"),traceId);
     const endpoint=new URL(w.base_url);
     endpoint.pathname="/v1/run";
     const payload:any={
@@ -330,6 +356,13 @@ Deno.serve(async(req:Request)=>{
       completed_at:new Date().toISOString(),
       updated_at:new Date().toISOString()
     }).eq("id",run.id);
-    return out({ok:false,traceId,error:"browser_run_failed",detail:message},502);
+    return out({
+      ok:false,
+      traceId,
+      error:message==="browser_capacity_busy"?"browser_capacity_busy":"browser_run_failed",
+      detail:message
+    },message==="browser_capacity_busy"?503:502);
+  }finally{
+    await releaseWorkerLease(workerLeaseId,traceId);
   }
 });
