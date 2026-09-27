@@ -6,7 +6,7 @@ import {HerculesBaseAuthClient} from "../hercules-bank/base-auth-client.mjs";
 test("Base Auth client signs in with bounded server-side POST requests", async () => {
   let received;
   const client=new HerculesBaseAuthClient({
-    baseUrl:"http://base.internal:8787",
+    baseUrl:"https://base.internal:8787",
     timeoutMs:1000,
     fetchImpl:async (url,options)=>{
       received={url:String(url),options};
@@ -23,7 +23,7 @@ test("Base Auth client signs in with bounded server-side POST requests", async (
     password:"correct horse battery staple",
   });
 
-  assert.equal(received.url,"http://base.internal:8787/v1/auth/signin");
+  assert.equal(received.url,"https://base.internal:8787/v1/auth/signin");
   assert.equal(received.options.method,"POST");
   assert.equal(received.options.redirect,"error");
   assert.equal(received.url.includes("alice"),false);
@@ -38,7 +38,7 @@ test("Base Auth client signs in with bounded server-side POST requests", async (
 test("Base Auth client refreshes and revokes without leaking tokens into URLs", async () => {
   const calls=[];
   const client=new HerculesBaseAuthClient({
-    baseUrl:"http://base.internal:8787/",
+    baseUrl:"https://base.internal:8787/",
     fetchImpl:async (url,options)=>{
       calls.push({url:String(url),options});
       if(String(url).endsWith("/refresh")){
@@ -56,14 +56,14 @@ test("Base Auth client refreshes and revokes without leaking tokens into URLs", 
   await client.logout({refresh_token:"next-refresh"});
 
   assert.equal(refreshed.refresh_token,"next-refresh");
-  assert.equal(calls[0].url,"http://base.internal:8787/v1/auth/refresh");
-  assert.equal(calls[1].url,"http://base.internal:8787/v1/auth/logout");
+  assert.equal(calls[0].url,"https://base.internal:8787/v1/auth/refresh");
+  assert.equal(calls[1].url,"https://base.internal:8787/v1/auth/logout");
   assert.equal(calls.every((call)=>!call.url.includes("refresh-secret")&&!call.url.includes("next-refresh")),true);
 });
 
 test("Base Auth client fails closed on non-success responses", async () => {
   const client=new HerculesBaseAuthClient({
-    baseUrl:"http://base.internal:8787",
+    baseUrl:"https://base.internal:8787",
     fetchImpl:async ()=>new Response(JSON.stringify({error:"invalid_credentials"}),{status:401}),
   });
 
