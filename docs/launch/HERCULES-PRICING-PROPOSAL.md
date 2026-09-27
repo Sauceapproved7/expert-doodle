@@ -1,7 +1,7 @@
 # Hercules Revenue Recovery — Canonical Launch Pricing
 
 **Status:** PRODUCTION-CATALOG ALIGNED — OWNER APPROVAL PENDING  
-**Entity:** SauceApproved Enterprise LLC
+**Entity:** SauceApproved enterprise LLC
 
 This document now matches the active Hercules production plan catalog. It does not activate Stripe billing or substitute for the authenticated owner approval required by the launch gate.
 
