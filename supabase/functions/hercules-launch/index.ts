@@ -3,6 +3,39 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 const U = Deno.env.get("SUPABASE_URL") || "https://xbwuablxhhwsaoomsoco.supabase.co";
 const P = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
 const K = P.default || Deno.env.get("SUPABASE_ANON_KEY") || "";
+const S = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}").default || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+async function authenticatedUser(req:Request){
+  const auth=req.headers.get("authorization")||"";
+  if(!auth.startsWith("Bearer ")||!K)return null;
+  try{
+    const response=await fetch(U+"/auth/v1/user",{
+      headers:{apikey:K,authorization:auth},
+      signal:AbortSignal.timeout(10000)
+    });
+    if(!response.ok)return null;
+    const user=await response.json();
+    return typeof user?.id==="string"?user:null;
+  }catch{return null}
+}
+
+async function serviceRpc(name:string,body:Record<string,unknown>){
+  if(!S)throw new Error("service_role_unavailable");
+  const response=await fetch(U+"/rest/v1/rpc/"+name,{
+    method:"POST",
+    headers:{apikey:S,authorization:"Bearer "+S,"content-type":"application/json"},
+    body:JSON.stringify(body),
+    signal:AbortSignal.timeout(15000)
+  });
+  const text=await response.text();
+  let payload:any=null;
+  try{payload=text?JSON.parse(text):null}catch{payload=text}
+  if(!response.ok){
+    const detail=String(payload?.message||payload?.error||payload||"bootstrap_failed").slice(0,500);
+    throw new Error(detail);
+  }
+  return payload;
+}
 
 const html = String.raw`<!doctype html>
 <html lang="en">
@@ -192,14 +225,16 @@ async function ensureOrg(){
   }
   if(!user?.id)throw new Error("Authenticated user required.");
   const slug="hercules-"+user.id.replaceAll("-","").slice(0,12);
-  const created=await sb.rpc("hercules_bootstrap_organization",{org_name:"My Hercules",org_slug:slug});
-  if(created.error){
+  let created=null;
+  try{
+    created=await fetchFn("hercules-launch",{method:"POST",body:JSON.stringify({action:"bootstrap_organization",org_name:"My Hercules",org_slug:slug})});
+  }catch(error){
     const retry=await fetchFn("hercules-status-controller/v1/me/organizations",{method:"GET"});
     const ro=(retry.organizations||[])[0];
     if(ro){orgId=ro.organization_id||ro.id||ro.hercules_organizations?.id;orgSlug=ro.hercules_organizations?.slug||slug;return orgId}
-    throw created.error;
+    throw error;
   }
-  orgId=created.data;
+  orgId=created.organization_id;
   orgSlug=slug;
   return orgId;
 }
@@ -218,11 +253,40 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 </body>
 </html>`.replaceAll("__URL__",U).replaceAll("__KEY__",K);
 
-Deno.serve((req:Request)=>{
+Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.2.0",product:"Hercules",presentation:"launch-surface",registration:"manual-release-gated",owned_runtime:true,backend_rebuild:false});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.3.0",product:"Hercules",presentation:"launch-surface",registration:"manual-release-gated",owned_runtime:true,backend_rebuild:false});
   }
+
+  if(req.method==="POST"){
+    const user=await authenticatedUser(req);
+    if(!user)return Response.json({error:"authenticated_user_required"},{status:401,headers:{"cache-control":"no-store"}});
+    const body=await req.json().catch(()=>({}));
+    if(String(body?.action||"")!=="bootstrap_organization"){
+      return Response.json({error:"unsupported_action"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    const orgName=String(body?.org_name||"").trim();
+    const orgSlug=String(body?.org_slug||"").trim();
+    if(!orgName||orgName.length>120||!/^\w/.test(orgName)){
+      return Response.json({error:"valid_organization_name_required"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    if(!/^[a-z0-9][a-z0-9-]{1,62}$/.test(orgSlug)){
+      return Response.json({error:"valid_organization_slug_required"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    try{
+      const organizationId=await serviceRpc("hercules_bootstrap_organization_internal",{
+        p_user_id:user.id,
+        org_name:orgName,
+        org_slug:orgSlug
+      });
+      return Response.json({ok:true,organization_id:organizationId},{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+    }catch(error){
+      return Response.json({error:"organization_bootstrap_failed",detail:error instanceof Error?error.message:"unknown"},{status:409,headers:{"cache-control":"no-store"}});
+    }
+  }
+
+  if(req.method!=="GET")return Response.json({error:"method_not_allowed"},{status:405});
   return new Response(html,{headers:{
     "content-type":"text/html; charset=utf-8",
     "cache-control":"no-store",
