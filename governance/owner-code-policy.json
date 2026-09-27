@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 8,
+  "version": 9,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -67,6 +67,10 @@
     {
       "path": "hercules-authority",
       "role": "scoped-authority-evidence-runtime"
+    },
+    {
+      "path": "hercules-bank",
+      "role": "financial-ledger-runtime"
     }
   ],
   "allowedModuleSpecifierPrefixes": [

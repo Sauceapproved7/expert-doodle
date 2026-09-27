@@ -1,0 +1,35 @@
+name: Hercules Bank Core
+
+on:
+  pull_request:
+    paths:
+      - "hercules-bank/**"
+      - "tests/hercules-bank-*.test.mjs"
+      - "governance/owner-code-policy.json"
+      - "docs/HERCULES-BANK-THREAT-MODEL-V0.1.md"
+      - ".github/workflows/hercules-bank.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "hercules-bank/**"
+      - "tests/hercules-bank-*.test.mjs"
+      - "governance/owner-code-policy.json"
+      - "docs/HERCULES-BANK-THREAT-MODEL-V0.1.md"
+      - ".github/workflows/hercules-bank.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  bank-core:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Enforce security baseline
+        run: node scripts/security-baseline.mjs
+      - name: Run Hercules Bank core tests
+        run: node --test tests/hercules-bank-*.test.mjs

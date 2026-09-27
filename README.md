@@ -13,6 +13,7 @@ Canonical source: `Sauceapproved7/expert-doodle`.
 - `hercules-training/` — training, evaluation, checkpoint and activation pipeline.
 - `hercules-video/` — video planning, rendering, quality and execution coordination.
 - `hercules-hurc/` — HURC token, Base Sepolia browser/RPC/signing components.
+- `hercules-bank/` — sandbox financial core: double-entry ledger, customer accounts, internal transfers and statements; external money rails remain disabled.
 - `staging-plane/` — isolated synthetic PostgreSQL/PostgREST/Forge staging.
 - `observability/` — sampled SLO policy.
 - `scripts/` — validation, benchmarking, security and operator tooling.
@@ -31,6 +32,7 @@ node --test tests/hercules-forge*.test.mjs
 node --test tests/hercules-hurc-*.test.mjs
 node --test tests/hercules-chat*.test.mjs
 node --test tests/hercules-base*.test.mjs
+node --test tests/hercules-bank-*.test.mjs
 ```
 
 Docker-capable staging:
