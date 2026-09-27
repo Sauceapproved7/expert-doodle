@@ -25,7 +25,8 @@ test("founding pilot is narrow, executable, and tied to live capabilities",()=>{
 
 test("offer preserves commercial and safety boundaries",()=>{
   assert.equal(offer.pricing.status,"owner_approval_required");
-  assert.equal(offer.pricing.postPilotProposal.monthlyUsd,99);
+  assert.equal(offer.pricing.postPilotProposal.monthlyUsd,49);
+  assert.equal(offer.pricing.postPilotProposal.annualUsd,490);
   assert.equal(offer.pricing.activeBilling,false);
   assert.equal(offer.dataHandling.defaultMode,"synthetic_until_authorized");
   assert.equal(offer.externalActions,"approval_gated");
