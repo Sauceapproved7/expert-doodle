@@ -41,6 +41,20 @@ function normalizeSelectors(input: unknown){
   if(!Array.isArray(input)) return [];
   return input.slice(0,25).map(x=>String(x||"").slice(0,500)).filter(Boolean);
 }
+function detectSecurityVerification(page:any){
+  const title=String(page?.title||"");
+  const text=String(page?.text||"");
+  const url=String(page?.url||"");
+  const haystack=(title+"\n"+text+"\n"+url).toLowerCase();
+  const cloudflare=/just a moment|performing security verification|verify you are not a bot|__cf_chl|cf_chl|challenge-platform/.test(haystack);
+  const captcha=/\bcaptcha\b|hcaptcha|recaptcha/.test(haystack);
+  if(!cloudflare&&!captcha)return {required:false,kind:null,provider:null};
+  return {
+    required:true,
+    kind:captcha?"captcha":"anti_bot_verification",
+    provider:cloudflare?"cloudflare":"unknown"
+  };
+}
 async function actor(req: Request){
   const h=req.headers.get("authorization")||"";
   const token=h.startsWith("Bearer ")?h.slice(7):"";
@@ -132,7 +146,7 @@ async function callWorker(endpoint:URL,w:any,payload:any,timeoutMs:number){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET") return out({
-    ok:true,service:"hercules-browser",version:"1.3.0",
+    ok:true,service:"hercules-browser",version:"1.4.0",
     actions:Array.from(ACTIONS),rawCodeExecution:false,
     sessionReuse:true,controlPlane:"Hercules"
   });
@@ -198,6 +212,7 @@ Deno.serve(async(req:Request)=>{
       sessionRecovered=true;
     }
     const result=workerCall.result;
+    const verification=detectSecurityVerification(result?.page);
     const totalAttempts=workerCall.attempts+sessionRecoveryAttempts;
     if(run?.id && totalAttempts!==1) await admin.from("hercules_browser_runs").update({
       attempt_count:totalAttempts,
@@ -217,11 +232,28 @@ Deno.serve(async(req:Request)=>{
       linkCount:Array.isArray(result?.page?.links)?result.page.links.length:0,
       stepCount:Array.isArray(result?.steps)?result.steps.length:0,
       sessionId:result?.sessionId||null,
-      bytes:result?.bytes||null
+      bytes:result?.bytes||null,
+      verificationRequired:verification.required,
+      verification
     };
     if(run?.id) await admin.from("hercules_browser_runs").update({
-      status:"succeeded",result:{summary},completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
+      status:verification.required?"blocked":"succeeded",
+      error:verification.required?"security_verification_required":null,
+      result:{summary},completed_at:new Date().toISOString(),updated_at:new Date().toISOString()
     }).eq("id",run.id);
+
+    if(verification.required){
+      return out({
+        ok:true,
+        traceId,
+        action,
+        status:"verification_required",
+        error:"security_verification_required",
+        verification,
+        preserveSession:true,
+        result
+      });
+    }
 
     if(action==="screenshot"&&typeof result?.base64==="string"){
       const bytes=decodeBase64(result.base64);
