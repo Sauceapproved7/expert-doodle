@@ -328,7 +328,7 @@ Deno.serve(async req=>{
         'query HerculesShopifyWebhooks{webhookSubscriptions(first:100){nodes{id topic uri}}}'
       )).webhookSubscriptions.nodes||[];
 
-      const topics=['ORDERS_CREATE','ORDERS_PAID','PRODUCTS_UPDATE','REFUNDS_CREATE'];
+      const topics=['ORDERS_CREATE','ORDERS_PAID','PRODUCTS_UPDATE','REFUNDS_CREATE','DOMAINS_CREATE','DOMAINS_UPDATE','DOMAINS_DESTROY'];
       const created:string[]=[];
 
       for(const topic of topics){
