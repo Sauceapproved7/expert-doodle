@@ -1,0 +1,25 @@
+name: Hercules Domain Status Launch Readiness
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-domains/**"
+      - "tests/hercules-domain-status-launch-readiness.test.mjs"
+      - "docs/HERCULES-DOMAIN-STATUS-LAUNCH-READINESS-V1.md"
+      - ".github/workflows/hercules-domain-status-launch-readiness.yml"
+      - "governance/owner-code-policy.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  domain-status-launch-readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Verify production domain status
+        run: node --test tests/hercules-domain-status-launch-readiness.test.mjs tests/hercules-domain-launch-controller-edge.test.mjs
