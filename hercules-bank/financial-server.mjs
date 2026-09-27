@@ -33,6 +33,9 @@ export async function startHerculesFinancialService({
   nowSeconds=()=>Math.floor(Date.now()/1000),
   randomBytes,
   adminRoles,
+  productionReadinessInputs={},
+  qualificationEvidenceStore=null,
+  currentAdapterQualification=null,
 }={}){
   required(statePath,"statePath");
   required(baseAuthUrl,"baseAuthUrl");
@@ -59,6 +62,9 @@ export async function startHerculesFinancialService({
     fetchImpl,
     authTimeoutMs,
     nowSeconds,
+    productionReadinessInputs,
+    qualificationEvidenceStore,
+    currentAdapterQualification,
     ...(randomBytes?{randomBytes}:{}),
     ...(adminRoles?{adminRoles}:{}),
   });

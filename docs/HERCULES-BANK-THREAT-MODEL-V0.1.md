@@ -227,9 +227,26 @@ fail-closed money boundary.
 | Key rotation triggered during qualification | Qualification checks rotation capability metadata but never calls rotateKey |
 | Provider qualification accidentally moves money | Qualification surface contains health/capability probes only and strips any submitTransfer function |
 | Provider lacks a safe test mode | Qualification requires sandboxOrDryRun=true |
-| Qualification mistaken for go-live authority | Results always keep activationAllowed=false and externalRailsEnabled=false |
+| Qualification mistaken for go-live authority | Results always keep activationAllowed=false and externalRailsEnabled=false |\n| Qualification evidence tampering | Canonical hash chain plus detached signature verification fails closed on reopen |\n| Expired qualification treated as current | Bounded TTL automatically marks evidence stale and downgrades production readiness |\n| New KMS key inherits old qualification | Secret-custody key ID participates in the signed identity fingerprint |\n| Provider or database swap inherits old qualification | Current adapter identity is fingerprint-compared to the latest signed record |\n| Browser fabricates qualification status | Evidence store and current adapter qualification are server-side dependencies only |
 
 Qualification functions may call candidate infrastructure health, transaction, backup,
 restore-verification, signing, and capability-probe methods. Those adapters therefore
 remain privileged server-side dependencies and must never be constructed from browser or
 customer input.
+
+
+## Qualification evidence lifecycle boundary
+
+v1.3 persists qualification proof without persisting production credentials or private
+signing keys.
+
+The evidence signer receives only a digest. The durable record stores a key identifier
+and detached signature, and reopen requires an external verifier. A canonical SHA-256
+hash chain also detects record reordering or structural tampering.
+
+Freshness and identity matching are mandatory readiness conditions. Expiration, a changed
+transactional-store identity, a changed key ID, or a changed regulated-provider identity
+automatically returns qualification readiness to blocked.
+
+The browser only receives sanitized status. It cannot sign evidence, select the verifier,
+change the current server-side adapter qualification, or enable external rails.
