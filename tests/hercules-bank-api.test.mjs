@@ -208,3 +208,47 @@ test("external payment rails remain hard-disabled at the API boundary", async ()
     await rm(root, {recursive:true, force:true});
   }
 });
+
+
+test("statement access follows account ownership", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hercules-bank-api-"));
+  try {
+    const runtime = await HerculesBankRuntime.open({statePath:join(root,"bank.json")});
+    const api = createHerculesBankApi({
+      runtime,
+      jwtSecret:JWT_SECRET,
+      issuer:ISSUER,
+      audience:AUDIENCE,
+      nowSeconds:() => 1100,
+    });
+    await new Promise((resolve) => api.listen(0, "127.0.0.1", resolve));
+    const base = "http://127.0.0.1:" + api.address().port;
+
+    const alice = (await request(base, "/v1/accounts", {
+      method:"POST",
+      bearer:token("user-alice"),
+      body:{customerId:"user-bob"},
+    })).payload.account;
+
+    assert.equal(alice.customerId, "user-alice");
+
+    const own = await request(
+      base,
+      "/v1/accounts/" + encodeURIComponent(alice.id) + "/statement",
+      {bearer:token("user-alice")},
+    );
+    assert.equal(own.response.status, 200);
+    assert.equal(own.payload.statement.customerId, "user-alice");
+
+    const hidden = await request(
+      base,
+      "/v1/accounts/" + encodeURIComponent(alice.id) + "/statement",
+      {bearer:token("user-bob")},
+    );
+    assert.equal(hidden.response.status, 404);
+
+    await new Promise((resolve) => api.close(resolve));
+  } finally {
+    await rm(root, {recursive:true, force:true});
+  }
+});
