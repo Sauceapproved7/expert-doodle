@@ -52,3 +52,11 @@ test("public launch preserves owner-bound legal and registration gates",()=>{
   assert.match(launch,/Public account creation is not open yet/);
   assert.match(launch,/not being offered here as .*guaranteed recovery service/i);
 });
+
+
+test("organic proof surface includes Build Receipt 001",()=>{
+  assert.match(launch,/Build Receipt #001/);
+  assert.match(launch,/Three receivables\. Three safe routes\./);
+  assert.match(launch,/id="build-receipt-001"/);
+  assert.match(launch,/Request founding pilot/);
+});
