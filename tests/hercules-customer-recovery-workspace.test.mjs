@@ -28,6 +28,7 @@ test("customer recovery workspace is the primary authenticated journey",()=>{
   assert.match(launch,/action:"dashboard"/);
   assert.match(launch,/action:"leads"/);
   assert.match(launch,/action:"ingest"/);
+  assert.doesNotMatch(launch,/Owner Console<\/a>/);
 });
 
 test("workspace exposes usable empty error and blocked states",()=>{
