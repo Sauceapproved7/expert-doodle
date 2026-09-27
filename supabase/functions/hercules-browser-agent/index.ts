@@ -102,7 +102,7 @@ async function browserCall(request:any){
     method:"POST",
     headers:{"content-type":"application/json","x-hercules-internal-key":key},
     body:JSON.stringify(request),
-    signal:AbortSignal.timeout(Math.min(70000,Number(request?.timeoutMs||30000)+15000))
+    signal:AbortSignal.timeout(Math.min(120000,Number(request?.timeoutMs||30000)+90000))
   });
   const text=await r.text(); let body:any=null;
   try{body=JSON.parse(text)}catch{body={raw:text.slice(0,2000)}}
@@ -149,7 +149,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.4.0",
+    ok:true,service:"hercules-browser-agent",version:"0.5.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,highImpactAutonomy:false
