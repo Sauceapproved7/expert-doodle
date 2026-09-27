@@ -1,0 +1,15 @@
+{
+  "name": "hercules-browser-standalone",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "playwright-core": "1.63.0"
+  }
+}
