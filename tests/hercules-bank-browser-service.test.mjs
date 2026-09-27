@@ -15,7 +15,7 @@ test("browser service composes Base Auth, secure sessions, console, and bank API
   try{
     const runtime=await HerculesBankRuntime.open({statePath:join(root,"bank.json")});
     const fetchImpl=async (url,options)=>{
-      assert.equal(String(url),"http://base.internal:8787/v1/auth/signin");
+      assert.equal(String(url),"https://base.example.test/v1/auth/signin");
       const body=JSON.parse(options.body);
       assert.equal(body.email,"alice@example.test");
       return new Response(JSON.stringify({
@@ -34,7 +34,7 @@ test("browser service composes Base Auth, secure sessions, console, and bank API
 
     const service=createHerculesBankBrowserService({
       runtime,
-      baseAuthUrl:"http://base.internal:8787",
+      baseAuthUrl:"https://base.example.test",
       jwtSecret:SECRET,
       fetchImpl,
       nowSeconds:()=>1100,
@@ -56,7 +56,7 @@ test("browser service composes Base Auth, secure sessions, console, and bank API
       headers:{"content-type":"application/json"},
       body:JSON.stringify({
         email:"alice@example.test",
-        password:"correct horse battery staple",
+        password:"fixture-password-long-enough",
       }),
     });
     assert.equal(login.status,201);
