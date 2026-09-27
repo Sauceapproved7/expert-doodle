@@ -124,6 +124,114 @@ async function exchangeShopifyToken(clientId:string,clientSecret:string){
   return String(body.access_token);
 }
 
+async function stripeRequest(key:string,path:string,init:RequestInit={}){
+  const response=await fetch('https://api.stripe.com/v1/'+path,{
+    ...init,
+    headers:{
+      Authorization:`Bearer ${key}`,
+      ...(init.headers||{})
+    },
+    signal:AbortSignal.timeout(30000)
+  });
+  const body=await response.json().catch(()=>({}));
+  if(!response.ok){
+    throw new Error(body?.error?.message||`stripe_http_${response.status}`);
+  }
+  return body;
+}
+
+async function stripeForm(key:string,path:string,form:URLSearchParams){
+  return stripeRequest(key,path,{
+    method:'POST',
+    headers:{'content-type':'application/x-www-form-urlencoded'},
+    body:form
+  });
+}
+
+async function ensureStripeCatalog(admin:any,key:string){
+  const {data:plans,error}=await admin.from('hercules_plans')
+    .select('code,name,monthly_price_cents,annual_price_cents,is_active')
+    .eq('is_active',true)
+    .order('code');
+  if(error)throw error;
+  if(!plans?.length)throw new Error('active_hercules_plan_catalog_missing');
+
+  const products=await stripeRequest(key,'products?active=true&limit=100');
+  const catalog:any[]=[];
+
+  for(const plan of plans){
+    let product=(products.data||[]).find((item:any)=>
+      item?.metadata?.hercules_plan_code===plan.code
+    );
+
+    if(!product){
+      const form=new URLSearchParams();
+      form.set('name',`Hercules ${plan.name}`);
+      form.set('metadata[hercules_plan_code]',String(plan.code));
+      form.set('metadata[hercules_catalog_source]','hercules_plans');
+      product=await stripeForm(key,'products',form);
+      products.data=[...(products.data||[]),product];
+    }
+
+    const desired=[
+      {
+        billing:'monthly',
+        amount:Number(plan.monthly_price_cents),
+        interval:'month',
+        lookupKey:`hercules_${plan.code}_monthly_v1`
+      },
+      {
+        billing:'annual',
+        amount:Number(plan.annual_price_cents),
+        interval:'year',
+        lookupKey:`hercules_${plan.code}_annual_v1`
+      }
+    ];
+
+    const priceIds:Record<string,string>={};
+    for(const target of desired){
+      const priceQuery=new URLSearchParams({active:'true',limit:'10'});
+      priceQuery.append('lookup_keys[]',target.lookupKey);
+      const priceLookup=await stripeRequest(key,'prices?'+priceQuery.toString());
+      let price=(priceLookup.data||[]).find((item:any)=>item?.lookup_key===target.lookupKey);
+
+      if(price){
+        const compatible=
+          Number(price.unit_amount)===target.amount &&
+          String(price.currency||'').toLowerCase()==='usd' &&
+          String(price.recurring?.interval||'')===target.interval &&
+          Number(price.recurring?.interval_count||1)===1 &&
+          String(price.product||'')===String(product.id);
+        if(!compatible)throw new Error('stripe_price_conflict:'+target.lookupKey);
+      }else{
+        const form=new URLSearchParams();
+        form.set('currency','usd');
+        form.set('unit_amount',String(target.amount));
+        form.set('product',String(product.id));
+        form.set('recurring[interval]',target.interval);
+        form.set('recurring[interval_count]','1');
+        form.set('lookup_key',target.lookupKey);
+        form.set('metadata[hercules_plan_code]',String(plan.code));
+        form.set('metadata[hercules_billing_period]',target.billing);
+        price=await stripeForm(key,'prices',form);
+      }
+
+      priceIds[target.billing]=String(price.id);
+    }
+
+    catalog.push({
+      plan_code:String(plan.code),
+      product_id:String(product.id),
+      monthly_price_id:priceIds.monthly,
+      annual_price_id:priceIds.annual,
+      monthly_price_cents:Number(plan.monthly_price_cents),
+      annual_price_cents:Number(plan.annual_price_cents)
+    });
+  }
+
+  return catalog;
+}
+
 async function activeShopifyConnection(admin:any,organizationId?:string){
   let query=admin.from('hercules_provider_connections')
     .select('id,organization_id,provider,account_key,client_id,secret_ref,access_secret_ref,status,connected_at,last_error,metadata,updated_at')
@@ -406,7 +514,7 @@ Deno.serve(async req=>{
     return j({
       ok:true,
       service:'hercules-provider-connect',
-      version:'1.2.0',
+      version:'1.3.0',
       providers:['shopify','stripe'],
       store:STORE,
       shopGid:SHOP_GID,
@@ -609,24 +717,22 @@ Deno.serve(async req=>{
       const key=String(body.secret_key||'').trim();
       if(!key.startsWith('sk_'))return j({error:'valid_stripe_secret_key_required'},400);
 
-      const accountResponse=await fetch('https://api.stripe.com/v1/account',{
-        headers:{Authorization:`Bearer ${key}`},
-        signal:AbortSignal.timeout(30000)
-      });
-      const account=await accountResponse.json();
-      if(!accountResponse.ok||!account.id){
-        throw new Error(account?.error?.message||`stripe_account_${accountResponse.status}`);
-      }
+      const account=await stripeRequest(key,'account');
+      if(!account?.id)throw new Error('stripe_account_identity_missing');
 
-      const listResponse=await fetch('https://api.stripe.com/v1/webhook_endpoints?limit=100',{
-        headers:{Authorization:`Bearer ${key}`},
-        signal:AbortSignal.timeout(30000)
-      });
-      const list=await listResponse.json();
-      if(!listResponse.ok)throw new Error(list?.error?.message||'stripe_list_failed');
+      const catalog=await ensureStripeCatalog(admin,key);
 
+      const existingConnection=await admin.from('hercules_provider_connections')
+        .select('signing_secret_ref')
+        .eq('organization_id',org)
+        .eq('provider','stripe')
+        .eq('account_key',String(account.id))
+        .maybeSingle();
+
+      const list=await stripeRequest(key,'webhook_endpoints?limit=100');
       let endpoint=(list.data||[]).find((item:any)=>item.url===STRIPE_RECEIVER);
       let signingSecret='';
+      let signingRef=existingConnection.data?.signing_secret_ref||null;
 
       if(!endpoint){
         const form=new URLSearchParams();
@@ -639,34 +745,21 @@ Deno.serve(async req=>{
           'invoice.payment_succeeded',
           'invoice.payment_failed'
         ])form.append('enabled_events[]',event);
-
-        const createResponse=await fetch('https://api.stripe.com/v1/webhook_endpoints',{
-          method:'POST',
-          headers:{
-            Authorization:`Bearer ${key}`,
-            'content-type':'application/x-www-form-urlencoded'
-          },
-          body:form,
-          signal:AbortSignal.timeout(30000)
-        });
-        const created=await createResponse.json();
-        if(!createResponse.ok){
-          throw new Error(created?.error?.message||'stripe_webhook_create_failed');
-        }
-        endpoint=created;
-        signingSecret=String(created.secret||'');
+        endpoint=await stripeForm(key,'webhook_endpoints',form);
+        signingSecret=String(endpoint.secret||'');
       }
 
-      const keyRef=await storeSecret(
-        admin,key,`hercules_stripe_secret_${org}`,'Hercules Stripe secret key.'
-      );
-      let signingRef=null;
-      if(signingSecret){
+      if(!signingRef){
+        if(!signingSecret)throw new Error('stripe_webhook_signing_secret_unavailable');
         signingRef=await storeSecret(
           admin,signingSecret,`hercules_stripe_webhook_${org}`,
           'Hercules Stripe webhook signing secret.'
         );
       }
+
+      const keyRef=await storeSecret(
+        admin,key,`hercules_stripe_secret_${org}`,'Hercules Stripe secret key.'
+      );
 
       const connection=await upsertConnection(admin,org,'stripe',String(account.id),{
         access_secret_ref:keyRef,
@@ -677,11 +770,13 @@ Deno.serve(async req=>{
         metadata:{
           receiver:STRIPE_RECEIVER,
           webhook_endpoint_id:endpoint.id,
-          livemode:Boolean(account.livemode)
+          livemode:key.startsWith('sk_live_'),
+          catalog_ready:true,
+          catalog
         }
       });
 
-      return j({ok:true,connection,webhook_endpoint_id:endpoint.id});
+      return j({ok:true,connection,webhook_endpoint_id:endpoint.id,catalog});
     }catch(error){
       return j({
         error:'stripe_connect_failed',
