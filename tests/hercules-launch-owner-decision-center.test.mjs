@@ -91,7 +91,8 @@ test("one owner approval can atomically decide pricing terms and privacy",()=>{
   assert.match(block,/String\(a\.m\.role\)!=='owner'/);
   assert.match(block,/owner_required/);
   assert.match(block,/hercules_launch_approval_bundle_decide/);
-  assert.match(block,/APPROVE HERCULES LAUNCH PACKET/);
+  assert.match(bridge,/APPROVE HERCULES LAUNCH PACKET/);
+  assert.match(block,/LAUNCH_PACKET_CONFIRMATION/);
   assert.match(block,/refreshLaunchGate/);
 });
 
