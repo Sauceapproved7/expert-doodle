@@ -378,6 +378,7 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
       <button class="btn sidebtn" data-view="knowledgeView">Knowledge</button>
       <button class="btn sidebtn" data-view="builderView">Builder</button>\n      <button class="btn sidebtn" data-view="adStudioView">Ad Studio</button>
       <button class="btn sidebtn" data-view="forgeView">Deployments</button>
+      <button class="btn sidebtn" data-view="domainAgentView">Domain Agent</button>
       <button class="btn sidebtn" data-view="statusView">System Status</button>
       <a class="btn sidebtn" href="/hercules-wallet/">Wallet · Testnet</a>
     </aside>
