@@ -36,6 +36,9 @@ No real-money custody or regulated payment rail is in scope for v0.1.
 | Bearer token sent over cleartext remote HTTP | First-party client permits HTTP only for loopback endpoints; remote endpoints require HTTPS |
 | Redirect-based credential forwarding | First-party client disables redirects |
 | Hung upstream/service request | First-party client applies a bounded request timeout |
+| Customer access to owner metrics | Owner overview requires an approved administrator role |
+| UI-only owner hiding treated as authorization | Admin endpoints independently enforce role authorization |
+| Aggregate sandbox liability overflow | Safe-integer accumulation fails closed |
 
 ## Authentication boundary
 
@@ -137,3 +140,16 @@ without transport encryption.
 These checks reduce accidental unsafe deployment. They do not replace TLS termination,
 network policy, rate limiting, secret rotation, monitoring, or regulated financial
 controls.
+
+
+## Owner control boundary
+
+v0.7 adds a summarized administrative view over sandbox customer accounts. The API
+authorizes every owner/admin request independently of the browser interface. Customer
+sessions therefore cannot gain administrative visibility by manipulating DOM state or
+calling the owner route directly.
+
+The overview deliberately omits raw journal records and exposes only account summaries,
+customer/account counts, currency, mode, external-rail status, and aggregate sandbox
+liabilities. Funding remains sandbox-only and retains the existing admin-role and CSRF
+requirements.
