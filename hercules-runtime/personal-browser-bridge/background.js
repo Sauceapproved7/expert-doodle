@@ -28,20 +28,25 @@ function domAction(command){
     const text=[el?.innerText,el?.textContent,el?.id,el?.className,el?.getAttribute?.("aria-label")].filter(Boolean).join(" ").toLowerCase();
     return /captcha|recaptcha|hcaptcha|turnstile|verify you are human|human verification|cloudflare challenge/.test(text);
   };
+  const redactText=(value)=>{
+    const text=String(value||"");
+    if(/api\s*secret|secret\s*key|private\s*key|recovery\s*code|one[- ]time\s*code|\botp\b|password/i.test(text))return "[REDACTED SENSITIVE CONTENT]";
+    return text;
+  };
   const safeObservation=()=>{
     const challenge=[...document.querySelectorAll("iframe,form,div,button")].find(humanChallenge);
     if(challenge)return {ok:false,error:"human_verification_required"};
-    const links=[...document.querySelectorAll("a[href]")].slice(0,80).map(a=>({text:(a.innerText||"").trim().slice(0,180),href:a.href}));
-    const buttons=[...document.querySelectorAll("button,[role=button],input[type=submit]")].slice(0,80).map((b,i)=>({index:i,text:(b.innerText||b.getAttribute("aria-label")||b.value||"").trim().slice(0,180)}));
+    const links=[...document.querySelectorAll("a[href]")].slice(0,80).map(a=>({text:redactText((a.innerText||"").trim()).slice(0,180),href:a.href}));
+    const buttons=[...document.querySelectorAll("button,[role=button],input[type=submit]")].slice(0,80).map((b,i)=>({index:i,text:redactText((b.innerText||b.getAttribute("aria-label")||b.value||"").trim()).slice(0,180)}));
     const fields=[...document.querySelectorAll("input,textarea,select")].slice(0,80).map((el,i)=>({
       index:i,
       tag:el.tagName.toLowerCase(),
       type:String(el.type||""),
-      name:String(el.name||"").slice(0,120),
-      placeholder:String(el.placeholder||"").slice(0,160),
+      name:redactText(String(el.name||"")).slice(0,120),
+      placeholder:redactText(String(el.placeholder||"")).slice(0,160),
       sensitive:sensitive(el)
     }));
-    return {ok:true,url:location.href,title:document.title,text:(document.body?.innerText||"").slice(0,16000),links,buttons,fields};
+    return {ok:true,url:location.href,title:redactText(document.title),text:redactText((document.body?.innerText||"").slice(0,16000)),links,buttons,fields};
   };
 
   if(action==="observe")return safeObservation();
