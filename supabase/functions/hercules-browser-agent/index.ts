@@ -75,13 +75,11 @@ function compactPage(payload:any){
   };
 }
 function directSatisfaction(goal:string,page:any,history:any[]){
-  const g=String(goal||"").toLowerCase();
-  const asksTitle=/\b(page\s+title|title)\b/i.test(g);
-  const asksNavigation=/\b(follow|click|open|go to|navigate|visit|destination)\b/i.test(g);
-  if(asksTitle&&String(page?.title||"").trim()){
-    if(!asksNavigation||history.length>0){
-      return {answer:String(page.title).trim().slice(0,12000),reason:"direct_page_title_satisfied"};
-    }
+  const raw=String(goal||"").trim();
+  const g=raw.toLowerCase().replace(/[?.!]+$/,"").trim();
+  const titleOnly=/^(?:what(?:'s| is) (?:the )?(?:page )?title|return (?:only )?(?:the )?(?:page )?title|give me (?:only )?(?:the )?(?:page )?title|(?:page )?title(?: only)?)$/.test(g);
+  if(titleOnly&&String(page?.title||"").trim()){
+    return {answer:String(page.title).trim().slice(0,12000),reason:"direct_page_title_satisfied"};
   }
   return null;
 }
@@ -166,7 +164,7 @@ async function updateRun(runId:string,patch:any){
 
 Deno.serve(async(req:Request)=>{
   if(req.method==="GET")return out({
-    ok:true,service:"hercules-browser-agent",version:"0.7.0",
+    ok:true,service:"hercules-browser-agent",version:"0.8.0",
     mode:"bounded_goal_driven",maxSteps:6,
     actions:["run"],rawCodeExecution:false,secretExport:false,
     antiBotBypass:false,highImpactAutonomy:false
