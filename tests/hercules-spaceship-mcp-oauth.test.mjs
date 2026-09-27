@@ -90,3 +90,12 @@ test("successful OAuth callback triggers existing launch autopilot",()=>{
   assert.match(mcp,/status:"configured"/);
   assert.match(mcp,/provider:"spaceship-mcp"/);
 });
+
+
+test("Private Bridge top-level GET router forwards Spaceship handoff requests",()=>{
+  assert.match(bridge,/requestUrl\.searchParams\.get\('spaceship_authorize'\)==='1'/);
+  assert.match(bridge,/return handleSpaceshipMcpRequest\(req\)/);
+  const handoffIndex=bridge.indexOf("requestUrl.searchParams.get('spaceship_authorize')==='1'");
+  const genericGetIndex=bridge.indexOf("if(req.method==='GET'){");
+  assert.ok(handoffIndex>=0&&genericGetIndex>handoffIndex,"handoff routing must run before generic GET status");
+});
