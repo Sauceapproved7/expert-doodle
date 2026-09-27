@@ -19,6 +19,7 @@ async function get(base,path,token){
 
 test("owner overview is admin-only and summarizes sandbox liabilities",async()=>{
   const root=await mkdtemp(join(tmpdir(),"hercules-bank-owner-"));
+  let server=null;
   try{
     const runtime=await HerculesBankRuntime.open({statePath:join(root,"bank.json")});
     const alice=await runtime.openCustomerAccount({customerId:"alice"});
@@ -26,7 +27,7 @@ test("owner overview is admin-only and summarizes sandbox liabilities",async()=>
     await runtime.fundSandboxAccount({accountId:alice.id,amountMinor:8000,idempotencyKey:"fund"});
     await runtime.transfer({fromAccountId:alice.id,toAccountId:bob.id,amountMinor:2500,idempotencyKey:"send"});
 
-    const server=createHerculesBankApi({runtime,jwtSecret:SECRET,nowSeconds:()=>1100});
+    server=createHerculesBankApi({runtime,jwtSecret:SECRET,nowSeconds:()=>1100});
     await new Promise((resolve)=>server.listen(0,"127.0.0.1",resolve));
     const base="http://127.0.0.1:"+server.address().port;
 
@@ -44,8 +45,8 @@ test("owner overview is admin-only and summarizes sandbox liabilities",async()=>
     assert.equal(allowed.body.accounts.length,2);
     assert.equal("journal" in allowed.body,false);
 
-    await new Promise((resolve)=>server.close(resolve));
   }finally{
+    if(server?.listening)await new Promise((resolve)=>server.close(resolve));
     await rm(root,{recursive:true,force:true});
   }
 });
