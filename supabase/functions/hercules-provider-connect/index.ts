@@ -10,6 +10,9 @@ const RECEIVER=`${U}/functions/v1/hercules-shopify-webhook`;
 const STRIPE_RECEIVER=`${U}/functions/v1/hercules-stripe-webhook`;
 const INTEGRATIONS_RETURN=`${U}/functions/v1/hercules-integrations`;
 const STUDIO_ADS_PRODUCTS=['sauceapproved-studio','sauceapproved-ads'] as const;
+const TITAN_PRODUCT_CODE='hercules-titan-founding-access';
+const TITAN_PRICE_CENTS=4900;
+const TITAN_LOOKUP_KEY='titan_founding_access_one_time_v1';
 const SOFTWARE_PRICE_GUARD={starter:2900,pro:7900,agency:19900} as const;
 const STRIPE_EVENTS=[
   'checkout.session.completed',
@@ -353,6 +356,67 @@ async function ensureSoftwareStripeCatalog(admin:any,key:string,stripeAccountId:
   return synced;
 }
 
+async function ensureTitanStripeCatalog(admin:any,key:string,stripeAccountId:string,livemode:boolean){
+  const {data:approvals,error:approvalError}=await admin.from('hercules_software_commercial_approvals')
+    .select('approval_type,status')
+    .eq('product_code',TITAN_PRODUCT_CODE)
+    .in('approval_type',['pricing','terms','privacy']);
+  if(approvalError)throw approvalError;
+  const approved=(approvals||[]).length===3&&(approvals||[]).every((row:any)=>row.status==='approved');
+  if(!approved)return [];
+
+  const products=await stripeRequest(key,'products?active=true&limit=100');
+  let product=(products.data||[]).find((item:any)=>item?.metadata?.titanProductCode===TITAN_PRODUCT_CODE);
+  if(!product){
+    const form=new URLSearchParams();
+    form.set('name','Hercules Titan Founding Access');
+    form.set('metadata[titanProductCode]',TITAN_PRODUCT_CODE);
+    form.set('metadata[billingModel]','one_time');
+    form.set('metadata[hercules_catalog_source]','hercules-titan-commercial-v1');
+    product=await stripeForm(key,'products',form);
+  }
+
+  const query=new URLSearchParams({active:'true',limit:'10'});
+  query.append('lookup_keys[]',TITAN_LOOKUP_KEY);
+  const priceLookup=await stripeRequest(key,'prices?'+query.toString());
+  let price=(priceLookup.data||[]).find((item:any)=>item?.lookup_key===TITAN_LOOKUP_KEY);
+  if(price){
+    if(Number(price.unit_amount)!==TITAN_PRICE_CENTS||
+       String(price.currency||'').toLowerCase()!=='usd'||
+       price.recurring!=null||
+       String(price.product)!==String(product.id)){
+      throw new Error('titan_stripe_price_drift');
+    }
+  }else{
+    const form=new URLSearchParams();
+    form.set('currency','usd');
+    form.set('unit_amount',String(TITAN_PRICE_CENTS));
+    form.set('product',String(product.id));
+    form.set('lookup_key',TITAN_LOOKUP_KEY);
+    form.set('metadata[titanProductCode]',TITAN_PRODUCT_CODE);
+    form.set('metadata[billingModel]','one_time');
+    form.set('metadata[hercules_catalog_source]','hercules-titan-commercial-v1');
+    price=await stripeForm(key,'prices',form);
+  }
+
+  const record={
+    product_code:TITAN_PRODUCT_CODE,
+    stripe_account_id:stripeAccountId,
+    stripe_product_id:String(product.id),
+    stripe_price_id:String(price.id),
+    unit_amount_cents:TITAN_PRICE_CENTS,
+    currency:'usd',
+    livemode,
+    active:true,
+    metadata:{lookup_key:TITAN_LOOKUP_KEY,billing_model:'one_time'},
+    synced_at:new Date().toISOString()
+  };
+  const {error}=await admin.from('hercules_titan_stripe_catalog')
+    .upsert(record,{onConflict:'product_code'});
+  if(error)throw error;
+  return [record];
+}
+
 async function activeStripeConnection(admin:any,organizationId:string){
   const {data,error}=await admin.from('hercules_provider_connections')
     .select('id,organization_id,provider,account_key,access_secret_ref,signing_secret_ref,status,connected_at,last_error,metadata,updated_at')
@@ -382,13 +446,19 @@ async function syncSoftwareProviderReady(admin:any,connection:any){
     verified_at:new Date().toISOString()
   };
 
+  const verified=Boolean(
+    evidence.livemode &&
+    evidence.stripe_account_id &&
+    evidence.webhook_endpoint_id &&
+    evidence.receiver
+  );
   const results:any[]=[];
   for(const productCode of SOFTWARE_PRODUCTS){
     const {data,error}=await admin.rpc('hercules_software_record_payment_gate',{
       p_product_code:productCode,
       p_gate:'payment_provider_ready',
-      p_verified:true,
-      p_evidence:evidence
+      p_verified:verified,
+      p_evidence:{...evidence,verified}
     });
     if(error)throw error;
     results.push({product_code:productCode,readiness:data});
@@ -453,6 +523,140 @@ async function softwarePaymentStatus(admin:any,organizationId:string){
     }:{status:'not_connected'},
     products
   };
+}
+
+async function latestTitanVerificationRun(admin:any,organizationId:string){
+  const {data,error}=await admin.from('hercules_titan_payment_verification_runs')
+    .select('id,organization_id,product_code,stripe_account_id,livemode,expected_amount_cents,status,checkout_session_id,provider_customer_id,payment_intent_id,charge_id,refund_id,balance_transaction_id,evidence,created_at,updated_at,completed_at')
+    .eq('organization_id',organizationId)
+    .eq('product_code',TITAN_PRODUCT_CODE)
+    .order('created_at',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  if(error)throw error;
+  return data;
+}
+
+async function titanPaymentStatus(admin:any,organizationId:string){
+  const connection=await activeStripeConnection(admin,organizationId);
+  const prerequisites=await softwareCommercialPrerequisites(admin,TITAN_PRODUCT_CODE);
+  const {data:catalog,error}=await admin.from('hercules_titan_stripe_catalog')
+    .select('product_code,stripe_account_id,stripe_product_id,stripe_price_id,unit_amount_cents,currency,livemode,active,synced_at')
+    .eq('product_code',TITAN_PRODUCT_CODE)
+    .maybeSingle();
+  if(error)throw error;
+  return {
+    ok:true,
+    service:'hercules-provider-connect',
+    payment_verifier:'titan-one-time-v1',
+    mode:'live_one_time_refund_verification',
+    stripe:connection?{
+      status:connection.status,
+      account_key:connection.account_key,
+      livemode:Boolean(connection.metadata?.livemode),
+      connected_at:connection.connected_at
+    }:{status:'not_connected'},
+    product_code:TITAN_PRODUCT_CODE,
+    amount_cents:TITAN_PRICE_CENTS,
+    prerequisites,
+    catalog:catalog||null,
+    latest_run:await latestTitanVerificationRun(admin,organizationId)
+  };
+}
+
+async function reconcileTitanVerificationRun(admin:any,run:any,key:string,account:any){
+  if(!run?.id||run.status==='verified')return run;
+  let current=run;
+
+  if(current.payment_intent_id){
+    const charges=await stripeRequest(
+      key,
+      'charges?payment_intent='+encodeURIComponent(String(current.payment_intent_id))+'&limit=1'
+    );
+    const charge=(charges.data||[])[0]||null;
+    const balanceTransactionId=String(charge?.balance_transaction||current.balance_transaction_id||'');
+    let balanceTransaction:any=null;
+    if(balanceTransactionId){
+      balanceTransaction=await stripeRequest(key,'balance_transactions/'+encodeURIComponent(balanceTransactionId));
+    }
+
+    const payoutStateVerified=Boolean(
+      account?.charges_enabled===true &&
+      account?.payouts_enabled===true &&
+      charge?.paid===true &&
+      balanceTransaction?.id &&
+      String(balanceTransaction.currency||'').toLowerCase()==='usd'
+    );
+
+    const evidence={
+      ...(current.evidence||{}),
+      payout_state:{
+        charges_enabled:Boolean(account?.charges_enabled),
+        payouts_enabled:Boolean(account?.payouts_enabled),
+        charge_paid:Boolean(charge?.paid),
+        balance_transaction_id:balanceTransactionId||null,
+        balance_status:balanceTransaction?.status||null,
+        available_on:balanceTransaction?.available_on||null,
+        amount:Number(balanceTransaction?.amount||0),
+        fee:Number(balanceTransaction?.fee||0),
+        net:Number(balanceTransaction?.net||0),
+        currency:balanceTransaction?.currency||null,
+        verified:payoutStateVerified
+      }
+    };
+    const {data,error}=await admin.from('hercules_titan_payment_verification_runs')
+      .update({
+        charge_id:String(charge?.id||current.charge_id||'')||null,
+        balance_transaction_id:balanceTransactionId||null,
+        evidence,
+        updated_at:new Date().toISOString()
+      })
+      .eq('id',current.id)
+      .select('*')
+      .single();
+    if(error)throw error;
+    current=data;
+
+    if(payoutStateVerified&&balanceTransactionId){
+      const {error:eventError}=await admin.rpc('hercules_titan_record_verification_event',{
+        p_run_id:String(current.id),
+        p_stripe_event_id:'titan-payout-state:'+String(current.id)+':'+balanceTransactionId,
+        p_event_type:'titan.payout_state_verified',
+        p_payload_hash:null,
+        p_evidence:{
+          charges_enabled:true,
+          payouts_enabled:true,
+          charge_paid:true,
+          balance_transaction_id:balanceTransactionId,
+          balance_status:balanceTransaction?.status||null,
+          available_on:balanceTransaction?.available_on||null,
+          amount:Number(balanceTransaction?.amount||0),
+          fee:Number(balanceTransaction?.fee||0),
+          net:Number(balanceTransaction?.net||0),
+          currency:String(balanceTransaction?.currency||'')
+        }
+      });
+      if(eventError)throw eventError;
+    }
+  }
+
+  const {data:certification,error:certificationError}=await admin.rpc(
+    'hercules_titan_certify_payment_path',
+    {p_run_id:String(current.id)}
+  );
+  if(certificationError){
+    const message=String(certificationError.message||'');
+    if(!message.includes('verification_identifiers_incomplete')&&
+       !message.includes('commercial_prerequisites_not_approved')&&
+       !message.includes('live_titan_stripe_catalog_mismatch')&&
+       !message.includes('live_mode_verification_required')&&
+       !message.includes('payout_state_evidence_incomplete')){
+      throw certificationError;
+    }
+  }
+
+  const fresh=await latestTitanVerificationRun(admin,String(current.organization_id));
+  return {...fresh,certification:certification||null};
 }
 
 async function reconcileSoftwareVerificationRun(admin:any,run:any,key:string){
@@ -800,7 +1004,7 @@ Deno.serve(async req=>{
     return j({
       ok:true,
       service:'hercules-provider-connect',
-      version:'1.4.0',
+      version:'1.5.0',
       providers:['shopify','stripe'],
       store:STORE,
       shopGid:SHOP_GID,
@@ -995,6 +1199,139 @@ Deno.serve(async req=>{
         error:'shopify_connect_failed',
         detail:error instanceof Error?error.message:String(error)
       },502);
+    }
+  }
+
+  if(action==='titan_payment_status'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      return j(await titanPaymentStatus(admin,org));
+    }catch(error){
+      return j({error:'titan_payment_status_failed',detail:error instanceof Error?error.message:String(error)},500);
+    }
+  }
+
+  if(action==='prepare_titan_payment_verification'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      const prerequisites=await softwareCommercialPrerequisites(admin,TITAN_PRODUCT_CODE);
+      if(!prerequisites.ownerReady)return j({error:'owner_approvals_required'},409);
+      if(!prerequisites.providerReady)return j({error:'stripe_provider_required'},409);
+      if(prerequisites.paymentPathVerified)return j({error:'payment_path_already_verified'},409);
+
+      const connection=await activeStripeConnection(admin,org);
+      if(!connection?.access_secret_ref)return j({error:'stripe_provider_required'},409);
+      if(connection.metadata?.livemode!==true)return j({error:'live_stripe_required'},409);
+      const key=await getSecret(admin,String(connection.access_secret_ref));
+      const account=await stripeRequest(key,'account');
+      if(!account?.id||String(account.id)!==String(connection.account_key)){
+        return j({error:'stripe_account_identity_mismatch'},409);
+      }
+      if(account.charges_enabled!==true||account.payouts_enabled!==true){
+        return j({error:'stripe_account_payout_state_not_ready'},409);
+      }
+
+      const titanCatalog=await ensureTitanStripeCatalog(admin,key,String(account.id),true);
+      const catalog=titanCatalog[0]||null;
+      if(!catalog||Number(catalog.unit_amount_cents)!==TITAN_PRICE_CENTS||catalog.livemode!==true){
+        return j({error:'titan_stripe_catalog_required'},409);
+      }
+
+      const {data:run,error:runError}=await admin.from('hercules_titan_payment_verification_runs')
+        .insert({
+          organization_id:org,
+          product_code:TITAN_PRODUCT_CODE,
+          stripe_account_id:String(account.id),
+          livemode:true,
+          expected_amount_cents:TITAN_PRICE_CENTS,
+          status:'prepared',
+          started_by:identity.user.id,
+          evidence:{
+            purpose:'controlled_live_titan_checkout_refund',
+            billing_model:'one_time',
+            automatic_refund:true,
+            owner_completion_required:true
+          }
+        })
+        .select('id')
+        .single();
+      if(runError)throw runError;
+
+      const runId=String(run.id);
+      const form=new URLSearchParams();
+      form.set('mode','payment');
+      form.set('payment_method_types[0]','card');
+      form.set('line_items[0][price]',String(catalog.stripe_price_id));
+      form.set('line_items[0][quantity]','1');
+      form.set('client_reference_id',String(org));
+      if(identity.user.email)form.set('customer_email',String(identity.user.email));
+      form.set('success_url',INTEGRATIONS_RETURN+'?titan_payment_verify=success&session_id={CHECKOUT_SESSION_ID}');
+      form.set('cancel_url',INTEGRATIONS_RETURN+'?titan_payment_verify=cancelled');
+      form.set('metadata[organizationId]',String(org));
+      form.set('metadata[titanProductCode]',TITAN_PRODUCT_CODE);
+      form.set('metadata[titanVerificationRunId]',runId);
+      form.set('metadata[purpose]','titan_payment_verification');
+      form.set('payment_intent_data[metadata][organizationId]',String(org));
+      form.set('payment_intent_data[metadata][titanProductCode]',TITAN_PRODUCT_CODE);
+      form.set('payment_intent_data[metadata][titanVerificationRunId]',runId);
+      form.set('payment_intent_data[metadata][purpose]','titan_payment_verification');
+
+      const session=await stripeForm(key,'checkout/sessions',form);
+      if(!session?.id||!session?.url)throw new Error('titan_verification_checkout_session_missing');
+
+      const {error:updateError}=await admin.from('hercules_titan_payment_verification_runs')
+        .update({
+          checkout_session_id:String(session.id),
+          evidence:{
+            purpose:'controlled_live_titan_checkout_refund',
+            billing_model:'one_time',
+            automatic_refund:true,
+            owner_completion_required:true,
+            checkout_session_created:true,
+            checkout_session_expires_at:session.expires_at||null
+          },
+          updated_at:new Date().toISOString()
+        })
+        .eq('id',runId);
+      if(updateError)throw updateError;
+
+      return j({
+        ok:true,
+        action:'prepare_titan_payment_verification',
+        run_id:runId,
+        product_code:TITAN_PRODUCT_CODE,
+        amount_cents:TITAN_PRICE_CENTS,
+        currency:'usd',
+        billing_model:'one_time',
+        checkout_url:String(session.url),
+        charge_occurs_only_if_owner_completes_checkout:true,
+        after_success:'Hercules automatically refunds the verification payment, verifies signed webhook evidence and Stripe payout state, then certifies only the Titan payment path.'
+      });
+    }catch(error){
+      return j({error:'prepare_titan_payment_verification_failed',detail:error instanceof Error?error.message:String(error)},502);
+    }
+  }
+
+  if(action==='reconcile_titan_payment_verification'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      const connection=await activeStripeConnection(admin,org);
+      if(!connection?.access_secret_ref)return j({error:'stripe_provider_required'},409);
+      if(connection.metadata?.livemode!==true)return j({error:'live_stripe_required'},409);
+      const key=await getSecret(admin,String(connection.access_secret_ref));
+      const account=await stripeRequest(key,'account');
+      if(!account?.id||String(account.id)!==String(connection.account_key)){
+        return j({error:'stripe_account_identity_mismatch'},409);
+      }
+      const run=await latestTitanVerificationRun(admin,org);
+      if(!run)return j({error:'verification_run_not_found'},404);
+      return j({
+        ok:true,
+        product_code:TITAN_PRODUCT_CODE,
+        run:await reconcileTitanVerificationRun(admin,run,key,account)
+      });
+    }catch(error){
+      return j({error:'reconcile_titan_payment_verification_failed',detail:error instanceof Error?error.message:String(error)},502);
     }
   }
 
@@ -1206,6 +1543,9 @@ Deno.serve(async req=>{
       const softwareCatalog=await ensureSoftwareStripeCatalog(
         admin,key,String(account.id),key.startsWith('sk_live_')
       );
+      const titanCatalog=await ensureTitanStripeCatalog(
+        admin,key,String(account.id),key.startsWith('sk_live_')
+      );
 
       return j({
         ok:true,
@@ -1213,6 +1553,7 @@ Deno.serve(async req=>{
         webhook_endpoint_id:endpoint.id,
         catalog,
         software_catalog:softwareCatalog,
+        titan_catalog:titanCatalog,
         software_provider_readiness:softwareProviderReadiness
       });
     }catch(error){
@@ -1220,6 +1561,25 @@ Deno.serve(async req=>{
         error:'stripe_connect_failed',
         detail:error instanceof Error?error.message:String(error)
       },502);
+    }
+  }
+
+  if(action==='sync_titan_catalog'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      const connection=await activeStripeConnection(admin,org);
+      if(!connection?.access_secret_ref)return j({error:'stripe_provider_required'},409);
+      const key=await getSecret(admin,String(connection.access_secret_ref));
+      const account=await stripeRequest(key,'account');
+      if(!account?.id||String(account.id)!==String(connection.account_key)){
+        return j({error:'stripe_account_identity_mismatch'},409);
+      }
+      const titanCatalog=await ensureTitanStripeCatalog(
+        admin,key,String(account.id),key.startsWith('sk_live_')
+      );
+      return j({ok:true,titan_catalog:titanCatalog});
+    }catch(error){
+      return j({error:'titan_catalog_sync_failed',detail:error instanceof Error?error.message:String(error)},502);
     }
   }
 
