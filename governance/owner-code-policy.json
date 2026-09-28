@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 11,
+  "version": 12,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -213,6 +213,13 @@
         "launchd",
         "systemd"
       ]
+    },
+    {
+      "path": "hercules-cleaner/installer.mjs",
+      "kind": "owned-internal-process",
+      "dependencies": [
+        "nodejs"
+      ]
     }
   ],
   "shellCommandBoundaries": [
@@ -325,6 +332,18 @@
     {
       "id": "launchd",
       "name": "Apple launchd / LaunchAgents",
+      "ownership": "third-party-operating-system-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "powershell",
+      "name": "Microsoft PowerShell / Windows PowerShell",
+      "ownership": "third-party-operating-system-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "windows-tar",
+      "name": "Windows tar.exe archive utility",
       "ownership": "third-party-operating-system-infrastructure",
       "packagedAsHerculesCode": false
     }
