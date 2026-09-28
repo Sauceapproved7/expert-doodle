@@ -26,6 +26,12 @@ export function evaluateMonitorContract({
   const json=String(contentType||"").toLowerCase().includes("application/json");
   const reachability=status!==null&&status!==undefined;
 
+  if(expected==="html"||expected==="html-ok"||expected==="html-200"){
+    const functional=is2xx(status)&&!json&&String(text||"").trim().length>0;
+    return result(functional,reachability,functional,null,functional?"functional":"failed",
+      functional?null:"html_health_failed");
+  }
+
   if(expected==="auth-or-json-health"){
     if(status===401||status===403){
       return result(true,true,null,null,"reachability_only","protected_endpoint_reachable");
