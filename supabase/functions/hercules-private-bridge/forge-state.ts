@@ -131,18 +131,20 @@ export async function handleForgeStateRequest(req:Request,admin:any){
       const index=integer(request.index,0,MAX_CHUNKS-1);
       const bytes=integer(request.bytes,0,MAX_CHUNK_BYTES);
       const digest=validSha(request.sha256);
-      if(index===null||bytes===null||!digest)return out({error:"invalid_chunk_metadata"},400);
+      const objectSha256=validSha(request.objectSha256);
+      if(index===null||bytes===null||!digest||!objectSha256)return out({error:"invalid_chunk_metadata"},400);
       const content=decodeBase64(request.contentBase64);
       if(content.byteLength!==bytes)return out({error:"chunk_size_mismatch"},409);
       if((await sha256HexBytes(content))!==digest)return out({error:"chunk_integrity_mismatch"},409);
       const {error}=await admin.from("hercules_forge_state_chunks").upsert({
         path,
+        object_sha256:objectSha256,
         chunk_index:index,
         sha256:digest,
         bytes,
         content_base64:String(request.contentBase64),
         updated_at:new Date().toISOString(),
-      },{onConflict:"path,chunk_index"});
+      },{onConflict:"path,object_sha256,chunk_index"});
       if(error)throw new Error("chunk_write_failed");
       return out({ok:true,path,index,bytes});
     }
@@ -156,6 +158,7 @@ export async function handleForgeStateRequest(req:Request,admin:any){
       const {data,error}=await admin.from("hercules_forge_state_chunks")
         .select("chunk_index,sha256,bytes")
         .eq("path",path)
+        .eq("object_sha256",digest)
         .lt("chunk_index",chunks)
         .order("chunk_index");
       if(error)throw new Error("chunk_manifest_read_failed");
@@ -174,18 +177,29 @@ export async function handleForgeStateRequest(req:Request,admin:any){
         path,sha256:digest,bytes,chunk_count:chunks,updated_at:now,
       },{onConflict:"path"});
       if(upsertError)throw new Error("object_commit_failed");
-      const {error:cleanupError}=await admin.from("hercules_forge_state_chunks")
-        .delete().eq("path",path).gte("chunk_index",chunks);
-      if(cleanupError)throw new Error("stale_chunk_cleanup_failed");
+      const [{error:staleGenerationError},{error:staleIndexError}]=await Promise.all([
+        admin.from("hercules_forge_state_chunks").delete().eq("path",path).neq("object_sha256",digest),
+        admin.from("hercules_forge_state_chunks").delete().eq("path",path).eq("object_sha256",digest).gte("chunk_index",chunks),
+      ]);
+      if(staleGenerationError||staleIndexError)throw new Error("stale_chunk_cleanup_failed");
       return out({ok:true,path,bytes,chunks,sha256:digest});
     }
 
     if(action==="forge_state_get_chunk"){
       const index=integer(request.index,0,MAX_CHUNKS-1);
-      if(index===null)return out({error:"invalid_chunk_index"},400);
-      const {data,error}=await admin.from("hercules_forge_state_chunks")
-        .select("path,chunk_index,sha256,bytes,content_base64")
+      const objectSha256=validSha(request.objectSha256);
+      if(index===null||!objectSha256)return out({error:"invalid_chunk_index"},400);
+      const {data:manifest,error:manifestError}=await admin.from("hercules_forge_state_objects")
+        .select("sha256")
         .eq("path",path)
+        .eq("sha256",objectSha256)
+        .maybeSingle();
+      if(manifestError)throw new Error("object_manifest_read_failed");
+      if(!manifest)return out({error:"not_found"},404);
+      const {data,error}=await admin.from("hercules_forge_state_chunks")
+        .select("path,object_sha256,chunk_index,sha256,bytes,content_base64")
+        .eq("path",path)
+        .eq("object_sha256",objectSha256)
         .eq("chunk_index",index)
         .maybeSingle();
       if(error)throw new Error("chunk_read_failed");
