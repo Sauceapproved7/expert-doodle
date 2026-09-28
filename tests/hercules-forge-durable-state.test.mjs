@@ -22,7 +22,7 @@ function startStateFixture() {
     let text = "";
     for await (const chunk of req) text += chunk;
     const body = text ? JSON.parse(text) : {};
-    const key = (path, index) => path + "#" + index;
+    const key = (path, objectSha256, index) => path + "#" + objectSha256 + "#" + index;
 
     if (body.action === "forge_state_manifest") {
       res.writeHead(200, {"content-type":"application/json"});
@@ -34,8 +34,8 @@ function startStateFixture() {
         res.writeHead(409, {"content-type":"application/json"});
         return res.end(JSON.stringify({error:"chunk_integrity"}));
       }
-      chunks.set(key(body.path, body.index), {
-        path:body.path,index:body.index,bytes:body.bytes,sha256:body.sha256,
+      chunks.set(key(body.path, body.objectSha256, body.index), {
+        path:body.path,objectSha256:body.objectSha256,index:body.index,bytes:body.bytes,sha256:body.sha256,
         contentBase64:body.contentBase64,
       });
       res.writeHead(200, {"content-type":"application/json"});
@@ -44,7 +44,7 @@ function startStateFixture() {
     if (body.action === "forge_state_commit_object") {
       let total = 0;
       for (let i = 0; i < body.chunks; i++) {
-        const chunk = chunks.get(key(body.path, i));
+        const chunk = chunks.get(key(body.path, body.sha256, i));
         if (!chunk) {
           res.writeHead(409, {"content-type":"application/json"});
           return res.end(JSON.stringify({error:"missing_chunk"}));
@@ -59,16 +59,17 @@ function startStateFixture() {
         path:body.path,sha256:body.sha256,bytes:body.bytes,chunks:body.chunks,
       });
       for (const chunkKey of [...chunks.keys()]) {
-        if (chunkKey.startsWith(body.path + "#")) {
-          const index = Number(chunkKey.slice(chunkKey.lastIndexOf("#") + 1));
-          if (index >= body.chunks) chunks.delete(chunkKey);
-        }
+        if (!chunkKey.startsWith(body.path + "#")) continue;
+        const parts = chunkKey.split("#");
+        const objectSha256 = parts[1];
+        const index = Number(parts[2]);
+        if (objectSha256 !== body.sha256 || index >= body.chunks) chunks.delete(chunkKey);
       }
       res.writeHead(200, {"content-type":"application/json"});
       return res.end(JSON.stringify({ok:true}));
     }
     if (body.action === "forge_state_get_chunk") {
-      const chunk = chunks.get(key(body.path, body.index));
+      const chunk = chunks.get(key(body.path, body.objectSha256, body.index));
       if (!chunk) {
         res.writeHead(404, {"content-type":"application/json"});
         return res.end(JSON.stringify({error:"not_found"}));
