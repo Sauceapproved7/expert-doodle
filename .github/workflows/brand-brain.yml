@@ -1,0 +1,35 @@
+name: SauceApproved Brand Brain
+
+on:
+  push:
+    branches:
+      - hercules/brand-brain-v1
+  pull_request:
+    paths:
+      - "sauceapproved-studio/brand-brain/**"
+      - "tests/sauceapproved-brand-brain.test.mjs"
+      - "governance/owner-code-policy.json"
+      - "docs/HERCULES-BRAND-BRAIN-V1.md"
+      - "IP_PROVENANCE.md"
+      - ".github/workflows/brand-brain.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Run Brand Brain tests
+        run: node --test tests/sauceapproved-brand-brain.test.mjs
+      - name: Owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Security baseline
+        run: node scripts/security-baseline.mjs
+      - name: Hercules execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
