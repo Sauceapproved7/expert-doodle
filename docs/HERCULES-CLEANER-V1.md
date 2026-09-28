@@ -140,3 +140,5 @@ The design favors recoverability and explicit policy over aggressive deletion.
 Hercules Cleaner is registered for SauceApproved Early Access discovery through the owned software-catalog path. The public catalog/request surface handles ordinary access-request information only; it does not require the customer's local file inventory or Recovery Capsule contents.
 
 Commercial state remains fail-closed: candidate pricing is not approved, Terms and Privacy remain owner-decision gated, payment-provider readiness is separate, paid-path verification is separate, and checkout stays disabled until those controls are explicitly satisfied.
+
+The catalog record intentionally carries no live product URL until an actual customer-facing Cleaner delivery endpoint is deployed and verified.
