@@ -22,7 +22,8 @@ test("bundle approval is owner-only and requires one exact typed phrase",()=>{
   assert.match(block,/software_commercial_bundle_version_mismatch/);
   assert.match(block,/software_commercial_bundle_digest_mismatch/);
   assert.match(block,/explicit_confirmation_required/);
-  assert.match(block,/APPROVE SAUCEAPPROVED SOFTWARE COMMERCIAL PACKET /);
+  assert.match(bridge,/APPROVE SAUCEAPPROVED SOFTWARE COMMERCIAL PACKET /);
+  assert.match(block,/SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION/);
 });
 
 test("bundle approves pricing Terms and Privacy for both Studio and Ads but not payment gates",()=>{
