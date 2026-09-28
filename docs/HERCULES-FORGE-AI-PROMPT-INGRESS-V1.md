@@ -84,3 +84,28 @@ This prevents a partially wired builder UI from receiving a false ready status.
 The interpreter adapter, prompt contract, schema validation, and release rules are SauceApproved/Hercules repository code.
 
 Supabase, Render, model providers, and network infrastructure remain replaceable external infrastructure and are not represented as SauceApproved-owned third-party code.
+
+
+## Internal startup certification canary
+
+Production can optionally set:
+
+```
+FORGE_STARTUP_PROMPT_CANARY_ID=forge-prompt-canary-ai-v1
+```
+
+When configured, Forge does not report a successful process startup until an internal loopback canary proves the real control-plane path:
+
+1. authenticated project lookup;
+2. `POST /v1/projects/from-prompt`;
+3. Hercules AI interpretation;
+4. canonical Forge spec validation;
+5. immutable revision creation;
+6. authenticated project reread;
+7. verified durable-state readiness with at least one committed object.
+
+The canary uses the already injected Forge control token only inside the running service. No token is written to logs or returned in the proof object.
+
+The canary project is deliberately synthetic and tagged with `canary=forge-startup-prompt-v1` and `purpose=synthetic-production-certification`. If the configured ID already belongs to another project, startup fails closed. If the same certified canary already exists, a later restart verifies it and does not create a duplicate.
+
+Changing the canary ID is the explicit mechanism for forcing a fresh prompt-to-project certification after a material interpreter change.
