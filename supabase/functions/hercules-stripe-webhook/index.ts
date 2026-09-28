@@ -144,10 +144,25 @@ async function softwarePlan(productCode:string,planCode:string){
   const {data,error}=await admin.from('hercules_software_product_plans')
     .select('product_code,plan_code,entitlements,candidate_monthly_price_cents')
     .eq('product_code',productCode)
-    .eq('plan_code',planCode)
-    .single();
+    .order('candidate_monthly_price_cents');
   if(error)throw error;
-  return data;
+  const rows=data||[];
+  const selected=rows.find((row:any)=>row.plan_code===planCode);
+  if(!selected)throw new Error('software_plan_not_found');
+
+  const starter=rows.find((row:any)=>row.plan_code==='starter');
+  const pro=rows.find((row:any)=>row.plan_code==='pro');
+  const own=(row:any)=>Array.isArray(row?.entitlements)
+    ?row.entitlements.map((value:any)=>String(value)).filter((value:string)=>value&&value!=='starter_features'&&value!=='pro_features')
+    :[];
+
+  let resolved:string[]=[];
+  if(planCode==='starter')resolved=own(starter);
+  if(planCode==='pro')resolved=[...own(starter),...own(pro)];
+  if(planCode==='agency')resolved=[...own(starter),...own(pro),...own(selected)];
+  if(!resolved.length)resolved=own(selected);
+
+  return {...selected,resolved_entitlements:[...new Set(resolved)]};
 }
 
 async function saveSoftwareSubscription(org:string,productCode:string,planCode:string,subscription:any,eventId:string){
@@ -177,7 +192,7 @@ async function saveSoftwareSubscription(org:string,productCode:string,planCode:s
   },{onConflict:'organization_id,product_code'});
   if(error)throw error;
 
-  const entitlements=Array.isArray(plan.entitlements)?plan.entitlements.map((value:any)=>String(value)).filter(Boolean):[];
+  const entitlements=Array.isArray(plan.resolved_entitlements)?plan.resolved_entitlements:[];
   const enabled=status==='active'||status==='trialing';
 
   const {error:deleteError}=await admin.from('hercules_software_entitlements')
