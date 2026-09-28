@@ -18,6 +18,15 @@ create table if not exists public.hercules_software_commercial_approvals (
 alter table public.hercules_software_commercial_approvals enable row level security;
 revoke all on public.hercules_software_commercial_approvals from anon, authenticated;
 
+-- Migration starts fail-closed even if earlier packaging state drifted.
+update public.hercules_software_products
+set checkout_enabled=false,updated_at=now()
+where code in ('sauceapproved-studio','sauceapproved-ads');
+
+update public.hercules_software_product_plans
+set checkout_enabled=false,pricing_status='owner_approval_required',updated_at=now()
+where product_code in ('sauceapproved-studio','sauceapproved-ads');
+
 insert into public.hercules_software_commercial_approvals(product_code,approval_type,status,document_ref,evidence)
 select p.code,a.approval_type,'pending',
   case a.approval_type
