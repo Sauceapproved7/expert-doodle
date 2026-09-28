@@ -25,3 +25,12 @@ test("commercial launch requires verified checkout refund and payout evidence",(
 test("commercialOk fails closed unless payment provider and paid flow are verified",()=>{
   assert.match(gate,/paymentProviderReady&&paymentPathVerified/);
 });
+
+
+test("commercial launch can use owned AppDeploy Stripe custody only with live redacted proof",()=>{
+  assert.match(gate,/sauceapproved-hercules-titan-dhakbi\.v2\.appdeploy\.ai\/api\/billing\/config/);
+  assert.match(gate,/credentialMode===['"]live['"]/);
+  assert.match(gate,/stripeReachable===true/);
+  assert.match(gate,/webhookConfigured===true/);
+  assert.match(gate,/vaultStripeReady\|\|appDeployStripeReady/);
+});
