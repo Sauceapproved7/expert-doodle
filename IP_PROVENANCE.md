@@ -119,3 +119,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
 - Third-party infrastructure: Node.js and GitHub Actions remain external infrastructure governed by their own terms and are not claimed as SauceApproved-owned code.
 - Security scope: defensive detection, deception, throttling, quarantine, session isolation guidance, honeytokens, and evidence capture only inside authorized infrastructure; no hack-back capability.
+
+
+## Hercules Cleaner v1 provenance — 2026-09-28
+
+- Component paths: `hercules-cleaner/*.mjs`, `tests/hercules-cleaner*.test.mjs`, `docs/HERCULES-CLEANER-V1.md`, command-surface routing, and the dedicated CI workflow.
+- Origin: project-authored Hercules implementation created for SauceApproved with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only. No vendored or third-party runtime source is included.
+- External operating-system infrastructure: Windows Task Scheduler, Apple launchd, and systemd user services are adapters only and remain third-party OS infrastructure.
+- Safety scope: user-scoped cleanup roots, explicit protected paths, dry-run plans, bounded scans, loopback-only dashboard control, transactional Recovery Capsules, integrity verification, and fail-closed restore semantics.
+- Market-research note: scheduled cleanup is common in Windows Storage Sense, CCleaner, BleachBit, Wise Disk Cleaner and CleanMyMac. Session Clean and Recovery Capsules are Hercules differentiators based on the reviewed mainstream feature sets; no absolute market-first claim is made.
