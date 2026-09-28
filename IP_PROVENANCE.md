@@ -110,3 +110,12 @@ This transition record does **not** itself transfer intellectual property. The c
 A non-executed assignment draft is maintained at `docs/legal/SAUCEAPPROVED-ENTERPRISE-IP-ASSIGNMENT-DRAFT.md`. Do not treat that draft as proof of transfer and do not commit signatures or sensitive execution material to this public repository.
 
 After execution of a valid assignment, update the declared rights holder, owner-code policy, intentional ownership constants/tests, and applicable notices in a dedicated chain-of-title commit while preserving third-party rights and all prior valid license grants.
+
+
+## Hercules SmokeScreen Sentinel v1 provenance — 2026-09-28
+
+- Component paths: `hercules-runtime/smokescreen-agent.mjs`, `tests/hercules-smokescreen-agent.test.mjs`, `docs/HERCULES-SMOKESCREEN-SENTINEL-V1.md`, and command-surface integration.
+- Origin: project-authored Hercules implementation created for SauceApproved with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- Third-party infrastructure: Node.js and GitHub Actions remain external infrastructure governed by their own terms and are not claimed as SauceApproved-owned code.
+- Security scope: defensive detection, deception, throttling, quarantine, session isolation guidance, honeytokens, and evidence capture only inside authorized infrastructure; no hack-back capability.
