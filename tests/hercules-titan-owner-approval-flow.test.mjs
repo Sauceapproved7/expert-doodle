@@ -30,12 +30,15 @@ test("Titan has a dedicated authenticated commercial approval migration",()=>{
   assert.match(sql,/payment_provider_ready/);
   assert.match(sql,/payment_path_verified/);
   assert.match(sql,/titan_checkout_must_use_shopify_launch_gate/);
+  assert.match(sql,/revoke all on function public\.hercules_titan_owner_approve_bundle\(uuid,text,text,text\) from public, anon, authenticated/);
+  assert.match(sql,/grant execute on function public\.hercules_titan_owner_approve_bundle\(uuid,text,text,text\) to service_role/);
 });
 
 test("Titan approval path is exposed only through authenticated owner actions",()=>{
   assert.match(bridge,/titan_commercial_bundle_status/);
   assert.match(bridge,/titan_commercial_bundle_approve/);
-  assert.match(bridge,/hercules_titan_owner_approve_bundle/);
+  assert.match(bridge,/admin\.rpc\('hercules_titan_owner_approve_bundle'/);
+  assert.doesNotMatch(bridge,/a\.db\.rpc\('hercules_titan_owner_approve_bundle'/);
   assert.match(bridge,/String\(a\.m\.role\)!=='owner'/);
   assert.match(bridge,/hercules-titan-founding-access/);
   assert.match(bridge,/HERCULES-TITAN-TERMS-CANDIDATE-V1\.md/);
