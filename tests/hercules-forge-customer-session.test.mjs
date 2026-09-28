@@ -153,6 +153,19 @@ test("customer session routes isolate workspaces and enforce roles", async () =>
     assert.equal(createdBody.project.metadata.workspaceId, "workspace-a");
     assert.equal(createdBody.project.metadata.createdByUserId, "owner-a");
 
+    const customerSource = await fetch(
+      base +
+        "/v1/workspaces/workspace-a/projects/customer-project/revisions/" +
+        encodeURIComponent(createdBody.revision.revisionId) +
+        "/source?path=" +
+        encodeURIComponent("public/index.html"),
+      {headers: {cookie: ownerLogin.cookie}},
+    );
+    assert.equal(customerSource.status, 200);
+    const customerSourceBody = await customerSource.json();
+    assert.equal(customerSourceBody.source.path, "public/index.html");
+    assert.match(customerSourceBody.source.content, /CustomerWorkspace/);
+
     const listed = await fetch(
       base + "/v1/workspaces/workspace-a/projects",
       {headers: {cookie: ownerLogin.cookie}},
