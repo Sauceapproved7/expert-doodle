@@ -55,20 +55,22 @@ test("Titan verification checkout is owner-only and mode payment",()=>{
 });
 
 test("Titan reconciliation requires real payout state before certification",()=>{
-  const block=provider.slice(provider.indexOf("if(action==='reconcile_titan_payment_verification')"),provider.indexOf("if(action==='configure_stripe')"));
-  assert.ok(block.length>0);
-  assert.match(block,/payouts_enabled/);
-  assert.match(block,/charges_enabled/);
-  assert.match(block,/balance_transactions/);
-  assert.match(block,/titan\.payout_state_verified/);
-  assert.match(block,/hercules_titan_certify_payment_path/);
+  const action=provider.slice(provider.indexOf("if(action==='reconcile_titan_payment_verification')"),provider.indexOf("if(action==='configure_stripe')"));
+  const helper=provider.slice(provider.indexOf("async function reconcileTitanVerificationRun"),provider.indexOf("async function reconcileSoftwareVerificationRun"));
+  assert.ok(action.length>0);
+  assert.match(action,/reconcileTitanVerificationRun/);
+  assert.match(helper,/payouts_enabled/);
+  assert.match(helper,/charges_enabled/);
+  assert.match(helper,/balance_transactions/);
+  assert.match(helper,/titan\.payout_state_verified/);
+  assert.match(helper,/hercules_titan_certify_payment_path/);
 });
 
 test("Stripe webhook auto-refunds Titan verification without creating a subscription",()=>{
   assert.match(webhook,/titanVerificationRunId/);
   assert.match(webhook,/autoRefundTitanVerification/);
   assert.match(webhook,/hercules_titan_payment_verification_runs/);
-  assert.match(webhook,/hercules_titan_payment_verification_events/);
+  assert.match(webhook,/hercules_titan_record_verification_event/);
   assert.match(webhook,/checkout\.session\.completed/);
   assert.match(webhook,/charge\.refunded/);
   const block=webhook.slice(webhook.indexOf("if(type==='checkout.session.completed')"),webhook.indexOf("if(['customer.subscription.created'"));
