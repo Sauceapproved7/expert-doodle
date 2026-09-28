@@ -26,6 +26,9 @@ test("benchmark renderer is deliberately constrained",()=>{
   assert.match(app,/"9:16"/);
   assert.match(app,/restricted to 720p/);
   assert.match(app,/fixed at 24 FPS/);
+  assert.match(app,/limited to 3 seconds/);
+  assert.match(app,/min\(73,/);
+  assert.match(app,/num_inference_steps=35/);
 });
 
 test("Space package uses dependencies rather than copied vendor source",()=>{
