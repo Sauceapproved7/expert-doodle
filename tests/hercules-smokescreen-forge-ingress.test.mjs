@@ -100,6 +100,20 @@ test("Forge Control API attaches SmokeScreen observation without changing custom
     assert.ok(observations.length>=2);
     assert.equal(observations.every((item)=>item.enforcementApplied===false),true);
     assert.equal(observations.every((item)=>item.outboundCounterattack===false),true);
+
+    const publicMetrics=await fetch(base+"/v1/security/smokescreen");
+    assert.equal(publicMetrics.status,401);
+
+    const metrics=await fetch(base+"/v1/security/smokescreen",{
+      headers:{authorization:"Bearer "+token},
+    });
+    assert.equal(metrics.status,200);
+    const metricsBody=await metrics.json();
+    assert.equal(metricsBody.mode,"OBSERVE_ONLY");
+    assert.equal(metricsBody.enforcementApplied,false);
+    assert.ok(metricsBody.observed>=2);
+    assert.equal(JSON.stringify(metricsBody).includes("127.0.0.1"),false);
+    assert.equal(metricsBody.auditCheckpoint.schema,"hercules.smokescreen.checkpoint.v1");
   }finally{
     await new Promise((resolve)=>server.close(resolve));
     await rm(root,{recursive:true,force:true});
