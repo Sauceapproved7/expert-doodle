@@ -33,7 +33,7 @@ test("Studio root serves the owned SauceApproved operator shell",async()=>{
   assert.match(response.body,/SauceApproved Studio/);
   assert.match(response.body,/Project Brief/);
   assert.match(response.body,/Shot Timeline/);
-  assert.match(response.body,/Quality & Evidence/);
+  assert.match(response.body,/Quality (?:&|&amp;) Evidence/);
   assert.match(response.body,/Execution bridge unavailable/);
 });
 
