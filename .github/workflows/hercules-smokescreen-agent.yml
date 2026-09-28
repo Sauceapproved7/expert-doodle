@@ -11,6 +11,8 @@ on:
       - "tests/hercules-smokescreen-agent.test.mjs"
       - "tests/hercules-smokescreen-forge-ingress.test.mjs"
       - "tests/hercules-forge-production.test.mjs"
+      - "staging-plane/compose.yml"
+      - "scripts/forge-staging-drill.mjs"
       - "docs/HERCULES-SMOKESCREEN-SENTINEL-V1.md"
       - "docs/HERCULES-THREAT-MODEL.md"
       - ".github/workflows/hercules-smokescreen-agent.yml"
