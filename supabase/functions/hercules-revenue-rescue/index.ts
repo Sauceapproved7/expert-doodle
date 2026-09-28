@@ -2,9 +2,35 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {createClient} from "npm:@supabase/supabase-js@2";
 import {applySignal, normalizeLead, recoveryPlan, type RevenueLead} from "./core.ts";
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
+const SERVICE_ROLE_KEY = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}").default || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+async function sha256Hex(value: string) {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(bytes)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function monitorAuthorized(req: Request) {
+  const key = req.headers.get("x-hercules-internal-key") ?? "";
+  if (!key || !SUPABASE_URL || !SERVICE_ROLE_KEY) return false;
+  const url = new URL(SUPABASE_URL + "/rest/v1/hercules_internal_service_keys");
+  url.searchParams.set("select", "enabled,key_sha256");
+  url.searchParams.set("purpose", "eq.ops-monitor");
+  url.searchParams.set("enabled", "eq.true");
+  url.searchParams.set("limit", "1");
+  const r = await fetch(url, {
+    headers: {apikey: SERVICE_ROLE_KEY, authorization: "Bearer " + SERVICE_ROLE_KEY},
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!r.ok) return false;
+  const rows = await r.json().catch(() => []);
+  const row = Array.isArray(rows) ? rows[0] : null;
+  return Boolean(row?.enabled && row?.key_sha256 && row.key_sha256 === await sha256Hex(key));
+}
+
 const corsHeaders = {
   "access-control-allow-origin": "*",
-  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
+  "access-control-allow-headers": "authorization, x-client-info, apikey, content-type, x-hercules-internal-key",
   "access-control-allow-methods": "POST, OPTIONS",
 };
 
@@ -37,6 +63,16 @@ function leadFromRow(row: Record<string, unknown>): RevenueLead {
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "GET") {
+    if (!await monitorAuthorized(req)) return response({error: "internal_monitor_authorization_required"}, 403);
+    return response({
+      ok: true,
+      service: "hercules-revenue-rescue",
+      version: "2.1.0",
+      mode: "authenticated-revenue-recovery",
+      monitor_contract: "internal-functional-v1",
+    });
+  }
   if (req.method === "OPTIONS") return new Response("ok", {headers: corsHeaders});
   if (req.method !== "POST") return response({error: "method_not_allowed"}, 405);
 
