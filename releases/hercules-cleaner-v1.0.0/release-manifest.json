@@ -23,12 +23,26 @@
     "docs/HERCULES-CLEANER-V1.md",
     "tests/hercules-cleaner.test.mjs",
     "tests/hercules-cleaner-agent.test.mjs",
-    "tests/hercules-cleaner-command.test.mjs"
+    "tests/hercules-cleaner-command.test.mjs",
+    "hercules-cleaner/windows/",
+    "hercules-cleaner/installer.mjs",
+    "tests/hercules-cleaner-installer.test.mjs",
+    "tests/hercules-cleaner-windows-package.test.mjs"
   ],
   "nonClaims": [
-    "no_native_installer_claim",
     "no_antivirus_claim",
     "no_registry_optimizer_claim",
-    "no_permission_bypass_claim"
-  ]
+    "no_permission_bypass_claim",
+    "no_native_exe_msi_claim",
+    "no_authenticode_signature_claim"
+  ],
+  "windowsInstaller": {
+    "mode": "per_user_script_bundle",
+    "nodeMinimumMajor": 22,
+    "installRoot": "%LOCALAPPDATA%\\\\SauceApproved\\\\Hercules Cleaner",
+    "stateRoot": "%USERPROFILE%\\\\.hercules-cleaner",
+    "autoUpdateImplemented": true,
+    "publicUpdateChannelEnabled": false,
+    "authenticodeSigned": false
+  }
 }
