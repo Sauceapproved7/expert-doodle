@@ -8,7 +8,7 @@ import {fileURLToPath} from "node:url";
 const execFileAsync = promisify(execFile);
 
 function xmlEscape(value) {
-  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll(""", "&quot;").replaceAll("'", "&apos;");
+  return String(value).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll(String.fromCharCode(34), "&quot;").replaceAll("'", "&apos;");
 }
 
 export function createAutostartPlan({
