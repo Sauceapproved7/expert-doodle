@@ -5,6 +5,11 @@ import {
   createSmokeScreenDecision,
   verifyAuditChain,
 } from "../hercules-runtime/smokescreen-agent.mjs";
+import {
+  createCommandRequest,
+  listCommandCapabilities,
+  routeCommand,
+} from "../hercules-runtime/command-surface.mjs";
 
 const key = "0123456789abcdef0123456789abcdef";
 
@@ -122,4 +127,16 @@ test("malformed and oversized events fail closed", () => {
     }, { hmacKey: key }),
     /invalid authFailures/,
   );
+});
+
+test("unified Hercules command surface exposes SmokeScreen without execution authority", () => {
+  assert.ok(listCommandCapabilities().includes("security.smokescreen"));
+  const command = createCommandRequest({
+    intentId: "intent-smokescreen-1",
+    capability: "security.smokescreen",
+    payload: { eventFingerprint: "abc" },
+  });
+  const routed = routeCommand(command);
+  assert.equal(routed.route, "hercules-runtime");
+  assert.equal(routed.executionAuthority, false);
 });
