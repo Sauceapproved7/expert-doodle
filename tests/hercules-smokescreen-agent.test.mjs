@@ -74,7 +74,7 @@ test("decoy identifiers are deterministic fingerprints and do not expose raw ses
   const event = {
     sessionId: "secret-session-value",
     route: "/api/private",
-    signals: { routeProbes: 20, requestVelocity: 120 },
+    signals: { routeProbes: 20, requestVelocity: 120, enumerationPattern: true },
   };
   const one = createSmokeScreenDecision(event, { hmacKey: key });
   const two = createSmokeScreenDecision(event, { hmacKey: key });
