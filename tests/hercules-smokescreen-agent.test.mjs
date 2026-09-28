@@ -8,6 +8,8 @@ import {
   createMirageFabric,
   evolveMirageFabric,
   createSmokeScreenEnforcementPlan,
+  createEvidenceLockedLearningCapsule,
+  verifyEvidenceLockedLearningCapsule,
 } from "../hercules-runtime/smokescreen-agent.mjs";
 import {
   createCommandRequest,
@@ -276,4 +278,87 @@ test("decoy enforcement plan requires isolation and denial on control failure", 
   assert.ok(plan.requiredControls.includes("NO_EGRESS"));
   assert.ok(plan.requiredControls.includes("NO_PRODUCTION_CREDENTIALS"));
   assert.ok(plan.requiredControls.includes("NO_CUSTOMER_DATA"));
+});
+
+
+test("false-positive governor blocks single-family behavioral evidence from deception", () => {
+  const decision = createSmokeScreenDecision({
+    sessionId: "governor-single-family",
+    route: "/account/settings",
+    signals: {
+      impossibleSequence: true,
+      privilegeBoundaryProbe: true,
+    },
+  }, { hmacKey: key });
+
+  assert.equal(decision.riskScore, 65);
+  assert.equal(decision.governor.independentEvidenceFamilies, 1);
+  assert.equal(decision.governor.deceptionAllowed, false);
+  assert.equal(decision.disposition, "THROTTLE");
+  assert.equal(decision.routeMode, "REAL");
+});
+
+test("false-positive governor allows deception when independent evidence families corroborate", () => {
+  const decision = createSmokeScreenDecision({
+    sessionId: "governor-multi-family",
+    route: "/admin",
+    signals: {
+      routeProbes: 20,
+      enumerationPattern: true,
+      privilegeBoundaryProbe: true,
+    },
+  }, { hmacKey: key });
+
+  assert.ok(decision.riskScore >= 60);
+  assert.ok(decision.governor.independentEvidenceFamilies >= 2);
+  assert.equal(decision.governor.deceptionAllowed, true);
+  assert.equal(decision.routeMode, "DECOY");
+});
+
+test("honeytoken evidence bypasses diversity requirement but remains local-only", () => {
+  const decision = createSmokeScreenDecision({
+    sessionId: "governor-honeytoken",
+    route: "/private",
+    signals: { honeytokenTouched: true },
+  }, { hmacKey: key });
+
+  assert.equal(decision.governor.honeytokenOverride, true);
+  assert.equal(decision.governor.deceptionAllowed, true);
+  assert.equal(decision.routeMode, "DECOY");
+  assert.equal(decision.outboundCounterattack, false);
+});
+
+test("evidence-locked learning capsule recommends hardening without production authority", () => {
+  const agent = createSmokeScreenAgent({
+    hmacKey: key,
+    now: () => 1_790_000_000_000,
+  });
+
+  agent.observe({
+    sessionId: "learn-1",
+    route: "/login",
+    signals: { authFailures: 7, credentialStuffing: true },
+  });
+  agent.observe({
+    sessionId: "learn-2",
+    route: "/admin",
+    signals: { routeProbes: 20, enumerationPattern: true, privilegeBoundaryProbe: true },
+  });
+
+  const capsule = createEvidenceLockedLearningCapsule(agent.audit(), {
+    hmacKey: key,
+    createdAt: "2026-09-28T10:00:00.000Z",
+  });
+
+  assert.equal(capsule.executionAuthority, false);
+  assert.equal(capsule.autoApply, false);
+  assert.equal(capsule.requiresReview, true);
+  assert.ok(capsule.recommendations.length >= 1);
+  assert.match(capsule.evidenceDigest, /^[a-f0-9]{64}$/);
+  assert.match(capsule.signature, /^[a-f0-9]{64}$/);
+  assert.equal(verifyEvidenceLockedLearningCapsule(capsule, { hmacKey: key }), true);
+
+  const tampered = structuredClone(capsule);
+  tampered.recommendations[0].control = "AUTO_DISABLE_ACCOUNT";
+  assert.equal(verifyEvidenceLockedLearningCapsule(tampered, { hmacKey: key }), false);
 });
