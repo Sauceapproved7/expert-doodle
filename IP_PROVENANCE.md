@@ -166,3 +166,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - External infrastructure: Supabase Data API/database/Edge Functions and browser runtime remain third-party infrastructure; they are not represented as SauceApproved-owned source.
 - Commercial boundary: product status is Early Access, candidate pricing remains owner-approval required, and checkout remains disabled. This integration does not approve pricing, Terms, Privacy, provider readiness, or the paid checkout path.
 - Privacy boundary: the public access-request surface does not require local file inventory or Recovery Capsule contents; Cleaner filesystem authority remains local to the authorized device.
+
+
+## SauceApproved Brand Brain v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/brand-brain/*.mjs`, `tests/sauceapproved-brand-brain.test.mjs`, `docs/HERCULES-BRAND-BRAIN-V1.md`, and the dedicated CI workflow.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- Third-party infrastructure: any future DAM, CMS, design, Figma, website, document, knowledge-base, model, or analytics provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
+- Trust scope: approved facts preserve source provenance; locked facts do not auto-overwrite; Constitution conflicts are rejected; fact changes remain review-required; cross-channel simulation never silently rewrites approved facts.
+- Differentiators: Brand Constitution, Cross-Channel Consistency Simulator, Rule Blast Radius Preview, and Brand Drift Time Machine. No absolute market-first claim is made without separate current verification.
