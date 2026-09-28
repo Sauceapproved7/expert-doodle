@@ -12,6 +12,7 @@ Canonical source: `Sauceapproved7/expert-doodle`.
 - `hercules-models/` — model plane and embedded native runtimes.
 - `hercules-training/` — training, evaluation, checkpoint and activation pipeline.
 - `hercules-video/` — video planning, rendering, quality and execution coordination.
+- `hercules-cleaner/` — local-first computer cleanup agent with policy-scoped automation, Session Clean and reversible Recovery Capsules.
 - `hercules-hurc/` — HURC token, Base Sepolia browser/RPC/signing components.
 - `hercules-bank/` — sandbox financial core: double-entry ledger, customer accounts, internal transfers and statements; external money rails remain disabled.
 - `staging-plane/` — isolated synthetic PostgreSQL/PostgREST/Forge staging.
