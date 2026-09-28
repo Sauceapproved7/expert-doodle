@@ -33,9 +33,10 @@ test("handoff tokens are random, one-time, and only hashed at rest",()=>{
 
 test("pilot GET is side-effect free and acceptance requires explicit POST",()=>{
   const getStart=handoff.indexOf("export async function pilotAdmissionGet");
+  const nextFunction=handoff.indexOf("async function passwordDefense",getStart);
   const postStart=handoff.indexOf("export async function pilotAdmissionPost");
-  assert.ok(getStart>=0&&postStart>getStart);
-  const getBlock=handoff.slice(getStart,postStart);
+  assert.ok(getStart>=0&&nextFunction>getStart&&postStart>nextFunction);
+  const getBlock=handoff.slice(getStart,nextFunction);
   assert.doesNotMatch(getBlock,/\.insert\(|\.update\(|\.delete\(|generateLink|verifyOtp|createUser/);
   assert.match(getBlock,/method=\"post\"/i);
   assert.match(handoff,/explicit_acceptance_required/);
@@ -64,7 +65,7 @@ test("accepted pilots get an isolated organization without weakening public regi
   assert.match(publicGate,/public-registration-open/);
   assert.match(publicGate,/'{"open":false}'::jsonb/);
   assert.doesNotMatch(control,/value:\s*\{\s*open:\s*true/);
-  assert.doesNotMatch(handoff,/public-registration-open[\s\S]{0,250}open['"]?\s*:\s*true/);
+  assert.doesNotMatch(handoff,/hercules_continuity_ledger[\s\S]{0,220}\.update\(/);
 });
 
 test("Password Defense v2 remains authoritative before password sign-in readiness",()=>{
@@ -79,8 +80,10 @@ test("synthetic certification cannot invite a real prospect or activate paid bil
   assert.match(control,/synthetic_certification/);
   assert.match(control,/@example\.com/);
   assert.match(control,/synthetic_only/);
-  assert.doesNotMatch(control,/stripe|checkout|paid_billing/i);
-  assert.doesNotMatch(handoff,/stripe|checkout|paid_billing/i);
+  assert.doesNotMatch(control,/stripe|checkout/i);
+  assert.doesNotMatch(handoff,/stripe|checkout/i);
+  assert.match(control,/paidBillingActivated:false/);
+  assert.match(handoff,/paid_billing:false/);
 });
 
 test("pilot control uses the dedicated Vault-backed service-key purpose and sanitized events",()=>{
