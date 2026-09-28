@@ -133,6 +133,7 @@ ${model ? statusBadge("Final output",model.evidence.finalization.closed ? "verif
 export function createStudioHttpHandler({
   statusReader=async()=>null,
   executionBridgeProvider=async()=>({connected:false,reason:"execution_bridge_unavailable"}),
+  authorizeOperator=async()=>false,
   actions={}
 }={}) {
   const manifest=createStudioManifest();
@@ -143,7 +144,8 @@ export function createStudioHttpHandler({
     return {runStatus,bridge,model};
   }
 
-  return async function handle({method="GET",pathname="/"}={}) {
+  return async function handle(request={}) {
+    const {method="GET",pathname="/"}=request;
     const normalizedMethod=String(method).toUpperCase();
     const normalizedPath=String(pathname || "/").split("?")[0];
 
@@ -181,6 +183,10 @@ export function createStudioHttpHandler({
       if (bridge?.connected!==true || model?.controls?.[actionName]?.enabled!==true) {
         return json({ok:false,error:reason || "execution_bridge_unavailable"},bridge?.connected===true ? 409 : 423);
       }
+      const authorized=await authorizeOperator(request);
+      if (authorized!==true) {
+        return json({ok:false,error:"studio_operator_authorization_required"},401);
+      }
       if (typeof actions?.[actionName]!=="function") {
         return json({ok:false,error:"execution_action_unavailable"},501);
       }
@@ -197,6 +203,7 @@ export async function startStudioServer({
   port=8787,
   statePath=null,
   executionBridgeProvider,
+  authorizeOperator,
   actions
 }={}) {
   const statusReader=statePath
@@ -205,11 +212,11 @@ export async function startStudioServer({
         throw error;
       })
     : async()=>null;
-  const handle=createStudioHttpHandler({statusReader,executionBridgeProvider,actions});
+  const handle=createStudioHttpHandler({statusReader,executionBridgeProvider,authorizeOperator,actions});
   const server=createServer(async(req,res)=>{
     try {
       const pathname=new URL(req.url || "/","http://studio.local").pathname;
-      const response=await handle({method:req.method || "GET",pathname});
+      const response=await handle({method:req.method || "GET",pathname,headers:req.headers});
       res.writeHead(response.status,response.headers);
       res.end(response.body);
     } catch (error) {
