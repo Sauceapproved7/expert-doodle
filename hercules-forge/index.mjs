@@ -17,3 +17,4 @@ export {customerConsoleHtml, customerConsoleCss, customerConsoleJs, customerCons
 export {createForgeControlService, listenForgeControlService} from "./control-api.mjs";
 export {readForgeProductionConfig, safeForgeProductionSummary, startForgeProductionService} from "./production.mjs";
 export {verifyForgePublicDeployment, renderForgeSystemdUnit} from "./deployment.mjs";
+\nexport {ForgeDurableStateMirror, FORGE_DURABLE_STATE_MANAGED_ROOTS} from "./durable-state.mjs";\n

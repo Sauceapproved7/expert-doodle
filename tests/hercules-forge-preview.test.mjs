@@ -244,3 +244,42 @@ test("control API starts, reports, and stops an owned preview", async () => {
     await rm(root, {recursive: true, force: true});
   }
 });
+
+
+test("preview acknowledges successful runtime mutations only after durability callback", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-preview-durable-"));
+  let preview;
+  const mutations = [];
+  try {
+    const store = new ForgeWorkspaceStore(root);
+    const {revision} = await store.createProject(spec, {projectId: "durable-preview-app"});
+    const artifact = await buildForgeArtifact({
+      workspaceRoot: root,
+      artifactRoot: join(root, "artifacts"),
+      projectId: "durable-preview-app",
+      revisionId: revision.revisionId,
+    });
+    preview = await startForgePreview({
+      artifactDir: artifact.artifactDir,
+      runtimeDataDir: join(root, "runtime-data", "durable-preview-app"),
+      onRuntimeMutation: async (event) => mutations.push(event),
+    });
+
+    const created = await fetch(preview.url + "/api/Item", {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({name:"durable"}),
+    });
+    assert.equal(created.status, 201);
+    assert.equal(mutations.length, 1);
+    assert.equal(mutations[0].method, "POST");
+    assert.equal(mutations[0].pathname, "/api/Item");
+
+    const listed = await fetch(preview.url + "/api/Item");
+    assert.equal(listed.status, 200);
+    assert.equal(mutations.length, 1);
+  } finally {
+    if (preview) await preview.stop();
+    await rm(root, {recursive:true, force:true});
+  }
+});

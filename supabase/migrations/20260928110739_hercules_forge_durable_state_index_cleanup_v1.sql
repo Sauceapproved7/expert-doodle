@@ -1,0 +1,2 @@
+drop index if exists public.hercules_forge_state_chunks_path_object_idx;
+drop index if exists public.hercules_forge_state_objects_updated_idx;

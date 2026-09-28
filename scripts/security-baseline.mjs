@@ -72,7 +72,8 @@ const checks = {
     /identity\.recovery\.complete/.test(control),
   forgeRecoveryEnumerationResistance:
     /identity\.recovery\.request/.test(control) &&
-    /return send\(res, 202, \{accepted: true\}\)/.test(control) &&
+    /return reply\(202, \{accepted: true\}\)/.test(control) &&
+    /if \(shouldPersist\) await durableState\.flush\(\)/.test(control) &&
     /FORGE_RECOVERY_MAX_REQUESTS/.test(production),
   forgeNotificationBoundary:
     /redirect: "error"/.test(notifications) &&
