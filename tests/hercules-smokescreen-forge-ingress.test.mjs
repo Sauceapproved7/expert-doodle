@@ -131,3 +131,36 @@ test("staging Forge mounts the SmokeScreen runtime read-only", async()=>{
     /\.\.\/hercules-runtime:\/repo\/hercules-runtime:ro/,
   );
 });
+
+
+test("Forge ingress separates authenticated sessions without exposing session tokens", async()=>{
+  const root=await mkdtemp(join(tmpdir(),"forge-smokescreen-session-"));
+  const observations=[];
+  const agent=createSmokeScreenAgent({hmacKey:key,now:()=>1_790_000_000_000});
+  const smokeScreenObserver=createForgeSmokeScreenObserver({
+    agent,
+    mode:"OBSERVE_ONLY",
+    now:()=>1_790_000_000_000,
+    onDecision:async(result)=>observations.push(result),
+  });
+  const server=createForgeControlService({root,token,smokeScreenObserver});
+  await new Promise((resolve)=>server.listen(0,"127.0.0.1",resolve));
+  const base="http://127.0.0.1:"+server.address().port;
+  const firstToken="session-token-alpha-private";
+  const secondToken="session-token-beta-private";
+
+  try{
+    await fetch(base+"/v1/me",{headers:{cookie:"forge_session="+encodeURIComponent(firstToken)}});
+    await fetch(base+"/v1/me",{headers:{cookie:"forge_session="+encodeURIComponent(secondToken)}});
+    await new Promise((resolve)=>setImmediate(resolve));
+
+    assert.equal(observations.length,2);
+    assert.notEqual(observations[0].clientFingerprint,observations[1].clientFingerprint);
+    const serialized=JSON.stringify(observations);
+    assert.equal(serialized.includes(firstToken),false);
+    assert.equal(serialized.includes(secondToken),false);
+  }finally{
+    await new Promise((resolve)=>server.close(resolve));
+    await rm(root,{recursive:true,force:true});
+  }
+});
