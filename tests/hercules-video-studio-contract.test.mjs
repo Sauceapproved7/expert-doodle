@@ -82,3 +82,17 @@ test("studio view model fails closed on broken run integrity",()=>{
   assert.equal(model.controls.resume.enabled,false);
   assert.match(model.blockingReason,/fingerprint_mismatch/);
 });
+
+
+test("studio view model redacts server-local artifact paths from customer-facing identity",()=>{
+  const model=buildStudioViewModel({
+    runStatus:runStatus(),
+    executionBridge:{connected:false,reason:"execution_bridge_unavailable"}
+  });
+  assert.equal(model.identity.executionPlanFingerprint,"plan-1");
+  assert.equal(model.identity.runtimeId,"hercules-video-local");
+  assert.equal(model.identity.runnerId,"wan22-ti2v5b");
+  assert.equal("renderOutputDir" in model.identity,false);
+  assert.equal("finalOutputPath" in model.identity,false);
+  assert.equal("evidenceOutputPath" in model.identity,false);
+});
