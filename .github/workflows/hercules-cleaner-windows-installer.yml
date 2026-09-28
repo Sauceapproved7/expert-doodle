@@ -32,11 +32,6 @@ jobs:
   windows-installer:
     runs-on: windows-latest
     timeout-minutes: 20
-    env:
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-      BUNDLE_DIR: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0
-      BUNDLE_ZIP: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip
-      BUNDLE_SHA: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip.sha256
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
@@ -63,40 +58,46 @@ jobs:
       - name: Build exact-commit Windows bundle
         shell: pwsh
         run: |
-          node scripts/package-hercules-cleaner-windows.mjs --commit-sha "$env:SOURCE_SHA" --output-dir "$env:BUNDLE_DIR"
+          $bundle = Join-Path $env:RUNNER_TEMP "hercules-cleaner-windows-v1.0.0"
+          node scripts/package-hercules-cleaner-windows.mjs --commit-sha "$env:GITHUB_SHA" --output-dir "$bundle"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Smoke install and uninstall without privileged startup changes
         shell: pwsh
         run: |
-          & "$env:BUNDLE_DIR\Install-HerculesCleaner.ps1" -BundleRoot "$env:BUNDLE_DIR" -NoAutostart -NoUpdateTask
+          $bundle = Join-Path $env:RUNNER_TEMP "hercules-cleaner-windows-v1.0.0"
+          $installed = Join-Path $env:LOCALAPPDATA "SauceApproved\Hercules Cleaner"
+          & (Join-Path $bundle "Install-HerculesCleaner.ps1") -BundleRoot $bundle -NoAutostart -NoUpdateTask
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & "$env:LOCALAPPDATA\SauceApproved\Hercules Cleaner\HerculesCleaner.cmd" status
+          & (Join-Path $installed "HerculesCleaner.cmd") status
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & "$env:LOCALAPPDATA\SauceApproved\Hercules Cleaner\Uninstall-HerculesCleaner.ps1"
+          & (Join-Path $installed "Uninstall-HerculesCleaner.ps1")
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build ZIP and checksum
         shell: pwsh
         run: |
-          Compress-Archive -Path "$env:BUNDLE_DIR\*" -DestinationPath "$env:BUNDLE_ZIP" -CompressionLevel Optimal -Force
-          $hash=(Get-FileHash -LiteralPath "$env:BUNDLE_ZIP" -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  hercules-cleaner-windows-v1.0.0.zip" | Set-Content -LiteralPath "$env:BUNDLE_SHA" -Encoding ascii
+          $bundle = Join-Path $env:RUNNER_TEMP "hercules-cleaner-windows-v1.0.0"
+          $zip = Join-Path $env:RUNNER_TEMP "hercules-cleaner-windows-v1.0.0.zip"
+          $checksum = Join-Path $env:RUNNER_TEMP "hercules-cleaner-windows-v1.0.0.zip.sha256"
+          Compress-Archive -Path (Join-Path $bundle "*") -DestinationPath $zip -CompressionLevel Optimal -Force
+          $hash=(Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  hercules-cleaner-windows-v1.0.0.zip" | Set-Content -LiteralPath $checksum -Encoding ascii
           Write-Host "Windows installer ZIP SHA-256: $hash"
 
       - name: Attest Windows installer build provenance
         if: github.event_name == 'push'
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
         with:
-          subject-path: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip
+          subject-path: ${{ runner.temp }}/hercules-cleaner-windows-v1.0.0.zip
 
       - name: Upload Windows installer artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: hercules-cleaner-windows-v1.0.0-${{ env.SOURCE_SHA }}
+          name: hercules-cleaner-windows-v1.0.0
           path: |
-            ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip
-            ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip.sha256
-            ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0\bundle-manifest.json
+            ${{ runner.temp }}/hercules-cleaner-windows-v1.0.0.zip
+            ${{ runner.temp }}/hercules-cleaner-windows-v1.0.0.zip.sha256
+            ${{ runner.temp }}/hercules-cleaner-windows-v1.0.0/bundle-manifest.json
           if-no-files-found: error
           retention-days: 90
