@@ -32,3 +32,18 @@ This release is not:
 - authority to bypass administrator/elevation controls.
 
 Report vulnerabilities through the repository's private security reporting path when available.
+
+
+## Windows installer and updater controls
+
+- Per-user install root under `LOCALAPPDATA`; no administrator elevation is requested.
+- The launcher resolves the active version from a local `active.json` pointer.
+- Installer bundle files are verified against the generated SHA-256 bundle manifest before staging.
+- Updates are accepted only from HTTPS and an allowlisted distribution host.
+- Downloaded update archives must match the channel SHA-256 before extraction.
+- Archive entries are rejected if they are absolute, drive-qualified, or contain traversal components.
+- A candidate version must pass a local Cleaner `status` health check before the active pointer changes.
+- Failed activation records a rollback receipt and leaves the previous version active.
+- The updater does not change PowerShell execution policy.
+- Node.js and Windows PowerShell/tar/Task Scheduler remain external operating-system/runtime infrastructure.
+- Authenticode publisher signing is not claimed until a trusted owner-controlled certificate is configured.
