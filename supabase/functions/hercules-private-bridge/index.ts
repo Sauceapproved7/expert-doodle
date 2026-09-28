@@ -51,6 +51,14 @@ const SOFTWARE_COMMERCIAL_BUNDLE={
     privacy:{path:'docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md',sha:SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA}
   }
 } as const;
+const TITAN_PRODUCT_CODE='hercules-titan-founding-access';
+const TITAN_COMMERCIAL_PACKET_VERSION='hercules-titan-commercial-v1';
+const TITAN_COMMERCIAL_PACKET_DIGEST='33c0f4567b6c0c06410b9bd546efdac8e2cc097f4c75b86728d539901e8bd5c7';
+const TITAN_COMMERCIAL_PACKET_CONFIRMATION='APPROVE HERCULES TITAN COMMERCIAL PACKET '+TITAN_COMMERCIAL_PACKET_DIGEST.slice(0,12).toUpperCase();
+const TITAN_TERMS_PATH='docs/legal/HERCULES-TITAN-TERMS-CANDIDATE-V1.md';
+const TITAN_PRIVACY_PATH='docs/legal/HERCULES-TITAN-PRIVACY-CANDIDATE-V1.md';
+const TITAN_TERMS_SHA='5d4daec3fa321db5c13366f05cc66814348182f6';
+const TITAN_PRIVACY_SHA='0ba9e0587ae38b3667a6397a70939f8f2c03b727';
 
 async function actor(req:Request){
   const h=req.headers.get('authorization')||'', token=h.startsWith('Bearer ')?h.slice(7):'';
@@ -252,6 +260,71 @@ async function softwareCommercialBundleStatus(){
       approved_at:x.approved_at,
       document_ref:x.document_ref,
       updated_at:x.updated_at
+    }))
+  };
+}
+
+async function titanCommercialBundleStatus(){
+  const [{data:product,error:productError},{data:approvals,error:approvalError}]=await Promise.all([
+    admin.from('hercules_software_products')
+      .select('code,name,descriptor,status,checkout_enabled,metadata,updated_at')
+      .eq('code',TITAN_PRODUCT_CODE)
+      .maybeSingle(),
+    admin.from('hercules_software_commercial_approvals')
+      .select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at')
+      .eq('product_code',TITAN_PRODUCT_CODE)
+      .order('approval_type')
+  ]);
+  if(productError||approvalError)throw (productError||approvalError);
+  if(!product)throw new Error('titan_product_missing');
+
+  const byType=Object.fromEntries((approvals||[]).map((row:any)=>[row.approval_type,row]));
+  const pricingMatches=Boolean(
+    product?.metadata?.commercial_mode==='founding_access_one_time' &&
+    product?.metadata?.billing_model==='one_time' &&
+    Number(product?.metadata?.candidate_price_cents)===4900 &&
+    String(product?.metadata?.currency||'').toUpperCase()==='USD' &&
+    product?.metadata?.commercial_packet_version===TITAN_COMMERCIAL_PACKET_VERSION &&
+    product?.metadata?.commercial_packet_digest===TITAN_COMMERCIAL_PACKET_DIGEST
+  );
+  const termsRefMatches=byType?.terms?.document_ref===TITAN_TERMS_PATH &&
+    byType?.terms?.evidence?.terms_sha===TITAN_TERMS_SHA;
+  const privacyRefMatches=byType?.privacy?.document_ref===TITAN_PRIVACY_PATH &&
+    byType?.privacy?.evidence?.privacy_sha===TITAN_PRIVACY_SHA;
+  const checkoutHeldClosed=product.checkout_enabled===false;
+  const ownerApprovalTypes=['pricing','terms','privacy'];
+  const ownerApprovalsComplete=ownerApprovalTypes.every(type=>byType?.[type]?.status==='approved');
+
+  return {
+    ok:true,
+    packet:{
+      version:TITAN_COMMERCIAL_PACKET_VERSION,
+      digest:TITAN_COMMERCIAL_PACKET_DIGEST,
+      fingerprint:TITAN_COMMERCIAL_PACKET_DIGEST.slice(0,12).toUpperCase(),
+      confirmation:TITAN_COMMERCIAL_PACKET_CONFIRMATION,
+      product_code:TITAN_PRODUCT_CODE,
+      price:{currency:'USD',amount_cents:4900,billing_model:'one_time'},
+      documents:{
+        terms:{path:TITAN_TERMS_PATH,sha:TITAN_TERMS_SHA},
+        privacy:{path:TITAN_PRIVACY_PATH,sha:TITAN_PRIVACY_SHA}
+      }
+    },
+    readiness:{
+      pricingMatches,
+      termsRefMatches,
+      privacyRefMatches,
+      checkoutHeldClosed,
+      ownerApprovalsComplete,
+      paymentProviderReady:byType?.payment_provider_ready?.status==='approved',
+      paymentPathVerified:byType?.payment_path_verified?.status==='approved',
+      canApprove:pricingMatches&&termsRefMatches&&privacyRefMatches&&checkoutHeldClosed&&!ownerApprovalsComplete
+    },
+    approvals:(approvals||[]).map((row:any)=>({
+      approval_type:row.approval_type,
+      status:row.status,
+      approved_at:row.approved_at||null,
+      document_ref:row.document_ref||null,
+      updated_at:row.updated_at||null
     }))
   };
 }
@@ -467,8 +540,8 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
-    return out({ok:true,service:'hercules-private-bridge',version:'1.6.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','software_commercial_bundle_status','software_commercial_bundle_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state'],
+    return out({ok:true,service:'hercules-private-bridge',version:'1.7.0',status:'ready',
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','software_commercial_bundle_status','software_commercial_bundle_approve','titan_commercial_bundle_status','titan_commercial_bundle_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -488,6 +561,69 @@ Deno.serve(async(req:Request)=>{
       const result=await issuePilotAdmission(admin,b,{principal:'owner',actorUserId:uid,launchBaseUrl:U+'/functions/v1/hercules-launch'});
       return out(result.body,result.status);
     }catch{return out({error:'pilot_admission_issue_failed'},500)}
+  }
+
+  if(action==='titan_commercial_bundle_status'){
+    try{return out(await titanCommercialBundleStatus())}
+    catch(error){return out({error:'titan_commercial_bundle_status_failed',detail:error instanceof Error?error.message:String(error)},500)}
+  }
+
+  if(action==='titan_commercial_bundle_approve'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const packetVersion=String(b.packet_version||'').trim();
+    const packetDigest=String(b.packet_digest||'').trim().toLowerCase();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+
+    if(packetVersion!==TITAN_COMMERCIAL_PACKET_VERSION)return out({
+      error:'titan_commercial_packet_version_mismatch',
+      expected:TITAN_COMMERCIAL_PACKET_VERSION
+    },409);
+    if(packetDigest!==TITAN_COMMERCIAL_PACKET_DIGEST)return out({
+      error:'titan_commercial_packet_digest_mismatch',
+      expected:TITAN_COMMERCIAL_PACKET_DIGEST
+    },409);
+    if(confirmation!==TITAN_COMMERCIAL_PACKET_CONFIRMATION)return out({
+      error:'explicit_confirmation_required',
+      expected:TITAN_COMMERCIAL_PACKET_CONFIRMATION
+    },400);
+
+    const envelope=await titanCommercialBundleStatus();
+    if(!envelope.readiness.pricingMatches)return out({error:'titan_pricing_catalog_mismatch'},409);
+    if(!envelope.readiness.termsRefMatches)return out({error:'titan_terms_document_mismatch'},409);
+    if(!envelope.readiness.privacyRefMatches)return out({error:'titan_privacy_document_mismatch'},409);
+    if(!envelope.readiness.checkoutHeldClosed)return out({error:'titan_checkout_must_remain_locked_during_owner_approval'},409);
+
+    const {data,error}=await a.db.rpc('hercules_titan_owner_approve_bundle',{
+      p_packet_version:TITAN_COMMERCIAL_PACKET_VERSION,
+      p_packet_digest:TITAN_COMMERCIAL_PACKET_DIGEST,
+      p_confirmation:TITAN_COMMERCIAL_PACKET_CONFIRMATION
+    });
+    if(error)return out({error:'titan_commercial_bundle_approval_failed',detail:error.message},500);
+
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'titan.commercial.bundle.approved',
+      resource_type:'hercules_titan_commercial_bundle',
+      resource_id:TITAN_COMMERCIAL_PACKET_VERSION,
+      details:{
+        packet_digest:TITAN_COMMERCIAL_PACKET_DIGEST,
+        product_code:TITAN_PRODUCT_CODE,
+        price_cents:4900,
+        billing_model:'one_time',
+        approvals:['pricing','terms','privacy'],
+        terms_sha:TITAN_TERMS_SHA,
+        privacy_sha:TITAN_PRIVACY_SHA,
+        payment_gates_unchanged:true
+      }
+    });
+
+    return out({
+      ok:true,
+      approval:data,
+      envelope:await titanCommercialBundleStatus(),
+      launch_gate:await refreshLaunchGate()
+    });
   }
 
   if(action==='software_commercial_bundle_status'){
@@ -570,7 +706,7 @@ Deno.serve(async(req:Request)=>{
 
   if(action==='software_commercial_status'){
     try{
-      const productCodes=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'];
+      const productCodes=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner','hercules-titan-founding-access'];
       const [{data:products,error:productError},{data:plans,error:planError},{data:approvals,error:approvalError},{data:stripe,error:stripeError}]=await Promise.all([
         admin.from('hercules_software_products').select('code,name,descriptor,status,live_url,checkout_enabled').in('code',productCodes).order('code'),
         admin.from('hercules_software_product_plans').select('product_code,plan_code,label,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',productCodes).order('candidate_monthly_price_cents'),
@@ -601,7 +737,7 @@ Deno.serve(async(req:Request)=>{
     const productCode=String(b.product_code||'').trim();
     const approvalType=String(b.approval_type||'').trim();
     const confirmation=String(b.confirmation||'').trim();
-    if(!['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'].includes(productCode))return out({error:'valid_product_code_required'},400);
+    if(!['sauceapproved-studio','sauceapproved-ads','hercules-cleaner','hercules-titan-founding-access'].includes(productCode))return out({error:'valid_product_code_required'},400);
     if(!['pricing','terms','privacy'].includes(approvalType))return out({error:'valid_approval_type_required'},400);
     const expected='APPROVE '+productCode+' '+approvalType.toUpperCase()+' V1';
     if(confirmation!==expected)return out({error:'explicit_confirmation_required',expected},400);
