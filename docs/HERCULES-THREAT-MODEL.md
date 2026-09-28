@@ -99,3 +99,12 @@ Current Hercules evidence does not establish:
 - multi-factor authentication or externally anchored lifecycle-token issuance/revocation evidence.
 
 These non-claims are security boundaries, not documentation omissions.
+
+
+### SmokeScreen defensive-deception boundary
+
+22. **Security telemetry -> SmokeScreen Sentinel -> local enforcement/decoy plane**: untrusted request, authentication, and runtime signals cross a normalization and policy boundary before any defensive action is recommended. The Sentinel emits only bounded, abstract, owned-infrastructure actions and never receives authority to attack, scan, exploit, access, or modify an external system. HMAC material remains server-side. Decoy routes must be isolated from real credentials, customer data, payment systems, signing authority, and production administration. A decision is not execution authority; an independently authorized local adapter must enforce it.
+
+### Adaptive deception and false-positive containment
+
+Controls: bounded input fields, explicit signal allowlist, deterministic risk scoring, fail-closed signal validation, maximum 1500 ms tarpit delay, no outbound counterattack path, HMAC-derived session/route/decoy fingerprints, no raw session identifiers in decision output, isolated decoy-only routing at high risk, honeytoken-triggered critical containment, tamper-evident HMAC audit chaining, bounded retained audit windows with checkpoint anchors, and staged rollout from observe-only through containment. SmokeScreen must never place real secrets or customer records in a decoy surface and must preserve an immediate path back to normal routing for false-positive remediation.

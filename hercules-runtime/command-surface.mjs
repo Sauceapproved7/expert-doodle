@@ -6,7 +6,8 @@ const ROUTES=Object.freeze({
   "recovery.assess":"hercules-recovery",
   "recovery.route":"hercules-recovery",
   "video.render":"hercules-video",
-  "deploy.release":"hercules-deploy"
+  "deploy.release":"hercules-deploy",
+  "security.smokescreen":"hercules-runtime"
 });
 const SHA=/^[a-f0-9]{64}$/i;
 function stable(v){if(Array.isArray(v))return v.map(stable);if(v&&typeof v==="object")return Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])]));return v}
