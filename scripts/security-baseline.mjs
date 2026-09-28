@@ -72,7 +72,7 @@ const checks = {
     /identity\.recovery\.complete/.test(control),
   forgeRecoveryEnumerationResistance:
     /identity\.recovery\.request/.test(control) &&
-    /return reply\(202, \{accepted: true\}\)/.test(control) &&
+    /return await reply\(202, \{accepted: true\}\)/.test(control) &&
     /if \(shouldPersist\)/.test(control) &&
     /await durableState\.flush\(\)/.test(control) &&
     /withInternalStage\(error, "forge_durable_flush_failed"\)/.test(control) &&
