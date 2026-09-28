@@ -177,6 +177,24 @@ paths:
         - $ref: "#/components/parameters/ProjectId"
       responses:
         "200": {description: Immutable revisions.}
+  /v1/workspaces/{workspaceId}/projects/{projectId}/revisions/{revisionId}/source:
+    get:
+      operationId: getWorkspaceProjectRevisionSource
+      parameters:
+        - $ref: "#/components/parameters/WorkspaceId"
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/RevisionId"
+        - name: path
+          in: query
+          required: true
+          schema: {type: string, minLength: 1}
+      responses:
+        "200": {description: Integrity-checked generated source file from the immutable revision index.}
+        "400": {description: Invalid or missing source path.}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {description: Revision or indexed source file not found.}
+        "409": {description: Source integrity mismatch.}
+        "413": {description: Source file exceeds browser limit.}
   /v1/admin/workspaces/{workspaceId}/invites:
     post:
       operationId: operatorCreateWorkspaceInvite
@@ -237,6 +255,24 @@ paths:
         - $ref: "#/components/parameters/RevisionId"
       responses:
         "200": {description: Specific revision.}
+  /v1/projects/{projectId}/revisions/{revisionId}/source:
+    get:
+      operationId: operatorGetRevisionSource
+      security: [{controlBearer: []}]
+      parameters:
+        - $ref: "#/components/parameters/ProjectId"
+        - $ref: "#/components/parameters/RevisionId"
+        - name: path
+          in: query
+          required: true
+          schema: {type: string, minLength: 1}
+      responses:
+        "200": {description: Integrity-checked generated source file from the immutable revision index.}
+        "400": {description: Invalid or missing source path.}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {description: Revision or indexed source file not found.}
+        "409": {description: Source integrity mismatch.}
+        "413": {description: Source file exceeds browser limit.}
   /v1/projects/{projectId}/revisions/{revisionId}/artifact:
     post:
       operationId: operatorBuildArtifact
