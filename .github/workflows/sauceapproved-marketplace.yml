@@ -1,0 +1,32 @@
+name: SauceApproved Marketplace Core
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "sauceapproved-marketplace/**"
+      - "tests/sauceapproved-marketplace.test.mjs"
+      - ".github/workflows/sauceapproved-marketplace.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  marketplace-core:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run Marketplace tests
+        run: node --test tests/sauceapproved-marketplace.test.mjs
+      - name: Enforce provider-neutral marketplace core
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -RniE 'from ["'\'' ]*(stripe|shopify|appdeploy|replit|vercel|netlify)|require\(["'\''](stripe|shopify|appdeploy|replit|vercel|netlify)'             sauceapproved-marketplace/catalog.mjs             sauceapproved-marketplace/install-plan.mjs; then
+            echo "Provider-specific dependency leaked into SauceApproved Marketplace core."
+            exit 1
+          fi
+          echo "SauceApproved Marketplace core remains provider-neutral."
