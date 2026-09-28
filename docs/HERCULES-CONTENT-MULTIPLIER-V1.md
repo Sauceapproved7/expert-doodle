@@ -31,3 +31,7 @@ node scripts/verify-hercules-execution-contract.mjs
 ```
 
 The architecture benchmark is not represented as production-scale evidence. Live integrations, load behavior and conversion impact require separate measured verification.
+
+## Merge governance
+
+Material changes require the repository provenance checklist in the pull-request body so origin, license compatibility, third-party notices, AI assistance, and owner-code scope are machine-verifiable at merge time.
