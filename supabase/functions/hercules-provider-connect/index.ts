@@ -8,6 +8,17 @@ const STORE='azymhc-x0.myshopify.com';
 const SHOP_GID='gid://shopify/Shop/100002726208';
 const RECEIVER=`${U}/functions/v1/hercules-shopify-webhook`;
 const STRIPE_RECEIVER=`${U}/functions/v1/hercules-stripe-webhook`;
+const STUDIO_ADS_PRODUCTS=['sauceapproved-studio','sauceapproved-ads'] as const;
+const SOFTWARE_PRICE_GUARD={starter:2900,pro:7900,agency:19900} as const;
+const STRIPE_EVENTS=[
+  'checkout.session.completed',
+  'customer.subscription.created',
+  'customer.subscription.updated',
+  'customer.subscription.deleted',
+  'invoice.payment_succeeded',
+  'invoice.payment_failed',
+  'charge.refunded'
+] as const;
 
 const j=(body:any,status=200)=>new Response(JSON.stringify(body),{
   status,
@@ -232,6 +243,128 @@ async function ensureStripeCatalog(admin:any,key:string){
   return catalog;
 }
 
+
+async function approvedSoftwareProducts(admin:any){
+  const {data,error}=await admin.from('hercules_software_commercial_approvals')
+    .select('product_code,approval_type,status')
+    .in('product_code',[...STUDIO_ADS_PRODUCTS])
+    .in('approval_type',['pricing','terms','privacy']);
+  if(error)throw error;
+  return STUDIO_ADS_PRODUCTS.filter(productCode=>{
+    const rows=(data||[]).filter((row:any)=>row.product_code===productCode);
+    return rows.length===3&&rows.every((row:any)=>row.status==='approved');
+  });
+}
+
+async function ensureSoftwareStripeCatalog(admin:any,key:string,stripeAccountId:string,livemode:boolean){
+  const approved=await approvedSoftwareProducts(admin);
+  if(!approved.length)return [];
+
+  const {data:plans,error}=await admin.from('hercules_software_product_plans')
+    .select('product_code,plan_code,label,candidate_monthly_price_cents')
+    .in('product_code',approved)
+    .order('candidate_monthly_price_cents');
+  if(error)throw error;
+
+  const products=await stripeRequest(key,'products?active=true&limit=100');
+  const synced:any[]=[];
+
+  for(const productCode of approved){
+    const productPlans=(plans||[]).filter((row:any)=>row.product_code===productCode);
+    if(productPlans.length!==3)throw new Error('software_plan_catalog_incomplete');
+
+    for(const [planCode,amount] of Object.entries(SOFTWARE_PRICE_GUARD)){
+      const row=productPlans.find((item:any)=>item.plan_code===planCode);
+      if(!row||Number(row.candidate_monthly_price_cents)!==Number(amount)){
+        throw new Error('software_plan_price_guard_mismatch');
+      }
+    }
+
+    let product=(products.data||[]).find((item:any)=>
+      item?.metadata?.softwareProductCode===productCode
+    );
+
+    if(!product){
+      const productName=productCode==='sauceapproved-studio'?'SauceApproved Studio':'SauceApproved Ads';
+      const form=new URLSearchParams();
+      form.set('name',productName);
+      form.set('metadata[softwareProductCode]',productCode);
+      form.set('metadata[hercules_catalog_source]','hercules_software_product_plans');
+      product=await stripeForm(key,'products',form);
+      products.data=[...(products.data||[]),product];
+    }
+
+    for(const plan of productPlans){
+      const planCode=String(plan.plan_code);
+      const amount=Number(plan.candidate_monthly_price_cents);
+      const lookupKey=`software_${productCode.replaceAll('-','_')}_${planCode}_monthly_v1`;
+      const query=new URLSearchParams({active:'true',limit:'10'});
+      query.append('lookup_keys[]',lookupKey);
+      const priceLookup=await stripeRequest(key,'prices?'+query.toString());
+      let price=(priceLookup.data||[]).find((item:any)=>item?.lookup_key===lookupKey);
+
+      if(price){
+        if(Number(price.unit_amount)!==amount||
+           String(price.currency)!=='usd'||
+           String(price.recurring?.interval)!=='month'||
+           Number(price.recurring?.interval_count||1)!==1||
+           String(price.product)!==String(product.id)){
+          throw new Error('software_stripe_price_drift');
+        }
+      }else{
+        const form=new URLSearchParams();
+        form.set('currency','usd');
+        form.set('unit_amount',String(amount));
+        form.set('product',String(product.id));
+        form.set('recurring[interval]','month');
+        form.set('recurring[interval_count]','1');
+        form.set('lookup_key',lookupKey);
+        form.set('metadata[softwareProductCode]',productCode);
+        form.set('metadata[softwarePlanCode]',planCode);
+        form.set('metadata[hercules_catalog_source]','hercules_software_product_plans');
+        price=await stripeForm(key,'prices',form);
+      }
+
+      const record={
+        product_code:productCode,
+        plan_code:planCode,
+        stripe_account_id:stripeAccountId,
+        stripe_product_id:String(product.id),
+        stripe_price_id:String(price.id),
+        unit_amount_cents:amount,
+        currency:'usd',
+        livemode,
+        active:true,
+        metadata:{
+          softwareProductCode:productCode,
+          softwarePlanCode:planCode,
+          lookup_key:lookupKey
+        },
+        synced_at:new Date().toISOString()
+      };
+      const {error:catalogError}=await admin.from('hercules_software_stripe_catalog')
+        .upsert(record,{onConflict:'product_code,plan_code'});
+      if(catalogError)throw catalogError;
+      synced.push(record);
+    }
+  }
+
+  return synced;
+}
+
+async function activeStripeConnection(admin:any,organizationId:string){
+  const {data,error}=await admin.from('hercules_provider_connections')
+    .select('id,organization_id,provider,account_key,access_secret_ref,signing_secret_ref,status,connected_at,last_error,metadata,updated_at')
+    .eq('organization_id',organizationId)
+    .eq('provider','stripe')
+    .eq('status','active')
+    .not('access_secret_ref','is',null)
+    .order('updated_at',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  if(error)throw error;
+  return data;
+}
 
 const SOFTWARE_PRODUCTS=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'] as const;
 
@@ -767,16 +900,13 @@ Deno.serve(async req=>{
       if(!endpoint){
         const form=new URLSearchParams();
         form.set('url',STRIPE_RECEIVER);
-        for(const event of [
-          'checkout.session.completed',
-          'customer.subscription.created',
-          'customer.subscription.updated',
-          'customer.subscription.deleted',
-          'invoice.payment_succeeded',
-          'invoice.payment_failed'
-        ])form.append('enabled_events[]',event);
+        for(const event of STRIPE_EVENTS)form.append('enabled_events[]',event);
         endpoint=await stripeForm(key,'webhook_endpoints',form);
         signingSecret=String(endpoint.secret||'');
+      }else{
+        const form=new URLSearchParams();
+        for(const event of STRIPE_EVENTS)form.append('enabled_events[]',event);
+        endpoint=await stripeForm(key,`webhook_endpoints/${encodeURIComponent(String(endpoint.id))}`,form);
       }
 
       if(!signingRef){
@@ -807,12 +937,16 @@ Deno.serve(async req=>{
       });
 
       const softwareProviderReadiness=await syncSoftwareProviderReady(admin,connection);
+      const softwareCatalog=await ensureSoftwareStripeCatalog(
+        admin,key,String(account.id),key.startsWith('sk_live_')
+      );
 
       return j({
         ok:true,
         connection,
         webhook_endpoint_id:endpoint.id,
         catalog,
+        software_catalog:softwareCatalog,
         software_provider_readiness:softwareProviderReadiness
       });
     }catch(error){
@@ -820,6 +954,25 @@ Deno.serve(async req=>{
         error:'stripe_connect_failed',
         detail:error instanceof Error?error.message:String(error)
       },502);
+    }
+  }
+
+  if(action==='sync_software_catalog'){
+    if(String(auth.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      const connection=await activeStripeConnection(admin,org);
+      if(!connection?.access_secret_ref)return j({error:'stripe_provider_required'},409);
+      const key=await getSecret(admin,String(connection.access_secret_ref));
+      const account=await stripeRequest(key,'account');
+      if(!account?.id||String(account.id)!==String(connection.account_key)){
+        return j({error:'stripe_account_identity_mismatch'},409);
+      }
+      const softwareCatalog=await ensureSoftwareStripeCatalog(
+        admin,key,String(account.id),key.startsWith('sk_live_')
+      );
+      return j({ok:true,software_catalog:softwareCatalog});
+    }catch(error){
+      return j({error:'software_catalog_sync_failed',detail:error instanceof Error?error.message:String(error)},502);
     }
   }
 
