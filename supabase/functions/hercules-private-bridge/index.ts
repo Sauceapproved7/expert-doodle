@@ -413,7 +413,7 @@ Deno.serve(async(req:Request)=>{
 
   if(action==='software_commercial_status'){
     try{
-      const productCodes=['sauceapproved-studio','sauceapproved-ads'];
+      const productCodes=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'];
       const [{data:products,error:productError},{data:plans,error:planError},{data:approvals,error:approvalError},{data:stripe,error:stripeError}]=await Promise.all([
         admin.from('hercules_software_products').select('code,name,descriptor,status,live_url,checkout_enabled').in('code',productCodes).order('code'),
         admin.from('hercules_software_product_plans').select('product_code,plan_code,label,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',productCodes).order('candidate_monthly_price_cents'),
@@ -444,7 +444,7 @@ Deno.serve(async(req:Request)=>{
     const productCode=String(b.product_code||'').trim();
     const approvalType=String(b.approval_type||'').trim();
     const confirmation=String(b.confirmation||'').trim();
-    if(!['sauceapproved-studio','sauceapproved-ads'].includes(productCode))return out({error:'valid_product_code_required'},400);
+    if(!['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'].includes(productCode))return out({error:'valid_product_code_required'},400);
     if(!['pricing','terms','privacy'].includes(approvalType))return out({error:'valid_approval_type_required'},400);
     const expected='APPROVE '+productCode+' '+approvalType.toUpperCase()+' V1';
     if(confirmation!==expected)return out({error:'explicit_confirmation_required',expected},400);
@@ -464,12 +464,12 @@ Deno.serve(async(req:Request)=>{
     });
     const statusReq=new Request(req.url,{method:'POST',headers:req.headers,body:JSON.stringify({action:'software_commercial_status'})});
     const [{data:products},{data:plans},{data:approvals},{data:stripe}]=await Promise.all([
-      admin.from('hercules_software_products').select('code,name,descriptor,status,live_url,checkout_enabled').in('code',['sauceapproved-studio','sauceapproved-ads']).order('code'),
-      admin.from('hercules_software_product_plans').select('product_code,plan_code,label,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',['sauceapproved-studio','sauceapproved-ads']).order('candidate_monthly_price_cents'),
-      admin.from('hercules_software_commercial_approvals').select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at').in('product_code',['sauceapproved-studio','sauceapproved-ads']).order('approval_type'),
+      admin.from('hercules_software_products').select('code,name,descriptor,status,live_url,checkout_enabled').in('code',['sauceapproved-studio','sauceapproved-ads','hercules-cleaner']).order('code'),
+      admin.from('hercules_software_product_plans').select('product_code,plan_code,label,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',['sauceapproved-studio','sauceapproved-ads','hercules-cleaner']).order('candidate_monthly_price_cents'),
+      admin.from('hercules_software_commercial_approvals').select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at').in('product_code',['sauceapproved-studio','sauceapproved-ads','hercules-cleaner']).order('approval_type'),
       admin.from('hercules_provider_connections').select('provider,account_key,status,connected_at,last_error,metadata,updated_at').eq('organization_id',org).eq('provider','stripe').order('updated_at',{ascending:false}).limit(1).maybeSingle()
     ]);
-    const productCodes=['sauceapproved-studio','sauceapproved-ads'];
+    const productCodes=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'];
     const productsOut=productCodes.map(code=>({
       product:(products||[]).find((x:any)=>x.code===code)||null,
       plans:(plans||[]).filter((x:any)=>x.product_code===code),

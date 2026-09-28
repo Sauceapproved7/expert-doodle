@@ -171,3 +171,11 @@ Before these Terms become effective:
 - verify the live payment-provider flow;
 - confirm the final Privacy Policy matches production behavior;
 - record affirmative owner approval through the Hercules product-specific approval path.
+
+
+### Hercules Cleaner
+Hercules Cleaner is a local computer-maintenance product. It may scan and act only within authorized cleanup roots under the current device user's operating-system permissions. Users are responsible for reviewing and configuring cleanup policy appropriately for the device and workload.
+
+Apply-mode cleanup is designed around **Recovery Capsules**, which temporarily preserve eligible files for restoration before later purge. Recovery is not a substitute for a complete independent backup, and recovery may be unavailable after a capsule expires, is manually purged, is corrupted, or cannot safely restore into a path that has been repopulated.
+
+Hercules Cleaner does not authorize SauceApproved to bypass operating-system access controls, and it is not represented as antivirus software, forensic erasure software, registry optimization, or a guarantee against data loss.
