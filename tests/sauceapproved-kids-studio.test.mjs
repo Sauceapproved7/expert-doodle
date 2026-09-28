@@ -16,6 +16,8 @@ test("Kids Studio exposes three parent-operated kits with two working additions 
   assert.match(page.body,/Dream Director/);
   assert.match(page.body,/Time Capsule/);
   assert.match(page.body,/Parent review required/);
+  assert.doesNotMatch(page.body,/boy campaign|girl campaign/i);
+  assert.deepEqual(manifest.kits.map(kit=>kit.genre),["Adventure","Creative spotlight","Family keepsake"]);
   assert.match(page.headers["content-security-policy"],/script-src 'self'/);
   const client=await handle({method:"GET",pathname:"/assets/kids-studio.js"});
   assert.equal(client.status,200);
