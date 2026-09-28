@@ -5,7 +5,6 @@ import {readFile} from "node:fs/promises";
 const migration=await readFile(new URL("../supabase/migrations/20260928101500_hercules_software_payment_path_v1.sql",import.meta.url),"utf8");
 const provider=await readFile(new URL("../supabase/functions/hercules-provider-connect/index.ts",import.meta.url),"utf8");
 const webhook=await readFile(new URL("../supabase/functions/hercules-stripe-webhook/index.ts",import.meta.url),"utf8");
-const verifier=await readFile(new URL("../supabase/functions/hercules-software-payment-verify/index.ts",import.meta.url),"utf8");
 
 test("software billing state is isolated from the Hercules platform subscription tables",()=>{
   assert.match(migration,/hercules_software_stripe_catalog/);
@@ -52,24 +51,24 @@ test("Stripe webhook routes software lifecycle events to software subscriptions 
   assert.match(webhook,/charge\.refunded/);
 });
 
-test("payment verifier stays dormant until owner packet and Stripe provider gates are approved",()=>{
-  assert.match(verifier,/pricing/);
-  assert.match(verifier,/terms/);
-  assert.match(verifier,/privacy/);
-  assert.match(verifier,/payment_provider_ready/);
-  assert.match(verifier,/owner_approvals_required/);
-  assert.match(verifier,/stripe_provider_required/);
+test("payment provider stays dormant until owner packet and Stripe provider gates are approved",()=>{
+  assert.match(provider,/pricing/);
+  assert.match(provider,/terms/);
+  assert.match(provider,/privacy/);
+  assert.match(provider,/payment_provider_ready/);
+  assert.match(provider,/owner_approvals_required/);
+  assert.match(provider,/stripe_provider_required/);
 });
 
-test("payment verifier prepares checkout without charging and cannot self-approve the paid path",()=>{
-  assert.match(verifier,/prepare_live_verification/);
-  assert.match(verifier,/mode.*subscription/s);
-  assert.match(verifier,/payment_method_collection/);
-  assert.match(verifier,/success_url/);
-  assert.match(verifier,/cancel_url/);
-  assert.match(verifier,/verificationRunId/);
-  assert.doesNotMatch(verifier,/payment_path_verified[^\n]*true/);
-  assert.doesNotMatch(verifier,/hercules_activate_software_checkout/);
+test("payment provider prepares checkout without charging and cannot self-approve the paid path",()=>{
+  assert.match(provider,/prepare_software_payment_verification/);
+  assert.match(provider,/mode.*subscription/s);
+  assert.match(provider,/payment_method_collection/);
+  assert.match(provider,/success_url/);
+  assert.match(provider,/cancel_url/);
+  assert.match(provider,/verificationRunId/);
+  assert.doesNotMatch(provider,/payment_path_verified[^\n]*true/);
+  assert.doesNotMatch(provider,/hercules_activate_software_checkout/);
 });
 
 test("payment path certification requires verified checkout subscription invoice cancel and refund evidence",()=>{
