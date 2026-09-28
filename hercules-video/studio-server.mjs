@@ -4,6 +4,7 @@ import {inspectLaunchRunStateFile} from "./run-status.mjs";
 import {buildStudioViewModel,createStudioManifest} from "./studio-contract.mjs";
 import {createContentMultiplierManifest} from "../sauceapproved-studio/content-multiplier/core.mjs";
 import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/core.mjs";
+import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -155,6 +156,59 @@ a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-dec
 </html>`;
 }
 
+function renderBrandBrainShell(manifest) {
+  const descriptions={
+    "Brand Constitution":"Turns brand rules into versioned, enforceable policy with precedence, inherited rules, explicit overrides and conflict detection.",
+    "Cross-Channel Consistency Simulator":"Finds contradictions in price, CTA, disclosure, promise, audience and timing before content ships.",
+    "Rule Blast Radius Preview":"Shows which assets, agents and campaigns a proposed rule change would affect before approval.",
+    "Brand Drift Time Machine":"Compares two Constitution versions and judges the same asset against both rule sets."
+  };
+  const cards=manifest.differentiators.map((name,index)=>`
+    <article class="feature">
+      <span>0${index+1}</span>
+      <h2>${escapeHtml(name)}</h2>
+      <p>${escapeHtml(descriptions[name] || "Owned SauceApproved brand governance.")}</p>
+    </article>`).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SauceApproved Brand Brain</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f7f7f7}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,#262036 0,#0d0b11 36%,#040404 75%)}
+main{width:min(1120px,100%);margin:auto;padding:clamp(18px,4vw,42px)}
+a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-decoration:none;font-weight:700}
+.hero{padding:clamp(24px,5vw,54px);border:1px solid #302a3c;border-radius:32px;background:linear-gradient(145deg,#17131e,#0a090c);box-shadow:0 28px 100px #0009}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#ae94cf}.title{font-size:clamp(42px,9vw,86px);line-height:.92;margin:10px 0 18px;font-weight:950;letter-spacing:-.055em}.title em{font-style:normal;color:#ceb3ee}
+.sub{max-width:800px;color:#b5b5b5;font-size:clamp(16px,2vw,20px);line-height:1.6}
+.status{margin-top:24px;padding:16px 18px;border:1px solid #574224;border-radius:18px;background:#1c160d;color:#f0ce8e;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.feature{min-height:220px;padding:24px;border-radius:24px;border:1px solid #2a2432;background:#0d0b10ee}.feature span{font-size:11px;letter-spacing:.18em;color:#9078ab}.feature h2{font-size:24px;margin:38px 0 10px}.feature p{color:#999;line-height:1.55;margin:0}
+.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px;padding:18px;border:1px solid #222;border-radius:20px;background:#090909;color:#888}.pill{font-size:12px;border:1px solid #333;padding:7px 10px;border-radius:999px;color:#bbb}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.hero{border-radius:24px}.feature{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">SauceApproved Studios / Hercules-owned governance</div>
+<h1 class="title">Brand <em>Brain</em></h1>
+<p class="sub">A governed source of truth for approved facts, provenance, Brand Constitution rules, multi-brand inheritance, cross-channel consistency and downstream impact analysis.</p>
+<div class="status">Changes require review — Brand Brain does not silently auto-learn or rewrite approved brand truth.</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="footer">
+<span>Change policy: <b>${escapeHtml(manifest.executionPolicy)}</b></span>
+<span class="pill">Silent auto-learning disabled</span>
+</div>
+</main>
+</body>
+</html>`;
+}
+
 function renderStudioShell({manifest,model,bridge}) {
   const bridgeConnected=bridge?.connected===true;
   const bridgeLabel=bridgeConnected ? "Execution bridge connected" : "Execution bridge unavailable";
@@ -202,7 +256,7 @@ ${statusBadge("Execution",bridgeLabel,bridgeConnected ? "good" : "warn")}
 <div><div class="eyebrow">Operator</div><h2>${escapeHtml(surfaces.get("project-brief"))}</h2><p>Capture the creative brief and prepare the run plan without pretending execution is connected.</p></div>
 <div class="notice">${escapeHtml(bridgeLabel)}. Start and resume stay locked until the owned execution bridge is verified.</div>
 <div class="surface-list">
-${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
+${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : surface.id==="brand-brain" ? `<a class="surface" href="/brand-brain">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
 </div>
 <div>
 <h2>${escapeHtml(surfaces.get("run-status"))}</h2>
@@ -284,6 +338,14 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/ai-sales-agent") {
       return {status:200,headers:HTML_HEADERS,body:renderSalesAgentShell(createSalesAgentManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/brand-brain/manifest") {
+      return json(createBrandBrainManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/brand-brain") {
+      return {status:200,headers:HTML_HEADERS,body:renderBrandBrainShell(createBrandBrainManifest())};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/status") {
