@@ -1,0 +1,13 @@
+{
+  "schema": "sauceapproved.hercules-cleaner.update-channel",
+  "channel": "early_access",
+  "enabled": false,
+  "version": "1.0.0",
+  "sourceCommit": null,
+  "artifactUrl": null,
+  "artifactSha256": null,
+  "minimumNodeMajor": 22,
+  "releaseClass": "early_access",
+  "checkoutEnabled": false,
+  "reason": "Awaiting verified distribution asset and trusted expected release identity/publisher-signing path before automatic updates are enabled."
+}
