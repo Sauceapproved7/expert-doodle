@@ -338,11 +338,23 @@ export class ForgeDurableStateMirror {
 
   async status() {
     const body = await this.request({action:"forge_state_status"});
-    if (body?.ok !== true) throw new Error("durable state status verification failed");
+    if (
+      body?.ok !== true ||
+      body?.schema !== "sauceapproved.hercules.forge.durable-state.v1" ||
+      body?.carriesCredentials !== false
+    ) {
+      throw new Error("durable state status verification failed");
+    }
+    const objectCount = Number(body.objectCount ?? 0);
+    if (!Number.isSafeInteger(objectCount) || objectCount < 0) {
+      throw new Error("durable state object count is invalid");
+    }
     return {
       ok:true,
+      schema:body.schema,
+      carriesCredentials:false,
       endpoint:new URL(this.endpoint).origin,
-      objectCount:Number(body.objectCount ?? 0),
+      objectCount,
     };
   }
 }
