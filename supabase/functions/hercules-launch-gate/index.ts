@@ -4,6 +4,7 @@ const U=Deno.env.get('SUPABASE_URL')!;
 const S=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default||Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||'';
 const db=createClient(U,S,{auth:{persistSession:false}});
 const ORG='ea5fb196-67f9-42fa-b592-49eeb3b84346';
+const APPDEPLOY_STRIPE_APP_ID='sauceapproved-hercules-titan-dhakbi';
 const H={'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'};
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:H});
 const hex=(a:ArrayBuffer)=>[...new Uint8Array(a)].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -46,7 +47,7 @@ async function run(){
       .catch(()=>({ok:false,status:0,control:null,probe:null}))
   ]);
 
-  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:paymentEvidence},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
+  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:appDeployProviderEvidence},{data:paymentEvidence},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
     db.from('hercules_devbrain_fabric_checks').select('overall_ok,checked_at').eq('organization_id',ORG).order('checked_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_release_queue').select('release_id,status,environment,admission_decision,flight_record_hash,updated_at').eq('organization_id',ORG).eq('environment','production').eq('status','verified').eq('admission_decision','allow').order('updated_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_recovery_snapshots').select('snapshot_id,status,verified_at,recovery_region').eq('organization_id',ORG).eq('status','verified').order('verified_at',{ascending:false}).limit(1).maybeSingle(),
@@ -61,6 +62,10 @@ async function run(){
       .not('signing_secret_ref','is',null)
       .order('updated_at',{ascending:false})
       .limit(1)
+      .maybeSingle(),
+    db.from('hercules_continuity_ledger')
+      .select('status,value,provenance,verified_at')
+      .eq('key','appdeploy-stripe-provider-verified')
       .maybeSingle(),
     db.from('hercules_continuity_ledger')
       .select('status,value,provenance,verified_at')
@@ -84,18 +89,44 @@ async function run(){
     no_open_critical_events:Number(critical||0)===0
   };
 
-  const paymentProviderReady=Boolean(
+  const vaultStripeReady=Boolean(
     stripe?.account_key &&
     stripe?.connected_at &&
     stripe?.metadata?.catalog_ready===true &&
     stripe?.metadata?.livemode===true &&
     stripe?.metadata?.webhook_endpoint_id
   );
+  const appDeployProviderValue=appDeployProviderEvidence?.value||{};
+  const appDeployProviderFresh=Boolean(
+    appDeployProviderEvidence?.verified_at &&
+    Date.now()-new Date(appDeployProviderEvidence.verified_at).getTime()<24*60*60*1000
+  );
+  const appDeployStripeReady=Boolean(
+    appDeployProviderEvidence?.status==='active' &&
+    appDeployProviderFresh &&
+    appDeployProviderValue?.provider==='stripe' &&
+    appDeployProviderValue?.custody==='appdeploy' &&
+    appDeployProviderValue?.appId===APPDEPLOY_STRIPE_APP_ID &&
+    appDeployProviderValue?.credentialMode==='live' &&
+    appDeployProviderValue?.stripeReachable===true &&
+    appDeployProviderValue?.webhookConfigured===true
+  );
+  const paymentProviderReady=Boolean(vaultStripeReady||appDeployStripeReady);
   const paymentEvidenceValue=paymentEvidence?.value||{};
+  const paymentEvidenceBound=Boolean(
+    vaultStripeReady
+      ? paymentEvidenceValue?.custody==='supabase-vault' &&
+        paymentEvidenceValue?.accountKey===stripe?.account_key
+      : appDeployStripeReady
+        ? paymentEvidenceValue?.custody==='appdeploy' &&
+          paymentEvidenceValue?.appId===APPDEPLOY_STRIPE_APP_ID
+        : false
+  );
   const paymentPathVerified=Boolean(
     paymentEvidence?.status==='active' &&
     paymentEvidence?.verified_at &&
     paymentEvidenceValue?.provider==='stripe' &&
+    paymentEvidenceBound &&
     paymentEvidenceValue?.checkoutVerified===true &&
     paymentEvidenceValue?.refundVerified===true &&
     paymentEvidenceValue?.payoutStateVerified===true
@@ -121,11 +152,15 @@ async function run(){
       payment:{
         provider:'stripe',
         providerReady:paymentProviderReady,
-        accountKey:stripe?.account_key||null,
-        connectedAt:stripe?.connected_at||null,
-        livemode:Boolean(stripe?.metadata?.livemode===true),
-        catalogReady:Boolean(stripe?.metadata?.catalog_ready===true),
-        webhookConfigured:Boolean(stripe?.metadata?.webhook_endpoint_id),
+        custody:vaultStripeReady?'supabase-vault':appDeployStripeReady?'appdeploy':null,
+        accountKey:vaultStripeReady?stripe?.account_key||null:null,
+        connectedAt:vaultStripeReady?stripe?.connected_at||null:appDeployProviderEvidence?.verified_at||null,
+        livemode:Boolean(vaultStripeReady?stripe?.metadata?.livemode===true:appDeployProviderValue?.credentialMode==='live'),
+        webhookConfigured:Boolean(vaultStripeReady?stripe?.metadata?.webhook_endpoint_id:appDeployProviderValue?.webhookConfigured===true),
+        providerAttestationFresh:appDeployStripeReady?appDeployProviderFresh:null,
+        providerAttestationAt:appDeployProviderEvidence?.verified_at||null,
+        providerAttestationProvenance:appDeployProviderEvidence?.provenance||null,
+        providerAppId:appDeployStripeReady?APPDEPLOY_STRIPE_APP_ID:null,
         pathVerified:paymentPathVerified,
         pathVerifiedAt:paymentEvidence?.verified_at||null,
         pathProvenance:paymentEvidence?.provenance||null
@@ -156,7 +191,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.3.0',
+      version:'1.5.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt
