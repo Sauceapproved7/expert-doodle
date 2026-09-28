@@ -49,6 +49,19 @@ test("candidate pricing is packaged but checkout stays fail-closed pending owner
   }
 });
 
+test("product packages cannot require AppDeploy for build or release", () => {
+  for (const item of listForgeProductPackages()) {
+    assert.deepEqual(item.deployment, {
+      controlPlane: "hercules-forge-builder",
+      releaseRuntime: "hercules-deploy",
+      archiveRuntime: "supabase",
+      presentationRuntime: "render",
+      appDeployRequired: false,
+      providerCreditsMayBlockRelease: false,
+    });
+  }
+});
+
 test("Forge package prompts preserve product cores and require SaaS packaging gates", () => {
   const prompt = buildForgeProductPrompt("sauceapproved-studio");
   assert.match(prompt, /SauceApproved Studio/);
@@ -61,6 +74,9 @@ test("Forge package prompts preserve product cores and require SaaS packaging ga
   assert.match(prompt, /checkout disabled/i);
   assert.match(prompt, /owner approval/i);
   assert.match(prompt, /do not replace the owned core with a hosted builder/i);
+  assert.match(prompt, /AppDeploy is not required/i);
+  assert.match(prompt, /Hercules Forge Builder.*Hercules Deploy/i);
+  assert.match(prompt, /Supabase.*Render/i);
 });
 
 test("builder console exposes first-class quick starts for both product packages", () => {
