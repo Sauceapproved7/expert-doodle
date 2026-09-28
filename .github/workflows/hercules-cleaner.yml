@@ -45,3 +45,30 @@ jobs:
         run: node scripts/security-baseline.mjs
       - name: Hercules execution contract
         run: node scripts/verify-hercules-execution-contract.mjs
+
+
+  windows-installer-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BUNDLE_DIR: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Build Windows bundle
+        shell: pwsh
+        run: |
+          node scripts/package-hercules-cleaner-windows.mjs --commit-sha "$env:SOURCE_SHA" --output-dir "$env:BUNDLE_DIR"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install, launch status, uninstall
+        shell: pwsh
+        run: |
+          & "$env:BUNDLE_DIR\Install-HerculesCleaner.ps1" -BundleRoot "$env:BUNDLE_DIR" -NoAutostart -NoUpdateTask
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$env:LOCALAPPDATA\SauceApproved\Hercules Cleaner\HerculesCleaner.cmd" status
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$env:LOCALAPPDATA\SauceApproved\Hercules Cleaner\Uninstall-HerculesCleaner.ps1"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
