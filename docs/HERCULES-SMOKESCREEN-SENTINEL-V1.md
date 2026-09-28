@@ -158,3 +158,28 @@ The ingress adapter:
 Production derives the SmokeScreen HMAC key from the existing Forge control-secret boundary using a namespaced HMAC derivation. No new secret is committed or returned by health/metrics surfaces.
 
 Promotion beyond observe-only requires separate false-positive evidence and a new reviewed enforcement change.
+
+
+## ATT&CK candidate enrichment v2.2
+
+Forge observe-only observations now include a bounded `attackEnrichment` object from `hercules-runtime/smokescreen-attack-enrichment.mjs`.
+
+The enrichment layer is descriptive evidence only:
+
+- framework: MITRE ATT&CK Enterprise;
+- scope: `CANDIDATE_BEHAVIOR_MAPPING_ONLY`;
+- no actor attribution;
+- no campaign attribution;
+- no automatic response authority;
+- no outbound counterattack;
+- raw routes are reduced to a bounded category and are not emitted.
+
+Current candidate mappings:
+
+- `T1110.004 Credential Stuffing` from the explicit normalized credential-stuffing signal;
+- `T1110.001 Password Guessing` from repeated authentication failures when credential stuffing is absent;
+- `T1595.003 Wordlist Scanning` from repeated route probing/enumeration;
+- `T1087 Account Discovery` only when enumeration is corroborated by an identity-category route;
+- `T1190 Exploit Public-Facing Application` only as a low-confidence candidate when repeated signature mismatches and a privilege-boundary probe corroborate each other.
+
+Anti-overmapping is part of the contract: web-route probing alone does not become `T1046 Network Service Discovery`, and credential attempts do not become `T1078 Valid Accounts` without successful-account-use evidence.
