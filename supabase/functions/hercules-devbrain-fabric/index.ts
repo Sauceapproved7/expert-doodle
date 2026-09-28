@@ -10,6 +10,12 @@ const H={'content-type':'application/json','cache-control':'no-store','x-content
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:H});
 const hex=(a:ArrayBuffer)=>[...new Uint8Array(a)].map(x=>x.toString(16).padStart(2,'0')).join('');
 const sha=async(s:string)=>hex(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)));
+const unhex=(s:string)=>{
+  if(!/^[0-9a-f]{64}$/i.test(s))return null;
+  const out=new Uint8Array(s.length/2);
+  for(let i=0;i<s.length;i+=2)out[i/2]=Number.parseInt(s.slice(i,i+2),16);
+  return out;
+};
 
 async function authorized(req:Request){
   const key=req.headers.get('x-hercules-internal-key')||'';
@@ -24,6 +30,32 @@ async function getInternalSecret(purpose:string){
   if(!row?.secret_ref)return null;
   const {data:secret}=await db.rpc('hercules_get_secret',{p_id:row.secret_ref});
   return secret?String(secret):null;
+}
+
+async function schedulerAuthorized(req:Request){
+  const timestamp=req.headers.get('x-hercules-cron-timestamp')||'';
+  const signature=req.headers.get('x-hercules-cron-signature')||'';
+  const present=Boolean(timestamp||signature);
+  if(!present)return {ok:false,present:false,error:'scheduler_signature_missing'};
+  if(!/^\d{10}$/.test(timestamp))return {ok:false,present:true,error:'scheduler_signature_invalid'};
+  const age=Math.abs(Math.floor(Date.now()/1000)-Number(timestamp));
+  if(!Number.isFinite(age)||age>300)return {ok:false,present:true,error:'scheduler_signature_expired'};
+  const signatureBytes=unhex(signature);
+  if(!signatureBytes)return {ok:false,present:true,error:'scheduler_signature_invalid'};
+  const secret=await getInternalSecret('agent-coordinator');
+  if(!secret)return {ok:false,present:true,error:'scheduler_credential_unavailable'};
+  const material=new TextEncoder().encode(timestamp+'\nPOST\n/hercules-devbrain-fabric');
+  const key=await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    {name:'HMAC',hash:'SHA-256'},
+    false,
+    ['verify']
+  );
+  const ok=await crypto.subtle.verify('HMAC',key,signatureBytes,material);
+  return ok
+    ? {ok:true,present:true,error:null}
+    : {ok:false,present:true,error:'scheduler_signature_invalid'};
 }
 
 async function aiCheck(){
@@ -94,11 +126,17 @@ Deno.serve(async(req:Request)=>{
     const {data:last}=await db.from('hercules_devbrain_fabric_checks')
       .select('ai_ok,browser_ok,wasm_ok,overall_ok,ai_provider,browser_engine,wasm_result,latency_ms,detail,checked_at')
       .eq('organization_id',ORG).order('checked_at',{ascending:false}).limit(1).maybeSingle();
-    return out({ok:true,service:'hercules-devbrain-fabric',version:'1.1.0',mode:'owned-provider-fabric',lastCheck:last||null});
+    return out({ok:true,service:'hercules-devbrain-fabric',version:'1.2.0',mode:'owned-provider-fabric',lastCheck:last||null});
   }
 
   if(req.method!=='POST')return out({error:'method_not_allowed'},405);
-  if(!await authorized(req))return out({error:'internal_authorization_required'},403);
+  const internal=await authorized(req);
+  if(!internal){
+    const scheduler=await schedulerAuthorized(req);
+    if(!scheduler.ok){
+      return out({error:scheduler.present?scheduler.error:'internal_authorization_required'},403);
+    }
+  }
 
   const [ai,browser,wasm]=await Promise.all([aiCheck(),browserCheck(),wasmCheck()]);
   const check={
