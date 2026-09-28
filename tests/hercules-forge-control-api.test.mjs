@@ -164,6 +164,27 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(inspected.status, 200);
     assert.equal(inspected.body.revisionId, firstRevisionId);
 
+    const source = await request(
+      base,
+      "/v1/projects/control-app/revisions/" +
+        firstRevisionId +
+        "/source?path=" +
+        encodeURIComponent("public/index.html"),
+    );
+    assert.equal(source.status, 200);
+    assert.equal(source.body.source.path, "public/index.html");
+    assert.match(source.body.source.content, /ControlApp/);
+    assert.match(source.body.source.sha256, /^[a-f0-9]{64}$/);
+
+    const sourceTraversal = await request(
+      base,
+      "/v1/projects/control-app/revisions/" +
+        firstRevisionId +
+        "/source?path=" +
+        encodeURIComponent("../project.json"),
+    );
+    assert.equal(sourceTraversal.status, 400);
+
     const built = await request(
       base,
       "/v1/projects/control-app/revisions/" + firstRevisionId + "/artifact",

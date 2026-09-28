@@ -146,7 +146,7 @@ function errorStatus(error) {
   if (error?.code === "EEXIST") return 409;
   if (Array.isArray(error?.details)) return 400;
   if (error instanceof TypeError) return 400;
-  if (/path-safe identifier/.test(error?.message ?? "")) return 400;
+  if (/path-safe identifier|invalid source path/.test(error?.message ?? "")) return 400;
   return 500;
 }
 
@@ -577,6 +577,24 @@ export function createForgeControlService({
             return send(res, 200, {revisions: await store.listRevisions(projectId)});
           }
 
+          if (
+            req.method === "GET" &&
+            parts[5] === "revisions" &&
+            parts[6] &&
+            parts[7] === "source" &&
+            parts.length === 8
+          ) {
+            await identities.requireWorkspace(sessionToken, workspaceId);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            const sourcePath = url.searchParams.get("path");
+            if (!sourcePath) {
+              throw Object.assign(new Error("source path is required"), {statusCode: 400});
+            }
+            return send(res, 200, {
+              source: await store.readRevisionSource(projectId, parts[6], sourcePath),
+            });
+          }
+
           if (req.method === "POST" && parts[5] === "revisions" && parts[6] === "from-prompt" && parts.length === 7) {
             requireInterpreter(interpreter);
             await identities.requireCsrf(sessionToken, requireCsrfHeader(req));
@@ -967,6 +985,22 @@ export function createForgeControlService({
           parts.length === 5
         ) {
           return send(res, 200, await store.getRevision(projectId, parts[4]));
+        }
+
+        if (
+          req.method === "GET" &&
+          parts[3] === "revisions" &&
+          parts[4] &&
+          parts[5] === "source" &&
+          parts.length === 6
+        ) {
+          const sourcePath = url.searchParams.get("path");
+          if (!sourcePath) {
+            throw Object.assign(new Error("source path is required"), {statusCode: 400});
+          }
+          return send(res, 200, {
+            source: await store.readRevisionSource(projectId, parts[4], sourcePath),
+          });
         }
 
         if (
