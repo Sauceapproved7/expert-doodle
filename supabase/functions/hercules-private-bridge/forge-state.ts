@@ -156,7 +156,7 @@ export async function handleForgeStateRequest(req:Request,admin:any){
       if(bytes===null||chunks===null||!digest)return out({error:"invalid_object_metadata"},400);
 
       const {data,error}=await admin.from("hercules_forge_state_chunks")
-        .select("chunk_index,sha256,bytes")
+        .select("chunk_index,sha256,bytes,content_base64")
         .eq("path",path)
         .eq("object_sha256",digest)
         .lt("chunk_index",chunks)
@@ -165,12 +165,23 @@ export async function handleForgeStateRequest(req:Request,admin:any){
       if(!data||data.length!==chunks)return out({error:"missing_chunk"},409);
 
       let total=0;
+      const objectBytes=new Uint8Array(bytes);
+      let offset=0;
       for(let i=0;i<chunks;i++){
         const row:any=data[i];
         if(Number(row.chunk_index)!==i||!validSha(row.sha256))return out({error:"chunk_manifest_invalid"},409);
-        total+=Number(row.bytes);
+        const content=decodeBase64(row.content_base64);
+        const rowBytes=Number(row.bytes);
+        if(content.byteLength!==rowBytes||await sha256HexBytes(content)!==String(row.sha256)){
+          return out({error:"chunk_integrity_mismatch"},409);
+        }
+        if(offset+content.byteLength>bytes)return out({error:"object_size_mismatch"},409);
+        objectBytes.set(content,offset);
+        offset+=content.byteLength;
+        total+=content.byteLength;
       }
       if(total!==bytes)return out({error:"object_size_mismatch"},409);
+      if(await sha256HexBytes(objectBytes)!==digest)return out({error:"object_integrity_mismatch"},409);
 
       const now=new Date().toISOString();
       const {error:upsertError}=await admin.from("hercules_forge_state_objects").upsert({
