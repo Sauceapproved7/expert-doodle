@@ -10,6 +10,7 @@ import {ForgeLoginRateLimiter} from "../hercules-forge/rate-limit.mjs";
 import {
   readForgeProductionConfig,
   safeForgeProductionSummary,
+  createForgeProductionSmokeScreenObserver,
 } from "../hercules-forge/production.mjs";
 
 function fixtureCredential() {
@@ -61,6 +62,20 @@ test("production config is fail-closed and safe summary omits credentials", () =
   assert.equal("interpreterToken" in summary, false);
   assert.equal("notificationToken" in summary, false);
   assert.equal(JSON.stringify(summary).includes(env.FORGE_CONTROL_TOKEN), false);
+  assert.deepEqual(summary.smokeScreen,{
+    enabled:true,
+    mode:"OBSERVE_ONLY",
+    enforcement:false,
+  });
+
+  const observer=createForgeProductionSmokeScreenObserver(config.token,{
+    now:()=>1_790_000_000_000,
+  });
+  assert.deepEqual(observer.publicStatus(),{
+    enabled:true,
+    mode:"OBSERVE_ONLY",
+    enforcement:false,
+  });
 
   assert.throws(
     () => readForgeProductionConfig({...env, FORGE_CONTROL_TOKEN: "short"}),
