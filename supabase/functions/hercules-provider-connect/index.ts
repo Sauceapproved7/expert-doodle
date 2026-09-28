@@ -8,6 +8,7 @@ const STORE='azymhc-x0.myshopify.com';
 const SHOP_GID='gid://shopify/Shop/100002726208';
 const RECEIVER=`${U}/functions/v1/hercules-shopify-webhook`;
 const STRIPE_RECEIVER=`${U}/functions/v1/hercules-stripe-webhook`;
+const INTEGRATIONS_RETURN=`${U}/functions/v1/hercules-integrations`;
 const STUDIO_ADS_PRODUCTS=['sauceapproved-studio','sauceapproved-ads'] as const;
 const SOFTWARE_PRICE_GUARD={starter:2900,pro:7900,agency:19900} as const;
 const STRIPE_EVENTS=[
@@ -393,6 +394,128 @@ async function syncSoftwareProviderReady(admin:any,connection:any){
     results.push({product_code:productCode,readiness:data});
   }
   return results;
+}
+
+async function softwareCommercialPrerequisites(admin:any,productCode:string){
+  const {data,error}=await admin.from('hercules_software_commercial_approvals')
+    .select('approval_type,status')
+    .eq('product_code',productCode)
+    .in('approval_type',['pricing','terms','privacy','payment_provider_ready','payment_path_verified']);
+  if(error)throw error;
+  const status=Object.fromEntries((data||[]).map((row:any)=>[row.approval_type,row.status]));
+  return {
+    status,
+    ownerReady:['pricing','terms','privacy'].every(key=>status[key]==='approved'),
+    providerReady:status.payment_provider_ready==='approved',
+    paymentPathVerified:status.payment_path_verified==='approved'
+  };
+}
+
+async function latestSoftwareVerificationRun(admin:any,organizationId:string,productCode:string){
+  const {data,error}=await admin.from('hercules_software_payment_verification_runs')
+    .select('id,product_code,plan_code,stripe_account_id,livemode,expected_amount_cents,status,checkout_session_id,provider_customer_id,provider_subscription_id,invoice_id,payment_intent_id,refund_id,evidence,created_at,updated_at,completed_at')
+    .eq('organization_id',organizationId)
+    .eq('product_code',productCode)
+    .order('created_at',{ascending:false})
+    .limit(1)
+    .maybeSingle();
+  if(error)throw error;
+  return data;
+}
+
+async function softwarePaymentStatus(admin:any,organizationId:string){
+  const connection=await activeStripeConnection(admin,organizationId);
+  const products:any[]=[];
+  for(const productCode of STUDIO_ADS_PRODUCTS){
+    const prerequisites=await softwareCommercialPrerequisites(admin,productCode);
+    const {data:catalog,error:catalogError}=await admin.from('hercules_software_stripe_catalog')
+      .select('product_code,plan_code,stripe_account_id,stripe_product_id,stripe_price_id,unit_amount_cents,currency,livemode,active,synced_at')
+      .eq('product_code',productCode)
+      .order('unit_amount_cents');
+    if(catalogError)throw catalogError;
+    products.push({
+      product_code:productCode,
+      prerequisites,
+      catalog:catalog||[],
+      latest_run:await latestSoftwareVerificationRun(admin,organizationId,productCode)
+    });
+  }
+  return {
+    ok:true,
+    service:'hercules-provider-connect',
+    payment_verifier:'embedded-v1',
+    mode:'live_refund_verification',
+    stripe:connection?{
+      status:connection.status,
+      account_key:connection.account_key,
+      livemode:Boolean(connection.metadata?.livemode),
+      connected_at:connection.connected_at
+    }:{status:'not_connected'},
+    products
+  };
+}
+
+async function reconcileSoftwareVerificationRun(admin:any,run:any,key:string){
+  if(!run?.id||run.status==='verified')return run;
+  let current=run;
+
+  if(current.provider_subscription_id&&!current.evidence?.cancel_requested){
+    try{
+      await stripeRequest(key,'subscriptions/'+encodeURIComponent(String(current.provider_subscription_id)),{method:'DELETE'});
+    }catch(error){
+      const message=error instanceof Error?error.message:String(error);
+      if(!/canceled|No such subscription/i.test(message))throw error;
+    }
+    const evidence={...(current.evidence||{}),cancel_requested:true,reconcile_cancel:true};
+    const {data,error}=await admin.from('hercules_software_payment_verification_runs')
+      .update({evidence,updated_at:new Date().toISOString()})
+      .eq('id',current.id)
+      .select('*')
+      .single();
+    if(error)throw error;
+    current=data;
+  }
+
+  if(current.payment_intent_id&&!current.refund_id&&!current.evidence?.refund_requested){
+    const form=new URLSearchParams();
+    form.set('payment_intent',String(current.payment_intent_id));
+    form.set('metadata[verificationRunId]',String(current.id));
+    form.set('metadata[purpose]','software_payment_verification');
+    const refund=await stripeForm(key,'refunds',form);
+    const evidence={...(current.evidence||{}),refund_requested:true,reconcile_refund:true};
+    const {data,error}=await admin.from('hercules_software_payment_verification_runs')
+      .update({
+        refund_id:String(refund.id||''),
+        evidence,
+        updated_at:new Date().toISOString()
+      })
+      .eq('id',current.id)
+      .select('*')
+      .single();
+    if(error)throw error;
+    current=data;
+  }
+
+  const {data:certification,error:certificationError}=await admin.rpc(
+    'hercules_software_certify_payment_path',
+    {p_run_id:String(current.id)}
+  );
+  if(certificationError){
+    const message=String(certificationError.message||'');
+    if(!message.includes('verification_identifiers_incomplete')&&
+       !message.includes('commercial_prerequisites_not_approved')&&
+       !message.includes('live_software_stripe_catalog_mismatch')&&
+       !message.includes('live_mode_verification_required')){
+      throw certificationError;
+    }
+  }
+
+  const {data:fresh,error:freshError}=await admin.from('hercules_software_payment_verification_runs')
+    .select('id,product_code,plan_code,stripe_account_id,livemode,expected_amount_cents,status,checkout_session_id,provider_customer_id,provider_subscription_id,invoice_id,payment_intent_id,refund_id,evidence,created_at,updated_at,completed_at')
+    .eq('id',current.id)
+    .single();
+  if(freshError)throw freshError;
+  return {...fresh,certification:certification||null};
 }
 
 async function activeShopifyConnection(admin:any,organizationId?:string){
@@ -872,6 +995,149 @@ Deno.serve(async req=>{
         error:'shopify_connect_failed',
         detail:error instanceof Error?error.message:String(error)
       },502);
+    }
+  }
+
+  if(action==='software_payment_status'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      return j(await softwarePaymentStatus(admin,org));
+    }catch(error){
+      return j({error:'software_payment_status_failed',detail:error instanceof Error?error.message:String(error)},500);
+    }
+  }
+
+  if(action==='prepare_software_payment_verification'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      const productCode=String(body.product_code||'');
+      const planCode=String(body.plan_code||'starter');
+      if(!STUDIO_ADS_PRODUCTS.includes(productCode as any))return j({error:'valid_product_code_required'},400);
+      if(planCode!=='starter')return j({error:'verification_uses_starter_plan_only'},400);
+
+      const prerequisites=await softwareCommercialPrerequisites(admin,productCode);
+      if(!prerequisites.ownerReady)return j({error:'owner_approvals_required'},409);
+      if(!prerequisites.providerReady)return j({error:'stripe_provider_required'},409);
+      if(prerequisites.paymentPathVerified)return j({error:'payment_path_already_verified'},409);
+
+      const connection=await activeStripeConnection(admin,org);
+      if(!connection?.access_secret_ref)return j({error:'stripe_provider_required'},409);
+      if(connection.metadata?.livemode!==true)return j({error:'live_stripe_required'},409);
+
+      const key=await getSecret(admin,String(connection.access_secret_ref));
+      const account=await stripeRequest(key,'account');
+      if(!account?.id||String(account.id)!==String(connection.account_key)){
+        return j({error:'stripe_account_identity_mismatch'},409);
+      }
+
+      const {data:catalog,error:catalogError}=await admin.from('hercules_software_stripe_catalog')
+        .select('product_code,plan_code,stripe_account_id,stripe_price_id,unit_amount_cents,currency,livemode,active')
+        .eq('product_code',productCode)
+        .eq('plan_code',planCode)
+        .eq('active',true)
+        .single();
+      if(catalogError||!catalog)return j({error:'software_stripe_catalog_required'},409);
+
+      const expected=SOFTWARE_PRICE_GUARD[planCode as keyof typeof SOFTWARE_PRICE_GUARD];
+      if(Number(catalog.unit_amount_cents)!==expected||
+         catalog.currency!=='usd'||
+         catalog.livemode!==true||
+         String(catalog.stripe_account_id)!==String(account.id)){
+        return j({error:'software_stripe_catalog_mismatch'},409);
+      }
+
+      const {data:run,error:runError}=await admin.from('hercules_software_payment_verification_runs')
+        .insert({
+          organization_id:org,
+          product_code:productCode,
+          plan_code:planCode,
+          stripe_account_id:String(account.id),
+          livemode:true,
+          expected_amount_cents:expected,
+          status:'prepared',
+          started_by:identity.user.id,
+          evidence:{
+            purpose:'controlled_live_checkout_cancel_refund',
+            automatic_cancel:true,
+            automatic_refund:true,
+            owner_completion_required:true
+          }
+        })
+        .select('id')
+        .single();
+      if(runError)throw runError;
+
+      const runId=String(run.id);
+      const form=new URLSearchParams();
+      form.set('mode','subscription');
+      form.set('payment_method_collection','always');
+      form.set('line_items[0][price]',String(catalog.stripe_price_id));
+      form.set('line_items[0][quantity]','1');
+      form.set('client_reference_id',String(org));
+      if(identity.user.email)form.set('customer_email',String(identity.user.email));
+      form.set('success_url',INTEGRATIONS_RETURN+'?software_payment_verify=success&session_id={CHECKOUT_SESSION_ID}');
+      form.set('cancel_url',INTEGRATIONS_RETURN+'?software_payment_verify=cancelled');
+      form.set('metadata[organizationId]',String(org));
+      form.set('metadata[softwareProductCode]',productCode);
+      form.set('metadata[softwarePlanCode]',planCode);
+      form.set('metadata[verificationRunId]',runId);
+      form.set('metadata[purpose]','software_payment_verification');
+      form.set('subscription_data[metadata][organizationId]',String(org));
+      form.set('subscription_data[metadata][softwareProductCode]',productCode);
+      form.set('subscription_data[metadata][softwarePlanCode]',planCode);
+      form.set('subscription_data[metadata][verificationRunId]',runId);
+      form.set('subscription_data[metadata][purpose]','software_payment_verification');
+
+      const session=await stripeForm(key,'checkout/sessions',form);
+      if(!session?.id||!session?.url)throw new Error('verification_checkout_session_missing');
+
+      const {error:updateError}=await admin.from('hercules_software_payment_verification_runs')
+        .update({
+          checkout_session_id:String(session.id),
+          evidence:{
+            purpose:'controlled_live_checkout_cancel_refund',
+            automatic_cancel:true,
+            automatic_refund:true,
+            owner_completion_required:true,
+            checkout_session_created:true,
+            checkout_session_expires_at:session.expires_at||null
+          },
+          updated_at:new Date().toISOString()
+        })
+        .eq('id',runId);
+      if(updateError)throw updateError;
+
+      return j({
+        ok:true,
+        action:'prepare_software_payment_verification',
+        run_id:runId,
+        product_code:productCode,
+        plan_code:planCode,
+        amount_cents:expected,
+        currency:'usd',
+        checkout_url:String(session.url),
+        charge_occurs_only_if_owner_completes_checkout:true,
+        after_success:'Hercules automatically cancels the verification subscription, refunds the payment, verifies signed webhook evidence, and certifies the product payment path.'
+      });
+    }catch(error){
+      return j({error:'prepare_software_payment_verification_failed',detail:error instanceof Error?error.message:String(error)},502);
+    }
+  }
+
+  if(action==='reconcile_software_payment_verification'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      const productCode=String(body.product_code||'');
+      if(!STUDIO_ADS_PRODUCTS.includes(productCode as any))return j({error:'valid_product_code_required'},400);
+      const connection=await activeStripeConnection(admin,org);
+      if(!connection?.access_secret_ref)return j({error:'stripe_provider_required'},409);
+      if(connection.metadata?.livemode!==true)return j({error:'live_stripe_required'},409);
+      const key=await getSecret(admin,String(connection.access_secret_ref));
+      const run=await latestSoftwareVerificationRun(admin,org,productCode);
+      if(!run)return j({error:'verification_run_not_found'},404);
+      return j({ok:true,product_code:productCode,run:await reconcileSoftwareVerificationRun(admin,run,key)});
+    }catch(error){
+      return j({error:'reconcile_software_payment_verification_failed',detail:error instanceof Error?error.message:String(error)},502);
     }
   }
 
