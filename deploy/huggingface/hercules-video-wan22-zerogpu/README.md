@@ -35,4 +35,4 @@ Hercules does not relicense or claim ownership of external model weights. Third-
 
 This Space is intended for Hugging Face ZeroGPU benchmark use. Hercules Studio, routing, continuity, quality gating, provenance, and final acceptance remain outside this Space in SauceApproved-owned infrastructure.
 
-The renderer deliberately supports only 720p, 24 FPS, 16:9 and 9:16 in v1. Unsupported requests fail closed.
+The renderer deliberately supports only 720p, 24 FPS, 16:9 and 9:16 in v1. Free benchmark clips are capped at 3 seconds / 73 frames with a 180-second GPU slot. Unsupported requests fail closed.
