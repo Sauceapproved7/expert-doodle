@@ -71,8 +71,7 @@ async function compromisedPasswordCount(password:string){
   });
   if(!response.ok)throw new Error("password_safety_upstream_"+response.status);
   const responseBody=await response.text();
-  for(const line of responseBody.split(/\r?
-/)){
+  for(const line of responseBody.split(/\r?\n/)){
     const [remoteSuffix,countRaw]=line.trim().split(":");
     if(remoteSuffix&&remoteSuffix.toUpperCase()===suffix){
       const count=Number(countRaw||0);
