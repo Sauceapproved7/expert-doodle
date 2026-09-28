@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 9,
+  "version": 10,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -71,6 +71,10 @@
     {
       "path": "hercules-bank",
       "role": "financial-ledger-runtime"
+    },
+    {
+      "path": "hercules-cleaner",
+      "role": "local-maintenance-runtime"
     }
   ],
   "allowedModuleSpecifierPrefixes": [
@@ -196,6 +200,15 @@
       "dependencies": [
         "docker"
       ]
+    },
+    {
+      "path": "hercules-cleaner/autostart.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "windows-task-scheduler",
+        "launchd",
+        "systemd"
+      ]
     }
   ],
   "shellCommandBoundaries": [
@@ -297,6 +310,18 @@
       "id": "spaceship",
       "name": "Spaceship registrar and DNS External API",
       "ownership": "third-party-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "windows-task-scheduler",
+      "name": "Windows Task Scheduler",
+      "ownership": "third-party-operating-system-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "launchd",
+      "name": "Apple launchd / LaunchAgents",
+      "ownership": "third-party-operating-system-infrastructure",
       "packagedAsHerculesCode": false
     }
   ]
