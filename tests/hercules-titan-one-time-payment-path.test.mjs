@@ -11,6 +11,7 @@ const migrationName=readdirSync(migrations).find(x=>x.includes("hercules_titan_p
 const provider=readFileSync(resolve(repo,"supabase/functions/hercules-provider-connect/index.ts"),"utf8");
 const webhook=readFileSync(resolve(repo,"supabase/functions/hercules-stripe-webhook/index.ts"),"utf8");
 const ui=readFileSync(resolve(repo,"supabase/functions/hercules-integrations/index.ts"),"utf8");
+const gate=readFileSync(resolve(repo,"supabase/functions/hercules-launch-gate/index.ts"),"utf8");
 
 test("Titan has a separate one-time live verification schema",()=>{
   assert.ok(migrationName,"Titan payment path migration missing");
@@ -24,7 +25,7 @@ test("Titan has a separate one-time live verification schema",()=>{
   assert.match(sql,/titan\.payout_state_verified/);
   assert.match(sql,/hercules_titan_certify_payment_path/);
   assert.match(sql,/payment_path_verified/);
-  assert.match(sql,/paid-billing-path-verified/);
+  assert.match(sql,/titan-paid-billing-path-verified/);
   assert.doesNotMatch(sql,/customer\.subscription/);
   assert.doesNotMatch(sql,/hercules_activate_software_checkout/);
 });
@@ -73,6 +74,11 @@ test("Stripe webhook auto-refunds Titan verification without creating a subscrip
   const block=webhook.slice(webhook.indexOf("if(type==='checkout.session.completed')"),webhook.indexOf("if(['customer.subscription.created'"));
   assert.match(block,/titanVerificationRunId/);
   assert.doesNotMatch(block,/saveSoftwareSubscription[\s\S]*titanVerificationRunId/);
+});
+
+test("Shopify Titan alignment requires the Titan-specific payment path",()=>{
+  assert.match(gate,/titanPaymentPathVerified/);
+  assert.match(gate,/shopifyOfferBase &&\s*titanOwnerApprovalsComplete &&\s*titanPaymentPathVerified/);
 });
 
 test("Owner Decision Center exposes Titan live verification but does not auto-charge",()=>{
