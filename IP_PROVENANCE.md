@@ -147,3 +147,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Third-party infrastructure: any future model, social-publishing, analytics, storage or messaging provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
 - Trust scope: generation fails closed without an injected provider; locked facts and banned phrases are validated before generated assets are accepted.
 - Market-position note: Content DNA, Variation Tree, Content Opportunity Radar and Variant Fatigue Guard are SauceApproved differentiators. No absolute market-first claim is made without separate current verification.
+
+
+## SauceApproved AI Sales Agent v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/ai-sales-agent/*.mjs`, `tests/sauceapproved-ai-sales-agent.test.mjs`, `docs/HERCULES-AI-SALES-AGENT-V1.md`, and the dedicated CI workflow.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- Third-party infrastructure: any future CRM, helpdesk, messaging, email, SMS, voice, booking, checkout, model, or analytics provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
+- Trust scope: recommendations are grounded in approved active product data; unsupported recommendations fail safely; lead capture is consent-gated; sensitive profiling is excluded from Adaptive Pitch Memory; business actions require explicit allowlisting plus a configured adapter.
+- Differentiators: Objection Intelligence Map, Adaptive Pitch Memory, Confidence-to-Handoff Governor, and Objection-to-Asset Bridge. No absolute market-first claim is made without separate current verification.

@@ -1,0 +1,35 @@
+name: SauceApproved AI Sales Agent
+
+on:
+  push:
+    branches:
+      - hercules/ai-sales-agent-v1
+  pull_request:
+    paths:
+      - "sauceapproved-studio/ai-sales-agent/**"
+      - "tests/sauceapproved-ai-sales-agent.test.mjs"
+      - "governance/owner-code-policy.json"
+      - "docs/HERCULES-AI-SALES-AGENT-V1.md"
+      - "IP_PROVENANCE.md"
+      - ".github/workflows/ai-sales-agent.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Run AI Sales Agent tests
+        run: node --test tests/sauceapproved-ai-sales-agent.test.mjs
+      - name: Owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Security baseline
+        run: node scripts/security-baseline.mjs
+      - name: Hercules execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
