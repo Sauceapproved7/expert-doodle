@@ -7,6 +7,7 @@ const SURFACES=Object.freeze([
   Object.freeze({id:"quality-evidence",label:"Quality & Evidence"}),
   Object.freeze({id:"recovery",label:"Recovery"}),
   Object.freeze({id:"output-review",label:"Output Review"}),
+  Object.freeze({id:"content-multiplier",label:"Content Multiplier"}),
   Object.freeze({id:"integrations",label:"Integrations"})
 ]);
 

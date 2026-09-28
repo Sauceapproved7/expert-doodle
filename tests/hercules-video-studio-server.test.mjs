@@ -126,3 +126,42 @@ test("Studio mutation runs only after explicit operator authorization and truste
   assert.equal(JSON.parse(response.body).ok,true);
   assert.equal(invoked,true);
 });
+
+
+test("Studio root advertises the owned Content Multiplier surface",async()=>{
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
+  });
+  const response=await handle({method:"GET",pathname:"/"});
+  assert.equal(response.status,200);
+  assert.match(response.body,/Content Multiplier/);
+  assert.match(response.body,/\/content-multiplier/);
+});
+
+test("Content Multiplier surface renders Hercules differentiators and provider lock",async()=>{
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
+  });
+  const response=await handle({method:"GET",pathname:"/content-multiplier"});
+  assert.equal(response.status,200);
+  assert.match(response.headers["content-type"],/text\/html/);
+  assert.match(response.body,/SauceApproved Content Multiplier/);
+  assert.match(response.body,/Content DNA/);
+  assert.match(response.body,/Variation Tree/);
+  assert.match(response.body,/Content Opportunity Radar/);
+  assert.match(response.body,/Variant Fatigue Guard/);
+  assert.match(response.body,/Generation provider not connected/);
+});
+
+test("Content Multiplier manifest API is owned and fail-closed",async()=>{
+  const handle=createStudioHttpHandler();
+  const response=await handle({method:"GET",pathname:"/api/studio/content-multiplier/manifest"});
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.product,"SauceApproved Content Multiplier");
+  assert.equal(body.executionPolicy,"fail-closed");
+  assert.equal(body.providerRequiredForGeneration,true);
+  assert.ok(body.differentiators.includes("Content DNA"));
+});
