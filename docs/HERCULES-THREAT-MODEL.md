@@ -118,3 +118,10 @@ Controls: every Mirage Fabric is derived only from an already-decoy-classified S
 ### Forge -> SmokeScreen observe-only ingress
 
 Controls: Forge attaches observation only after an HTTP response completes; observation failure cannot alter the already-determined customer response; raw remote addresses and user-agent strings are reduced to a one-way client fingerprint before appearing in SmokeScreen results; request-window state is bounded by time, per-client entry count, and total client count; only normalized defensive signals are passed to the Sentinel; public health reveals only enabled/mode/enforcement booleans; aggregate metrics require the existing Forge bearer control credential; production starts in `OBSERVE_ONLY` with `enforcementApplied=false`; and any later transition to friction, deception, or containment requires a distinct reviewed change with false-positive evidence.
+
+
+### Hercules Cleaner local filesystem boundary
+
+23. **User filesystem -> Cleaner policy engine -> Recovery Vault**: local file metadata crosses an allowlisted-root, protected-path, disposable-rule and freshness boundary before any cleanup plan is produced. Cleanup execution is local only and moves approved files into a per-run Recovery Capsule before any later purge.
+
+Controls: loopback-only dashboard binding, per-process control token, origin checks, bounded request bodies, symlink non-following, explicit protected paths, user-scoped defaults, scan depth/file-count caps, time-of-check revalidation before moving a file, SHA-256 capsule integrity, fail-closed restore when a destination already exists, a single-operation lock, retained manifests, and no automatic cleaning of Documents/Desktop/Pictures/Videos/Music/SSH/GnuPG defaults. Native startup uses user-level OS facilities only; system scheduler/launch infrastructure remains outside owned Hercules code.
