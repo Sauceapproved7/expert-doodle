@@ -1,7 +1,7 @@
 export {FORGE_SPEC_VERSION, normalizeForgeSpec, validateForgeSpec} from "./schema.mjs";
 export {FORGE_OWNERSHIP_POLICY_VERSION, FORGE_OWNED_ENGINE, FORGE_DECLARED_RIGHTS_HOLDER, createOwnerCodeAttestation, assertOwnerCodeAttestation} from "./ownership.mjs";
 export {compileForgeProject, compileFromInterpreter} from "./compiler.mjs";
-export {ForgeInterpreter, StaticForgeInterpreter, HttpForgeInterpreter} from "./interpreter.mjs";
+export {ForgeInterpreter, StaticForgeInterpreter, HttpForgeInterpreter, HerculesAiForgeInterpreter, HERCULES_FORGE_SPEC_INTERPRETER_SYSTEM} from "./interpreter.mjs";
 export {ForgeNotificationAdapter, HttpForgeNotificationAdapter, MemoryForgeNotificationAdapter} from "./notifications.mjs";
 export {ForgeWorkspaceStore} from "./workspace.mjs";
 export {ForgeIdentityStore, normalizeEmail, verifyPassword} from "./identity.mjs";
@@ -17,4 +17,5 @@ export {customerConsoleHtml, customerConsoleCss, customerConsoleJs, customerCons
 export {createForgeControlService, listenForgeControlService} from "./control-api.mjs";
 export {readForgeProductionConfig, safeForgeProductionSummary, startForgeProductionService} from "./production.mjs";
 export {verifyForgePublicDeployment, renderForgeSystemdUnit} from "./deployment.mjs";
-\nexport {ForgeDurableStateMirror, FORGE_DURABLE_STATE_MANAGED_ROOTS} from "./durable-state.mjs";\n
+
+export {ForgeDurableStateMirror, FORGE_DURABLE_STATE_MANAGED_ROOTS} from "./durable-state.mjs";
