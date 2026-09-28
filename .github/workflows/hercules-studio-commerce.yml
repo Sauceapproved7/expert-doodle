@@ -20,4 +20,5 @@ jobs:
           node-version: "22"
       - run: node --check supabase/functions/hercules-private-bridge/studio-commerce.mjs
       - run: node --test tests/hercules-studio-commerce.test.mjs
+      - run: node --test tests/hercules-studio-commerce-webhook.test.mjs
       - run: node --test tests/hercules-customer-foundation.test.mjs
