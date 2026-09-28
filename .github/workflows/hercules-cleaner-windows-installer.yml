@@ -1,0 +1,102 @@
+name: Hercules Cleaner Windows Installer
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "hercules-cleaner/**"
+      - "scripts/package-hercules-cleaner-windows.mjs"
+      - "tests/hercules-cleaner-installer.test.mjs"
+      - "tests/hercules-cleaner-windows-package.test.mjs"
+      - "releases/hercules-cleaner-v1.0.0/windows/**"
+      - ".github/workflows/hercules-cleaner-windows-installer.yml"
+      - "governance/owner-code-policy.json"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-cleaner/**"
+      - "scripts/package-hercules-cleaner-windows.mjs"
+      - "tests/hercules-cleaner-installer.test.mjs"
+      - "tests/hercules-cleaner-windows-package.test.mjs"
+      - "releases/hercules-cleaner-v1.0.0/windows/**"
+      - ".github/workflows/hercules-cleaner-windows-installer.yml"
+      - "governance/owner-code-policy.json"
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      BUNDLE_DIR: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0
+      BUNDLE_ZIP: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip
+      BUNDLE_SHA: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip.sha256
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+
+      - name: Enforce Hercules gates
+        shell: pwsh
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/security-baseline.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/verify-hercules-execution-contract.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run Cleaner installer tests
+        shell: pwsh
+        run: |
+          node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-installer.test.mjs tests/hercules-cleaner-windows-package.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build exact-commit Windows bundle
+        shell: pwsh
+        run: |
+          node scripts/package-hercules-cleaner-windows.mjs --commit-sha "$env:SOURCE_SHA" --output-dir "$env:BUNDLE_DIR"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Smoke install and uninstall without privileged startup changes
+        shell: pwsh
+        run: |
+          & "$env:BUNDLE_DIR\Install-HerculesCleaner.ps1" -BundleRoot "$env:BUNDLE_DIR" -NoAutostart -NoUpdateTask
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$env:LOCALAPPDATA\SauceApproved\Hercules Cleaner\HerculesCleaner.cmd" status
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$env:LOCALAPPDATA\SauceApproved\Hercules Cleaner\Uninstall-HerculesCleaner.ps1"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build ZIP and checksum
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "$env:BUNDLE_DIR\*" -DestinationPath "$env:BUNDLE_ZIP" -CompressionLevel Optimal -Force
+          $hash=(Get-FileHash -LiteralPath "$env:BUNDLE_ZIP" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  hercules-cleaner-windows-v1.0.0.zip" | Set-Content -LiteralPath "$env:BUNDLE_SHA" -Encoding ascii
+          Write-Host "Windows installer ZIP SHA-256: $hash"
+
+      - name: Attest Windows installer build provenance
+        if: github.event_name == 'push'
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
+        with:
+          subject-path: ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip
+
+      - name: Upload Windows installer artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: hercules-cleaner-windows-v1.0.0-${{ env.SOURCE_SHA }}
+          path: |
+            ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip
+            ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0.zip.sha256
+            ${{ runner.temp }}\hercules-cleaner-windows-v1.0.0\bundle-manifest.json
+          if-no-files-found: error
+          retention-days: 90
