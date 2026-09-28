@@ -142,3 +142,12 @@ Hercules Cleaner is registered for SauceApproved Early Access discovery through 
 Commercial state remains fail-closed: candidate pricing is not approved, Terms and Privacy remain owner-decision gated, payment-provider readiness is separate, paid-path verification is separate, and checkout stays disabled until those controls are explicitly satisfied.
 
 The catalog record intentionally carries no live product URL until an actual customer-facing Cleaner delivery endpoint is deployed and verified.
+
+
+## Update and rollback certification
+
+Cleaner updates are fail-closed against immutable release identity. An update candidate must carry an exact 40-character canonical commit SHA and 64-character aggregate package SHA-256 that match the expected release identity. Mutable refs such as `main`, digest mismatches, malformed versions, same-version replacement, and downgrades are rejected.
+
+The update policy cannot enable checkout or change the release out of Early Access. A verified update retains the currently installed version as the explicit rollback version. Recovery Capsule data and local Cleaner state are not update payloads and must not be deleted or migrated implicitly by update eligibility checks.
+
+This v1 certification defines update eligibility and rollback identity; it does not claim a silent auto-updater or native installer. Installation or replacement on a customer device remains subject to that device's explicit authorization and operating-system permissions.

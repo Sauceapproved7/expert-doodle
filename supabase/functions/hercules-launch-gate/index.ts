@@ -5,6 +5,9 @@ const S=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default||Deno.env
 const db=createClient(U,S,{auth:{persistSession:false}});
 const ORG='ea5fb196-67f9-42fa-b592-49eeb3b84346';
 const APPDEPLOY_STRIPE_APP_ID='sauceapproved-hercules-titan-dhakbi';
+const SHOPIFY_TITAN_PRODUCT_ID='gid://shopify/Product/10261114782016';
+const SHOPIFY_STORE_DOMAIN='sauceapproved-2.myshopify.com';
+const LAUNCH_PACKET_VERSION='hercules-launch-packet-2026-09-27-v2';
 const H={'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'};
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:H});
 const hex=(a:ArrayBuffer)=>[...new Uint8Array(a)].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -47,7 +50,7 @@ async function run(){
       .catch(()=>({ok:false,status:0,control:null,probe:null}))
   ]);
 
-  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:appDeployProviderEvidence},{data:paymentEvidence},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
+  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:appDeployProviderEvidence},{data:paymentEvidence},{data:shopifyOfferEvidence},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
     db.from('hercules_devbrain_fabric_checks').select('overall_ok,checked_at').eq('organization_id',ORG).order('checked_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_release_queue').select('release_id,status,environment,admission_decision,flight_record_hash,updated_at').eq('organization_id',ORG).eq('environment','production').eq('status','verified').eq('admission_decision','allow').order('updated_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_recovery_snapshots').select('snapshot_id,status,verified_at,recovery_region').eq('organization_id',ORG).eq('status','verified').order('verified_at',{ascending:false}).limit(1).maybeSingle(),
@@ -70,6 +73,10 @@ async function run(){
     db.from('hercules_continuity_ledger')
       .select('status,value,provenance,verified_at')
       .eq('key','paid-billing-path-verified')
+      .maybeSingle(),
+    db.from('hercules_continuity_ledger')
+      .select('status,value,provenance,verified_at')
+      .eq('key','shopify-hercules-paid-offer-reconciled')
       .maybeSingle(),
     db.rpc('hercules_password_defense_status')
   ]);
@@ -132,13 +139,42 @@ async function run(){
     paymentEvidenceValue?.payoutStateVerified===true
   );
 
+  const shopifyOfferValue=shopifyOfferEvidence?.value||{};
+  const shopifyOfferFresh=Boolean(
+    shopifyOfferEvidence?.verified_at &&
+    Date.now()-new Date(shopifyOfferEvidence.verified_at).getTime()<24*60*60*1000
+  );
+  const shopifyOfferBase=Boolean(
+    shopifyOfferEvidence?.status==='active' &&
+    shopifyOfferFresh &&
+    shopifyOfferValue?.storefront==='shopify' &&
+    shopifyOfferValue?.shopDomain===SHOPIFY_STORE_DOMAIN &&
+    shopifyOfferValue?.productId===SHOPIFY_TITAN_PRODUCT_ID &&
+    shopifyOfferValue?.approvalPacketVersion===LAUNCH_PACKET_VERSION
+  );
+  const shopifyOfferAligned=Boolean(
+    shopifyOfferBase &&
+    shopifyOfferValue?.disposition==='aligned_to_approved_offer' &&
+    shopifyOfferValue?.priceCadenceVerified===true &&
+    shopifyOfferValue?.entitlementVerified===true &&
+    shopifyOfferValue?.refundCancellationVerified===true &&
+    shopifyOfferValue?.deliveryVerified===true
+  );
+  const shopifyOfferExcluded=Boolean(
+    shopifyOfferBase &&
+    shopifyOfferValue?.disposition==='excluded_from_paid_launch' &&
+    shopifyOfferValue?.purchaseExposureBlocked===true
+  );
+  const shopifyOfferReconciled=Boolean(shopifyOfferAligned||shopifyOfferExcluded);
+
   const commercial=Object.fromEntries((approvals||[]).map((x:any)=>[x.approval_type,x.status==='approved']));
   commercial.auth_hardening=passwordDefense.ok;
   commercial.payment_provider_ready=paymentProviderReady;
   commercial.payment_path_verified=paymentPathVerified;
+  commercial.storefront_offer_reconciled=shopifyOfferReconciled;
   const requiredOwnerCommercial=['pricing','privacy','terms'];
   const technicalOk=Object.values(technical).every(Boolean);
-  const commercialOk=passwordDefense.ok&&paymentProviderReady&&paymentPathVerified&&requiredOwnerCommercial.every(k=>commercial[k]===true);
+  const commercialOk=passwordDefense.ok&&paymentProviderReady&&paymentPathVerified&&shopifyOfferReconciled&&requiredOwnerCommercial.every(k=>commercial[k]===true);
 
   const checks={
     technical,
@@ -164,6 +200,16 @@ async function run(){
         pathVerified:paymentPathVerified,
         pathVerifiedAt:paymentEvidence?.verified_at||null,
         pathProvenance:paymentEvidence?.provenance||null
+      },
+      storefrontOffer:{
+        provider:'shopify',
+        reconciled:shopifyOfferReconciled,
+        disposition:shopifyOfferValue?.disposition||null,
+        productId:shopifyOfferValue?.productId||SHOPIFY_TITAN_PRODUCT_ID,
+        shopDomain:shopifyOfferValue?.shopDomain||SHOPIFY_STORE_DOMAIN,
+        approvalPacketVersion:shopifyOfferValue?.approvalPacketVersion||null,
+        verifiedAt:shopifyOfferEvidence?.verified_at||null,
+        provenance:shopifyOfferEvidence?.provenance||null
       }
     },
     duration_ms:Date.now()-started
@@ -191,7 +237,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.5.0',
+      version:'1.6.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt
