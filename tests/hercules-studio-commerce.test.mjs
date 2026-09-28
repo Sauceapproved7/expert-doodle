@@ -92,8 +92,8 @@ test("derives an idempotent entitlement key without buyer PII",async()=>{
     shopDomain:"sauceapproved-2.myshopify.com",
     topic:"orders/paid"
   });
-  const a=studioEntitlementKey(order,order.lineItems[0]);
-  const b=studioEntitlementKey(order,order.lineItems[0]);
+  const a=await studioEntitlementKey(order,order.lineItems[0]);
+  const b=await studioEntitlementKey(order,order.lineItems[0]);
   assert.equal(a,b);
   assert.match(a,/^[a-f0-9]{64}$/);
   assert.equal(a.includes("buyer@example.com"),false);
