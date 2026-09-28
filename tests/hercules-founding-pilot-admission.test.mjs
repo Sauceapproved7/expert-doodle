@@ -78,7 +78,7 @@ test("Password Defense v2 remains authoritative before password sign-in readines
 
 test("synthetic certification cannot invite a real prospect or activate paid billing",()=>{
   assert.match(control,/synthetic_certification/);
-  assert.match(control,/@example\.com/);
+  assert.ok(control.includes("@example\\.com"));
   assert.match(control,/synthetic_only/);
   assert.doesNotMatch(control,/stripe|checkout/i);
   assert.doesNotMatch(handoff,/stripe|checkout/i);
