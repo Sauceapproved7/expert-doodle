@@ -138,3 +138,23 @@ If an enforcement adapter cannot prove those controls, it must deny the hostile 
 - `createSmokeScreenEnforcementPlan(decision)`
 
 The agent instance also exposes `plan()`, `mirage()`, and `evolveMirage()` helpers bound to its server-side HMAC key and clock.
+
+
+## Forge production observe-only ingress
+
+Forge production now boots SmokeScreen Sentinel automatically in `OBSERVE_ONLY` mode at the HTTP control boundary.
+
+The ingress adapter:
+
+- observes completed Forge responses without changing status, body, routing, or session behavior;
+- hashes network/client identity before exposing observation results;
+- accumulates bounded per-client request-window signals for auth failures, denied privileged paths, route probes, velocity, and signature mismatch indicators;
+- feeds only normalized signals into the existing SmokeScreen Sentinel;
+- applies no rate limit, tarpit, decoy route, or containment action in this phase;
+- keeps `outboundCounterattack=false`;
+- exposes public capability status only through `/health`;
+- exposes aggregate observation evidence only through the bearer-protected `GET /v1/security/smokescreen` operator route.
+
+Production derives the SmokeScreen HMAC key from the existing Forge control-secret boundary using a namespaced HMAC derivation. No new secret is committed or returned by health/metrics surfaces.
+
+Promotion beyond observe-only requires separate false-positive evidence and a new reviewed enforcement change.

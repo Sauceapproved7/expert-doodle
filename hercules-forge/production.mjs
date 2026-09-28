@@ -6,6 +6,11 @@ import {HttpForgeInterpreter} from "./interpreter.mjs";
 import {HttpForgeNotificationAdapter} from "./notifications.mjs";
 import {ForgeLoginRateLimiter} from "./rate-limit.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES} from "./runtime-data.mjs";
+import {createSmokeScreenAgent} from "../hercules-runtime/smokescreen-agent.mjs";
+import {
+  createForgeSmokeScreenObserver,
+  deriveForgeSmokeScreenKey,
+} from "../hercules-runtime/smokescreen-forge-ingress.mjs";
 
 function requireString(env, name) {
   const value = env[name];
@@ -158,7 +163,22 @@ export function safeForgeProductionSummary(config) {
     promptIngress: Boolean(config.interpreterUrl),
     identityLifecycle: Boolean(config.notificationUrl),
     secureSessionCookies: true,
+    smokeScreen: {
+      enabled: true,
+      mode: "OBSERVE_ONLY",
+      enforcement: false,
+    },
   };
+}
+
+export function createForgeProductionSmokeScreenObserver(controlToken, {now = Date.now} = {}) {
+  const hmacKey = deriveForgeSmokeScreenKey(controlToken);
+  const agent = createSmokeScreenAgent({hmacKey, now});
+  return createForgeSmokeScreenObserver({
+    agent,
+    mode: "OBSERVE_ONLY",
+    now,
+  });
 }
 
 export async function probeForgeProductionStorage(root, {minFreeBytes = 256 * 1024 * 1024} = {}) {
@@ -243,6 +263,7 @@ export async function startForgeProductionService({env = process.env} = {}) {
         token: config.notificationToken,
       })
     : null;
+  const smokeScreenObserver = createForgeProductionSmokeScreenObserver(config.token);
 
   const server = listenForgeControlService({
     root: config.root,
@@ -258,6 +279,7 @@ export async function startForgeProductionService({env = process.env} = {}) {
     }),
     serviceMode: "production",
     publicOrigin: config.publicOrigin,
+    smokeScreenObserver,
     host: config.host,
     port: config.port,
   });

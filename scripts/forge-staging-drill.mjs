@@ -93,6 +93,13 @@ if (before.mode !== "production") throw new Error("forge_not_in_production_mode"
 if (before.publicOrigin !== "https://forge.staging.invalid") {
   throw new Error("unexpected_forge_public_origin");
 }
+if (
+  before.smokeScreen?.enabled !== true
+  || before.smokeScreen?.mode !== "OBSERVE_ONLY"
+  || before.smokeScreen?.enforcement !== false
+) {
+  throw new Error("forge_smokescreen_not_observe_only");
+}
 const beforeReady = await readReadiness();
 if (!beforeReady.ready || !beforeReady.auditVerified || !beforeReady.storage?.writable) {
   throw new Error("forge_not_ready_before_restart");
@@ -154,6 +161,17 @@ if (!snapshots.snapshots.some((item) => item.snapshotId === snapshotId)) {
 
 const auditIntegrity = await operatorRequest("/v1/audit/verify", token);
 if (!auditIntegrity.integrity?.verified) throw new Error("forge_audit_chain_not_verified");
+const smokeScreen = await operatorRequest("/v1/security/smokescreen", token);
+if (
+  smokeScreen.mode !== "OBSERVE_ONLY"
+  || smokeScreen.enforcementApplied !== false
+  || smokeScreen.outboundCounterattack !== false
+  || !Number.isInteger(smokeScreen.observed)
+  || smokeScreen.observed < 1
+) {
+  throw new Error("forge_smokescreen_observation_evidence_invalid");
+}
+
 const auditEvents = await operatorRequest(
   "/v1/audit?projectId=" + encodeURIComponent(projectId) + "&limit=100",
   token,
@@ -184,6 +202,10 @@ const evidence = {
   auditChainVerifiedAfterRestart: auditIntegrity.integrity.verified === true,
   projectAuditPersistedAfterRestart: auditTypes.has("project.create"),
   snapshotAuditPersistedAfterRestart: auditTypes.has("data.snapshot"),
+  smokeScreenObserveOnly: smokeScreen.mode === "OBSERVE_ONLY",
+  smokeScreenEnforcementApplied: smokeScreen.enforcementApplied === true,
+  smokeScreenObservedRequests: smokeScreen.observed,
+  smokeScreenOutboundCounterattack: smokeScreen.outboundCounterattack,
   controlTokenExposed: false,
 };
 
