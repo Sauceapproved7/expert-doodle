@@ -10,6 +10,7 @@ on:
       - "tests/hercules-paid-launch-payment-gate.test.mjs"
       - "tests/hercules-shopify-paid-offer-gate.test.mjs"
       - "tests/hercules-titan-separate-offer.test.mjs"
+      - "tests/hercules-titan-owner-approval-flow.test.mjs"
       - "governance/hercules-titan-founding-access-offer-v1.json"
       - "docs/launch/HERCULES-TITAN-FOUNDING-ACCESS-OFFER-V1.md"
       - "docs/HERCULES-EXPLICIT-PUBLIC-RELEASE-GATE-V0.1.md"
@@ -26,4 +27,4 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-      - run: node --test tests/hercules-explicit-public-release-gate.test.mjs tests/hercules-paid-launch-payment-gate.test.mjs tests/hercules-shopify-paid-offer-gate.test.mjs tests/hercules-titan-separate-offer.test.mjs
+      - run: node --test tests/hercules-explicit-public-release-gate.test.mjs tests/hercules-paid-launch-payment-gate.test.mjs tests/hercules-shopify-paid-offer-gate.test.mjs tests/hercules-titan-separate-offer.test.mjs tests/hercules-titan-owner-approval-flow.test.mjs
