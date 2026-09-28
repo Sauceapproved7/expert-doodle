@@ -206,6 +206,65 @@ function strings(value:unknown,name:string){
   return result;
 }
 
+function optionalInstant(value:unknown,name:string){
+  if(value==null||String(value).trim()==='')return null;
+  const when=new Date(String(value));
+  if(!Number.isFinite(when.getTime())){
+    throw Object.assign(new Error(name+'_must_be_valid_timestamp'),{status:400});
+  }
+  return when.toISOString();
+}
+
+function taskWindowDecision(body:any){
+  const notBefore=optionalInstant(body.not_before,'not_before');
+  const expiresAt=optionalInstant(body.expires_at,'expires_at');
+  if(notBefore&&expiresAt&&Date.parse(expiresAt)<=Date.parse(notBefore)){
+    throw Object.assign(new Error('expires_at_must_be_after_not_before'),{status:400});
+  }
+  const now=Date.now();
+  if(notBefore&&now<Date.parse(notBefore)){
+    return {reasonCode:'TASK_NOT_YET_VALID',notBefore,expiresAt};
+  }
+  if(expiresAt&&now>=Date.parse(expiresAt)){
+    return {reasonCode:'TASK_EXPIRED',notBefore,expiresAt};
+  }
+  return null;
+}
+
+async function grantFingerprint(grant:any){
+  const normalized={
+    provider:String(grant?.provider??'').trim().toLowerCase(),
+    account_key:grant?.account_key==null?null:String(grant.account_key),
+    connection_ref:grant?.connection_ref==null?null:String(grant.connection_ref),
+    authorization_evidence_sha256:grant?.authorization_evidence_sha256==null?null:String(grant.authorization_evidence_sha256).toLowerCase(),
+    capabilities:[...(grant?.capabilities??[])].map((x:any)=>String(x).trim().toLowerCase()).filter(Boolean).sort(),
+    required_capabilities:[...(grant?.required_capabilities??[])].map((x:any)=>String(x).trim().toLowerCase()).filter(Boolean).sort(),
+    status:String(grant?.status??'').trim().toLowerCase(),
+    refreshable:Boolean(grant?.refreshable),
+    refresh_mode:String(grant?.refresh_mode??'none').trim().toLowerCase()
+  };
+  return sha256(JSON.stringify(normalized));
+}
+
+async function assertGrantPin(body:any,grant:any){
+  const actual=await grantFingerprint(grant);
+  const expected=body.expected_grant_fingerprint_sha256==null
+    ? ''
+    : String(body.expected_grant_fingerprint_sha256).trim().toLowerCase();
+  if(!expected)return actual;
+  if(!/^[a-f0-9]{64}$/.test(expected)){
+    throw Object.assign(new Error('expected_grant_fingerprint_sha256_invalid'),{status:400});
+  }
+  if(!safeEqual(expected,actual)){
+    const error:any=new Error('PROVIDER_GRANT_PIN_MISMATCH');
+    error.status=412;
+    error.expected=expected;
+    error.actual=actual;
+    throw error;
+  }
+  return actual;
+}
+
 async function readJson(req:Request){
   const declared=Number(req.headers.get('content-length')||'0');
   if(Number.isFinite(declared)&&declared>MAX_BODY_BYTES){
@@ -296,7 +355,9 @@ function discovery(){
       executionAdapters:true,
       safeInternalExecution:true,
       customerApiKeys:true,
-      commercialMetering:true
+      commercialMetering:true,
+      grantFingerprintPinning:true,
+      taskValidityWindows:true
     },
     refresh:{
       strategy:'provider-native-only',
@@ -509,6 +570,7 @@ async function dispatchProvider(principal:Principal,body:any,requestId:string){
     account_key:accountKey,
     required_capabilities:[adapter.capability]
   });
+  const grantFingerprintSha256=await assertGrantPin(body,grant);
 
   if(!grant?.execution_eligible){
     const error:any=new Error(
@@ -543,7 +605,7 @@ async function dispatchProvider(principal:Principal,body:any,requestId:string){
   }else{
     result=await invokeInternal(adapter.service,String(adapter.purpose),{action:adapter.action});
   }
-  return {adapter,grant,result,usage};
+  return {adapter,grant,grantFingerprintSha256,result,usage};
 }
 
 async function enqueueInternal(principal:Principal,body:any,requestId:string){
@@ -640,7 +702,7 @@ export async function handleDomainAgentRequest(req:Request){
       return out({
         ok:true,
         service:'hercules-domain-agent',
-        version:'2.0.0-multiplex',
+        version:'2.1.0-multiplex',
         schema:'hercules.domain-agent.health.v1',
         intendedOrigin:ORIGIN,
         backendService:'hercules-private-bridge',
@@ -666,6 +728,36 @@ export async function handleDomainAgentRequest(req:Request){
     const principal=await resolveOrganization(req,body,requiredScope);
     const requestId=String(body.request_id||crypto.randomUUID()).trim().slice(0,128);
     if(!requestId)return out({error:'request_id_required'},400);
+
+    if(action==='domain_agent_task_preflight'||action==='domain_agent_execute'){
+      const taskWindow=taskWindowDecision(body);
+      if(taskWindow){
+        const response={
+          schema:'hercules.domain-agent.preflight.v1',
+          disposition:'DENY',
+          status:'denied',
+          organization_id:principal.organizationId,
+          request_id:requestId,
+          execution_eligible:false,
+          execution_authority:false,
+          owner_action_required:false,
+          not_before:taskWindow.notBefore,
+          expires_at:taskWindow.expiresAt,
+          reason_codes:[taskWindow.reasonCode]
+        };
+        const decisionSha256=await decisionHash(response);
+        await recordAudit({
+          organizationId:principal.organizationId,requestId,principalType:principal.principalType,
+          action:action==='domain_agent_execute'?'execute':'task_preflight',
+          provider:body.provider==null?null:String(body.provider).trim().toLowerCase(),
+          accountKey:body.account_key==null?null:String(body.account_key).trim(),
+          disposition:'DENY',decisionSha256,
+          requiredCapabilities:strings(body.required_capabilities,'required_capabilities'),
+          reasonCodes:[taskWindow.reasonCode]
+        });
+        return out({...response,decision_sha256:decisionSha256},403);
+      }
+    }
 
     if(action==='domain_agent_usage_status'){
       const usage=await usageStatus(principal.organizationId);
@@ -770,6 +862,31 @@ export async function handleDomainAgentRequest(req:Request){
         dispatched=await dispatchProvider(principal,body,requestId);
       }catch(error){
         const e:any=error;
+        if(Number(e?.status)===412&&String(e?.message)==='PROVIDER_GRANT_PIN_MISMATCH'){
+          const response={
+            schema:'hercules.domain-agent.execution.v1',
+            ok:false,
+            organization_id:principal.organizationId,
+            request_id:requestId,
+            provider:adapter.provider,
+            capability,
+            status:'denied',
+            disposition:'DENY',
+            execution_performed:false,
+            owner_action_required:false,
+            expected_grant_fingerprint_sha256:e.expected??null,
+            grant_fingerprint_sha256:e.actual??null,
+            reason_codes:['PROVIDER_GRANT_PIN_MISMATCH']
+          };
+          const digest=await decisionHash(response);
+          await recordAudit({
+            organizationId:principal.organizationId,requestId,principalType:principal.principalType,
+            action:'execute',provider:adapter.provider,accountKey:body.account_key??null,
+            disposition:'DENY',decisionSha256:digest,
+            requiredCapabilities:[capability],reasonCodes:['PROVIDER_GRANT_PIN_MISMATCH']
+          });
+          return out({...response,decision_sha256:digest},412);
+        }
         if(Number(e?.status)===409){
           const response={
             schema:'hercules.domain-agent.execution.v1',
@@ -812,6 +929,7 @@ export async function handleDomainAgentRequest(req:Request){
         provider_native_refresh:true,
         refresh_mode:dispatched.grant?.refresh_mode??'none',
         authorization_evidence_sha256:dispatched.grant?.authorization_evidence_sha256??null,
+        grant_fingerprint_sha256:dispatched.grantFingerprintSha256,
         execution_performed:true,
         result:dispatched.result,
         usage,
@@ -829,6 +947,42 @@ export async function handleDomainAgentRequest(req:Request){
     }
 
     const grant=await resolveGrant(principal.organizationId,body);
+    let grantFingerprintSha256:string;
+    try{
+      grantFingerprintSha256=await assertGrantPin(body,grant);
+    }catch(error){
+      const e:any=error;
+      if(Number(e?.status)===412&&String(e?.message)==='PROVIDER_GRANT_PIN_MISMATCH'){
+        const response={
+          schema:'hercules.domain-agent.preflight.v1',
+          disposition:'DENY',
+          status:'denied',
+          organization_id:principal.organizationId,
+          request_id:requestId,
+          provider:grant?.provider??null,
+          account_key:grant?.account_key??null,
+          execution_eligible:false,
+          execution_authority:false,
+          owner_action_required:false,
+          expected_grant_fingerprint_sha256:e.expected??null,
+          grant_fingerprint_sha256:e.actual??null,
+          reason_codes:['PROVIDER_GRANT_PIN_MISMATCH']
+        };
+        const decisionSha256=await decisionHash(response);
+        await recordAudit({
+          organizationId:principal.organizationId,requestId,principalType:principal.principalType,
+          action:'task_preflight',
+          provider:grant?.provider??null,accountKey:grant?.account_key??null,
+          disposition:'DENY',decisionSha256,
+          authorizationEvidenceSha256:grant?.authorization_evidence_sha256??null,
+          requiredCapabilities:grant?.required_capabilities??[],
+          missingCapabilities:grant?.missing_capabilities??[],
+          reasonCodes:['PROVIDER_GRANT_PIN_MISMATCH']
+        });
+        return out({...response,decision_sha256:decisionSha256},412);
+      }
+      throw error;
+    }
 
     if(action==='domain_agent_grant_status'){
       const response={
@@ -836,7 +990,8 @@ export async function handleDomainAgentRequest(req:Request){
         service:'hercules-domain-agent',
         organization_id:principal.organizationId,
         request_id:requestId,
-        grant
+        grant,
+        grant_fingerprint_sha256:grantFingerprintSha256
       };
       const decisionSha256=await decisionHash(response);
       await recordAudit({
@@ -866,6 +1021,7 @@ export async function handleDomainAgentRequest(req:Request){
       account_key:grant?.account_key??null,
       connection_ref:grant?.connection_ref??null,
       authorization_evidence_sha256:grant?.authorization_evidence_sha256??null,
+      grant_fingerprint_sha256:grantFingerprintSha256,
       capabilities:grant?.capabilities??[],
       required_capabilities:grant?.required_capabilities??[],
       missing_capabilities:grant?.missing_capabilities??[],
