@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {mkdtemp, mkdir, writeFile, readFile, stat, rm} from "node:fs/promises";
+import {mkdtemp, mkdir, writeFile, readFile, stat, rm, utimes} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 
@@ -93,4 +93,21 @@ test("every-other-day schedule runs only when two full days have elapsed", () =>
   const last = Date.parse("2026-09-26T10:00:00Z");
   assert.equal(shouldRunSchedule({schedule:{type:"everyNDays", days:2}, lastRunAt:last, now:Date.parse("2026-09-28T10:00:00Z")}), true);
   assert.equal(shouldRunSchedule({schedule:{type:"everyNDays", days:2}, lastRunAt:last, now:Date.parse("2026-09-27T23:59:59Z")}), false);
+});
+
+
+test("zero minAge disables age filtering even when filesystem mtime is slightly ahead", async () => {
+  const root=await tempRoot();
+  const cache=join(root,"cache");
+  await mkdir(cache,{recursive:true});
+  const target=join(cache,"future.tmp");
+  await writeFile(target,"future-clock-skew");
+  const now=Date.now();
+  await utimes(target,new Date(now+1000),new Date(now+1000));
+  const plan=await createCleanupPlan({
+    profile:{id:"zero-age",roots:[cache],protectedPaths:[],minAgeMs:0,disposableExtensions:[".tmp"]},
+    now,
+  });
+  assert.deepEqual(plan.candidates.map(item=>item.path),[target]);
+  await rm(root,{recursive:true,force:true});
 });

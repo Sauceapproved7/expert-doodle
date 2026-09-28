@@ -52,7 +52,7 @@ function assessFile({path, size, mtimeMs}, profile, now, {ignoreAge = false} = {
   if (isProtected(path, profile.protectedPaths)) return {allowed: false, reason: "protected-path"};
   if (!matchDisposable(path, profile)) return {allowed: false, reason: "not-disposable-by-policy"};
   if (size > profile.maxFileBytes) return {allowed: false, reason: "file-too-large-for-policy"};
-  if (!ignoreAge && now - mtimeMs < profile.minAgeMs) return {allowed: false, reason: "too-recent"};
+  if (!ignoreAge && profile.minAgeMs > 0 && now - mtimeMs < profile.minAgeMs) return {allowed: false, reason: "too-recent"};
   return {allowed: true, reason: "approved-disposable-artifact"};
 }
 
