@@ -8,6 +8,7 @@ on:
       - "supabase/migrations/20260927040500_add_explicit_public_release_gate.sql"
       - "tests/hercules-explicit-public-release-gate.test.mjs"
       - "tests/hercules-paid-launch-payment-gate.test.mjs"
+      - "tests/hercules-shopify-paid-offer-gate.test.mjs"
       - "docs/HERCULES-EXPLICIT-PUBLIC-RELEASE-GATE-V0.1.md"
       - ".github/workflows/hercules-explicit-public-release-gate.yml"
 
@@ -22,4 +23,4 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-      - run: node --test tests/hercules-explicit-public-release-gate.test.mjs tests/hercules-paid-launch-payment-gate.test.mjs
+      - run: node --test tests/hercules-explicit-public-release-gate.test.mjs tests/hercules-paid-launch-payment-gate.test.mjs tests/hercules-shopify-paid-offer-gate.test.mjs
