@@ -78,5 +78,5 @@ test("auth hardening is computed from live Hercules password defense evidence",(
 test("native provider warning cannot by itself fail the Hercules auth gate",()=>{
   assert.doesNotMatch(gate,/requiredCommercial=\['auth_hardening','pricing','privacy','terms'\]/);
   assert.match(gate,/requiredOwnerCommercial=\['pricing','privacy','terms'\]/);
-  assert.match(gate,/commercialOk=passwordDefense\.ok&&paymentProviderReady&&paymentPathVerified&&requiredOwnerCommercial\.every/);
+  assert.match(gate,/commercialOk=passwordDefense\.ok&&paymentProviderReady&&paymentPathVerified&&shopifyOfferReconciled&&requiredOwnerCommercial\.every/);
 });
