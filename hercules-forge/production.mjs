@@ -7,6 +7,7 @@ import {HttpForgeNotificationAdapter} from "./notifications.mjs";
 import {ForgeLoginRateLimiter} from "./rate-limit.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES} from "./runtime-data.mjs";
 import {ForgeDurableStateMirror} from "./durable-state.mjs";
+import {runForgeStartupPromptCanary} from "./startup-canary.mjs";
 import {createSmokeScreenAgent} from "../hercules-runtime/smokescreen-agent.mjs";
 import {
   createForgeSmokeScreenObserver,
@@ -172,6 +173,19 @@ export function readForgeProductionConfig(env = process.env) {
   if (durableStateToken && durableStateToken.length < 32) {
     throw new Error("FORGE_DURABLE_STATE_TOKEN must be at least 32 characters in production");
   }
+  const startupPromptCanaryId = String(env.FORGE_STARTUP_PROMPT_CANARY_ID ?? "").trim() || null;
+  if (
+    startupPromptCanaryId &&
+    !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(startupPromptCanaryId)
+  ) {
+    throw new Error("FORGE_STARTUP_PROMPT_CANARY_ID must be a safe Forge identifier");
+  }
+  if (startupPromptCanaryId && !interpreterUrl) {
+    throw new Error("FORGE_STARTUP_PROMPT_CANARY_ID requires prompt ingress");
+  }
+  if (startupPromptCanaryId && !durableStateUrl) {
+    throw new Error("FORGE_STARTUP_PROMPT_CANARY_ID requires durable state");
+  }
 
   return {
     root,
@@ -192,6 +206,7 @@ export function readForgeProductionConfig(env = process.env) {
     notificationToken: notificationUrl ? (env.FORGE_NOTIFICATION_TOKEN ?? null) : null,
     durableStateUrl,
     durableStateToken,
+    startupPromptCanaryId,
   };
 }
 
@@ -212,6 +227,7 @@ export function safeForgeProductionSummary(config) {
     identityLifecycle: Boolean(config.notificationUrl),
     durableState: Boolean(config.durableStateUrl),
     stateDurability: config.durableStateUrl ? "remote-mirror" : "host-filesystem",
+    startupPromptCanaryId: config.startupPromptCanaryId ?? null,
     secureSessionCookies: true,
     smokeScreen: {
       enabled: true,
@@ -365,6 +381,23 @@ export async function startForgeProductionService({env = process.env} = {}) {
     server.once("listening", onListening);
   });
 
+  let startupPromptCanary = null;
+  if (config.startupPromptCanaryId) {
+    try {
+      startupPromptCanary = await runForgeStartupPromptCanary({
+        origin:"http://127.0.0.1:" + config.port,
+        controlToken:config.token,
+        projectId:config.startupPromptCanaryId,
+      });
+    } catch (error) {
+      await new Promise((resolveClose) => server.close(() => resolveClose()));
+      if (durableState) {
+        try { await durableState.flush(); } catch {}
+      }
+      throw error;
+    }
+  }
+
   let stopping = null;
   const shutdown = () => {
     if (stopping) return stopping;
@@ -384,6 +417,7 @@ export async function startForgeProductionService({env = process.env} = {}) {
       ...preflight.summary,
       durableStateStatus,
       durableHydration,
+      startupPromptCanary,
     },
     durableState,
     shutdown,
