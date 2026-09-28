@@ -10,10 +10,10 @@ const ui = await readFile(new URL("../supabase/functions/hercules-integrations/i
 
 test("Cleaner catalog migration registers the product and three owner-gated plans", async () => {
   const sql = await readFile(migrationPath, "utf8");
-  assert.match(sql, /'hercules-cleaner','Hercules Cleaner','Recoverable Computer Maintenance','early_access'/);
-  assert.match(sql, /'hercules-cleaner','starter','Starter',2900,'owner_approval_required',false/);
-  assert.match(sql, /'hercules-cleaner','pro','Pro',7900,'owner_approval_required',false/);
-  assert.match(sql, /'hercules-cleaner','agency','Agency',19900,'owner_approval_required',false/);
+  assert.match(sql, /'hercules-cleaner'\s*,\s*'Hercules Cleaner'\s*,\s*'Recoverable Computer Maintenance'\s*,\s*'early_access'/);
+  assert.match(sql, /'hercules-cleaner'\s*,\s*'starter'\s*,\s*'Starter'\s*,\s*2900\s*,\s*'owner_approval_required'\s*,\s*false/);
+  assert.match(sql, /'hercules-cleaner'\s*,\s*'pro'\s*,\s*'Pro'\s*,\s*7900\s*,\s*'owner_approval_required'\s*,\s*false/);
+  assert.match(sql, /'hercules-cleaner'\s*,\s*'agency'\s*,\s*'Agency'\s*,\s*19900\s*,\s*'owner_approval_required'\s*,\s*false/);
   assert.match(sql, /checkout_enabled=false/);
   assert.match(sql, /canonical_core/);
   assert.match(sql, /local_agent_with_web_commerce/);
@@ -44,4 +44,16 @@ test("Cleaner catalog preparation does not infer owner pricing or legal approval
   assert.doesNotMatch(sql, /'hercules-cleaner'[^;]+pricing_status='approved'/s);
   assert.doesNotMatch(sql, /'hercules-cleaner'[^;]+checkout_enabled=true/s);
   assert.match(sql, /owner_approval_required/);
+});
+
+
+test("Cleaner legal candidates describe local-file and recovery behavior before approval", async () => {
+  const terms = await readFile(new URL("../docs/legal/SAUCEAPPROVED-SOFTWARE-TERMS-CANDIDATE-V1.md", import.meta.url), "utf8");
+  const privacy = await readFile(new URL("../docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md", import.meta.url), "utf8");
+  assert.match(terms, /Hercules Cleaner/);
+  assert.match(terms, /Recovery Capsules/);
+  assert.match(terms, /authorized cleanup roots/i);
+  assert.match(privacy, /Hercules Cleaner/);
+  assert.match(privacy, /local file metadata/i);
+  assert.match(privacy, /does not require uploading/i);
 });
