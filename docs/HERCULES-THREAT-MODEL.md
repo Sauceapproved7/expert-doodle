@@ -108,3 +108,8 @@ These non-claims are security boundaries, not documentation omissions.
 ### Adaptive deception and false-positive containment
 
 Controls: bounded input fields, explicit signal allowlist, deterministic risk scoring, fail-closed signal validation, maximum 1500 ms tarpit delay, no outbound counterattack path, HMAC-derived session/route/decoy fingerprints, no raw session identifiers in decision output, isolated decoy-only routing at high risk, honeytoken-triggered critical containment, tamper-evident HMAC audit chaining, bounded retained audit windows with checkpoint anchors, and staged rollout from observe-only through containment. SmokeScreen must never place real secrets or customer records in a decoy surface and must preserve an immediate path back to normal routing for false-positive remediation.
+
+
+### SmokeScreen Mirage Fabric v2
+
+Controls: every Mirage Fabric is derived only from an already-decoy-classified SmokeScreen decision; topology generation uses HMAC-bound synthetic identifiers; arbitrary attacker-controlled labels are reduced to a fixed focus allowlist; all Mirage data is synthetic; real asset access is false; network policy is isolated with no egress; production credentials, customer data, payment keys, and signing authority are forbidden; execution authority remains false; outbound counterattack remains false; topology generations may mutate only within the same synthetic containment boundary; and enforcement must fail closed to denial when isolation controls cannot be proven.
