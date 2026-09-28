@@ -68,6 +68,12 @@ test("machine-readable execution contract is fail-closed and binds canonical rul
   assert.equal(policy.founderDirectives?.doYouExecutionCommand?.useBestProfessionalJudgment, true);
   assert.equal(policy.founderDirectives?.doYouExecutionCommand?.doNotRequireFounderToDirectRoutineTechnicalWork, true);
   assert.equal(policy.founderDirectives?.doYouExecutionCommand?.preserveOwnerOnlySecurityAndAuthorizationBoundaries, true);
+  assert.equal(policy.founderDirectives?.strengthAndNameStandard?.enabled, true);
+  assert.equal(policy.founderDirectives?.outsideTheBoxBuildRule?.enabled, true);
+  assert.equal(policy.founderDirectives?.billionDollarOperatingStandard?.enabled, true);
+  assert.equal(policy.founderDirectives?.marketLeadershipMindset?.enabled, true);
+  assert.equal(policy.founderDirectives?.differentiatorRequirement?.minimumPerBuild, 2);
+  assert.equal(policy.founderDirectives?.nightlyWholeHerculesAudit?.requiredOperatingTarget, true);
   assert.equal(policy.quality?.commerciallyUsable, true);
   assert.equal(policy.quality?.visuallyPolished, true);
   assert.equal(policy.security?.securityIsPartOfBuild, true);
