@@ -294,7 +294,7 @@ function renderSoftwarePaymentVerification(d){
 }
 async function softwarePaymentVerificationStatus(){
   try{
-    const d=await call('hercules-software-payment-verify',{action:'status'});
+    const d=await call('hercules-provider-connect',{action:'software_payment_status'});
     renderSoftwarePaymentVerification(d);$('softwarepaymentout').textContent=fmt(d);return d
   }catch(e){
     softwarePaymentState=null;
@@ -309,8 +309,8 @@ async function prepareSoftwarePaymentVerification(productCode){
   const confirmation=window.prompt('This controlled live verification charges $29 only if you complete Stripe checkout. Hercules will automatically cancel the verification subscription and issue a refund. Type exactly: '+phrase);
   if(confirmation!==phrase){if(confirmation!==null)$('softwarepaymentout').textContent='Verification not started: confirmation did not match.';return}
   try{
-    const d=await call('hercules-software-payment-verify',{
-      action:'prepare_live_verification',
+    const d=await call('hercules-provider-connect',{
+      action:'prepare_software_payment_verification',
       product_code:productCode,
       plan_code:'starter'
     });
@@ -322,7 +322,7 @@ async function prepareSoftwarePaymentVerification(productCode){
 }
 async function reconcileSoftwarePaymentVerification(productCode){
   try{
-    const d=await call('hercules-software-payment-verify',{action:'reconcile_live_verification',product_code:productCode});
+    const d=await call('hercules-provider-connect',{action:'reconcile_software_payment_verification',product_code:productCode});
     $('softwarepaymentout').textContent=fmt(d);return d
   }catch(e){
     if(!String(e.message||'').includes('verification_run_not_found'))$('softwarepaymentout').textContent='Payment reconciliation: '+e.message;
