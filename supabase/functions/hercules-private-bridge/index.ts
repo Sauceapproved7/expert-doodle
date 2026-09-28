@@ -593,7 +593,8 @@ Deno.serve(async(req:Request)=>{
     if(!envelope.readiness.privacyRefMatches)return out({error:'titan_privacy_document_mismatch'},409);
     if(!envelope.readiness.checkoutHeldClosed)return out({error:'titan_checkout_must_remain_locked_during_owner_approval'},409);
 
-    const {data,error}=await a.db.rpc('hercules_titan_owner_approve_bundle',{
+    const {data,error}=await admin.rpc('hercules_titan_owner_approve_bundle',{
+      p_user_id:uid,
       p_packet_version:TITAN_COMMERCIAL_PACKET_VERSION,
       p_packet_digest:TITAN_COMMERCIAL_PACKET_DIGEST,
       p_confirmation:TITAN_COMMERCIAL_PACKET_CONFIRMATION
