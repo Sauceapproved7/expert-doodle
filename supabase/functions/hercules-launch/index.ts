@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import {pilotAdmissionGet,pilotAdmissionPost} from "./pilot-admission.ts";
 
 const U = Deno.env.get("SUPABASE_URL") || "https://xbwuablxhhwsaoomsoco.supabase.co";
 const P = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
@@ -70,7 +71,8 @@ async function compromisedPasswordCount(password:string){
   });
   if(!response.ok)throw new Error("password_safety_upstream_"+response.status);
   const responseBody=await response.text();
-  for(const line of responseBody.split(/\r?\n/)){
+  for(const line of responseBody.split(/\r?
+/)){
     const [remoteSuffix,countRaw]=line.trim().split(":");
     if(remoteSuffix&&remoteSuffix.toUpperCase()===suffix){
       const count=Number(countRaw||0);
@@ -409,8 +411,10 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
       <button class="btn sidebtn" data-view="homeView">Hercules AI</button>
       <div class="tag" style="margin:18px 10px 6px">Advanced tools</div>
       <button class="btn sidebtn" data-view="knowledgeView">Knowledge</button>
-      <button class="btn sidebtn" data-view="builderView">Builder</button>\n      <button class="btn sidebtn" data-view="adStudioView">Ad Studio</button>
-      <button class="btn sidebtn" data-view="forgeView">Deployments</button>\n      <button class="btn sidebtn" data-view="domainAgentView">Domain Agent</button>
+      <button class="btn sidebtn" data-view="builderView">Builder</button>
+      <button class="btn sidebtn" data-view="adStudioView">Ad Studio</button>
+      <button class="btn sidebtn" data-view="forgeView">Deployments</button>
+      <button class="btn sidebtn" data-view="domainAgentView">Domain Agent</button>
       <button class="btn sidebtn" data-view="statusView">System Status</button>
       <a class="btn sidebtn" href="/hercules-wallet/">Wallet · Testnet</a>
     </aside>
@@ -793,7 +797,10 @@ async function loadDomainAgent(){
 $("domainAgentRefresh").onclick=loadDomainAgent;
 $("domainAgentSelfTest").onclick=async()=>{setNotice("domainAgentExecution","Running Hercules self-test…","warn");try{const d=await domainAgentCall({action:"domain_agent_execute",request_id:"ui-selftest-"+crypto.randomUUID(),workload_type:"runtime.selftest",input:{}});const ok=d.execution_performed===true&&d.job?.status==="succeeded";setNotice("domainAgentExecution",ok?"Self-test succeeded · "+safe(d.job?.trace_id):"Self-test accepted · "+safe(d.job?.status),ok?"good":"warn");await loadDomainAgent()}catch(e){setNotice("domainAgentExecution",e.message,"bad")}};
 $("domainAgentCheckGrant").onclick=async()=>{setNotice("domainAgentProviders","Checking authorization…","warn");try{const provider=$("domainAgentProvider").value,account=$("domainAgentAccountKey").value.trim();const d=await domainAgentCall({action:"domain_agent_grant_status",request_id:"ui-grant-"+crypto.randomUUID(),provider,account_key:account||null,required_capabilities:provider==="shopify"?["shopify.domain.observe"]:provider==="github_forge"?["github.bridge.verify"]:["knowledge.read"]});const g=d.grant||{};const text=g.status==="ready"?"Authorized · "+(g.capabilities||[]).join(", "):(g.status||"authorization unresolved")+" · "+(g.reason_codes||[]).join(", ");setNotice("domainAgentProviders",text,g.execution_eligible?"good":"warn")}catch(e){setNotice("domainAgentProviders",e.message,"bad")}};
-$("domainAgentIssueKey").onclick=async()=>{setNotice("domainAgentApiKey","Issuing scoped key…","warn");try{const d=await domainAgentCall({action:"domain_agent_api_key_issue",name:$("domainAgentKeyName").value.trim()||"Hercules Domain Agent",scopes:["domain-agent:read","domain-agent:execute"]});domainAgentLastKeyId=d.api_key?.id||null;setNotice("domainAgentApiKey","Copy now — shown once:\n"+safe(d.api_key_secret)+"\n\nKey ID: "+safe(domainAgentLastKeyId),"good")}catch(e){setNotice("domainAgentApiKey",e.message,"bad")}};
+$("domainAgentIssueKey").onclick=async()=>{setNotice("domainAgentApiKey","Issuing scoped key…","warn");try{const d=await domainAgentCall({action:"domain_agent_api_key_issue",name:$("domainAgentKeyName").value.trim()||"Hercules Domain Agent",scopes:["domain-agent:read","domain-agent:execute"]});domainAgentLastKeyId=d.api_key?.id||null;setNotice("domainAgentApiKey","Copy now — shown once:
+"+safe(d.api_key_secret)+"
+
+Key ID: "+safe(domainAgentLastKeyId),"good")}catch(e){setNotice("domainAgentApiKey",e.message,"bad")}};
 $("domainAgentRevokeKey").onclick=async()=>{if(!domainAgentLastKeyId){setNotice("domainAgentApiKey","Issue a key in this session before using revoke here.","warn");return}try{await domainAgentCall({action:"domain_agent_api_key_revoke",api_key_id:domainAgentLastKeyId});setNotice("domainAgentApiKey","Key revoked: "+domainAgentLastKeyId,"good");domainAgentLastKeyId=null}catch(e){setNotice("domainAgentApiKey",e.message,"bad")}};
 
 function statusRow(label,value,tone){const x=document.createElement("div");x.className="statusline";const a=document.createElement("span");a.textContent=label;const b=document.createElement("span");b.className="pill";const dot=document.createElement("span");dot.className="dot "+(tone||"");b.append(dot,document.createTextNode(safe(value)));x.append(a,b);return x}
@@ -809,6 +816,11 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 
 Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
+  if(url.searchParams.has("pilot_admission")){
+    if(req.method==="GET")return pilotAdmissionGet(req,url,{U,K,S});
+    if(req.method==="POST")return pilotAdmissionPost(req,url,{U,K,S});
+    return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
+  }
   if(url.searchParams.get("password_defense_probe")==="compromised"){
     const check=await screenPasswordServer("Password123!");
     return Response.json({
