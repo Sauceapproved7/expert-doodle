@@ -8,7 +8,7 @@ test("SmokeScreen public package includes canonical runtime and benchmark eviden
   });
 
   assert.equal(manifest.product,"Hercules SmokeScreen Sentinel");
-  assert.equal(manifest.version,"2.1.0");
+  assert.equal(manifest.version,"2.2.0");
   assert.equal(manifest.releaseClass,"public-community-preview");
   assert.equal(manifest.license,"Apache-2.0");
   assert.equal(manifest.defensiveOnly,true);
@@ -23,7 +23,13 @@ test("SmokeScreen public package includes canonical runtime and benchmark eviden
   for(const required of [
     "hercules-runtime/smokescreen-agent.mjs",
     "hercules-runtime/smokescreen-forge-ingress.mjs",
+    "hercules-runtime/smokescreen-attack-enrichment.mjs",
+    "tests/hercules-smokescreen-attack-enrichment.test.mjs",
     "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md",
+    "releases/hercules-smokescreen-v2.2.0/README.md",
+    "releases/hercules-smokescreen-v2.2.0/INSTALL.md",
+    "releases/hercules-smokescreen-v2.2.0/SECURITY.md",
+    "releases/hercules-smokescreen-v2.2.0/RELEASE-NOTES.md",
     "docs/HERCULES-SMOKESCREEN-SENTINEL-V1.md",
     "docs/HERCULES-THREAT-MODEL.md",
     "LICENSE",

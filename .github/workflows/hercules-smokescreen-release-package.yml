@@ -6,11 +6,12 @@ on:
     paths:
       - "hercules-runtime/smokescreen-agent.mjs"
       - "hercules-runtime/smokescreen-forge-ingress.mjs"
+      - "hercules-runtime/smokescreen-attack-enrichment.mjs"
       - "scripts/smokescreen-global-benchmark.mjs"
       - "scripts/package-smokescreen-release.mjs"
       - "tests/hercules-smokescreen*.test.mjs"
       - "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md"
-      - "releases/hercules-smokescreen-v2.1.0/**"
+      - "releases/hercules-smokescreen-v2.2.0/**"
       - ".github/workflows/hercules-smokescreen-release-package.yml"
   push:
     branches:
@@ -22,7 +23,7 @@ on:
       - "scripts/package-smokescreen-release.mjs"
       - "tests/hercules-smokescreen*.test.mjs"
       - "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md"
-      - "releases/hercules-smokescreen-v2.1.0/**"
+      - "releases/hercules-smokescreen-v2.2.0/**"
       - ".github/workflows/hercules-smokescreen-release-package.yml"
 
 permissions:
@@ -55,34 +56,35 @@ jobs:
         run: |
           node --test tests/hercules-smokescreen-agent.test.mjs
           node --test tests/hercules-smokescreen-forge-ingress.test.mjs
+          node --test tests/hercules-smokescreen-attack-enrichment.test.mjs
           node --test tests/hercules-smokescreen-global-benchmark.test.mjs
           node --test tests/hercules-smokescreen-release-package.test.mjs
 
       - name: Build exact-commit source package
         run: |
-          rm -rf /tmp/hercules-smokescreen-v2.1.0
-          node scripts/package-smokescreen-release.mjs             --commit-sha "$SOURCE_SHA"             --output-dir /tmp/hercules-smokescreen-v2.1.0
+          rm -rf /tmp/hercules-smokescreen-v2.2.0
+          node scripts/package-smokescreen-release.mjs             --commit-sha "$SOURCE_SHA"             --output-dir /tmp/hercules-smokescreen-v2.2.0
 
       - name: Build deterministic archive and checksum
         shell: bash
         run: |
           set -euo pipefail
-          tar             --sort=name             --mtime='UTC 1970-01-01'             --owner=0             --group=0             --numeric-owner             -C /tmp/hercules-smokescreen-v2.1.0             -cf - .           | gzip -n > /tmp/hercules-smokescreen-v2.1.0.tgz
-          sha256sum /tmp/hercules-smokescreen-v2.1.0.tgz             > /tmp/hercules-smokescreen-v2.1.0.tgz.sha256
+          tar             --sort=name             --mtime='UTC 1970-01-01'             --owner=0             --group=0             --numeric-owner             -C /tmp/hercules-smokescreen-v2.2.0             -cf - .           | gzip -n > /tmp/hercules-smokescreen-v2.2.0.tgz
+          sha256sum /tmp/hercules-smokescreen-v2.2.0.tgz             > /tmp/hercules-smokescreen-v2.2.0.tgz.sha256
 
       - name: Attest package provenance
         if: github.event_name == 'push'
         uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
         with:
-          subject-path: /tmp/hercules-smokescreen-v2.1.0.tgz
+          subject-path: /tmp/hercules-smokescreen-v2.2.0.tgz
 
       - name: Upload public preview artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
-          name: hercules-smokescreen-v2.1.0-${{ env.SOURCE_SHA }}
+          name: hercules-smokescreen-v2.2.0-${{ env.SOURCE_SHA }}
           path: |
-            /tmp/hercules-smokescreen-v2.1.0.tgz
-            /tmp/hercules-smokescreen-v2.1.0.tgz.sha256
-            /tmp/hercules-smokescreen-v2.1.0/smokescreen-release-manifest.json
+            /tmp/hercules-smokescreen-v2.2.0.tgz
+            /tmp/hercules-smokescreen-v2.2.0.tgz.sha256
+            /tmp/hercules-smokescreen-v2.2.0/smokescreen-release-manifest.json
           if-no-files-found: error
           retention-days: 90

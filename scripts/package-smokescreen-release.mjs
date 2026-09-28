@@ -5,20 +5,22 @@ import {fileURLToPath} from "node:url";
 import {runSmokeScreenGlobalBenchmark} from "./smokescreen-global-benchmark.mjs";
 
 const ROOT=fileURLToPath(new URL("../",import.meta.url));
-const VERSION="2.1.0";
+const VERSION="2.2.0";
 const RELEASE_FILES=Object.freeze([
   "hercules-runtime/smokescreen-agent.mjs",
   "hercules-runtime/smokescreen-forge-ingress.mjs",
+  "hercules-runtime/smokescreen-attack-enrichment.mjs",
   "scripts/smokescreen-global-benchmark.mjs",
   "tests/hercules-smokescreen-agent.test.mjs",
   "tests/hercules-smokescreen-forge-ingress.test.mjs",
   "tests/hercules-smokescreen-global-benchmark.test.mjs",
+  "tests/hercules-smokescreen-attack-enrichment.test.mjs",
   "tests/hercules-smokescreen-release-package.test.mjs",
   "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md",
-  "releases/hercules-smokescreen-v2.1.0/README.md",
-  "releases/hercules-smokescreen-v2.1.0/INSTALL.md",
-  "releases/hercules-smokescreen-v2.1.0/SECURITY.md",
-  "releases/hercules-smokescreen-v2.1.0/RELEASE-NOTES.md",
+  "releases/hercules-smokescreen-v2.2.0/README.md",
+  "releases/hercules-smokescreen-v2.2.0/INSTALL.md",
+  "releases/hercules-smokescreen-v2.2.0/SECURITY.md",
+  "releases/hercules-smokescreen-v2.2.0/RELEASE-NOTES.md",
   "docs/HERCULES-SMOKESCREEN-SENTINEL-V1.md",
   "docs/HERCULES-THREAT-MODEL.md",
   "LICENSE",
@@ -122,7 +124,7 @@ async function writePackage({commitSha,outputDir}){
 function parseArgs(argv){
   const out={
     commitSha:process.env.GITHUB_SHA||"",
-    outputDir:"/tmp/hercules-smokescreen-v2.1.0",
+    outputDir:"/tmp/hercules-smokescreen-v2.2.0",
   };
   for(let i=0;i<argv.length;i++){
     if(argv[i]==="--commit-sha")out.commitSha=argv[++i];

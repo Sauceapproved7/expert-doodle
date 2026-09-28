@@ -125,3 +125,10 @@ Controls: Forge attaches observation only after an HTTP response completes; obse
 23. **User filesystem -> Cleaner policy engine -> Recovery Vault**: local file metadata crosses an allowlisted-root, protected-path, disposable-rule and freshness boundary before any cleanup plan is produced. Cleanup execution is local only and moves approved files into a per-run Recovery Capsule before any later purge.
 
 Controls: loopback-only dashboard binding, per-process control token, origin checks, bounded request bodies, symlink non-following, explicit protected paths, user-scoped defaults, scan depth/file-count caps, time-of-check revalidation before moving a file, SHA-256 capsule integrity, fail-closed restore when a destination already exists, a single-operation lock, retained manifests, and no automatic cleaning of Documents/Desktop/Pictures/Videos/Music/SSH/GnuPG defaults. Native startup uses user-level OS facilities only; system scheduler/launch infrastructure remains outside owned Hercules code.
+
+
+### SmokeScreen ATT&CK enrichment boundary
+
+24. **Normalized SmokeScreen telemetry -> ATT&CK candidate enrichment -> operator evidence**: normalized request/authentication evidence crosses a taxonomy boundary where behavioral indicators are mapped to candidate MITRE ATT&CK techniques. ATT&CK metadata must not be treated as proof of actor identity, campaign identity, compromise success, or authorization for enforcement.
+
+Controls: candidate-only output; explicit confidence and corroboration fields; fixed technique allowlist reviewed against MITRE public documentation; bounded route categories instead of raw route disclosure; no inference of `T1046 Network Service Discovery` without network-service telemetry; no inference of `T1078 Valid Accounts` without successful-account-use evidence; `actorAttribution=false`; `campaignAttribution=false`; `automaticResponseAuthority=false`; `outboundCounterattack=false`; and Forge remains `OBSERVE_ONLY` during this stage.

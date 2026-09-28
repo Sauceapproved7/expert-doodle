@@ -37,7 +37,7 @@ Each domain is scored from 0 to 10. Missing public evidence for another vendor i
 | Environment breadth and discovery | 3/10 | Current proof is application/Forge oriented, not broad IT/OT/cloud/identity discovery. |
 | Automated production containment | 5/10 | Enforcement plans exist; Forge ingress is intentionally observe-only today. |
 | SIEM/SOAR/EDR/XDR integration breadth | 1/10 | No verified broad production connector matrix yet. |
-| ATT&CK/TTP enrichment and external maturity | 3/10 | Audit evidence exists, but full ATT&CK/TTP enrichment and large external red-team/production proof are not yet established. |
+| ATT&CK/TTP enrichment and external maturity | 3/10 | v2.2 candidate ATT&CK mapping is implemented; broader IOC/TTP context and large external red-team/production proof are not yet established. Score held pending a deliberate benchmark rerun. |
 | **Total** | **64/100** | |
 
 ## Current global reference bar
@@ -92,7 +92,7 @@ Hercules is strongest today in the defensive decision core:
 1. Broader IT, OT, identity, cloud, endpoint, and industrial coverage.
 2. A verified SIEM/SOAR/EDR/XDR connector matrix.
 3. More high-interaction service and digital-twin realism.
-4. Mature ATT&CK/TTP and IOC enrichment.
+4. Broader ATT&CK/TTP and IOC context beyond the bounded v2.2 candidate mappings.
 5. Live production containment beyond observe-only Forge ingress.
 6. Large independent red-team, customer, multi-region, and sustained-load evidence.
 
@@ -163,7 +163,7 @@ This benchmark does not claim:
 Before any global-leadership claim:
 
 1. collect observe-only production telemetry and review false positives;
-2. add ATT&CK/TTP enrichment;
+2. rerun the global benchmark after v2.2 ATT&CK enrichment and add broader IOC/TTP context;
 3. verify a local enforcement adapter and rollback path;
 4. ship SIEM/SOAR export contracts;
 5. add high-interaction Mirage service profiles;
