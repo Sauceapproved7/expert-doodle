@@ -60,7 +60,7 @@ async function contactForToken(admin:any,tokenSha256:string){
   if(admission.synthetic_certification===true&&!/@example\.com$/i.test(String(data.email||'')))return null;
   return data;
 }
-export async function pilotAdmissionGet(_req:Request,url:URL,ctx:{admin?:any;U:string;S:string}){\n  if(!ctx.S)return page('<h1>Service unavailable</h1><p class="err">server_auth_configuration_required</p>',503);\n  const admin=ctx.admin||createClient(ctx.U,ctx.S,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
+export async function pilotAdmissionGet(_req:Request,url:URL,ctx:{admin?:any;U:string;K?:string;S:string}){\n  if(!ctx.S)return page('<h1>Service unavailable</h1><p class="err">server_auth_configuration_required</p>',503);\n  const admin=ctx.admin||createClient(ctx.U,ctx.S,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
   const token=tokenFrom(url);
   if(!token)return page('<h1>Invitation unavailable</h1><p class="muted">This controlled admission handoff is invalid or expired.</p>',404);
   const tokenSha256=await sha256Hex(token);
