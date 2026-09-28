@@ -41,20 +41,48 @@ export function customerConsoleHtml() {
       <textarea id="prompt" placeholder="Describe the app you want Hercules Forge to build..."></textarea>
       <button id="create">Build project</button>
     </div>
-    <div class="panel" id="projectPanel" hidden>
-      <div class="heading"><div><h2 id="projectName"></h2><code id="selectedProject"></code></div></div>
-      <div id="builderControls">
-        <textarea id="revisionPrompt" placeholder="Describe the next change..."></textarea>
-        <div class="actions">
-          <button id="revise">Create revision</button>
-          <button id="preview">Preview latest</button>
-          <button id="stopPreview">Stop preview</button>
-        </div>
+    <div class="panel workbench-panel" id="projectPanel" hidden>
+      <div class="heading workbench-heading">
+        <div><div class="eyebrow">Hercules Forge Workbench</div><h2 id="projectName"></h2><code id="selectedProject"></code></div>
+        <div class="workbench-badges"><span>OWNED CORE</span><span>PROOF-GATED</span></div>
       </div>
-      <div id="adminControls" class="actions">
-        <button id="publish">Publish latest</button>
+      <div class="workbench-grid">
+        <section class="workbench-pane files-pane">
+          <div class="pane-title"><strong>Files</strong><span id="fileCount" class="muted"></span></div>
+          <div id="sourceFiles" class="file-tree"></div>
+        </section>
+        <section class="workbench-pane editor-shell">
+          <div class="pane-title"><strong>Editor</strong><code id="editorPath">Select a generated file</code></div>
+          <pre id="sourceEditor" class="source-editor">Choose a file from the revision source tree.</pre>
+          <div id="editorMeta" class="muted"></div>
+        </section>
+        <section class="workbench-pane preview-shell">
+          <div class="pane-title"><strong>Live preview</strong><span class="muted">isolated runtime</span></div>
+          <div id="previewBox" class="preview-box">No preview running.</div>
+          <div class="actions">
+            <button id="preview">Preview latest</button>
+            <button id="stopPreview" class="secondary">Stop preview</button>
+          </div>
+        </section>
+        <section class="workbench-pane agent-shell">
+          <div class="pane-title"><strong>Hercules Agent</strong><span class="muted">architect · builder · tester · release</span></div>
+          <div id="builderControls">
+            <textarea id="revisionPrompt" placeholder="Tell Hercules what to change. Forge records a new immutable revision instead of silently mutating history."></textarea>
+            <button id="revise">Build revision</button>
+          </div>
+          <div id="adminControls" class="actions">
+            <button id="publish">Publish verified revision</button>
+          </div>
+          <div class="proof-card">
+            <div class="pane-title"><strong>Proof Gate</strong><span id="proofState" class="muted"></span></div>
+            <div id="proofGate"></div>
+          </div>
+        </section>
       </div>
-      <div id="previewBox"></div>
+      <section class="terminal-panel">
+        <div class="pane-title"><strong>Terminal / Output</strong><span class="muted">read-only Forge activity stream</span></div>
+        <pre id="terminalOutput">Forge workbench ready.</pre>
+      </section>
       <section class="data-panel">
         <h3>Runtime data</h3>
         <div id="dataUsage" class="muted">Loading usage...</div>
@@ -66,7 +94,10 @@ export function customerConsoleHtml() {
         <div id="auditStatus" class="muted"></div>
         <div id="auditEvents"></div>
       </section>
-      <h3>Revisions</h3><div id="revisions"></div>
+      <section class="ledger-panel">
+        <div class="pane-title"><strong>Build Ledger</strong><span class="muted">immutable revisions · checkpoints · rollback</span></div>
+        <div id="revisions"></div>
+      </section>
     </div>
     <pre id="status">Ready.</pre>
   </section>
@@ -75,16 +106,17 @@ export function customerConsoleHtml() {
 }
 
 export function customerConsoleCss() {
-  return `:root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}*{box-sizing:border-box}body{margin:0}header{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid #263047;background:#0d111a}header span{margin-left:10px;color:#8791a7}.auth-card{max-width:430px;margin:9vh auto;padding:26px;background:#111724;border:1px solid #273047;border-radius:16px}.auth-card p{color:#aab4c8}#appShell{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 61px)}aside{padding:20px;border-right:1px solid #263047}.workspace{padding:28px;max-width:1100px;width:100%}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:20px;margin-bottom:18px}label{display:block;font-size:13px;color:#aab4c8;margin:8px 0}input,textarea,select{width:100%;margin-top:6px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:9px;padding:11px}textarea{min-height:115px;resize:vertical}button{background:#f5f7ff;color:#0b0f17;border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer;margin:5px 5px 5px 0}button.secondary{background:#20283a;color:#e8edff;border:1px solid #34415c}.project{padding:10px;border:1px solid #273047;border-radius:9px;margin:7px 0;cursor:pointer}.project:hover{background:#151d2d}.muted{color:#8791a7;font-size:12px}.revision,.snapshot,.audit-event{padding:10px 0;border-bottom:1px solid #273047}.revision button,.snapshot button{font-size:12px;padding:7px 9px}.data-panel{margin-top:18px;padding-top:14px;border-top:1px solid #273047}.user-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}.heading{display:flex;justify-content:space-between;gap:12px}.actions{margin:10px 0}pre{white-space:pre-wrap;background:#080b12;border:1px solid #273047;padding:14px;border-radius:10px;min-height:54px}a{color:#8bc4ff}@media(max-width:760px){#appShell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #263047}.workspace{padding:16px}}`;
+  return `:root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#07090e}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 70% -20%,#17223a 0,#07090e 38%,#05070b 100%);min-height:100vh}header{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;border-bottom:1px solid #263047;background:rgba(9,13,21,.94);backdrop-filter:blur(14px);position:sticky;top:0;z-index:20}header strong{letter-spacing:.08em}header span{margin-left:10px;color:#8791a7}.auth-card{max-width:430px;margin:9vh auto;padding:26px;background:#101622;border:1px solid #273047;border-radius:18px;box-shadow:0 28px 80px rgba(0,0,0,.35)}.auth-card p{color:#aab4c8}#appShell{display:grid;grid-template-columns:280px minmax(0,1fr);min-height:calc(100vh - 58px)}aside{padding:18px;border-right:1px solid #263047;background:rgba(9,13,21,.8)}.workspace{padding:22px;max-width:none;width:100%;overflow:hidden}.panel{background:#0f1520;border:1px solid #273047;border-radius:16px;padding:18px;margin-bottom:18px;box-shadow:0 18px 55px rgba(0,0,0,.18)}label{display:block;font-size:13px;color:#aab4c8;margin:8px 0}input,textarea,select{width:100%;margin-top:6px;background:#070b12;color:#fff;border:1px solid #303b52;border-radius:9px;padding:11px}textarea{min-height:108px;resize:vertical}button{background:#f5f7ff;color:#0b0f17;border:0;border-radius:9px;padding:10px 14px;font-weight:800;cursor:pointer;margin:5px 5px 5px 0}button.secondary{background:#20283a;color:#e8edff;border:1px solid #34415c}.project{padding:11px;border:1px solid #273047;border-radius:10px;margin:7px 0;cursor:pointer;background:#0b1019}.project:hover{background:#151d2d;border-color:#40506f}.muted{color:#8791a7;font-size:12px}.revision,.snapshot,.audit-event{padding:10px 0;border-bottom:1px solid #273047}.revision button,.snapshot button{font-size:12px;padding:7px 9px}.data-panel,.ledger-panel{margin-top:18px;padding-top:14px;border-top:1px solid #273047}.user-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}.heading,.pane-title{display:flex;justify-content:space-between;gap:12px;align-items:center}.actions{margin:10px 0}pre{white-space:pre-wrap;background:#070b12;border:1px solid #273047;padding:14px;border-radius:10px;min-height:54px}a{color:#9fc7ff}.eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:#6f7f9f;font-weight:800}.workbench-panel{padding:16px}.workbench-heading{margin-bottom:14px}.workbench-badges{display:flex;gap:7px;flex-wrap:wrap}.workbench-badges span{font-size:9px;letter-spacing:.14em;border:1px solid #3b4862;background:#121a28;border-radius:999px;padding:6px 8px;color:#b9c6dd}.workbench-grid{display:grid;grid-template-columns:220px minmax(320px,1.35fr) minmax(260px,.9fr);grid-template-areas:"files editor agent" "files preview agent";gap:10px;min-height:560px}.workbench-pane{border:1px solid #273047;border-radius:12px;background:#090e16;overflow:hidden}.workbench-pane>.pane-title{padding:10px 12px;border-bottom:1px solid #273047;background:#0d131e}.files-pane{grid-area:files}.editor-shell{grid-area:editor;min-height:330px}.preview-shell{grid-area:preview;padding-bottom:10px}.agent-shell{grid-area:agent;padding-bottom:12px}.agent-shell #builderControls,.agent-shell #adminControls,.proof-card{padding:10px 12px}.file-tree{padding:8px;max-height:700px;overflow:auto}.file-item{display:block;width:100%;text-align:left;background:transparent;color:#c8d2e7;border:1px solid transparent;padding:8px 9px;margin:2px 0;font:500 12px ui-monospace,SFMono-Regular,Menlo,monospace}.file-item:hover,.file-item.active{background:#151e2e;border-color:#31415e}.source-editor{margin:0;border:0;border-radius:0;min-height:290px;max-height:430px;overflow:auto;font:12px/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;color:#d7e0ef}.editor-shell #editorMeta{padding:8px 12px;border-top:1px solid #273047}.preview-box{min-height:96px;padding:14px;display:flex;align-items:center;color:#9aa6bb}.proof-card{border-top:1px solid #273047;margin-top:10px}.proof-row{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #1d2636;font-size:12px}.proof-pass{color:#9ee6b1}.proof-block{color:#ffbd9d}.terminal-panel{margin-top:10px;border:1px solid #273047;border-radius:12px;overflow:hidden;background:#06090e}.terminal-panel .pane-title{padding:9px 12px;border-bottom:1px solid #273047}.terminal-panel pre{margin:0;border:0;border-radius:0;max-height:180px;overflow:auto;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#a9b8cf}.ledger-entry{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;padding:11px 0;border-bottom:1px solid #273047}.ledger-entry code{font-size:11px;color:#8da1bf}.ledger-meta{font-size:11px;color:#6f7f9f;margin-top:4px}.status-chip{font-size:10px;padding:4px 7px;border-radius:999px;border:1px solid #32415b;color:#b8c6de}@media(max-width:1100px){.workbench-grid{grid-template-columns:200px minmax(0,1fr);grid-template-areas:"files editor" "files agent" "preview preview"}}@media(max-width:760px){#appShell{grid-template-columns:1fr}aside{border-right:0;border-bottom:1px solid #263047}.workspace{padding:10px}.workbench-grid{grid-template-columns:1fr;grid-template-areas:"agent" "files" "editor" "preview";min-height:0}.files-pane{max-height:280px}.source-editor{max-height:360px}.workbench-heading{align-items:flex-start;flex-direction:column}.workbench-badges{margin-top:6px}}`;
 }
 
 export function customerConsoleJs() {
   return `(() => {
 const $=(id)=>document.getElementById(id);
 let csrf=""; let me=null; let workspaceId=null; let membership=null; let selected=null; let revisions=[];
+let selectedRevisionId=null; let selectedSourcePath=null;
 let lifecycleKind=null; let lifecycleTokenValue="";
 const esc=(v)=>String(v).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const status=(v)=>$("status").textContent=typeof v==="string"?v:JSON.stringify(v,null,2);
+const status=(v)=>{const value=typeof v==="string"?v:JSON.stringify(v,null,2);$("status").textContent=value;const terminal=$("terminalOutput");if(terminal){const stamp=new Date().toLocaleTimeString();terminal.textContent=("["+stamp+"] "+value+"\\n"+terminal.textContent).slice(0,12000)}};
 const loginStatus=(v)=>$("loginStatus").textContent=typeof v==="string"?v:JSON.stringify(v,null,2);
 const canBuild=()=>["owner","admin","builder"].includes(membership?.role);
 const canAdmin=()=>["owner","admin"].includes(membership?.role);
@@ -148,25 +180,81 @@ async function selectProject(id){
   revisions=revisionData.revisions;
   $("projectPanel").hidden=false; $("projectName").textContent=project.name; $("selectedProject").textContent=id;
   $("builderControls").hidden=!canBuild(); $("adminControls").hidden=!canAdmin();
-  renderRevisions();
+  selectedRevisionId=revisions.at(-1)?.revisionId||null;
+  renderFileTree();
+  renderProofGate();
+  renderBuildLedger();
+  if(selectedRevisionId){
+    const firstPath=Object.keys(revisions.at(-1)?.files||{}).sort()[0];
+    if(firstPath)await loadSourceFile(selectedRevisionId,firstPath);
+  }
   await Promise.all([refreshPreview(), refreshData(), canAdmin()?refreshAudit():Promise.resolve()]);
 }
 
-function renderRevisions(){
+function renderFileTree(){
+  const revision=revisions.at(-1);
+  const files=Object.keys(revision?.files||{}).sort();
+  $("sourceFiles").innerHTML="";
+  $("fileCount").textContent=files.length+" files";
+  for(const path of files){
+    const button=document.createElement("button");
+    button.className="file-item"+(path===selectedSourcePath?" active":"");
+    button.textContent=path;
+    button.onclick=()=>loadSourceFile(revision.revisionId,path).catch((error)=>status(error.message));
+    $("sourceFiles").appendChild(button);
+  }
+  if(!files.length)$("sourceFiles").textContent="No generated source indexed.";
+}
+
+async function loadSourceFile(revisionId,path){
+  const data=await request(projectBase()+"/revisions/"+encodeURIComponent(revisionId)+"/source?path="+encodeURIComponent(path));
+  selectedRevisionId=revisionId; selectedSourcePath=path;
+  $("editorPath").textContent=path;
+  $("sourceEditor").textContent=data.source.content;
+  $("editorMeta").textContent=data.source.bytes+" bytes · sha256 "+data.source.sha256.slice(0,16)+"…";
+  renderFileTree();
+  return data.source;
+}
+
+function renderProofGate(){
+  const revision=revisions.at(-1);
+  const checks=[
+    ["Immutable revision",Boolean(revision?.revisionId)],
+    ["Source indexed",Object.keys(revision?.files||{}).length>0],
+    ["Build fingerprint",Boolean(revision?.fingerprint)],
+    ["Ownership attestation",Boolean(revision?.ownership)],
+  ];
+  const clear=checks.every(([,ok])=>ok);
+  $("proofState").textContent=clear?"READY FOR VALIDATION":"BLOCKED";
+  $("proofGate").innerHTML="";
+  for(const [label,ok] of checks){
+    const row=document.createElement("div");row.className="proof-row";
+    row.innerHTML="<span>"+esc(label)+"</span><strong class='"+(ok?"proof-pass":"proof-block")+"'>"+(ok?"PASS":"BLOCK")+"</strong>";
+    $("proofGate").appendChild(row);
+  }
+}
+
+function renderBuildLedger(){
   $("revisions").innerHTML="";
-  [...revisions].reverse().forEach((revision)=>{
-    const el=document.createElement("div"); el.className="revision";
-    el.innerHTML="<strong>"+esc(revision.message||"Revision")+"</strong><div class=muted>"+esc(revision.revisionId)+"</div>";
+  [...revisions].reverse().forEach((revision,index)=>{
+    const el=document.createElement("div");el.className="ledger-entry";
+    const fileCount=Object.keys(revision.files||{}).length;
+    const detail=document.createElement("div");
+    detail.innerHTML="<strong>"+esc(revision.message||"Revision")+"</strong><div class=ledger-meta>"+esc(revision.createdAt)+" · "+fileCount+" files · fingerprint "+esc((revision.fingerprint||"").slice(0,12))+"</div><code>"+esc(revision.revisionId)+"</code>";
+    const actions=document.createElement("div");
     if(canBuild()){
-      const preview=document.createElement("button"); preview.textContent="Preview"; preview.onclick=()=>startPreview(revision.revisionId); el.appendChild(preview);
+      const preview=document.createElement("button");preview.textContent="Preview";preview.onclick=()=>startPreview(revision.revisionId);actions.appendChild(preview);
     }
     if(canAdmin()){
-      const publish=document.createElement("button"); publish.textContent="Publish"; publish.onclick=()=>publishRevision(revision.revisionId); el.appendChild(publish);
-      const rollback=document.createElement("button"); rollback.textContent="Rollback"; rollback.onclick=()=>rollbackRevision(revision.revisionId); el.appendChild(rollback);
+      const publish=document.createElement("button");publish.textContent="Publish";publish.onclick=()=>publishRevision(revision.revisionId);actions.appendChild(publish);
+      if(index>0){const rollback=document.createElement("button");rollback.textContent="Rollback";rollback.onclick=()=>rollbackRevision(revision.revisionId);actions.appendChild(rollback)}
     }
-    $("revisions").appendChild(el);
+    el.append(detail,actions);$("revisions").appendChild(el);
   });
+  if(!revisions.length)$("revisions").textContent="No build ledger entries yet.";
 }
+
+function renderRevisions(){renderBuildLedger()}
 
 function projectBase(){
   return "/v1/workspaces/"+encodeURIComponent(workspaceId)+"/projects/"+encodeURIComponent(selected);
