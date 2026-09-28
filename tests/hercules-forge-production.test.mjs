@@ -54,9 +54,27 @@ test("production config is fail-closed and safe summary omits credentials", () =
   assert.equal(config.minFreeBytes, 1048576);
   assert.equal(config.notificationUrl, "https://notify.example.test/send");
 
+  const durableConfig = readForgeProductionConfig({
+    ...env,
+    FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
+    FORGE_DURABLE_STATE_TOKEN: "d".repeat(48),
+  });
+  assert.equal(
+    durableConfig.durableStateUrl,
+    "https://state.example.test/functions/v1/hercules-private-bridge",
+  );
+  assert.equal(durableConfig.durableStateToken, "d".repeat(48));
+
   const summary = safeForgeProductionSummary(config);
   assert.equal(summary.secureSessionCookies, true);
   assert.equal(summary.identityLifecycle, true);
+  assert.equal(summary.durableState, false);
+  assert.equal(summary.stateDurability, "host-filesystem");
+  const durableSummary = safeForgeProductionSummary(durableConfig);
+  assert.equal(durableSummary.durableState, true);
+  assert.equal(durableSummary.stateDurability, "remote-mirror");
+  assert.equal("durableStateToken" in durableSummary, false);
+  assert.equal(JSON.stringify(durableSummary).includes(durableConfig.durableStateToken), false);
   assert.equal(summary.minFreeBytes, 1048576);
   assert.equal("token" in summary, false);
   assert.equal("interpreterToken" in summary, false);
@@ -103,6 +121,30 @@ test("production config is fail-closed and safe summary omits credentials", () =
     }).interpreterUrl,
     "http://127.0.0.1:39000/interpret",
   );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
+    }),
+    /FORGE_DURABLE_STATE_TOKEN is required/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
+      FORGE_DURABLE_STATE_TOKEN: "short",
+    }),
+    /at least 32 characters/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_DURABLE_STATE_URL: "http://state.example.test/functions/v1/hercules-private-bridge",
+      FORGE_DURABLE_STATE_TOKEN: "d".repeat(48),
+    }),
+    /must use https unless it is loopback/,
+  );
+
   assert.throws(
     () => readForgeProductionConfig({
       ...env,
