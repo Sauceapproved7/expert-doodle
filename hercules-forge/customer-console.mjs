@@ -116,7 +116,7 @@ let csrf=""; let me=null; let workspaceId=null; let membership=null; let selecte
 let selectedRevisionId=null; let selectedSourcePath=null;
 let lifecycleKind=null; let lifecycleTokenValue="";
 const esc=(v)=>String(v).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-const status=(v)=>{const value=typeof v==="string"?v:JSON.stringify(v,null,2);$("status").textContent=value;const terminal=$("terminalOutput");if(terminal){const stamp=new Date().toLocaleTimeString();terminal.textContent=("["+stamp+"] "+value+"\n"+terminal.textContent).slice(0,12000)}};
+const status=(v)=>{const value=typeof v==="string"?v:JSON.stringify(v,null,2);$("status").textContent=value;const terminal=$("terminalOutput");if(terminal){const stamp=new Date().toLocaleTimeString();terminal.textContent=("["+stamp+"] "+value+"\\n"+terminal.textContent).slice(0,12000)}};
 const loginStatus=(v)=>$("loginStatus").textContent=typeof v==="string"?v:JSON.stringify(v,null,2);
 const canBuild=()=>["owner","admin","builder"].includes(membership?.role);
 const canAdmin=()=>["owner","admin"].includes(membership?.role);
