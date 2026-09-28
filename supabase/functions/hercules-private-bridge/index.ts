@@ -4,6 +4,7 @@ import { handleSpaceshipDnsRequest } from './spaceship-dns-control.ts';
 import { handleSpaceshipMcpRequest, isSpaceshipMcpAction } from './spaceship-mcp.ts';
 import { handlePersonalBrowserRequest, isPersonalBrowserAction } from './personal-browser.ts';
 import { handleDomainAgentRequest, isDomainAgentAction, isDomainAgentGet } from './domain-agent.ts';
+import { handlePilotAdmissionRequest, isPilotAdmissionAction } from './pilot-admission.ts';
 
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}').default||Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -372,6 +373,7 @@ Deno.serve(async(req:Request)=>{
     const probe=await req.clone().json().catch(()=>({}));
     const probeAction=String(probe?.action||'');
     if(isDomainAgentAction(probeAction))return handleDomainAgentRequest(req);
+    if(isPilotAdmissionAction(probeAction))return handlePilotAdmissionRequest(req);
     if(isSpaceshipMcpAction(probeAction))return handleSpaceshipMcpRequest(req);
     if(isPersonalBrowserAction(probeAction))return handlePersonalBrowserRequest(req);
   }
@@ -380,8 +382,8 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
-    return out({ok:true,service:'hercules-private-bridge',version:'1.5.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api'],
+    return out({ok:true,service:'hercules-private-bridge',version:'1.6.0',status:'ready',
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','pilot_admission_control'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
