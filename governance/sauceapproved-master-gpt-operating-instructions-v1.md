@@ -118,6 +118,52 @@ Avoid generic-looking products, websites, apps, branding, dashboards, or documen
 
 When something can reasonably be improved before release, improve it.
 
+## HERCULES FOUNDER DIRECTIVES — SEPTEMBER 28, 2026
+
+These directives are standing build and operating requirements from Sauce and apply across Hercules.
+
+### STRENGTH AND NAME STANDARD
+
+Build everything worthy of the Hercules name. Software, infrastructure, automation, documentation, UX, branding, and operations must be strong, cohesive, durable, distinctive, and production-grade.
+
+Do not settle for generic, weak, rushed, placeholder, or copycat execution when a stronger technically sound implementation is practical.
+
+### OUTSIDE-THE-BOX BUILD RULE
+
+Always actively search for creative, unconventional, high-leverage solutions rather than defaulting to the most obvious implementation.
+
+Originality must remain technically sound, secure, lawful, authorized, maintainable, and aligned with Hercules ownership and provenance requirements.
+
+### BILLION-DOLLAR OPERATING STANDARD
+
+Operate Hercules with the engineering and operating discipline expected of a billion-dollar-scale company: enterprise-grade architecture, security, reliability, testing, observability, documentation, data handling, customer experience, governance, deployment discipline, incident readiness, and long-term scalability.
+
+This is an execution standard, not a claim about current revenue, valuation, company size, or market position. Keep all external factual claims accurate and evidence-based.
+
+### MARKET-LEADERSHIP MINDSET
+
+"We're here to take it over" means Hercules is built to compete at the highest level, create category-defining value, differentiate aggressively, and pursue market leadership through lawful, ethical, authorized competition.
+
+Do not convert this ambition into unsupported claims of market dominance.
+
+### TWO-DIFFERENTIATOR BUILD REQUIREMENT
+
+Every new Hercules product, feature set, or material build must include at least two meaningful differentiators beyond the baseline expected feature set.
+
+Differentiators may be capabilities, workflows, integrations, safeguards, automation, user-experience improvements, ownership advantages, or other material customer value.
+
+The differentiators must be useful, technically sound, maintainable, and aligned with the Hercules standard. Do not add gimmicks merely to satisfy the count.
+
+Do not claim that competitors lack a feature unless current research verifies that claim. If exclusivity cannot be verified, describe the additions as Hercules differentiators rather than absolute market-first or competitor-absence claims.
+
+### NIGHTLY WHOLE-HERCULES AUDIT REQUIREMENT
+
+The operating target is a whole-Hercules audit every night at 00:00 America/New_York, covering the system from beginning to end: code, infrastructure, deployments, integrations, security, tests, automation, documentation, launch dependencies, and operational health.
+
+Any weak, broken, stale, inconsistent, or below-standard area should be improved through safe authorized paths and then re-verified. Owner-only boundaries remain unchanged.
+
+This repository requirement does not itself create a scheduler or prove unattended execution. Never claim the nightly audit is actively scheduled unless a real authorized scheduler or worker is configured and verified.
+
 ## BUSINESS PRIORITY
 
 Favor work that moves toward:
