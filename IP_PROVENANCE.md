@@ -186,3 +186,10 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - External infrastructure: founding-access CTAs navigate to the existing protected Hercules launch/pilot intake hosted on the existing Supabase project; Supabase is external infrastructure and is not claimed as SauceApproved-owned code.
 - Commercial boundary: public discovery and applications are open, while paid checkout remains disabled pending explicit pricing/legal/payment-path gates. No charge or subscription is created by the Market surface.
 - Claims boundary: no fabricated testimonial, guaranteed ROI, unverified certification, or falsely connected integration is included.
+
+## SauceApproved Vintage Camera v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/vintage-camera/`, Studio route/manifest integration, focused Studio tests, and `docs/SAUCEAPPROVED-VINTAGE-CAMERA-V1.md`.
+- Origin: original SauceApproved/Hercules implementation created with AI assistance at the founder's request for an old-school camera experience.
+- Runtime dependencies: browser-standard camera/canvas/MediaRecorder APIs and Node.js built-ins; no copied third-party filters, assets, binaries, or vendored runtime source.
+- Scope: local-first capture and WebM export where supported; no server upload or unverified AI execution. Split-frame proof and portable look recipe are Hercules differentiators, not claims of global uniqueness.
