@@ -41,3 +41,8 @@ Hercules security changes should:
 - GitHub Actions and release provenance.
 
 See `docs/HERCULES-THREAT-MODEL.md` for the current threat model.
+
+
+## Hercules Cleaner local-file authority
+
+Hercules Cleaner is authorized only for user-configured local cleanup roots. Default personal document and credential directories remain protected. The cleaner must not follow symlinks, silently widen roots, bind its control dashboard to non-loopback interfaces, or bypass OS permission boundaries. Every apply-mode cleanup uses a Recovery Capsule before purge; restore verifies hashes and fails if the original path has been repopulated.
