@@ -53,7 +53,7 @@ export function createDefaultProfiles({
     );
   }
 
-  const safeRoots = uniq([temp, ...appCaches]);
+  const safeRoots = uniq([temp, ...appCaches, ...browserCaches]);
   const cleanAllInRoots = uniq([...appCaches, ...browserCaches]);
 
   return [
