@@ -1,0 +1,138 @@
+const $=id=>document.getElementById(id);
+const source=$('source'),view=$('view'),preview=view.getContext('2d',{alpha:false});
+const output=document.createElement('canvas');output.width=1280;output.height=720;
+const frame=output.getContext('2d',{alpha:false});
+const grainCanvas=document.createElement('canvas');grainCanvas.width=160;grainCanvas.height=90;
+const grainContext=grainCanvas.getContext('2d');
+let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
+let recordingStarted=0,animation=0,mode='idle',chunks=[],rawChunks=[];
+const setStatus=message=>{$('status').textContent=message;};
+const setButtonState=()=>{
+  const ready=mode==='camera'||mode==='clip';
+  $('camera').disabled=mode==='recording';$('load').disabled=mode==='recording';
+  $('record').disabled=!ready||typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream;
+  $('stop').disabled=mode==='idle';$('original').disabled=!originalUrl;
+  $('record').textContent=mode==='clip'?'Process clip':'Record look';
+};
+const recipe=()=>({schema:'sauceapproved.vintage-camera.recipe',version:1,stock:$('stock').value,strength:Number($('strength').value),grain:Number($('grain').value),export:'webm',sourceMediaIncluded:false});
+function filterFor(stock,strength){
+  const amount=strength/100;
+  const values={
+    'golden-hour':`sepia(${.64*amount}) saturate(${1+.2*amount}) contrast(${1+.1*amount}) brightness(${1+.03*amount})`,
+    'street-tape':`saturate(${1-.32*amount}) contrast(${1+.17*amount}) hue-rotate(${-5*amount}deg)`,
+    'silver-noir':`grayscale(${amount}) contrast(${1+.32*amount}) brightness(${1-.04*amount})`,
+    'clean-archive':`sepia(${.2*amount}) contrast(${1+.07*amount}) saturate(${1-.08*amount})`
+  };
+  return values[stock]||'none';
+}
+function imageTo(ctx,filter='none'){
+  const w=ctx.canvas.width,h=ctx.canvas.height,sw=source.videoWidth,sh=source.videoHeight;
+  ctx.fillStyle='#090909';ctx.fillRect(0,0,w,h);
+  if(!sw||!sh)return;
+  const scale=Math.max(w/sw,h/sh),dw=sw*scale,dh=sh*scale;
+  ctx.filter=filter;ctx.drawImage(source,(w-dw)/2,(h-dh)/2,dw,dh);ctx.filter='none';
+}
+function grainOverlay(ctx,amount){
+  if(amount<=0)return;
+  const pixels=grainContext.createImageData(grainCanvas.width,grainCanvas.height);
+  for(let i=0;i<pixels.data.length;i+=4){
+    const value=Math.floor(Math.random()*256);
+    pixels.data[i]=value;pixels.data[i+1]=value;pixels.data[i+2]=value;pixels.data[i+3]=Math.floor(amount*.55);
+  }
+  grainContext.putImageData(pixels,0,0);
+  ctx.drawImage(grainCanvas,0,0,ctx.canvas.width,ctx.canvas.height);
+}
+function draw(){
+  const settings=recipe();
+  imageTo(frame,filterFor(settings.stock,settings.strength));
+  grainOverlay(frame,settings.grain);
+  preview.fillStyle='#090909';preview.fillRect(0,0,view.width,view.height);
+  if(source.readyState>=2){
+    preview.save();preview.beginPath();preview.rect(0,0,view.width/2,view.height);preview.clip();imageTo(preview);preview.restore();
+    preview.save();preview.beginPath();preview.rect(view.width/2,0,view.width/2,view.height);preview.clip();preview.drawImage(output,0,0);preview.restore();
+    preview.fillStyle='#e2b68d';preview.fillRect(view.width/2-1,0,2,view.height);
+  }else{
+    preview.fillStyle='#b49e8a';preview.font='bold 28px system-ui';preview.textAlign='center';
+    preview.fillText('A STORY IS WAITING.',view.width/2,view.height/2);
+  }
+  if(mode==='recording'){
+    const seconds=Math.floor((Date.now()-recordingStarted)/1000);
+    $('timecode').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
+  }
+  animation=requestAnimationFrame(draw);
+}
+function releaseSource(){
+  if(recorder?.state==='recording')recorder.stop();
+  if(rawRecorder?.state==='recording')rawRecorder.stop();
+  if(cameraStream){cameraStream.getTracks().forEach(track=>track.stop());cameraStream=null;}
+  source.pause();source.srcObject=null;source.removeAttribute('src');source.load();
+  if(sourceUrl){URL.revokeObjectURL(sourceUrl);sourceUrl=null;sourceName=null;}
+  mode='idle';setButtonState();
+}
+function releaseDownloads(){
+  if(processedUrl)URL.revokeObjectURL(processedUrl);
+  if(originalUrl)URL.revokeObjectURL(originalUrl);
+  processedUrl=originalUrl=null;$('download').hidden=true;setButtonState();
+}
+function saveBlob(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
+function supportedMime(){return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(type=>MediaRecorder.isTypeSupported(type));}
+$('camera').addEventListener('click',async()=>{
+  releaseSource();releaseDownloads();
+  if(!navigator.mediaDevices?.getUserMedia){setStatus('This browser cannot open a camera here. Use Load a clip instead.');return;}
+  try{
+    const wantAudio=$('microphone').checked;
+    cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:wantAudio});
+    source.srcObject=cameraStream;source.muted=true;await source.play();mode='camera';setButtonState();
+    $('finder-label').textContent='LIVE / SOURCE ↔ LOOK';
+    setStatus(`Camera live. ${wantAudio?'Microphone enabled by your choice.':'Microphone off.'} Recording has not started.`);
+  }catch(error){releaseSource();setStatus(error?.name==='NotAllowedError'?'Camera permission was denied. No capture started.':'Camera unavailable. Try Load a clip.');}
+});
+$('load').addEventListener('click',()=>$('file').click());
+$('file').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];if(!file)return;
+  if(!file.type.startsWith('video/')){setStatus('Choose a video file. Nothing was uploaded.');return;}
+  releaseSource();releaseDownloads();sourceUrl=URL.createObjectURL(file);originalUrl=sourceUrl;sourceName=file.name;
+  source.src=sourceUrl;source.loop=false;source.muted=true;
+  try{await source.play();mode='clip';setButtonState();$('finder-label').textContent='CLIP / SOURCE ↔ LOOK';setStatus('Clip loaded locally. Processing exports video without source audio on this version.');}
+  catch{mode='clip';setButtonState();setStatus('Clip loaded locally. Tap the video processing control to start playback.');}
+  event.target.value='';
+});
+$('record').addEventListener('click',async()=>{
+  if(mode!=='camera'&&mode!=='clip')return;
+  const mime=supportedMime();if(!mime){setStatus('This browser cannot encode WebM. No recording started.');return;}
+  try{
+    if(mode==='clip'){source.currentTime=0;await source.play();}
+    const stream=output.captureStream(30);
+    if(mode==='camera')cameraStream.getAudioTracks().forEach(track=>stream.addTrack(track));
+    chunks=[];rawChunks=[];
+    recorder=new MediaRecorder(stream,{mimeType:mime});
+    recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
+    recorder.onstop=()=>{
+      if(chunks.length){processedUrl=URL.createObjectURL(new Blob(chunks,{type:mime}));$('download').href=processedUrl;$('download').download='sauceapproved-vintage-look.webm';$('download').hidden=false;setStatus('Processed clip ready to download. The source stayed local.');}
+      stream.getVideoTracks().forEach(track=>track.stop());
+    };
+    if(mode==='camera'){
+      rawRecorder=new MediaRecorder(cameraStream,{mimeType:mime});
+      rawRecorder.ondataavailable=event=>{if(event.data.size)rawChunks.push(event.data);};
+      rawRecorder.onstop=()=>{if(rawChunks.length){originalUrl=URL.createObjectURL(new Blob(rawChunks,{type:mime}));setButtonState();}};
+      rawRecorder.start(1000);
+    }
+    recorder.start(1000);mode='recording';recordingStarted=Date.now();setButtonState();
+    setStatus('Recording locally. Stop to finish and download.');
+  }catch{if(rawRecorder?.state==='recording')rawRecorder.stop();setStatus('Recording could not start on this browser.');}
+});
+$('stop').addEventListener('click',()=>{
+  if(mode==='recording'){
+    if(recorder?.state==='recording')recorder.stop();
+    if(rawRecorder?.state==='recording')rawRecorder.stop();
+    mode=cameraStream?'camera':'clip';
+  }else{releaseSource();setStatus('Camera stopped. Nothing was sent to a server.');}
+  if(mode==='clip'){source.pause();source.currentTime=0;}
+  setButtonState();
+});
+source.addEventListener('ended',()=>{if(mode==='recording'&&!cameraStream)$('stop').click();});
+$('recipe').addEventListener('click',()=>saveBlob(new Blob([JSON.stringify(recipe(),null,2)],{type:'application/json'}),'sauceapproved-look-recipe.json'));
+$('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||'sauceapproved-original.webm';link.click();});
+for(const id of ['strength','grain'])$(id).addEventListener('input',()=>{$(id+'-value').value=$(id).value+'%';});
+window.addEventListener('pagehide',()=>{cancelAnimationFrame(animation);releaseSource();releaseDownloads();});
+setButtonState();draw();

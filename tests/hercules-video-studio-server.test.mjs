@@ -2,6 +2,25 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {createStudioHttpHandler} from "../hercules-video/studio-server.mjs";
 
+test("Vintage Camera serves an owned local-first capture surface and client",async()=>{
+  const handle=createStudioHttpHandler();
+  const page=await handle({method:"GET",pathname:"/vintage-camera"});
+  assert.equal(page.status,200);
+  assert.match(page.body,/SauceApproved Vintage Camera/);
+  assert.match(page.body,/Original stays on your device/);
+  assert.match(page.body,/\/assets\/vintage-camera.js/);
+  assert.match(page.headers["content-security-policy"],/script-src 'self'/);
+  const client=await handle({method:"GET",pathname:"/assets/vintage-camera.js"});
+  assert.equal(client.status,200);
+  assert.match(client.headers["content-type"],/javascript/);
+  assert.match(client.body,/getUserMedia/);
+  assert.match(client.body,/MediaRecorder/);
+  const root=await handle({method:"GET",pathname:"/"});
+  assert.match(root.body,/href="\/vintage-camera"/);
+  const manifest=JSON.parse((await handle({method:"GET",pathname:"/api\/studio\/manifest"})).body);
+  assert.ok(manifest.surfaces.some(surface=>surface.id==="vintage-camera"));
+});
+
 function statusFixture() {
   return {
     schema:"sauceapproved.hercules.video-launch-run-status",
