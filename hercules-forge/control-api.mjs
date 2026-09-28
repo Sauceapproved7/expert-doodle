@@ -163,6 +163,7 @@ export function createForgeControlService({
   serviceMode = "development",
   publicOrigin = null,
   smokeScreenObserver = null,
+  durableState = null,
 }) {
   if (!root) throw new TypeError("root is required");
   if (typeof token !== "string" || token.length < 16) {
@@ -171,7 +172,10 @@ export function createForgeControlService({
 
   const store = new ForgeWorkspaceStore(root);
   const releases = new ForgeLocalReleaseAdapter(root);
-  const previews = new ForgePreviewManager(root, {runtimeDataMaxBytes});
+  const previews = new ForgePreviewManager(root, {
+    runtimeDataMaxBytes,
+    onRuntimeMutation: durableState ? () => durableState.flush() : null,
+  });
   const runtimeData = new ForgeLocalRuntimeDataAdapter(root, {
     maxProjectBytes: runtimeDataMaxBytes,
   });
@@ -218,6 +222,17 @@ export function createForgeControlService({
     try {
       const url = new URL(req.url, "http://localhost");
       const parts = routeParts(url);
+      const shouldPersist = Boolean(
+        durableState &&
+        (
+          !["GET", "HEAD", "OPTIONS"].includes(req.method ?? "GET") ||
+          url.pathname === "/v1/session/csrf"
+        )
+      );
+      const reply = async (status, body, headers = {}) => {
+        if (shouldPersist) await durableState.flush();
+        return reply( status, body, headers);
+      };
 
       if (req.method === "GET") {
         const asset = customerConsoleAsset(url.pathname) ?? builderConsoleAsset(url.pathname);
@@ -233,7 +248,7 @@ export function createForgeControlService({
       }
 
       if (req.method === "GET" && url.pathname === "/health") {
-        return send(res, 200, {
+        return reply( 200, {
           ok: true,
           service: "hercules-forge-control-api",
           version: "1.6",
@@ -245,6 +260,7 @@ export function createForgeControlService({
           runtimeDataControl: true,
           auditEvents: true,
           identityLifecycle: Boolean(notificationAdapter && publicOrigin),
+          durableState: Boolean(durableState),
           runtimeDataMaxBytes,
           smokeScreen: smokeScreenObserver?.publicStatus?.() ?? {
             enabled: false,
@@ -257,15 +273,15 @@ export function createForgeControlService({
       if (req.method === "GET" && url.pathname === "/v1/security/smokescreen") {
         requireToken(req, token);
         if (!smokeScreenObserver || typeof smokeScreenObserver.snapshot !== "function") {
-          return send(res, 503, {error: "smokescreen_not_configured"});
+          return reply( 503, {error: "smokescreen_not_configured"});
         }
-        return send(res, 200, smokeScreenObserver.snapshot());
+        return reply( 200, smokeScreenObserver.snapshot());
       }
 
       if (req.method === "GET" && url.pathname === "/ready") {
         const integrity = await audit.verify();
         const storage = readinessCheck ? await readinessCheck() : null;
-        return send(res, 200, {
+        return reply( 200, {
           ready: true,
           service: "hercules-forge-control-api",
           version: "1.6",
@@ -291,7 +307,7 @@ export function createForgeControlService({
             role: accepted.membership.role,
           },
         });
-        return send(res, 201, {
+        return reply( 201, {
           accepted: true,
           user: accepted.user,
           membership: accepted.membership,
