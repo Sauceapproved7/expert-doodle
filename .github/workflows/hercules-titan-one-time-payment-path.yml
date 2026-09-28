@@ -1,0 +1,24 @@
+name: Hercules Titan One-Time Payment Path
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-provider-connect/**"
+      - "supabase/functions/hercules-stripe-webhook/**"
+      - "supabase/functions/hercules-integrations/**"
+      - "supabase/migrations/*hercules_titan_payment_path_v1.sql"
+      - "tests/hercules-titan-one-time-payment-path.test.mjs"
+      - ".github/workflows/hercules-titan-one-time-payment-path.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --test tests/hercules-titan-one-time-payment-path.test.mjs

@@ -226,6 +226,15 @@ function softwareMetadata(obj:any){
   };
 }
 
+function titanMetadata(obj:any){
+  const metadata=obj?.metadata||{};
+  return {
+    organizationId:String(metadata.organizationId||''),
+    titanProductCode:String(metadata.titanProductCode||''),
+    titanVerificationRunId:String(metadata.titanVerificationRunId||'')
+  };
+}
+
 async function updateVerificationRun(runId:string,patch:any){
   if(!runId)return;
   const {error}=await admin.from('hercules_software_payment_verification_runs')
@@ -264,6 +273,73 @@ async function tryCertify(runId:string){
     throw error;
   }
   return data;
+}
+
+async function updateTitanVerificationRun(runId:string,patch:any){
+  if(!runId)return;
+  const {error}=await admin.from('hercules_titan_payment_verification_runs')
+    .update({...patch,updated_at:new Date().toISOString()})
+    .eq('id',runId);
+  if(error)throw error;
+}
+
+async function recordTitanVerificationEvent(runId:string,event:any,payloadHash:string,evidence:any={}){
+  if(!runId)return;
+  const {error}=await admin.rpc('hercules_titan_record_verification_event',{
+    p_run_id:runId,
+    p_stripe_event_id:String(event.id),
+    p_event_type:String(event.type),
+    p_payload_hash:payloadHash,
+    p_evidence:{
+      signature_verified:true,
+      livemode:Boolean(event.livemode),
+      ...evidence
+    }
+  });
+  if(error)throw error;
+}
+
+async function tryCertifyTitan(runId:string){
+  if(!runId)return null;
+  const {data,error}=await admin.rpc('hercules_titan_certify_payment_path',{p_run_id:runId});
+  if(error){
+    const message=String(error.message||'');
+    if(message.includes('verification_identifiers_incomplete')||
+       message.includes('commercial_prerequisites_not_approved')||
+       message.includes('live_titan_stripe_catalog_mismatch')||
+       message.includes('live_mode_verification_required')||
+       message.includes('payout_state_evidence_incomplete')){
+      return {ok:false,pending:true,reason:message};
+    }
+    throw error;
+  }
+  return data;
+}
+
+async function autoRefundTitanVerification(runId:string,paymentIntentId:string){
+  if(!runId||!paymentIntentId)return;
+
+  const {data:run,error}=await admin.from('hercules_titan_payment_verification_runs')
+    .select('id,status,payment_intent_id,refund_id,evidence')
+    .eq('id',runId)
+    .single();
+  if(error)throw error;
+  if(run.status==='verified'||run.refund_id||run.evidence?.refund_requested)return;
+
+  await updateTitanVerificationRun(runId,{
+    payment_intent_id:paymentIntentId,
+    evidence:{...(run.evidence||{}),refund_requested:true}
+  });
+
+  const form=new URLSearchParams();
+  form.set('payment_intent',paymentIntentId);
+  form.set('metadata[titanVerificationRunId]',runId);
+  form.set('metadata[purpose]','titan_payment_verification');
+  const refund=await stripeForm('refunds',form);
+  await updateTitanVerificationRun(runId,{
+    refund_id:String(refund.id||'')||null,
+    evidence:{...(run.evidence||{}),refund_requested:true,refund_created:true}
+  });
 }
 
 async function autoCancelAndRefund(runId:string,subscriptionId:string,paymentIntentId:string){
@@ -319,7 +395,7 @@ Deno.serve(async req=>{
     return json({
       ok:true,
       service:'hercules-stripe-webhook',
-      version:'5.0.0',
+      version:'5.1.0',
       access_configured:Boolean(access),
       webhook_configured:Boolean(signing),
       dedupe:'unique-receipt-first',
@@ -382,17 +458,36 @@ Deno.serve(async req=>{
 
   let organizationId='';
   let verificationRunId='';
+  let titanVerificationRunId='';
 
   try{
     const obj=event?.data?.object||{};
     const type=String(event.type||'');
 
     if(type==='checkout.session.completed'){
+      const titan=titanMetadata(obj);
       const meta=softwareMetadata(obj);
-      organizationId=String(obj.client_reference_id||meta.organizationId||'');
+      organizationId=String(obj.client_reference_id||titan.organizationId||meta.organizationId||'');
+      titanVerificationRunId=titan.titanVerificationRunId;
       verificationRunId=meta.verificationRunId;
 
-      if(meta.softwareProductCode&&meta.softwarePlanCode){
+      if(titanVerificationRunId&&titan.titanProductCode==='hercules-titan-founding-access'){
+        const paymentIntentId=stripeId(obj.payment_intent);
+        await updateTitanVerificationRun(titanVerificationRunId,{
+          checkout_session_id:String(obj.id||''),
+          provider_customer_id:stripeId(obj.customer),
+          payment_intent_id:paymentIntentId
+        });
+        await recordTitanVerificationEvent(titanVerificationRunId,event,payloadHash,{
+          checkout_session_id:String(obj.id||''),
+          payment_intent_id:paymentIntentId,
+          amount_total:Number(obj.amount_total||0),
+          payment_status:String(obj.payment_status||'')
+        });
+        if(paymentIntentId){
+          await autoRefundTitanVerification(titanVerificationRunId,paymentIntentId);
+        }
+      }else if(meta.softwareProductCode&&meta.softwarePlanCode){
         const subscriptionId=stripeId(obj.subscription);
         if(organizationId&&subscriptionId){
           const subscription=await stripe('subscriptions/'+encodeURIComponent(subscriptionId));
@@ -481,16 +576,37 @@ Deno.serve(async req=>{
     if(type==='charge.refunded'){
       const paymentIntentId=stripeId(obj.payment_intent);
       if(paymentIntentId){
-        const {data:run}=await admin.from('hercules_software_payment_verification_runs')
-          .select('id')
-          .eq('payment_intent_id',paymentIntentId)
-          .order('created_at',{ascending:false})
-          .limit(1)
-          .maybeSingle();
-        verificationRunId=String(run?.id||'');
+        const [{data:titanRun},{data:softwareRun}]=await Promise.all([
+          admin.from('hercules_titan_payment_verification_runs')
+            .select('id')
+            .eq('payment_intent_id',paymentIntentId)
+            .order('created_at',{ascending:false})
+            .limit(1)
+            .maybeSingle(),
+          admin.from('hercules_software_payment_verification_runs')
+            .select('id')
+            .eq('payment_intent_id',paymentIntentId)
+            .order('created_at',{ascending:false})
+            .limit(1)
+            .maybeSingle()
+        ]);
+        titanVerificationRunId=String(titanRun?.id||'');
+        verificationRunId=titanVerificationRunId?'':String(softwareRun?.id||'');
       }
-      if(verificationRunId){
-        const refundId=String(obj.refunds?.data?.[0]?.id||'');
+      const refundId=String(obj.refunds?.data?.[0]?.id||'');
+      if(titanVerificationRunId){
+        await updateTitanVerificationRun(titanVerificationRunId,{
+          charge_id:String(obj.id||'')||null,
+          refund_id:refundId||null
+        });
+        await recordTitanVerificationEvent(titanVerificationRunId,event,payloadHash,{
+          charge_id:String(obj.id||''),
+          payment_intent_id:paymentIntentId,
+          refund_id:refundId,
+          refunded:Boolean(obj.refunded),
+          amount_refunded:Number(obj.amount_refunded||0)
+        });
+      }else if(verificationRunId){
         await updateVerificationRun(verificationRunId,{refund_id:refundId});
         await recordVerificationEvent(verificationRunId,event,payloadHash,{
           charge_id:String(obj.id||''),
@@ -502,6 +618,7 @@ Deno.serve(async req=>{
       }
     }
 
+    const titanCertification=titanVerificationRunId?await tryCertifyTitan(titanVerificationRunId):null;
     const certification=verificationRunId?await tryCertify(verificationRunId):null;
 
     await admin.from('hercules_webhook_receipts').update({
@@ -511,7 +628,7 @@ Deno.serve(async req=>{
       error:null
     }).eq('provider','stripe').eq('delivery_id',delivery);
 
-    return json({received:true,processed:true,software_verification:certification});
+    return json({received:true,processed:true,software_verification:certification,titan_verification:titanCertification});
   }catch(error){
     await admin.from('hercules_webhook_receipts').update({
       organization_id:organizationId||null,
