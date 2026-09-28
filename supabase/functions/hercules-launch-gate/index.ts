@@ -7,7 +7,8 @@ const ORG='ea5fb196-67f9-42fa-b592-49eeb3b84346';
 const APPDEPLOY_STRIPE_APP_ID='sauceapproved-hercules-titan-dhakbi';
 const SHOPIFY_TITAN_PRODUCT_ID='gid://shopify/Product/10261114782016';
 const SHOPIFY_STORE_DOMAIN='sauceapproved-2.myshopify.com';
-const LAUNCH_PACKET_VERSION='hercules-launch-packet-2026-09-27-v2';
+const TITAN_OFFER_PACKET_VERSION='hercules-titan-founding-access-offer-v1';
+const TITAN_OFFER_PACKET_DIGEST='8e9330f7cf70103e8fd8691cdd14a22d70eb466849c1b5a5fc98bc45c378a00f';
 const H={'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'};
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:H});
 const hex=(a:ArrayBuffer)=>[...new Uint8Array(a)].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -150,7 +151,8 @@ async function run(){
     shopifyOfferValue?.storefront==='shopify' &&
     shopifyOfferValue?.shopDomain===SHOPIFY_STORE_DOMAIN &&
     shopifyOfferValue?.productId===SHOPIFY_TITAN_PRODUCT_ID &&
-    shopifyOfferValue?.approvalPacketVersion===LAUNCH_PACKET_VERSION
+    shopifyOfferValue?.approvalPacketVersion===TITAN_OFFER_PACKET_VERSION &&
+    shopifyOfferValue?.approvalPacketDigest===TITAN_OFFER_PACKET_DIGEST
   );
   const shopifyOfferAligned=Boolean(
     shopifyOfferBase &&
@@ -208,6 +210,9 @@ async function run(){
         productId:shopifyOfferValue?.productId||SHOPIFY_TITAN_PRODUCT_ID,
         shopDomain:shopifyOfferValue?.shopDomain||SHOPIFY_STORE_DOMAIN,
         approvalPacketVersion:shopifyOfferValue?.approvalPacketVersion||null,
+        approvalPacketDigest:shopifyOfferValue?.approvalPacketDigest||null,
+        expectedPacketVersion:TITAN_OFFER_PACKET_VERSION,
+        expectedPacketDigest:TITAN_OFFER_PACKET_DIGEST,
         verifiedAt:shopifyOfferEvidence?.verified_at||null,
         provenance:shopifyOfferEvidence?.provenance||null
       }
@@ -237,7 +242,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.6.0',
+      version:'1.7.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt
