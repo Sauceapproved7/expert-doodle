@@ -9,6 +9,9 @@ on:
       - "hercules-forge/control-api.mjs"
       - "hercules-forge/production.mjs"
       - "tests/hercules-smokescreen-agent.test.mjs"
+      - "tests/hercules-smokescreen-global-benchmark.test.mjs"
+      - "scripts/smokescreen-global-benchmark.mjs"
+      - "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md"
       - "tests/hercules-smokescreen-forge-ingress.test.mjs"
       - "tests/hercules-forge-production.test.mjs"
       - "staging-plane/compose.yml"
@@ -35,6 +38,10 @@ jobs:
       - name: Enforce owner-code boundary
         run: node scripts/verify-owner-code-only.mjs
       - name: Run SmokeScreen Sentinel tests
-        run: node --test tests/hercules-smokescreen-agent.test.mjs tests/hercules-smokescreen-forge-ingress.test.mjs tests/hercules-forge-production.test.mjs
+        run: node --test tests/hercules-smokescreen-agent.test.mjs
+      - name: Run SmokeScreen global benchmark contract
+        run: node --test tests/hercules-smokescreen-global-benchmark.test.mjs
+      - name: Run SmokeScreen synthetic global benchmark
+        run: node scripts/smokescreen-global-benchmark.mjs tests/hercules-smokescreen-forge-ingress.test.mjs tests/hercules-forge-production.test.mjs
       - name: Run security baseline
         run: node scripts/security-baseline.mjs
