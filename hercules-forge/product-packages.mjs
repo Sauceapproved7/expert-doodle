@@ -1,4 +1,4 @@
-export const FORGE_PRODUCT_PACKAGE_VERSION = "1.0";
+export const FORGE_PRODUCT_PACKAGE_VERSION = "1.1";
 
 const COMMON_PRICING = Object.freeze({
   status: "owner_approval_required",
@@ -28,6 +28,15 @@ const COMMON_OWNERSHIP = Object.freeze({
   rule: "Preserve the SauceApproved-owned product core and keep replaceable infrastructure behind explicit adapters.",
 });
 
+const COMMON_DEPLOYMENT = Object.freeze({
+  controlPlane: "hercules-forge-builder",
+  releaseRuntime: "hercules-deploy",
+  archiveRuntime: "supabase",
+  presentationRuntime: "render",
+  appDeployRequired: false,
+  providerCreditsMayBlockRelease: false,
+});
+
 const PACKAGES = Object.freeze([
   Object.freeze({
     version: FORGE_PRODUCT_PACKAGE_VERSION,
@@ -46,6 +55,7 @@ const PACKAGES = Object.freeze([
       "docs/HERCULES-VIDEO-V1.5-RUN-STATUS.md",
     ]),
     ownership: COMMON_OWNERSHIP,
+    deployment: COMMON_DEPLOYMENT,
     pricing: COMMON_PRICING,
     commerce: COMMON_COMMERCE,
     plans: Object.freeze({
@@ -105,6 +115,7 @@ const PACKAGES = Object.freeze([
       "tests/hercules-ad-studio.test.mjs",
     ]),
     ownership: COMMON_OWNERSHIP,
+    deployment: COMMON_DEPLOYMENT,
     pricing: COMMON_PRICING,
     commerce: COMMON_COMMERCE,
     plans: Object.freeze({
@@ -186,6 +197,8 @@ export function buildForgeProductPrompt(id) {
     "",
     "Preserve the existing owned product core. Extend it; do not replace it with a duplicate or a hosted-builder implementation.",
     "Do not replace the owned core with a hosted builder. Keep external infrastructure replaceable and behind explicit adapters.",
+    "AppDeploy is not required for build, release, deployment, or verification. Provider credit ceilings must not block the owned Hercules release path.",
+    "Use Hercules Forge Builder as the control plane and Hercules Deploy as the release runtime. Use Supabase for the owned archive/origin layer and the verified Render presentation runtime for browser delivery.",
     "",
     "Required productization:",
     goals,
