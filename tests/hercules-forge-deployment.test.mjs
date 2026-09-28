@@ -110,6 +110,7 @@ test("public deployment verifier requires matching HTTPS production health and r
           version: "1.6",
           mode: "production",
           publicOrigin: "https://forge.example.test",
+          durableState: true,
         }
       : {
           ready: true,
@@ -117,6 +118,12 @@ test("public deployment verifier requires matching HTTPS production health and r
           mode: "production",
           publicOrigin: "https://forge.example.test",
           auditVerified: true,
+          durableState: {
+            ok: true,
+            schema: "sauceapproved.hercules.forge.durable-state.v1",
+            carriesCredentials: false,
+            objectCount: 0,
+          },
           storage: {
             writable: true,
             freeBytes: 500_000_000,
@@ -139,6 +146,8 @@ test("public deployment verifier requires matching HTTPS production health and r
   assert.equal(evidence.ready, true);
   assert.equal(evidence.auditVerified, true);
   assert.equal(evidence.storageWritable, true);
+  assert.equal(evidence.durableStateVerified, true);
+  assert.equal(evidence.durableStateSchema, "sauceapproved.hercules.forge.durable-state.v1");
   assert.equal(calls.length, 2);
   assert.equal(calls.every((call) => call.options.redirect === "error"), true);
 
