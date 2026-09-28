@@ -1,0 +1,25 @@
+name: Hercules Controlled Pilot Admission
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-launch/**"
+      - "supabase/functions/hercules-private-bridge/**"
+      - "hercules-deploy/pilot-admission-control-key.sql"
+      - "tests/hercules-pilot-admission.test.mjs"
+      - ".github/workflows/hercules-pilot-admission.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pilot-admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Test controlled pilot admission contract
+        run: node --test tests/hercules-pilot-admission.test.mjs
