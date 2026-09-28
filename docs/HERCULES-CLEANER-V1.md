@@ -1,6 +1,6 @@
 # Hercules Cleaner v1
 
-Status: implementation candidate  
+Status: Early Access runtime; Windows installer v1 candidate  
 Runtime: `hercules-cleaner/`  
 Control surface: localhost-only dashboard + CLI  
 Primary platforms: Windows, macOS, Linux (Node.js runtime)
@@ -90,6 +90,16 @@ node hercules-cleaner/cli.mjs uninstall-autostart
 
 The scheduler/launch systems are operating-system infrastructure and are not SauceApproved-owned code.
 
+## Windows installer v1
+
+The Windows Early Access bundle installs per-user under `%LOCALAPPDATA%\SauceApproved\Hercules Cleaner` and keeps Cleaner state and Recovery Capsules separately under `%USERPROFILE%\.hercules-cleaner`. The entrypoint is `install.cmd`; it invokes PowerShell without changing or bypassing the machine execution-policy setting.
+
+The bundle requires Node.js 22+ but does not package Node.js as SauceApproved code. Installation is versioned, verifies every bundled source file against a generated SHA-256 manifest, performs a Cleaner `status` health check before activation, creates a Start Menu launcher, and can register user-logon startup plus a daily update check.
+
+Update activation reuses the canonical Cleaner update-policy layer. A remote channel cannot trigger installation by itself: an enabled channel must also match a separately trusted exact release identity. Downloaded ZIPs are SHA-256 checked, archive entries are traversal-checked before extraction, and failed health checks leave the previous active version selected with rollback evidence.
+
+The public Early Access update channel remains disabled until a verified distribution asset and trusted signing/identity path are available. Windows Authenticode publisher signing is not claimed in v1. GitHub artifact attestation is CI provenance, not a substitute for a Windows publisher certificate.
+
 ## State
 
 Default local state directory:
@@ -108,7 +118,7 @@ Default local state directory:
 Focused suite:
 
 ```sh
-node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs
+node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-update-policy.test.mjs tests/hercules-cleaner-installer.test.mjs tests/hercules-cleaner-windows-package.test.mjs
 ```
 
 Repository gates:
@@ -129,7 +139,8 @@ v1 does not claim:
 - registry optimization;
 - secure forensic erasure;
 - autonomous deletion of arbitrary personal folders;
-- standalone native binaries that require no Node.js runtime;
+- a native EXE/MSI installer that requires no Node.js runtime;
+- an Authenticode publisher signature before a trusted owner-controlled certificate is configured;
 - installation on a customer device until that device has been explicitly connected/authorized.
 
 The design favors recoverability and explicit policy over aggressive deletion.
@@ -141,7 +152,7 @@ Hercules Cleaner is registered for SauceApproved Early Access discovery through 
 
 Commercial state remains fail-closed: candidate pricing is not approved, Terms and Privacy remain owner-decision gated, payment-provider readiness is separate, paid-path verification is separate, and checkout stays disabled until those controls are explicitly satisfied.
 
-The catalog record intentionally carries no live product URL until an actual customer-facing Cleaner delivery endpoint is deployed and verified.
+The catalog carries the verified Early Access presentation URL after Hercules deployment-ledger and outside-in HTTP verification. The catalog page itself does not grant local filesystem authority.
 
 
 ## Update and rollback certification
@@ -150,4 +161,4 @@ Cleaner updates are fail-closed against immutable release identity. An update ca
 
 The update policy cannot enable checkout or change the release out of Early Access. A verified update retains the currently installed version as the explicit rollback version. Recovery Capsule data and local Cleaner state are not update payloads and must not be deleted or migrated implicitly by update eligibility checks.
 
-This v1 certification defines update eligibility and rollback identity; it does not claim a silent auto-updater or native installer. Installation or replacement on a customer device remains subject to that device's explicit authorization and operating-system permissions.
+This v1 certification defines update eligibility and rollback identity. The Windows installer/updater implementation now exists, but the public update channel remains disabled until separately trusted release identity/signing is configured. Installation or replacement on a customer device remains subject to that device's explicit authorization and operating-system permissions.
