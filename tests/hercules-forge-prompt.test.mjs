@@ -152,7 +152,7 @@ test("Hercules AI interpreter uses the internal router and returns a validated F
     res.writeHead(200, {"content-type": "application/json"});
     res.end(JSON.stringify({
       ok: true,
-      result: "\`\`\`json\\n" + JSON.stringify(spec) + "\\n\`\`\`",
+      result: "\`\`\`json\n" + JSON.stringify(spec) + "\n\`\`\`",
       provider: "test-provider",
       model: "test-model",
     }));
