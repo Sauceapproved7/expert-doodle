@@ -96,7 +96,12 @@ function startStateFixture() {
     }
     if (body.action === "forge_state_status") {
       res.writeHead(200, {"content-type":"application/json"});
-      return res.end(JSON.stringify({ok:true, objectCount:objects.size}));
+      return res.end(JSON.stringify({
+        ok:true,
+        schema:"sauceapproved.hercules.forge.durable-state.v1",
+        objectCount:objects.size,
+        carriesCredentials:false,
+      }));
     }
     res.writeHead(400, {"content-type":"application/json"});
     res.end(JSON.stringify({error:"unknown_action"}));
