@@ -24,11 +24,11 @@ function startStateFixture() {
     const body = text ? JSON.parse(text) : {};
     const key = (path, index) => path + "#" + index;
 
-    if (body.action === "manifest") {
+    if (body.action === "forge_state_manifest") {
       res.writeHead(200, {"content-type":"application/json"});
       return res.end(JSON.stringify({ok:true, objects:[...objects.values()]}));
     }
-    if (body.action === "put_chunk") {
+    if (body.action === "forge_state_put_chunk") {
       const raw = Buffer.from(body.contentBase64, "base64");
       if (raw.byteLength !== body.bytes || sha256(raw) !== body.sha256) {
         res.writeHead(409, {"content-type":"application/json"});
@@ -41,7 +41,7 @@ function startStateFixture() {
       res.writeHead(200, {"content-type":"application/json"});
       return res.end(JSON.stringify({ok:true}));
     }
-    if (body.action === "commit_object") {
+    if (body.action === "forge_state_commit_object") {
       let total = 0;
       for (let i = 0; i < body.chunks; i++) {
         const chunk = chunks.get(key(body.path, i));
@@ -67,7 +67,7 @@ function startStateFixture() {
       res.writeHead(200, {"content-type":"application/json"});
       return res.end(JSON.stringify({ok:true}));
     }
-    if (body.action === "get_chunk") {
+    if (body.action === "forge_state_get_chunk") {
       const chunk = chunks.get(key(body.path, body.index));
       if (!chunk) {
         res.writeHead(404, {"content-type":"application/json"});
@@ -76,7 +76,7 @@ function startStateFixture() {
       res.writeHead(200, {"content-type":"application/json"});
       return res.end(JSON.stringify({ok:true, chunk}));
     }
-    if (body.action === "delete_object") {
+    if (body.action === "forge_state_delete_object") {
       objects.delete(body.path);
       for (const chunkKey of [...chunks.keys()]) {
         if (chunkKey.startsWith(body.path + "#")) chunks.delete(chunkKey);
@@ -84,7 +84,7 @@ function startStateFixture() {
       res.writeHead(200, {"content-type":"application/json"});
       return res.end(JSON.stringify({ok:true}));
     }
-    if (body.action === "status") {
+    if (body.action === "forge_state_status") {
       res.writeHead(200, {"content-type":"application/json"});
       return res.end(JSON.stringify({ok:true, objectCount:objects.size}));
     }
