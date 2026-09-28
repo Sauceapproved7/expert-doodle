@@ -138,3 +138,21 @@ If an enforcement adapter cannot prove those controls, it must deny the hostile 
 - `createSmokeScreenEnforcementPlan(decision)`
 
 The agent instance also exposes `plan()`, `mirage()`, and `evolveMirage()` helpers bound to its server-side HMAC key and clock.
+
+
+## Observe-only ingress v1
+
+The first live-integration stage is deliberately non-enforcing. `hercules-runtime/smokescreen-ingress-observer.mjs` can translate server-trusted request context into SmokeScreen scoring evidence while preserving the original request path.
+
+Hard guarantees in this stage:
+
+- no route mutation;
+- no blocking;
+- no artificial delay;
+- no Mirage activation;
+- query strings are discarded before telemetry;
+- Authorization and Cookie header values are never copied into observations;
+- client IPs are represented only by a keyed pseudonymous fingerprint;
+- security signals are accepted only through server-side context, never attacker-supplied headers.
+
+Promotion to friction or Mirage enforcement requires separate implementation and certification evidence.
