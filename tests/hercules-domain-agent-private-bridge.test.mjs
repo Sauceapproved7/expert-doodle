@@ -89,3 +89,22 @@ test("live private bridge pins provider execution to a resolved grant fingerprin
   const usage=agent.indexOf("recordUsage(principal,requestId");
   assert.ok(pinCheck>=0 && usage>pinCheck);
 });
+
+
+test("domain agent exposes a Spaceship DNS inspection adapter through the existing secure lane",()=>{
+  assert.match(agent,/'spaceship\.dns\.inspect'/);
+  assert.match(agent,/provider:'spaceship'/);
+  assert.match(agent,/service:'hercules-private-bridge'/);
+  assert.match(agent,/purpose:'spaceship-dns'/);
+  assert.match(agent,/action:'inspect_shopify_dns'/);
+  assert.match(agent,/resolveSpaceshipGrant/);
+});
+
+test("Spaceship authorization is derived from existing control state without reading raw credentials",()=>{
+  assert.match(agent,/hercules_spaceship_dns_credentials/);
+  assert.match(agent,/hercules_spaceship_mcp_oauth/);
+  assert.match(agent,/spaceship_provider_authorization_required/);
+  assert.match(agent,/credential_custody:'supabase_vault'/);
+  assert.doesNotMatch(agent,/api_key_secret_ref|api_secret_secret_ref/);
+  assert.doesNotMatch(agent,/hercules_get_secret.*spaceship/i);
+});
