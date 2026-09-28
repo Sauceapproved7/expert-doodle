@@ -58,6 +58,13 @@ const PROVIDER_ADAPTERS:Record<string,{
     purpose:'shopify-launch-readiness',
     action:'monitor_shopify_launch'
   },
+  'spaceship.dns.inspect':{
+    provider:'spaceship',
+    capability:'spaceship.dns.inspect',
+    service:'hercules-private-bridge',
+    purpose:'spaceship-dns',
+    action:'inspect_shopify_dns'
+  },
   'github.bridge.verify':{
     provider:'github_forge',
     capability:'github.bridge.verify',
@@ -357,7 +364,8 @@ function discovery(){
       customerApiKeys:true,
       commercialMetering:true,
       grantFingerprintPinning:true,
-      taskValidityWindows:true
+      taskValidityWindows:true,
+      spaceshipDnsInspection:true
     },
     refresh:{
       strategy:'provider-native-only',
@@ -373,6 +381,65 @@ function discovery(){
   };
 }
 
+async function resolveSpaceshipGrant(organizationId:string,requiredCapabilities:string[]){
+  const [{data:api,error:apiError},{data:mcp,error:mcpError},{data:key,error:keyError}]=await Promise.all([
+    admin.from('hercules_spaceship_dns_credentials')
+      .select('status,updated_at').eq('singleton',true).limit(1).maybeSingle(),
+    admin.from('hercules_spaceship_mcp_oauth')
+      .select('status,updated_at').eq('singleton',true).limit(1).maybeSingle(),
+    admin.from('hercules_internal_service_keys')
+      .select('enabled,rotated_at').eq('purpose','spaceship-dns').eq('enabled',true).limit(1).maybeSingle()
+  ]);
+  if(apiError||mcpError||keyError)throw new Error('spaceship_authorization_state_unavailable');
+
+  const mode=mcp?.status==='configured'
+    ? 'mcp_oauth'
+    : api?.status==='configured'
+      ? 'external_api'
+      : null;
+  const controlReady=key?.enabled===true;
+  const authorized=Boolean(mode&&controlReady);
+  const capability='spaceship.dns.inspect';
+  const capabilities=authorized?[capability]:[];
+  const missing=requiredCapabilities.filter(value=>!capabilities.includes(value));
+  const evidence=await sha256(JSON.stringify({
+    provider:'spaceship',
+    organizationId,
+    apiStatus:api?.status??null,
+    apiUpdatedAt:api?.updated_at??null,
+    mcpStatus:mcp?.status??null,
+    mcpUpdatedAt:mcp?.updated_at??null,
+    controlReady,
+    controlRotatedAt:key?.rotated_at??null,
+    mode
+  }));
+
+  return {
+    schema:'hercules.domain-agent.provider-grant-resolution.v1',
+    status:authorized&&missing.length===0?'ready':'provider_connection_required',
+    organization_id:organizationId,
+    provider:'spaceship',
+    account_key:'sauceapproved.com',
+    connection_ref:mode?'spaceship-dns:'+mode:null,
+    authorization_evidence_sha256:evidence,
+    authorized_at:null,
+    last_observed_at:new Date().toISOString(),
+    capabilities,
+    required_capabilities:requiredCapabilities,
+    missing_capabilities:missing,
+    refreshable:false,
+    refresh_mode:'none',
+    execution_eligible:authorized&&missing.length===0,
+    owner_action_required:!authorized||missing.length>0,
+    carries_credentials:false,
+    credential_custody:'supabase_vault',
+    reason_codes:authorized&&missing.length===0
+      ? ['AUTHORIZED_PROVIDER_GRANT']
+      : ['SPACESHIP_PROVIDER_AUTHORIZATION_REQUIRED'],
+    detail:authorized?null:'spaceship_provider_authorization_required'
+  };
+}
+
 async function resolveGrant(organizationId:string,body:any){
   const provider=String(body.provider||'').trim().toLowerCase();
   if(!/^[a-z0-9][a-z0-9_-]{1,63}$/.test(provider)){
@@ -381,6 +448,9 @@ async function resolveGrant(organizationId:string,body:any){
   const accountKey=body.account_key==null?null:String(body.account_key).trim();
   if(accountKey&&accountKey.length>512)throw Object.assign(new Error('account_key_too_long'),{status:400});
   const requiredCapabilities=strings(body.required_capabilities,'required_capabilities');
+  if(provider==='spaceship'){
+    return resolveSpaceshipGrant(organizationId,requiredCapabilities);
+  }
 
   const {data,error}=await admin.rpc('hercules_domain_agent_resolve_provider_grant',{
     p_organization_id:organizationId,
@@ -702,7 +772,7 @@ export async function handleDomainAgentRequest(req:Request){
       return out({
         ok:true,
         service:'hercules-domain-agent',
-        version:'2.1.0-multiplex',
+        version:'2.2.0-multiplex',
         schema:'hercules.domain-agent.health.v1',
         intendedOrigin:ORIGIN,
         backendService:'hercules-private-bridge',
