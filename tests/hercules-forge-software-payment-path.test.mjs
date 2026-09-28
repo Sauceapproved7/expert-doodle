@@ -85,3 +85,11 @@ test("payment path certification requires verified checkout subscription invoice
   assert.match(migration,/hercules_activate_software_checkout/);
   assert.match(migration,/service_role_required/);
 });
+
+
+test("paid software entitlements expand inherited Starter and Pro capabilities",()=>{
+  assert.match(webhook,/resolved_entitlements/);
+  assert.match(webhook,/starter_features/);
+  assert.match(webhook,/pro_features/);
+  assert.match(webhook,/new Set\(resolved\)/);
+});
