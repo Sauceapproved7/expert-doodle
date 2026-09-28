@@ -51,13 +51,30 @@ async function videoCapacity(){
  ]);
  const vw=(workers||[]).filter((x:any)=>videoCapable(x.capabilities));
  const va=(adapters||[]).filter((x:any)=>videoCapable(x.capabilities));
- const dispatchAdapters=va.filter((x:any)=>Boolean(x.endpoint_ref)&&x.metadata?.protocol==='hercules-video-v1');
+ const productionAdapters=va.filter((x:any)=>
+   Boolean(x.endpoint_ref)&&
+   x.metadata?.protocol==='hercules-video-v1'&&
+   x.metadata?.production_capacity_certified===true
+ );
+ const benchmarkAdapters=va.filter((x:any)=>
+   Boolean(x.endpoint_ref)&&
+   x.metadata?.benchmark_only===true&&
+   x.metadata?.production_capacity_certified!==true&&
+   Boolean(x.metadata?.certification_fingerprint)
+ );
  return {
-  rendererAvailable:vw.length>0||dispatchAdapters.length>0,
+  rendererAvailable:vw.length>0||productionAdapters.length>0,
+  benchmarkRendererAvailable:benchmarkAdapters.length>0,
   workerCount:vw.length,
-  adapterCount:dispatchAdapters.length,
+  adapterCount:productionAdapters.length,
+  benchmarkAdapterCount:benchmarkAdapters.length,
   workers:vw.map((x:any)=>({id:x.id,key:x.worker_key,name:x.display_name,lastHeartbeatAt:x.last_heartbeat_at})),
-  adapters:dispatchAdapters.map((x:any)=>({id:x.id,key:x.provider_key,name:x.display_name,kind:x.adapter_kind,lastHealthAt:x.last_health_at}))
+  adapters:productionAdapters.map((x:any)=>({id:x.id,key:x.provider_key,name:x.display_name,kind:x.adapter_kind,lastHealthAt:x.last_health_at})),
+  benchmarkAdapters:benchmarkAdapters.map((x:any)=>({
+    id:x.id,key:x.provider_key,name:x.display_name,kind:x.adapter_kind,lastHealthAt:x.last_health_at,
+    certificationFingerprint:x.metadata?.certification_fingerprint||null,
+    modelRef:x.metadata?.model_ref||null
+  }))
  };
 }
 
@@ -92,6 +109,95 @@ async function createVideoRenderRequest(b:any){
  return {...normalized,requestFingerprint:await fingerprint(normalized)};
 }
 
+async function consumeCertificationNonce(req:Request){
+ const raw=req.headers.get('x-hercules-e2e-nonce')||'';
+ if(!raw)return false;
+ const digest=await sha(raw);
+ const now=new Date().toISOString();
+ const {data:row}=await db.from('hercules_forge_e2e_nonces')
+  .select('id').eq('token_sha256',digest).is('used_at',null).gt('expires_at',now).maybeSingle();
+ if(!row)return false;
+ const {data:used,error}=await db.from('hercules_forge_e2e_nonces')
+  .update({used_at:now}).eq('id',row.id).is('used_at',null).select('id').maybeSingle();
+ return !error&&Boolean(used);
+}
+
+function allowedCertificationArtifact(raw:string){
+ let u:URL;try{u=new URL(raw)}catch{throw new Error('certification_artifact_url_invalid')}
+ if(u.protocol!=='https:')throw new Error('certification_artifact_https_required');
+ if(u.hostname!=='zerogpu-aoti-wan2-2-fp8da-aoti-faster.hf.space')throw new Error('certification_artifact_host_denied');
+ if(!u.pathname.startsWith('/gradio_api/file='))throw new Error('certification_artifact_path_denied');
+ return u.toString();
+}
+
+async function certifyPublicVideoArtifact(b:any){
+ const artifactUrl=allowedCertificationArtifact(String(b?.artifactUrl||''));
+ const request=await createVideoRenderRequest(b?.request||{});
+ const response=await fetch(artifactUrl,{headers:{accept:'video/mp4'},signal:AbortSignal.timeout(30000)});
+ if(!response.ok)throw new Error('certification_artifact_fetch_failed:'+response.status);
+ const ab=await response.arrayBuffer();
+ const bytes=new Uint8Array(ab);
+ if(bytes.byteLength<=0)throw new Error('certification_artifact_empty');
+ if(bytes.byteLength>25*1024*1024)throw new Error('certification_artifact_too_large');
+ const signature=String.fromCharCode(...bytes.slice(4,8));
+ if(signature!=='ftyp')throw new Error('certification_artifact_not_mp4');
+ const contentType=String(response.headers.get('content-type')||'video/mp4').split(';')[0].trim().toLowerCase();
+ if(contentType&&!contentType.startsWith('video/')&&contentType!=='application/octet-stream')throw new Error('certification_artifact_not_video');
+ const digest=hex(await crypto.subtle.digest('SHA-256',ab));
+ const storagePath='video-certifications/'+request.requestFingerprint+'/'+digest+'.mp4';
+ const {error:uploadError}=await db.storage.from(BUCKET).upload(storagePath,bytes,{contentType:'video/mp4',upsert:true});
+ if(uploadError)throw new Error('certification_artifact_persist_failed:'+uploadError.message);
+ const checkedAt=new Date().toISOString();
+ const base={
+  schema:'sauceapproved.hercules.video-renderer-certification',
+  version:1,
+  certified:true,
+  adapter:{
+   id:'hf-public-zerogpu-fast-wan22-i2v',
+   label:'Public ZeroGPU Fast Wan2.2 I2V',
+   kind:'external-renderer',
+   provider:'huggingface',
+   runtime:'zerogpu-public',
+   protocol:'gradio-call-v1'
+  },
+  requestFingerprint:request.requestFingerprint,
+  request,
+  artifact:{
+   sourceUrl:artifactUrl,
+   storageBucket:BUCKET,
+   storagePath,
+   mimeType:'video/mp4',
+   sizeBytes:bytes.byteLength,
+   sha256:digest,
+   providerEvidence:{
+    requestFingerprint:request.requestFingerprint,
+    modelRef:request.modelRef,
+    seed:request.seed,
+    eventId:String(b?.eventId||'')||null
+   }
+  },
+  inspect:{ok:true,status:response.status,contentType,sizeBytes:bytes.byteLength,mp4Signature:true},
+  benchmarkOnly:true,
+  productionCapacityCertified:false,
+  authorizationBypassed:false,
+  fabricatedOutput:false,
+  checkedAt
+ };
+ const certificationFingerprint=await fingerprint(base);
+ const proof={...base,certificationFingerprint};
+ const {error:ledgerError}=await db.from('hercules_continuity_ledger').upsert({
+   key:'hercules_video_public_zerogpu_fast_certification',
+   category:'benchmark',
+   status:'verified',
+   value:proof,
+   provenance:'One-time nonce verified public ZeroGPU synthetic MP4 certification; artifact persisted to Hercules Storage',
+   verified_at:checkedAt,
+   updated_at:checkedAt
+ },{onConflict:'key'});
+ if(ledgerError)throw new Error('certification_ledger_write_failed:'+ledgerError.message);
+ return proof;
+}
+
 async function videoHealth(){
  const capacity=await videoCapacity();
  return {
@@ -101,12 +207,14 @@ async function videoHealth(){
   version:'1.0.0',
   orchestrationConnected:true,
   renderCapacityAvailable:capacity.rendererAvailable,
+  benchmarkRenderAvailable:capacity.benchmarkRendererAvailable,
   executionPolicy:'fail-closed',
   canonicalRequestSchema:'sauceapproved.hercules.video-render-request',
   studioSurface:'SauceApproved Studio',
   workerCount:capacity.workerCount,
   adapterCount:capacity.adapterCount,
-  blockingReason:capacity.rendererAvailable?null:'no_certified_video_renderer_online',
+  benchmarkAdapterCount:capacity.benchmarkAdapterCount,
+  blockingReason:capacity.rendererAvailable?null:(capacity.benchmarkRendererAvailable?'production_renderer_not_certified':'no_certified_video_renderer_online'),
   checkedAt:new Date().toISOString()
  };
 }
@@ -119,8 +227,13 @@ function studioRuntimeInjection(){
  <script>
  (()=>{const el=document.getElementById('hercules-video-runtime-state');fetch(location.origin+'/functions/v1/hercules-preview-cell/video/health',{cache:'no-store'}).then(r=>r.json()).then(x=>{
   if(!el)return;
-  el.textContent=x.renderCapacityAvailable?'Bridge connected · certified renderer online':'Bridge connected · render capacity unavailable · fail-closed';
+  el.textContent=x.renderCapacityAvailable
+    ?'Bridge connected · production renderer certified'
+    :(x.benchmarkRenderAvailable
+      ?'Bridge connected · certified benchmark renderer online · production capacity unavailable'
+      :'Bridge connected · render capacity unavailable · fail-closed');
   el.dataset.ready=String(Boolean(x.renderCapacityAvailable));
+  el.dataset.benchmarkReady=String(Boolean(x.benchmarkRenderAvailable));
  }).catch(()=>{if(el)el.textContent='Hercules Video status unavailable · execution locked';});})();
  </script>`;
 }
@@ -219,6 +332,16 @@ Deno.serve(async(req:Request)=>{
    return out({ok:true,job:data});
  }
 
+ if(req.method==='POST'&&relative==='/video/certify-public-artifact'){
+   if(!await consumeCertificationNonce(req))return out({error:'one_time_certification_authorization_required'},403);
+   const b=await req.json().catch(()=>({}));
+   try{
+     const proof=await certifyPublicVideoArtifact(b);
+     return out({ok:true,proof},201);
+   }catch(e){
+     return out({ok:false,error:'video_renderer_certification_failed',detail:e instanceof Error?e.message:'unknown'},502);
+   }
+ }
  if(req.method==='POST'&&relative==='/video/render'){
    const a=await operator(req);if(!a)return out({error:'owner_or_admin_required'},401);
    const b=await req.json().catch(()=>({}));
