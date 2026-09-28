@@ -222,6 +222,7 @@ export class ForgeDurableStateMirror {
           await this.request({
             action:"forge_state_put_chunk",
             path:object.path,
+            objectSha256:object.sha256,
             index,
             bytes:chunk.byteLength,
             sha256:sha256(chunk),
@@ -280,6 +281,7 @@ export class ForgeDurableStateMirror {
             const response = await this.request({
               action:"forge_state_get_chunk",
               path:object.path,
+              objectSha256:object.sha256,
               index,
             });
             const remoteChunk = response?.chunk;
