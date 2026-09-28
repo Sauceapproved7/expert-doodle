@@ -29,6 +29,8 @@ test("Titan unresolved commercial terms remain explicitly owner-pending",()=>{
 
 test("Shopify reconciliation is bound to the Titan offer packet instead of Revenue Recovery launch packet",()=>{
   assert.match(gate,/TITAN_OFFER_PACKET_VERSION='hercules-titan-founding-access-offer-v1'/);
+  assert.match(gate,/TITAN_OFFER_PACKET_DIGEST='8e9330f7cf70103e8fd8691cdd14a22d70eb466849c1b5a5fc98bc45c378a00f'/);
   assert.match(gate,/shopifyOfferValue\?\.approvalPacketVersion===TITAN_OFFER_PACKET_VERSION/);
+  assert.match(gate,/shopifyOfferValue\?\.approvalPacketDigest===TITAN_OFFER_PACKET_DIGEST/);
   assert.doesNotMatch(gate,/shopifyOfferValue\?\.approvalPacketVersion===LAUNCH_PACKET_VERSION/);
 });
