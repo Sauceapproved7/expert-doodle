@@ -38,10 +38,37 @@ jobs:
         with:
           node-version: "22"
       - name: Hercules Cleaner tests
-        run: node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-update-policy.test.mjs
+        run: node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-update-policy.test.mjs tests/hercules-cleaner-installer.test.mjs tests/hercules-cleaner-windows-package.test.mjs
       - name: Owner-code boundary
         run: node scripts/verify-owner-code-only.mjs
       - name: Security baseline
         run: node scripts/security-baseline.mjs
       - name: Hercules execution contract
         run: node scripts/verify-hercules-execution-contract.mjs
+
+
+  windows-installer-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Build Windows bundle
+        shell: pwsh
+        run: |
+          $bundle = Join-Path $env:RUNNER_TEMP "hercules-cleaner-windows-v1.0.0"
+          node scripts/package-hercules-cleaner-windows.mjs --commit-sha "$env:GITHUB_SHA" --output-dir "$bundle"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Install, launch status, uninstall
+        shell: pwsh
+        run: |
+          $bundle = Join-Path $env:RUNNER_TEMP "hercules-cleaner-windows-v1.0.0"
+          $installed = Join-Path $env:LOCALAPPDATA "SauceApproved\Hercules Cleaner"
+          & (Join-Path $bundle "Install-HerculesCleaner.ps1") -BundleRoot $bundle -NoAutostart -NoUpdateTask
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & (Join-Path $installed "HerculesCleaner.cmd") status
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & (Join-Path $installed "Uninstall-HerculesCleaner.ps1")
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
