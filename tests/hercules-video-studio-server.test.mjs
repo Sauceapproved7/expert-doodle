@@ -205,3 +205,39 @@ test("AI Sales Agent manifest API is owned, fail-closed and blocks sensitive pro
   assert.equal(body.sensitiveProfilingAllowed,false);
   assert.ok(body.differentiators.includes("Objection Intelligence Map"));
 });
+
+
+test("Studio root advertises the owned Brand Brain surface",async()=>{
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
+  });
+  const response=await handle({method:"GET",pathname:"/"});
+  assert.equal(response.status,200);
+  assert.match(response.body,/Brand Brain/);
+  assert.match(response.body,/\/brand-brain/);
+});
+
+test("Brand Brain surface renders governance differentiators and approval gate",async()=>{
+  const handle=createStudioHttpHandler();
+  const response=await handle({method:"GET",pathname:"/brand-brain"});
+  assert.equal(response.status,200);
+  assert.match(response.headers["content-type"],/text\/html/);
+  assert.match(response.body,/SauceApproved Brand Brain/);
+  assert.match(response.body,/Brand Constitution/);
+  assert.match(response.body,/Cross-Channel Consistency Simulator/);
+  assert.match(response.body,/Rule Blast Radius Preview/);
+  assert.match(response.body,/Brand Drift Time Machine/);
+  assert.match(response.body,/Changes require review/);
+});
+
+test("Brand Brain manifest API is owned and approval-gated",async()=>{
+  const handle=createStudioHttpHandler();
+  const response=await handle({method:"GET",pathname:"/api/studio/brand-brain/manifest"});
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.product,"SauceApproved Brand Brain");
+  assert.equal(body.executionPolicy,"approval-gated");
+  assert.equal(body.silentAutoLearningAllowed,false);
+  assert.ok(body.differentiators.includes("Brand Constitution"));
+});
