@@ -3,11 +3,20 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 
-const POLICY_VERSION = "1.0.0";
+const POLICY_VERSION = "2.0.0";
 const MAX_ROUTE_BYTES = 2048;
 const MAX_SESSION_BYTES = 512;
 const MAX_DELAY_MS = 1500;
 const ZERO_HASH = "0".repeat(64);
+const MIRAGE_TTL_MS = 15 * 60 * 1000;
+const MIRAGE_FOCUS = new Set(["generic", "auth", "admin", "api", "storage", "billing"]);
+const MIRAGE_ISOLATION = Object.freeze([
+  "NO_EGRESS",
+  "NO_PRODUCTION_CREDENTIALS",
+  "NO_CUSTOMER_DATA",
+  "NO_PAYMENT_KEYS",
+  "NO_SIGNING_AUTHORITY",
+]);
 
 const NUMERIC_SIGNALS = Object.freeze([
   "authFailures",
@@ -235,6 +244,153 @@ export function createSmokeScreenDecision(input = {}, options = {}) {
   });
 }
 
+function normalizeMirageFocus(value) {
+  const focus = String(value ?? "generic").trim().toLowerCase();
+  return MIRAGE_FOCUS.has(focus) ? focus : "generic";
+}
+
+function normalizeGeneration(value) {
+  const generation = Number(value ?? 0);
+  if (!Number.isInteger(generation) || generation < 0 || generation > 1_000_000) {
+    throw new Error("generation must be an integer from 0 to 1000000");
+  }
+  return generation;
+}
+
+function assertDecoyDecision(decision = {}) {
+  if (!decision || typeof decision !== "object" || Array.isArray(decision)) {
+    throw new Error("decision must be an object");
+  }
+  if (decision.scope !== "OWNED_INFRASTRUCTURE_ONLY") {
+    throw new Error("decision scope must be owned infrastructure only");
+  }
+  if (decision.outboundCounterattack !== false) {
+    throw new Error("outbound counterattack must remain disabled");
+  }
+  if (decision.routeMode !== "DECOY") {
+    throw new Error("Mirage Fabric requires a decoy decision");
+  }
+  if (!/^decoy_[a-f0-9]{24}$/i.test(String(decision.decoyId ?? ""))) {
+    throw new Error("valid decoyId required");
+  }
+}
+
+export function createSmokeScreenEnforcementPlan(decision = {}) {
+  if (!decision || typeof decision !== "object" || Array.isArray(decision)) {
+    throw new Error("decision must be an object");
+  }
+  if (decision.scope !== "OWNED_INFRASTRUCTURE_ONLY") {
+    throw new Error("decision scope must be owned infrastructure only");
+  }
+  if (decision.outboundCounterattack !== false) {
+    throw new Error("outbound counterattack must remain disabled");
+  }
+
+  if (decision.routeMode === "DECOY") {
+    return Object.freeze({
+      schema: "hercules.smokescreen.enforcement-plan.v2",
+      policyVersion: POLICY_VERSION,
+      mode: "MIRAGE",
+      fallback: "DENY",
+      requiredControls: MIRAGE_ISOLATION,
+      realAssetAccess: false,
+      executionAuthority: false,
+      outboundCounterattack: false,
+    });
+  }
+
+  if (decision.routeMode === "REAL") {
+    return Object.freeze({
+      schema: "hercules.smokescreen.enforcement-plan.v2",
+      policyVersion: POLICY_VERSION,
+      mode: "REAL",
+      fallback: "PRESERVE_ROUTE",
+      requiredControls: Object.freeze(["LOG"]),
+      realAssetAccess: true,
+      executionAuthority: false,
+      outboundCounterattack: false,
+    });
+  }
+
+  throw new Error("unsupported route mode");
+}
+
+export function createMirageFabric(decision = {}, context = {}, options = {}) {
+  assertDecoyDecision(decision);
+  const key = keyBytes(options.hmacKey);
+  const generation = normalizeGeneration(context.generation);
+  const focus = normalizeMirageFocus(context.focus);
+  const now = typeof options.now === "function" ? options.now : Date.now;
+  const ttlMs = options.ttlMs ?? MIRAGE_TTL_MS;
+  if (!Number.isInteger(ttlMs) || ttlMs < 60_000 || ttlMs > 60 * 60 * 1000) {
+    throw new Error("ttlMs must be an integer from 60000 to 3600000");
+  }
+
+  const createdAtMs = Number(now());
+  if (!Number.isFinite(createdAtMs)) throw new Error("invalid clock");
+  const seed = mac(key, {
+    namespace: "hercules.smokescreen.mirage.v2",
+    decoyId: decision.decoyId,
+    generation,
+    focus,
+  });
+
+  const namespace = "mz_" + seed.slice(0, 12);
+  const syntheticRoutes = Object.freeze([
+    "/ops/" + seed.slice(12, 20) + "/status",
+    "/api/" + seed.slice(20, 28) + "/export",
+    "/store/" + seed.slice(28, 36) + "/snapshot",
+  ]);
+
+  return Object.freeze({
+    schema: "hercules.smokescreen.mirage.v2",
+    policyVersion: POLICY_VERSION,
+    decoyId: decision.decoyId,
+    generation,
+    focus,
+    namespace,
+    createdAt: new Date(createdAtMs).toISOString(),
+    expiresAt: new Date(createdAtMs + ttlMs).toISOString(),
+    networkPolicy: "ISOLATED_NO_EGRESS",
+    dataPolicy: "SYNTHETIC_ONLY",
+    fallback: "DENY",
+    requiredControls: MIRAGE_ISOLATION,
+    syntheticRoutes,
+    honeytoken: "HNY_" + seed.slice(36, 60).toUpperCase(),
+    syntheticRecords: 3 + (parseInt(seed.slice(60, 62), 16) % 10),
+    realAssetAccess: false,
+    executionAuthority: false,
+    outboundCounterattack: false,
+  });
+}
+
+export function evolveMirageFabric(fabric = {}, observation = {}, options = {}) {
+  if (!fabric || typeof fabric !== "object" || Array.isArray(fabric)) {
+    throw new Error("fabric must be an object");
+  }
+  if (
+    fabric.schema !== "hercules.smokescreen.mirage.v2"
+    || fabric.networkPolicy !== "ISOLATED_NO_EGRESS"
+    || fabric.dataPolicy !== "SYNTHETIC_ONLY"
+    || fabric.fallback !== "DENY"
+    || fabric.realAssetAccess !== false
+    || fabric.outboundCounterattack !== false
+  ) {
+    throw new Error("invalid or unsafe Mirage Fabric state");
+  }
+
+  const decision = {
+    scope: "OWNED_INFRASTRUCTURE_ONLY",
+    outboundCounterattack: false,
+    routeMode: "DECOY",
+    decoyId: fabric.decoyId,
+  };
+  return createMirageFabric(decision, {
+    focus: observation.focus ?? fabric.focus,
+    generation: normalizeGeneration(fabric.generation) + 1,
+  }, options);
+}
+
 function auditPayload(entry) {
   return {
     schema: entry.schema,
@@ -321,6 +477,18 @@ export function createSmokeScreenAgent(options = {}) {
         headHash,
       });
     },
+
+    plan(decision) {
+      return createSmokeScreenEnforcementPlan(decision);
+    },
+
+    mirage(decision, context = {}) {
+      return createMirageFabric(decision, context, { hmacKey: key, now });
+    },
+
+    evolveMirage(fabric, observation = {}) {
+      return evolveMirageFabric(fabric, observation, { hmacKey: key, now });
+    },
   });
 }
 
@@ -330,6 +498,10 @@ export const SMOKESCREEN_POLICY = Object.freeze({
   scope: "OWNED_INFRASTRUCTURE_ONLY",
   maxDelayMs: MAX_DELAY_MS,
   activeCounterattack: false,
+  mirageFabric: true,
+  mirageNetworkPolicy: "ISOLATED_NO_EGRESS",
+  mirageDataPolicy: "SYNTHETIC_ONLY",
+  mirageFallback: "DENY",
   supportedSignals: Object.freeze([...SIGNAL_SET].sort()),
 });
 
