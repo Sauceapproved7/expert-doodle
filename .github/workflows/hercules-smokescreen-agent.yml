@@ -4,8 +4,13 @@ on:
   pull_request:
     paths:
       - "hercules-runtime/smokescreen-agent.mjs"
+      - "hercules-runtime/smokescreen-forge-ingress.mjs"
       - "hercules-runtime/command-surface.mjs"
+      - "hercules-forge/control-api.mjs"
+      - "hercules-forge/production.mjs"
       - "tests/hercules-smokescreen-agent.test.mjs"
+      - "tests/hercules-smokescreen-forge-ingress.test.mjs"
+      - "tests/hercules-forge-production.test.mjs"
       - "docs/HERCULES-SMOKESCREEN-SENTINEL-V1.md"
       - "docs/HERCULES-THREAT-MODEL.md"
       - ".github/workflows/hercules-smokescreen-agent.yml"
@@ -28,6 +33,6 @@ jobs:
       - name: Enforce owner-code boundary
         run: node scripts/verify-owner-code-only.mjs
       - name: Run SmokeScreen Sentinel tests
-        run: node --test tests/hercules-smokescreen-agent.test.mjs
+        run: node --test tests/hercules-smokescreen-agent.test.mjs tests/hercules-smokescreen-forge-ingress.test.mjs tests/hercules-forge-production.test.mjs
       - name: Run security baseline
         run: node scripts/security-baseline.mjs
