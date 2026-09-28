@@ -26,6 +26,25 @@ function json(data: unknown, status = 200) {
   });
 }
 
+
+async function sha256Hex(value: string) {
+  const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(bytes)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function monitorAuthorized(req: Request): Promise<boolean> {
+  const key = req.headers.get("x-hercules-internal-key") ?? "";
+  if (!key) return false;
+  const rows = await rest(
+    req,
+    "hercules_internal_service_keys?select=enabled,key_sha256&purpose=eq.ops-monitor&enabled=eq.true&limit=1",
+    { method: "GET" },
+    true,
+  ) as Array<{ enabled?: boolean; key_sha256?: string }>;
+  const expected = rows?.[0]?.key_sha256 ?? "";
+  return Boolean(rows?.[0]?.enabled && expected && expected === await sha256Hex(key));
+}
+
 function decodeJwtSub(req: Request): string {
   const auth = req.headers.get("Authorization") ?? "";
   if (!auth.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
@@ -228,6 +247,19 @@ async function finalize(
 }
 
 Deno.serve(async (req: Request) => {
+  if (req.method === "GET") {
+    if (!await monitorAuthorized(req)) {
+      return json({ error: "INTERNAL_MONITOR_AUTHORIZATION_REQUIRED" }, 403);
+    }
+    return json({
+      ok: true,
+      service: "hercules-chat",
+      version: "3.1.0",
+      mode: "authenticated-customer-chat",
+      monitor_contract: "internal-functional-v1",
+    });
+  }
+
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
