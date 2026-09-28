@@ -94,3 +94,35 @@ test("Studio health does not expose run paths or credentials",async()=>{
   assert.equal("statePath" in body,false);
   assert.equal("credential" in body,false);
 });
+
+
+test("Studio mutation stays unauthorized even when execution bridge is connected",async()=>{
+  let invoked=false;
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:true,id:"hercules-video-owned-bridge"}),
+    actions:{start:async()=>{invoked=true;return {started:true};}}
+  });
+  const response=await handle({method:"POST",pathname:"/api/studio/start",headers:{}});
+  assert.equal(response.status,401);
+  assert.equal(JSON.parse(response.body).error,"studio_operator_authorization_required");
+  assert.equal(invoked,false);
+});
+
+test("Studio mutation runs only after explicit operator authorization and trusted bridge checks",async()=>{
+  let invoked=false;
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:true,id:"hercules-video-owned-bridge"}),
+    authorizeOperator:async request=>request?.headers?.authorization==="Bearer test-owner",
+    actions:{start:async()=>{invoked=true;return {started:true};}}
+  });
+  const response=await handle({
+    method:"POST",
+    pathname:"/api/studio/start",
+    headers:{authorization:"Bearer test-owner"}
+  });
+  assert.equal(response.status,200);
+  assert.equal(JSON.parse(response.body).ok,true);
+  assert.equal(invoked,true);
+});
