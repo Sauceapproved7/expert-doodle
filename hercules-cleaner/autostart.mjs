@@ -41,7 +41,7 @@ export function createAutostartPlan({
     };
   }
   const path = join(home, ".config", "systemd", "user", "hercules-cleaner.service");
-  const content = `[Unit]\nDescription=SauceApproved Hercules Cleaner\nAfter=default.target\n\n[Service]\nType=simple\nExecStart=${JSON.stringify(node)} ${JSON.stringify(cli)} daemon\nRestart=on-failure\nRestartSec=5\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=read-only\nReadWritePaths=${JSON.stringify(join(home, ".hercules-cleaner"))}\n\n[Install]\nWantedBy=default.target\n`;
+  const content = `[Unit]\nDescription=SauceApproved Hercules Cleaner\nAfter=default.target\n\n[Service]\nType=simple\nExecStart=${JSON.stringify(node)} ${JSON.stringify(cli)} daemon\nRestart=on-failure\nRestartSec=5\nNoNewPrivileges=true\nPrivateTmp=true\nProtectSystem=strict\nProtectHome=false\nProtectKernelTunables=true\nProtectKernelModules=true\nProtectControlGroups=true\nRestrictSUIDSGID=true\n\n[Install]\nWantedBy=default.target\n`;
   return {
     platform,
     kind: "systemd-user-service",
