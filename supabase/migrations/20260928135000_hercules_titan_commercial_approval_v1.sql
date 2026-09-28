@@ -93,6 +93,7 @@ on conflict (product_code,approval_type) do update set
   updated_at=now();
 
 create or replace function public.hercules_titan_owner_approve_bundle(
+  p_user_id uuid,
   p_packet_version text,
   p_packet_digest text,
   p_confirmation text
@@ -103,7 +104,7 @@ security definer
 set search_path to 'public','pg_temp'
 as $function$
 declare
-  v_uid uuid:=auth.uid();
+  v_uid uuid:=p_user_id;
   v_is_owner boolean:=false;
   v_expected_version constant text:='hercules-titan-commercial-v1';
   v_expected_digest constant text:='33c0f4567b6c0c06410b9bd546efdac8e2cc097f4c75b86728d539901e8bd5c7';
@@ -112,7 +113,7 @@ declare
   v_product public.hercules_software_products%rowtype;
   v_count integer:=0;
 begin
-  if v_uid is null then raise exception 'authentication_required'; end if;
+  if v_uid is null then raise exception 'owner_identity_required'; end if;
 
   select exists(
     select 1
@@ -190,8 +191,8 @@ begin
 end;
 $function$;
 
-revoke all on function public.hercules_titan_owner_approve_bundle(text,text,text) from public, anon;
-grant execute on function public.hercules_titan_owner_approve_bundle(text,text,text) to authenticated;
+revoke all on function public.hercules_titan_owner_approve_bundle(uuid,text,text,text) from public, anon, authenticated;
+grant execute on function public.hercules_titan_owner_approve_bundle(uuid,text,text,text) to service_role;
 
 create or replace function public.hercules_guard_titan_checkout()
 returns trigger
