@@ -129,3 +129,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - External operating-system infrastructure: Windows Task Scheduler, Apple launchd, and systemd user services are adapters only and remain third-party OS infrastructure.
 - Safety scope: user-scoped cleanup roots, explicit protected paths, dry-run plans, bounded scans, loopback-only dashboard control, transactional Recovery Capsules, integrity verification, and fail-closed restore semantics.
 - Market-research note: scheduled cleanup is common in Windows Storage Sense, CCleaner, BleachBit, Wise Disk Cleaner and CleanMyMac. Session Clean and Recovery Capsules are Hercules differentiators based on the reviewed mainstream feature sets; no absolute market-first claim is made.
+
+
+## SauceApproved Content Multiplier v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/content-multiplier/*.mjs`, `tests/sauceapproved-content-multiplier.test.mjs`, `docs/HERCULES-CONTENT-MULTIPLIER-V1.md`, and the dedicated CI workflow.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- Third-party infrastructure: any future model, social-publishing, analytics, storage or messaging provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
+- Trust scope: generation fails closed without an injected provider; locked facts and banned phrases are validated before generated assets are accepted.
+- Market-position note: Content DNA, Variation Tree, Content Opportunity Radar and Variant Fatigue Guard are SauceApproved differentiators. No absolute market-first claim is made without separate current verification.
