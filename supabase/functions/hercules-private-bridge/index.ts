@@ -6,6 +6,7 @@ import { handlePersonalBrowserRequest, isPersonalBrowserAction } from './persona
 import { handleDomainAgentRequest, isDomainAgentAction, isDomainAgentGet } from './domain-agent.ts';
 import {issuePilotAdmission,pilotAdmissionControlStatus,pilotAdmissionInternalAuthorized,PILOT_ADMISSION_OWNER_ERROR,PILOT_ADMISSION_INTERNAL_ERROR} from './pilot-admission.ts';
 import {handleForgeStateRequest,isForgeStateAction} from './forge-state.ts';
+import {handleStudioShopifyPaidWebhook,isStudioShopifyPaidWebhook} from './studio-commerce-webhook.ts';
 
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}').default||Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -512,6 +513,7 @@ async function handleSpaceshipCredentialDrop(req:Request,requestUrl:URL){
 
 Deno.serve(async(req:Request)=>{
   const requestUrl=new URL(req.url);
+  if(isStudioShopifyPaidWebhook(requestUrl))return handleStudioShopifyPaidWebhook(req,requestUrl,admin);
   if(isDomainAgentGet(req,requestUrl))return handleDomainAgentRequest(req);
   if(requestUrl.searchParams.get('spaceship_credentials')==='1'){
     return handleSpaceshipCredentialDrop(req,requestUrl);
