@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 10,
+  "version": 11,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -75,6 +75,10 @@
     {
       "path": "hercules-cleaner",
       "role": "local-maintenance-runtime"
+    },
+    {
+      "path": "sauceapproved-studio",
+      "role": "studio-product-runtime"
     }
   ],
   "allowedModuleSpecifierPrefixes": [
