@@ -165,3 +165,43 @@ test("Content Multiplier manifest API is owned and fail-closed",async()=>{
   assert.equal(body.providerRequiredForGeneration,true);
   assert.ok(body.differentiators.includes("Content DNA"));
 });
+
+
+test("Studio root advertises the owned AI Sales Agent surface",async()=>{
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
+  });
+  const response=await handle({method:"GET",pathname:"/"});
+  assert.equal(response.status,200);
+  assert.match(response.body,/AI Sales Agent/);
+  assert.match(response.body,/\/ai-sales-agent/);
+});
+
+test("AI Sales Agent surface renders Hercules differentiators and action lock",async()=>{
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
+  });
+  const response=await handle({method:"GET",pathname:"/ai-sales-agent"});
+  assert.equal(response.status,200);
+  assert.match(response.headers["content-type"],/text\/html/);
+  assert.match(response.body,/SauceApproved AI Sales Agent/);
+  assert.match(response.body,/Objection Intelligence Map/);
+  assert.match(response.body,/Adaptive Pitch Memory/);
+  assert.match(response.body,/Confidence-to-Handoff Governor/);
+  assert.match(response.body,/Objection-to-Asset Bridge/);
+  assert.match(response.body,/Action adapter not connected/);
+});
+
+test("AI Sales Agent manifest API is owned, fail-closed and blocks sensitive profiling",async()=>{
+  const handle=createStudioHttpHandler();
+  const response=await handle({method:"GET",pathname:"/api/studio/ai-sales-agent/manifest"});
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.product,"SauceApproved AI Sales Agent");
+  assert.equal(body.executionPolicy,"fail-closed");
+  assert.equal(body.actionAdapterRequired,true);
+  assert.equal(body.sensitiveProfilingAllowed,false);
+  assert.ok(body.differentiators.includes("Objection Intelligence Map"));
+});
