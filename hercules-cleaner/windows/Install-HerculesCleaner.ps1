@@ -42,7 +42,7 @@ if(Test-Path -LiteralPath $VersionRoot){throw "Hercules Cleaner version $Version
 
 New-Item -ItemType Directory -Path $StageRoot -Force | Out-Null
 try{
-  Copy-Item -LiteralPath (Join-Path $AppSource "*") -Destination $StageRoot -Recurse -Force
+  Copy-Item -Path (Join-Path $AppSource "*") -Destination $StageRoot -Recurse -Force
 }catch{
   Remove-Item -LiteralPath $StageRoot -Recurse -Force -ErrorAction SilentlyContinue
   throw
