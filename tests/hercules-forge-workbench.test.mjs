@@ -76,4 +76,5 @@ test("customer console exposes the Hercules Forge workbench contract", () => {
   assert.match(js, /renderFileTree/);
   assert.match(js, /renderProofGate/);
   assert.match(js, /renderBuildLedger/);
+  assert.doesNotThrow(() => new Function(js));
 });
