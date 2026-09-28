@@ -5,6 +5,9 @@ import {
   createSmokeScreenDecision,
   verifyAuditChain,
   runSmokeScreenWatcher,
+  createMirageFabric,
+  evolveMirageFabric,
+  createSmokeScreenEnforcementPlan,
 } from "../hercules-runtime/smokescreen-agent.mjs";
 import {
   createCommandRequest,
@@ -180,4 +183,97 @@ test("watcher consumes an authorized telemetry stream and emits bounded decision
     decisions.map((decision) => decision.disposition),
     ["OBSERVE", "QUARANTINE"],
   );
+});
+
+
+test("Mirage Fabric is synthetic-only, no-egress, and fails closed away from real assets", () => {
+  const decision = createSmokeScreenDecision({
+    sessionId: "mirage-hostile",
+    route: "/admin/export",
+    signals: { honeytokenTouched: true },
+  }, { hmacKey: key });
+
+  const fabric = createMirageFabric(decision, {
+    focus: "admin",
+    generation: 0,
+  }, {
+    hmacKey: key,
+    now: () => 1_790_000_000_000,
+  });
+
+  assert.equal(fabric.networkPolicy, "ISOLATED_NO_EGRESS");
+  assert.equal(fabric.dataPolicy, "SYNTHETIC_ONLY");
+  assert.equal(fabric.realAssetAccess, false);
+  assert.equal(fabric.outboundCounterattack, false);
+  assert.equal(fabric.executionAuthority, false);
+  assert.equal(fabric.fallback, "DENY");
+  assert.ok(fabric.syntheticRoutes.length >= 2);
+  assert.match(fabric.honeytoken, /^HNY_[A-F0-9]{24}$/);
+});
+
+test("Mirage Fabric mutates topology across generations without widening authority", () => {
+  const decision = createSmokeScreenDecision({
+    sessionId: "mirage-mutate",
+    route: "/api/private",
+    signals: { routeProbes: 50, enumerationPattern: true, privilegeBoundaryProbe: true },
+  }, { hmacKey: key });
+
+  const first = createMirageFabric(decision, {
+    focus: "api",
+    generation: 1,
+  }, {
+    hmacKey: key,
+    now: () => 1_790_000_000_000,
+  });
+
+  const second = evolveMirageFabric(first, {
+    focus: "storage",
+  }, {
+    hmacKey: key,
+    now: () => 1_790_000_010_000,
+  });
+
+  assert.equal(second.generation, first.generation + 1);
+  assert.notEqual(second.namespace, first.namespace);
+  assert.notDeepEqual(second.syntheticRoutes, first.syntheticRoutes);
+  assert.equal(second.realAssetAccess, false);
+  assert.equal(second.outboundCounterattack, false);
+  assert.equal(second.fallback, "DENY");
+});
+
+test("Mirage Fabric never reflects arbitrary attacker-controlled labels", () => {
+  const decision = createSmokeScreenDecision({
+    sessionId: "mirage-untrusted",
+    route: "/private",
+    signals: { honeytokenTouched: true },
+  }, { hmacKey: key });
+
+  const attackerText = "../../prod-secrets?token=steal-me";
+  const fabric = createMirageFabric(decision, {
+    focus: attackerText,
+    generation: 0,
+  }, {
+    hmacKey: key,
+    now: () => 1_790_000_000_000,
+  });
+
+  assert.equal(fabric.focus, "generic");
+  assert.equal(JSON.stringify(fabric).includes(attackerText), false);
+});
+
+test("decoy enforcement plan requires isolation and denial on control failure", () => {
+  const decision = createSmokeScreenDecision({
+    sessionId: "mirage-plan",
+    route: "/root",
+    signals: { honeytokenTouched: true },
+  }, { hmacKey: key });
+
+  const plan = createSmokeScreenEnforcementPlan(decision);
+  assert.equal(plan.mode, "MIRAGE");
+  assert.equal(plan.fallback, "DENY");
+  assert.equal(plan.realAssetAccess, false);
+  assert.equal(plan.executionAuthority, false);
+  assert.ok(plan.requiredControls.includes("NO_EGRESS"));
+  assert.ok(plan.requiredControls.includes("NO_PRODUCTION_CREDENTIALS"));
+  assert.ok(plan.requiredControls.includes("NO_CUSTOMER_DATA"));
 });

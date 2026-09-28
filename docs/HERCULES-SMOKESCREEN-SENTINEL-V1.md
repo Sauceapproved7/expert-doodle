@@ -1,8 +1,9 @@
-# Hercules SmokeScreen Sentinel v1
+# Hercules SmokeScreen Sentinel v2 — Mirage Fabric
 
-Status: implementation candidate  
+Status: v2 implementation candidate  
 Scope: defensive deception and containment inside authorized Hercules infrastructure  
-Runtime: `hercules-runtime/smokescreen-agent.mjs`
+Runtime: `hercules-runtime/smokescreen-agent.mjs`  
+Document path retained for continuity with v1.
 
 ## Purpose
 
@@ -97,3 +98,43 @@ The runtime core can support all four modes, but deployment adapters must be ena
 ## Ownership and provenance
 
 The SmokeScreen Sentinel runtime, tests, command-surface integration, and this specification are project-authored Hercules source created for SauceApproved on 2026-09-28. The implementation uses only Node.js built-ins and repository-owned source. Node.js and GitHub Actions remain third-party infrastructure and are not claimed as SauceApproved-owned code.
+
+
+## Mirage Fabric v2
+
+v2 upgrades the decoy plane from a static destination into an adaptive synthetic environment.
+
+For every high-confidence decoy decision, SmokeScreen can generate a short-lived Mirage Fabric with:
+
+- a deterministic but rotating synthetic namespace;
+- synthetic-only API, operations, and storage routes;
+- session-scoped honeytokens that are never valid credentials;
+- bounded synthetic record counts;
+- explicit `ISOLATED_NO_EGRESS` network policy;
+- explicit `SYNTHETIC_ONLY` data policy;
+- `realAssetAccess=false`;
+- `executionAuthority=false`;
+- `outboundCounterattack=false`; and
+- a fail-closed `DENY` fallback if required isolation cannot be proven.
+
+The topology can evolve across generations as the hostile session changes behavior. Attacker-controlled labels are not reflected directly into route names or namespaces; unrecognized focus values collapse to a bounded `generic` profile.
+
+### v2 local enforcement contract
+
+`createSmokeScreenEnforcementPlan(decision)` converts a decision into a bounded local plan. A decoy plan requires:
+
+- `NO_EGRESS`
+- `NO_PRODUCTION_CREDENTIALS`
+- `NO_CUSTOMER_DATA`
+- `NO_PAYMENT_KEYS`
+- `NO_SIGNING_AUTHORITY`
+
+If an enforcement adapter cannot prove those controls, it must deny the hostile session rather than route it back to real assets.
+
+### v2 runtime API
+
+- `createMirageFabric(decision, context, options)`
+- `evolveMirageFabric(fabric, observation, options)`
+- `createSmokeScreenEnforcementPlan(decision)`
+
+The agent instance also exposes `plan()`, `mirage()`, and `evolveMirage()` helpers bound to its server-side HMAC key and clock.
