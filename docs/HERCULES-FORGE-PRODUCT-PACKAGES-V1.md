@@ -24,6 +24,14 @@ The normal Forge flow remains unchanged:
 
 `PLAN -> BUILD -> VALIDATE -> DEPLOY -> VERIFY`
 
+## Independent deployment lane
+
+Product-package releases use the SauceApproved-owned control path:
+
+`Hercules Forge Builder -> Hercules Deploy -> Supabase archive/origin -> Render presentation -> live verification`
+
+AppDeploy is an optional external adapter, not a required release dependency. AppDeploy quotas or deployment-credit ceilings must not block Studio or Ads from moving through the owned Forge release path. Provider-specific outages remain isolated behind replaceable adapters and do not grant permission to bypass authentication, release admission, provenance, or verification controls.
+
 ## Candidate plans
 
 Both packages carry the same initial candidate monthly structure:
