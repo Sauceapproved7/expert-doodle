@@ -241,3 +241,48 @@ test("Brand Brain manifest API is owned and approval-gated",async()=>{
   assert.equal(body.silentAutoLearningAllowed,false);
   assert.ok(body.differentiators.includes("Brand Constitution"));
 });
+
+
+test("Studio root advertises the public Studios Market",async()=>{
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
+  });
+  const response=await handle({method:"GET",pathname:"/"});
+  assert.equal(response.status,200);
+  assert.match(response.body,/Studios Market/);
+  assert.match(response.body,/\/market/);
+});
+
+test("Studios Market lists all three products and the bundle with tracked pilot CTAs",async()=>{
+  const handle=createStudioHttpHandler();
+  const response=await handle({method:"GET",pathname:"/market"});
+  assert.equal(response.status,200);
+  assert.match(response.body,/SauceApproved Studios Market/);
+  assert.match(response.body,/Content Multiplier/);
+  assert.match(response.body,/AI Sales Agent/);
+  assert.match(response.body,/Brand Brain/);
+  assert.match(response.body,/Studios Bundle/);
+  assert.match(response.body,/utm_content=studio-content-multiplier/);
+  assert.match(response.body,/utm_content=studio-ai-sales-agent/);
+  assert.match(response.body,/utm_content=studio-brand-brain/);
+  assert.match(response.body,/utm_content=studio-bundle/);
+  assert.match(response.body,/Paid checkout remains locked/);
+});
+
+test("Studios Market manifest keeps public discovery open and paid checkout closed",async()=>{
+  const handle=createStudioHttpHandler();
+  const response=await handle({method:"GET",pathname:"/api/studio/market/manifest"});
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.product,"SauceApproved Studios Market");
+  assert.equal(body.publicDiscovery,true);
+  assert.equal(body.pilotApplicationsOpen,true);
+  assert.equal(body.paidCheckoutEnabled,false);
+  assert.equal(body.pricingApprovalRequired,true);
+  assert.equal(body.products.length,4);
+  assert.ok(body.products.some(item=>item.id==="content-multiplier"));
+  assert.ok(body.products.some(item=>item.id==="ai-sales-agent"));
+  assert.ok(body.products.some(item=>item.id==="brand-brain"));
+  assert.ok(body.products.some(item=>item.id==="studios-bundle"));
+});
