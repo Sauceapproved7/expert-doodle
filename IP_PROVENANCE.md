@@ -186,3 +186,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - External infrastructure: founding-access CTAs navigate to the existing protected Hercules launch/pilot intake hosted on the existing Supabase project; Supabase is external infrastructure and is not claimed as SauceApproved-owned code.
 - Commercial boundary: public discovery and applications are open, while paid checkout remains disabled pending explicit pricing/legal/payment-path gates. No charge or subscription is created by the Market surface.
 - Claims boundary: no fabricated testimonial, guaranteed ROI, unverified certification, or falsely connected integration is included.
+
+
+## Hercules Cleaner Windows installer provenance — 2026-09-28
+
+- Component paths: `hercules-cleaner/installer.mjs`, `hercules-cleaner/windows/`, `scripts/package-hercules-cleaner-windows.mjs`, installer/package tests, and Windows installer CI.
+- Origin: original SauceApproved/Hercules installer/update implementation created with AI assistance around the owned Cleaner runtime and the canonical `hercules-cleaner/update-policy.mjs` trust rule.
+- Packaged source: SauceApproved/Hercules files only. Node.js, PowerShell, Windows Task Scheduler, Windows tar, and GitHub Actions are external infrastructure and are not represented as SauceApproved-owned code.
+- Distribution model: per-user versioned installation with local Cleaner state and Recovery Capsules preserved outside the app tree; exact-commit bundle manifest and per-file SHA-256 evidence.
+- Update controls: canonical immutable release identity, separately trusted expected identity, HTTPS/host constraints, ZIP SHA-256, traversal rejection, health-check activation, and rollback receipts.
+- Signing boundary: the Early Access bundle is not claimed as Authenticode publisher-signed. A trusted owner-controlled Windows code-signing certificate remains a later owner-controlled distribution prerequisite.
