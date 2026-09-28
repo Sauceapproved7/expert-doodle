@@ -5,7 +5,7 @@ import {
   validateStudioShopifyPaidOrder,
   studioEntitlementKey,
   STUDIO_SHOPIFY_PRODUCT
-} from "../hercules-runtime/studio-commerce.mjs";
+} from "../supabase/functions/hercules-private-bridge/studio-commerce.mjs";
 
 function paidOrder(overrides={}){
   return {
@@ -87,7 +87,7 @@ test("requires product id, variant id, and sku to all match",()=>{
   }
 });
 
-test("derives an idempotent entitlement key without buyer PII",()=>{
+test("derives an idempotent entitlement key without buyer PII",async()=>{
   const order=validateStudioShopifyPaidOrder(paidOrder(),{
     shopDomain:"sauceapproved-2.myshopify.com",
     topic:"orders/paid"
@@ -97,4 +97,15 @@ test("derives an idempotent entitlement key without buyer PII",()=>{
   assert.equal(a,b);
   assert.match(a,/^[a-f0-9]{64}$/);
   assert.equal(a.includes("buyer@example.com"),false);
+});
+
+test("rejects Shopify test orders and cancelled orders",()=>{
+  assert.throws(()=>validateStudioShopifyPaidOrder(
+    paidOrder({test:true}),
+    {shopDomain:"sauceapproved-2.myshopify.com",topic:"orders/paid"}
+  ),/test_order_not_eligible/);
+  assert.throws(()=>validateStudioShopifyPaidOrder(
+    paidOrder({cancelled_at:"2026-09-28T12:00:00Z"}),
+    {shopDomain:"sauceapproved-2.myshopify.com",topic:"orders/paid"}
+  ),/cancelled_order_not_eligible/);
 });
