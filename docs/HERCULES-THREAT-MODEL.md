@@ -113,3 +113,8 @@ Controls: bounded input fields, explicit signal allowlist, deterministic risk sc
 ### SmokeScreen Mirage Fabric v2
 
 Controls: every Mirage Fabric is derived only from an already-decoy-classified SmokeScreen decision; topology generation uses HMAC-bound synthetic identifiers; arbitrary attacker-controlled labels are reduced to a fixed focus allowlist; all Mirage data is synthetic; real asset access is false; network policy is isolated with no egress; production credentials, customer data, payment keys, and signing authority are forbidden; execution authority remains false; outbound counterattack remains false; topology generations may mutate only within the same synthetic containment boundary; and enforcement must fail closed to denial when isolation controls cannot be proven.
+
+
+### Forge -> SmokeScreen observe-only ingress
+
+Controls: Forge attaches observation only after an HTTP response completes; observation failure cannot alter the already-determined customer response; raw remote addresses and user-agent strings are reduced to a one-way client fingerprint before appearing in SmokeScreen results; request-window state is bounded by time, per-client entry count, and total client count; only normalized defensive signals are passed to the Sentinel; public health reveals only enabled/mode/enforcement booleans; aggregate metrics require the existing Forge bearer control credential; production starts in `OBSERVE_ONLY` with `enforcementApplied=false`; and any later transition to friction, deception, or containment requires a distinct reviewed change with false-positive evidence.
