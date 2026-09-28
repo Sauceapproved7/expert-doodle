@@ -2,6 +2,7 @@ import {createServer} from "node:http";
 import {pathToFileURL} from "node:url";
 import {inspectLaunchRunStateFile} from "./run-status.mjs";
 import {buildStudioViewModel,createStudioManifest} from "./studio-contract.mjs";
+import {createContentMultiplierManifest} from "../sauceapproved-studio/content-multiplier/core.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -46,6 +47,58 @@ function renderTimeline(model) {
         <em>${shot.safelyReusable ? "REUSABLE" : shot.requiresResubmission ? "RESUBMIT" : "HELD"}</em>
       </div>
     </article>`).join("");
+}
+
+function renderContentMultiplierShell(manifest) {
+  const cards=manifest.differentiators.map((name,index)=>`
+    <article class="feature">
+      <span>0${index+1}</span>
+      <h2>${escapeHtml(name)}</h2>
+      <p>${escapeHtml({
+        "Content DNA":"Keeps vocabulary, tone, offers, audiences, banned phrases and locked facts attached to the brand.",
+        "Variation Tree":"Branches hooks, audiences, platforms, lengths and offers without losing parent-child lineage.",
+        "Content Opportunity Radar":"Surfaces strong unused source moments and approved brand facts before they get overlooked.",
+        "Variant Fatigue Guard":"Stops near-duplicate content from multiplying and pushes the next branch toward a materially different angle."
+      }[name] || "Owned SauceApproved content intelligence.")}</p>
+    </article>`).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SauceApproved Content Multiplier</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f7f7f7}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 18% 0,#2c1b19 0,#0b0b0b 34%,#040404 74%)}
+main{width:min(1120px,100%);margin:auto;padding:clamp(18px,4vw,42px)}
+a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-decoration:none;font-weight:700}
+.hero{padding:clamp(24px,5vw,54px);border:1px solid #2a2524;border-radius:32px;background:linear-gradient(145deg,#171313,#0b0b0b);box-shadow:0 28px 100px #0009}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#bf9189}.title{font-size:clamp(42px,9vw,86px);line-height:.92;margin:10px 0 18px;font-weight:950;letter-spacing:-.055em}.title em{font-style:normal;color:#e1b6ae}
+.sub{max-width:760px;color:#b5b5b5;font-size:clamp(16px,2vw,20px);line-height:1.6}
+.status{margin-top:24px;padding:16px 18px;border:1px solid #5a3c24;border-radius:18px;background:#1d140d;color:#f0c789;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.feature{min-height:210px;padding:24px;border-radius:24px;border:1px solid #282323;background:#0c0c0cee}.feature span{font-size:11px;letter-spacing:.18em;color:#8d706b}.feature h2{font-size:24px;margin:38px 0 10px}.feature p{color:#999;line-height:1.55;margin:0}
+.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px;padding:18px;border:1px solid #222;border-radius:20px;background:#090909;color:#888}.pill{font-size:12px;border:1px solid #333;padding:7px 10px;border-radius:999px;color:#bbb}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.hero{border-radius:24px}.feature{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">SauceApproved Studios / Hercules-owned module</div>
+<h1 class="title">Content <em>Multiplier</em></h1>
+<p class="sub">Turn one approved source into a governed content system. Brand truth stays locked, variation stays traceable, and repetitive branches are caught before they waste output.</p>
+<div class="status">Generation provider not connected — generation stays fail-closed until an authorized provider is configured.</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="footer">
+<span>Execution policy: <b>${escapeHtml(manifest.executionPolicy)}</b></span>
+<span class="pill">Provider required for generation</span>
+</div>
+</main>
+</body>
+</html>`;
 }
 
 function renderStudioShell({manifest,model,bridge}) {
@@ -95,7 +148,7 @@ ${statusBadge("Execution",bridgeLabel,bridgeConnected ? "good" : "warn")}
 <div><div class="eyebrow">Operator</div><h2>${escapeHtml(surfaces.get("project-brief"))}</h2><p>Capture the creative brief and prepare the run plan without pretending execution is connected.</p></div>
 <div class="notice">${escapeHtml(bridgeLabel)}. Start and resume stay locked until the owned execution bridge is verified.</div>
 <div class="surface-list">
-${manifest.surfaces.map(surface=>`<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
+${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
 </div>
 <div>
 <h2>${escapeHtml(surfaces.get("run-status"))}</h2>
@@ -161,6 +214,14 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/manifest") {
       return json(manifest);
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/content-multiplier/manifest") {
+      return json(createContentMultiplierManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/content-multiplier") {
+      return {status:200,headers:HTML_HEADERS,body:renderContentMultiplierShell(createContentMultiplierManifest())};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/status") {
