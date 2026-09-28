@@ -10,6 +10,9 @@ on:
       - "hercules-forge/production.mjs"
       - "tests/hercules-smokescreen-agent.test.mjs"
       - "tests/hercules-smokescreen-global-benchmark.test.mjs"
+      - "tests/hercules-smokescreen-release-package.test.mjs"
+      - "scripts/package-smokescreen-release.mjs"
+      - "releases/hercules-smokescreen-v2.1.0/**"
       - "scripts/smokescreen-global-benchmark.mjs"
       - "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md"
       - "tests/hercules-smokescreen-forge-ingress.test.mjs"
@@ -42,6 +45,8 @@ jobs:
       - name: Run SmokeScreen global benchmark contract
         run: node --test tests/hercules-smokescreen-global-benchmark.test.mjs
       - name: Run SmokeScreen synthetic global benchmark
-        run: node scripts/smokescreen-global-benchmark.mjs tests/hercules-smokescreen-forge-ingress.test.mjs tests/hercules-forge-production.test.mjs
+        run: node scripts/smokescreen-global-benchmark.mjs
+      - name: Run SmokeScreen release package contract
+        run: node --test tests/hercules-smokescreen-release-package.test.mjs tests/hercules-smokescreen-forge-ingress.test.mjs tests/hercules-forge-production.test.mjs
       - name: Run security baseline
         run: node scripts/security-baseline.mjs
