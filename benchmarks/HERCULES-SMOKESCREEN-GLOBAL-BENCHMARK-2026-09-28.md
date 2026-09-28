@@ -1,99 +1,172 @@
 # Hercules SmokeScreen Sentinel — Global Benchmark
-Date: 2026-09-28
-Status: evidence-based architecture benchmark; synthetic performance fixture
 
-## Benchmark boundary
+Status: evidence-based global capability benchmark plus synthetic fixture evidence
 
-This benchmark compares publicly documented deception-security capabilities against the current Hercules SmokeScreen implementation. It does **not** claim proprietary competitor performance testing, production detection rates, or external penetration-test assurance.
+## Executive result
 
-The executable benchmark in `scripts/smokescreen-global-benchmark.mjs` measures only Hercules against a labeled synthetic fixture.
+**Global readiness coverage: 64/100.**
 
-## Current external reference bar
+This score is an internal evidence-coverage rubric. It is not an independent certification, analyst ranking, or claim that Hercules is the best deception product globally.
 
-| Reference | Publicly documented capability bar |
-|---|---|
-| MITRE Engage | Plan adversary engagement around Prepare, Expose, Affect, Elicit, and Understand; use deception/denial while avoiding hack-back. |
-| MITRE D3FEND | Defensive deception includes decoy environments, files, network resources, personas, session tokens, and user credentials, alongside isolation controls. |
-| Acalvio ShadowPlex | Dynamic/adaptive deception, HoneyPaths, honeytokens, identity/cloud/IT/OT coverage, automated placement, and SIEM/SOAR/EDR/XDR integration. |
-| Fortinet FortiDeceptor | Asset-matched IT/OT/IoT decoys, attack isolation/quarantine, forensics, SIEM/SOAR/EDR integration, and on-demand deception deployment. |
-| CyberTrap Engage | Adaptive digital twins, lures/breadcrumbs/honeytokens, synthetic data, behavioral adaptation, attacker-TTP intelligence, and SOC integrations. |
-| SentinelOne Singularity Hologram | Network decoys that lure adversaries and generate telemetry for investigation/adversary intelligence, integrated with identity/XDR capabilities. |
-| Microsoft Defender for Identity | Honeytoken accounts where sign-in activity is treated as an alertable trap signal. |
-| Proofpoint Identity Threat Defense | Agentless identity deceptions and lateral-movement detection/response. |
-| Thinkst Canary | Lightweight decoys and Canarytokens designed as high-signal compromise markers with rapid deployment. |
+Separately, the controlled synthetic fixture passed with:
 
-## Hercules capability comparison
+- 6/6 hostile scenarios detected;
+- 6/6 hostile scenarios routed to deception;
+- 0/6 benign or ambiguous scenarios falsely routed to deception;
+- 0 safety-boundary violations;
+- approximately 0.05 ms p95 policy-decision latency across 3,000 decisions in the verified CI run.
 
-| Capability | Global enterprise bar | Hercules evidence | Status |
-|---|---|---|---|
-| High-signal honeytokens | Common | Honeytoken touch forces critical containment guidance | Implemented |
-| Adaptive deception | Expected in leading platforms | Mirage Fabric rotates synthetic namespaces/routes/honeytokens by generation | Implemented |
-| No-egress isolation | Strong defensive practice | Mirage requires `ISOLATED_NO_EGRESS`; failure fallback is `DENY` | Implemented |
-| No hack-back | MITRE Engage-aligned | `outboundCounterattack=false` is invariant | Implemented |
-| False-positive control | Low-noise/high-confidence alerts are a market expectation | v2.1 requires corroboration across independent evidence families before deception, except honeytoken contact | Implemented in this benchmark branch |
-| Tamper-evident evidence | Important for forensics/audit | HMAC audit chain and checkpoints | Implemented |
-| Learning from engagements | Leading platforms convert engagements into intelligence | Evidence-Locked Learning Capsule produces signed, review-required hardening recommendations with no auto-apply authority | Implemented in this benchmark branch |
-| TTP/ATT&CK enrichment | Common in mature enterprise offerings | No full ATT&CK/TTP enrichment pipeline proven | Gap |
-| High-interaction service realism | Mature platforms offer broad decoy/service fidelity | Mirage currently synthesizes bounded routes/data, not full service emulation | Partial |
-| Identity/cloud/OT breadth | Leading suites span multiple environments | Current proof is Hercules application/runtime oriented | Gap |
-| SIEM/SOAR/EDR/XDR integration | Common enterprise requirement | No broad production integration matrix proven | Gap |
-| Automated local quarantine | Common in enterprise offerings | Decision/enforcement plan exists; production enforcement adapter is staged separately | Partial |
-| Global-scale production evidence | Enterprise expectation | No multi-region or production-scale benchmark claim | Gap |
+Those synthetic results are **not** a 100/100 global market score and are not production detection-rate evidence.
 
-## Hercules differentiators added by the benchmark
+## Method
 
-### 1. False-Positive Governor
+The global benchmark uses public primary-source documentation from current deception-security platforms and MITRE defensive frameworks to define the contemporary capability bar. Hercules is scored only on capabilities implemented and evidenced in the canonical repository.
 
-A high numerical score alone is not enough to divert a non-honeytoken session into deception. The governor requires corroboration across at least two independent evidence families. This explicitly protects ambiguous legitimate behavior from being trapped by a single class of signal.
+Each domain is scored from 0 to 10. Missing public evidence for another vendor is not treated as proof that the vendor lacks a capability.
 
-Honeytoken contact remains a special high-confidence case because the token has no legitimate business purpose.
+## Hercules global-readiness scorecard
 
-### 2. Evidence-Locked Learning Capsule
+| Domain | Score | Current evidence |
+|---|---:|---|
+| Adaptive deception and moving synthetic topology | 9/10 | Mirage Fabric rotates synthetic namespaces, routes, records, and honeytokens. |
+| High-signal lures and honeytokens | 9/10 | Honeytoken touch is a critical signal; synthetic honeytokens are session-scoped. |
+| Isolation, no-egress safety, and deny fallback | 10/10 | Mirage requires synthetic-only/no-egress controls and fails closed to DENY. |
+| False-positive governance | 9/10 | False-Positive Governor requires corroboration across independent evidence families except honeytoken contact. |
+| Tamper-evident evidence and governed learning | 10/10 | HMAC audit chain plus Evidence-Locked Learning Capsule with no auto-apply authority. |
+| High-interaction service realism | 5/10 | Synthetic topology/data are implemented; broad full-service/digital-twin emulation is not yet proven. |
+| Environment breadth and discovery | 3/10 | Current proof is application/Forge oriented, not broad IT/OT/cloud/identity discovery. |
+| Automated production containment | 5/10 | Enforcement plans exist; Forge ingress is intentionally observe-only today. |
+| SIEM/SOAR/EDR/XDR integration breadth | 1/10 | No verified broad production connector matrix yet. |
+| ATT&CK/TTP enrichment and external maturity | 3/10 | Audit evidence exists, but full ATT&CK/TTP enrichment and large external red-team/production proof are not yet established. |
+| **Total** | **64/100** | |
 
-SmokeScreen can summarize signed audit evidence into bounded hardening recommendations. The capsule:
+## Current global reference bar
 
-- contains no production execution authority;
-- cannot auto-apply changes;
-- requires review;
-- uses an allowlist of defensive recommendation types;
-- carries an evidence digest and HMAC signature;
-- fails verification if recommendations are tampered with.
+### MITRE Engage and D3FEND
 
-This creates a learning loop without allowing attacker-controlled activity to rewrite production policy.
+MITRE Engage frames adversary engagement around deception and denial, maps it to ATT&CK, and explicitly recommends avoiding hack-back. MITRE D3FEND recognizes decoy environments, decoy files, decoy session tokens, decoy user credentials, decoy network resources, and isolation techniques.
 
-## Executable fixture thresholds
+### Acalvio ShadowPlex
 
-The synthetic benchmark requires:
+Acalvio publicly documents adaptive deception, honeytokens, HoneyPaths, broad IT/OT/cloud/identity coverage, and integrations with SIEM, SOAR, EDR, and XDR.
 
-- false-positive deception rate: **0%** on the labeled benign fixture;
-- hostile detection rate: **100%** on the labeled hostile fixture;
-- hostile deception rate: **100%** on the labeled hostile fixture;
-- deception precision: **100%** on the labeled fixture;
-- safety-boundary violations: **0**;
-- at least one ambiguous benign scenario protected by the False-Positive Governor;
-- p95 policy-decision latency: **<= 10 ms** in CI.
+### Fortinet FortiDeceptor
 
-These thresholds are fixture assertions only.
+Fortinet publicly documents dynamic deception across IT/OT/IoT, automated endpoint quarantine, forensics, IOC/TTP collection, and integrations with SIEM, SOAR, EDR, and other Fortinet controls.
 
-## External references
+### CyberTrap Engage
 
-- https://www.mitre.org/news-insights/impact-story/mitre-engage-framework-and-community-cyber-deception
-- https://d3fend.mitre.org/
-- https://www.acalvio.com/shadowplex-platform/
-- https://www.fortinet.com/products/fortideceptor
-- https://cybertrap.com/platform
-- https://www.sentinelone.com/press/sentinelone-completes-acquisition-of-attivo-networks/
-- https://learn.microsoft.com/en-us/defender-for-identity/entity-tags
-- https://www.proofpoint.com/us/illusive-is-now-proofpoint
-- https://thinkst.com/
+CyberTrap publicly documents adaptive digital twins, synthetic data, dynamic decoy swarms, honeytokens, environment mapping, attacker-skill adaptation, threat intelligence, and SOC integrations.
+
+### Proofpoint Identity Threat Defense
+
+Proofpoint publicly documents 75+ agentless deception techniques, identity-risk discovery/remediation, forensic collection, and published red-team exercise results.
+
+### Thinkst Canary
+
+Thinkst publicly documents high-signal decoys and Canarytokens, noise-reducing alert thresholds, many token types, and alert integrations including webhook, syslog, SIEM, and automation paths.
+
+### SentinelOne Singularity Hologram
+
+SentinelOne publicly documents network deception decoys whose telemetry supports investigations and adversary intelligence in its broader identity/XDR platform.
+
+### Microsoft Defender for Identity
+
+Microsoft Defender for Identity supports honeytoken accounts where any sign-in activity triggers an alert.
+
+## Hercules strengths
+
+Hercules is strongest today in the defensive decision core:
+
+- adaptive Mirage topology;
+- deterministic honeytoken generation;
+- explicit synthetic-only/no-egress isolation;
+- deny fallback when isolation cannot be proven;
+- no hack-back invariant;
+- tamper-evident evidence;
+- false-positive corroboration governor;
+- evidence-locked learning with no production execution authority.
+
+## Gaps versus mature global platforms
+
+1. Broader IT, OT, identity, cloud, endpoint, and industrial coverage.
+2. A verified SIEM/SOAR/EDR/XDR connector matrix.
+3. More high-interaction service and digital-twin realism.
+4. Mature ATT&CK/TTP and IOC enrichment.
+5. Live production containment beyond observe-only Forge ingress.
+6. Large independent red-team, customer, multi-region, and sustained-load evidence.
+
+## Hercules differentiators
+
+### False-Positive Governor
+
+A high numerical risk score alone does not authorize deception. Except for honeytoken contact, SmokeScreen requires corroboration across independent evidence families before routing a session into Mirage.
+
+### Evidence-Locked Learning Capsule
+
+Engagement telemetry can produce signed defensive recommendations, but recommendations:
+
+- have no execution authority;
+- cannot auto-apply;
+- require review;
+- use an allowlist of defensive recommendation types;
+- carry evidence integrity data;
+- fail verification if tampered with.
+
+These are Hercules differentiators. They are not claimed as globally unique without dedicated prior-art and product-feature research.
+
+## Synthetic fixture evidence
+
+Scope: `SYNTHETIC_FIXTURE_ONLY`
+
+Thresholds:
+
+- false-positive deception rate: 0%;
+- hostile detection rate: 100%;
+- hostile deception rate: 100%;
+- deception precision: 100%;
+- safety-boundary violations: 0;
+- at least one ambiguous benign scenario protected by the governor;
+- p95 decision latency: <=10 ms in CI.
+
+Verified run:
+
+- 12 labeled scenarios;
+- 3,000 decision samples;
+- p95 approximately 0.05 ms;
+- all assertions passed.
+
+## Non-claims
+
+This benchmark does not claim:
+
+- a 100/100 global-market score;
+- production detection rates;
+- proprietary competitor performance testing;
+- independent penetration-test certification;
+- global product leadership.
+
+## Public source set
+
+- MITRE Engage: https://www.mitre.org/news-insights/impact-story/mitre-engage-framework-and-community-cyber-deception
+- MITRE D3FEND Deceive: https://d3fend.mitre.org/tactic/d3f%3ADeceive/
+- Acalvio ShadowPlex: https://www.acalvio.com/shadowplex-platform/
+- Fortinet FortiDeceptor: https://www.fortinet.com/products/fortideceptor
+- CyberTrap Engage: https://cybertrap.com/platform
+- Proofpoint Identity Threat Defense: https://www.proofpoint.com/us/products/identity-threat-detection-response
+- Thinkst Canary: https://canary.tools/
+- SentinelOne Hologram reference: https://www.sentinelone.com/press/sentinelone-completes-acquisition-of-attivo-networks/
+- Microsoft Defender for Identity entity tags: https://learn.microsoft.com/en-us/defender-for-identity/entity-tags
 
 ## Next benchmark gates
 
-Before stronger live enforcement, Hercules still needs evidence for:
+Before any global-leadership claim:
 
-1. observe-only production telemetry quality and false-positive review;
-2. ATT&CK/TTP enrichment from normalized telemetry;
-3. a local production enforcement adapter with rollback evidence;
-4. SIEM/SOAR export contract;
-5. high-interaction Mirage service profiles;
-6. sustained-load and multi-instance evidence.
+1. collect observe-only production telemetry and review false positives;
+2. add ATT&CK/TTP enrichment;
+3. verify a local enforcement adapter and rollback path;
+4. ship SIEM/SOAR export contracts;
+5. add high-interaction Mirage service profiles;
+6. run sustained-load and multi-instance testing;
+7. obtain independent red-team or penetration-test evidence;
+8. prove multi-environment production behavior.

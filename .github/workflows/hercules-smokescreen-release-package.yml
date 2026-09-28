@@ -1,0 +1,88 @@
+name: Hercules SmokeScreen Public Package
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "hercules-runtime/smokescreen-agent.mjs"
+      - "hercules-runtime/smokescreen-forge-ingress.mjs"
+      - "scripts/smokescreen-global-benchmark.mjs"
+      - "scripts/package-smokescreen-release.mjs"
+      - "tests/hercules-smokescreen*.test.mjs"
+      - "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md"
+      - "releases/hercules-smokescreen-v2.1.0/**"
+      - ".github/workflows/hercules-smokescreen-release-package.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "hercules-runtime/smokescreen-agent.mjs"
+      - "hercules-runtime/smokescreen-forge-ingress.mjs"
+      - "scripts/smokescreen-global-benchmark.mjs"
+      - "scripts/package-smokescreen-release.mjs"
+      - "tests/hercules-smokescreen*.test.mjs"
+      - "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md"
+      - "releases/hercules-smokescreen-v2.1.0/**"
+      - ".github/workflows/hercules-smokescreen-release-package.yml"
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+jobs:
+  package:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+
+      - name: Enforce Hercules security boundaries
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+          node scripts/verify-hercules-execution-contract.mjs
+
+      - name: Run SmokeScreen release tests
+        run: |
+          node --test tests/hercules-smokescreen-agent.test.mjs
+          node --test tests/hercules-smokescreen-forge-ingress.test.mjs
+          node --test tests/hercules-smokescreen-global-benchmark.test.mjs
+          node --test tests/hercules-smokescreen-release-package.test.mjs
+
+      - name: Build exact-commit source package
+        run: |
+          rm -rf /tmp/hercules-smokescreen-v2.1.0
+          node scripts/package-smokescreen-release.mjs             --commit-sha "$SOURCE_SHA"             --output-dir /tmp/hercules-smokescreen-v2.1.0
+
+      - name: Build deterministic archive and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar             --sort=name             --mtime='UTC 1970-01-01'             --owner=0             --group=0             --numeric-owner             -C /tmp/hercules-smokescreen-v2.1.0             -cf - .           | gzip -n > /tmp/hercules-smokescreen-v2.1.0.tgz
+          sha256sum /tmp/hercules-smokescreen-v2.1.0.tgz             > /tmp/hercules-smokescreen-v2.1.0.tgz.sha256
+
+      - name: Attest package provenance
+        if: github.event_name == 'push'
+        uses: actions/attest@508db95dd578ae2727ebd6217d5ba78e4fbda05d
+        with:
+          subject-path: /tmp/hercules-smokescreen-v2.1.0.tgz
+
+      - name: Upload public preview artifact
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: hercules-smokescreen-v2.1.0-${{ env.SOURCE_SHA }}
+          path: |
+            /tmp/hercules-smokescreen-v2.1.0.tgz
+            /tmp/hercules-smokescreen-v2.1.0.tgz.sha256
+            /tmp/hercules-smokescreen-v2.1.0/smokescreen-release-manifest.json
+          if-no-files-found: error
+          retention-days: 90
