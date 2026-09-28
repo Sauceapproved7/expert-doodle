@@ -8,6 +8,9 @@ on:
     paths:
       - "sauceapproved-studio/content-multiplier/**"
       - "tests/sauceapproved-content-multiplier.test.mjs"
+      - "governance/owner-code-policy.json"
+      - "docs/HERCULES-CONTENT-MULTIPLIER-V1.md"
+      - "IP_PROVENANCE.md"
       - ".github/workflows/content-multiplier.yml"
 
 permissions:
@@ -16,10 +19,17 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          node-version: 20
+          node-version: "22"
       - name: Run Content Multiplier tests
         run: node --test tests/sauceapproved-content-multiplier.test.mjs
+      - name: Owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Security baseline
+        run: node scripts/security-baseline.mjs
+      - name: Hercules execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
