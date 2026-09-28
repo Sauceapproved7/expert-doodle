@@ -193,3 +193,10 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Origin: original SauceApproved/Hercules implementation created with AI assistance at the founder's request for an old-school camera experience.
 - Runtime dependencies: browser-standard camera/canvas/MediaRecorder APIs and Node.js built-ins; no copied third-party filters, assets, binaries, or vendored runtime source.
 - Scope: local-first capture and WebM export where supported; no server upload or unverified AI execution. Split-frame proof and portable look recipe are Hercules differentiators, not claims of global uniqueness.
+
+## SauceApproved Kids Studio v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/kids/`, Studio route and manifest integration, focused tests, and `docs/SAUCEAPPROVED-KIDS-STUDIO-V1.md`.
+- Origin: original SauceApproved/Hercules implementation created with AI assistance for parent-operated family storytelling.
+- Runtime dependencies: browser-standard JavaScript and Node.js built-ins; no copied third-party templates, artwork, binaries, or vendor source.
+- Scope: local browser-memory planning and explicit text download. No child account, server upload, public posting, AI media generation, or automatic video linkage. The six planning additions are Hercules differentiators, with no exclusivity claim about competitors.

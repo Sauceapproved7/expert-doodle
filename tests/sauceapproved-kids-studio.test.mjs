@@ -1,0 +1,29 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {createStudioHttpHandler} from "../hercules-video/studio-server.mjs";
+
+test("Kids Studio exposes three parent-operated kits with two working additions each",async()=>{
+  const handle=createStudioHttpHandler();
+  const manifest=JSON.parse((await handle({method:"GET",pathname:"/api/studio/kids/manifest"})).body);
+  assert.equal(manifest.kits.length,3);
+  assert.equal(manifest.storage,"device-only");
+  assert.equal(manifest.serverUpload,false);
+  assert.equal(manifest.childAccounts,false);
+  for(const kit of manifest.kits) assert.equal(kit.differentiators.length,2);
+  const page=await handle({method:"GET",pathname:"/kids"});
+  assert.equal(page.status,200);
+  assert.match(page.body,/Neighborhood Hero/);
+  assert.match(page.body,/Dream Director/);
+  assert.match(page.body,/Time Capsule/);
+  assert.match(page.body,/Parent review required/);
+  assert.match(page.headers["content-security-policy"],/script-src 'self'/);
+  const client=await handle({method:"GET",pathname:"/assets/kids-studio.js"});
+  assert.equal(client.status,200);
+  for(const feature of ["Choice Compass","Courage Replay","beat-board","role-swap","then-now","privacy-check"]) assert.match(client.body,new RegExp(feature));
+  const root=await handle({method:"GET",pathname:"/"});
+  assert.match(root.body,/href="\/kids"/);
+  const studio=JSON.parse((await handle({method:"GET",pathname:"/api/studio/manifest"})).body);
+  assert.ok(studio.surfaces.some(surface=>surface.id==="kids"));
+  const mutation=await handle({method:"POST",pathname:"/api/studio/kids/export"});
+  assert.notEqual(mutation.status,200);
+});

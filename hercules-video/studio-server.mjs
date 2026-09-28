@@ -8,6 +8,7 @@ import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/c
 import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core.mjs";
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
+import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -323,7 +324,7 @@ ${statusBadge("Execution",bridgeLabel,bridgeConnected ? "good" : "warn")}
 <div><div class="eyebrow">Operator</div><h2>${escapeHtml(surfaces.get("project-brief"))}</h2><p>Capture the creative brief and prepare the run plan without pretending execution is connected.</p></div>
 <div class="notice">${escapeHtml(bridgeLabel)}. Start and resume stay locked until the owned execution bridge is verified.</div>
 <div class="surface-list">
-${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : surface.id==="brand-brain" ? `<a class="surface" href="/brand-brain">${escapeHtml(surface.label)}</a>` : surface.id==="market" ? `<a class="surface" href="/market">${escapeHtml(surface.label)}</a>` : surface.id==="vintage-camera" ? `<a class="surface" href="/vintage-camera">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
+${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : surface.id==="brand-brain" ? `<a class="surface" href="/brand-brain">${escapeHtml(surface.label)}</a>` : surface.id==="market" ? `<a class="surface" href="/market">${escapeHtml(surface.label)}</a>` : surface.id==="vintage-camera" ? `<a class="surface" href="/vintage-camera">${escapeHtml(surface.label)}</a>` : surface.id==="kids" ? `<a class="surface" href="/kids">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
 </div>
 <div>
 <h2>${escapeHtml(surfaces.get("run-status"))}</h2>
@@ -434,6 +435,19 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/vintage-camera/manifest") {
       return json(createVintageCameraManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/kids") {
+      return {status:200,headers:CAMERA_HTML_HEADERS,body:renderKidsStudio()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/kids-studio.js") {
+      const body=await readFile(new URL("../sauceapproved-studio/kids/client.js",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/kids/manifest") {
+      return json(createKidsStudioManifest());
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/status") {
