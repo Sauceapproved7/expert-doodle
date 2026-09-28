@@ -56,6 +56,7 @@ jobs:
         run: |
           node --test tests/hercules-smokescreen-agent.test.mjs
           node --test tests/hercules-smokescreen-forge-ingress.test.mjs
+          node --test tests/hercules-smokescreen-attack-enrichment.test.mjs
           node --test tests/hercules-smokescreen-global-benchmark.test.mjs
           node --test tests/hercules-smokescreen-release-package.test.mjs
 
