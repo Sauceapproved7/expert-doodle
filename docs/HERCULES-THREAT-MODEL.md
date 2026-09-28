@@ -34,6 +34,7 @@ Hercules must protect:
 16. **Domain-agent -> execution ledger -> background runner -> worker runtime**: execution eligibility, tenant entitlement, metering, idempotency, job state, runtime isolation, and audit evidence are separate controls. A successful authorization decision does not permit an arbitrary workload.
 17. **Tenant API key -> Domain Agent**: customer API keys are hashed at rest, resolved server-side, bound to one organization, expiry/status checked, and must carry explicit `domain-agent:read`, `domain-agent:execute`, `domain-agent:*`, or `*` scope as appropriate.
 18. **Commercial plan -> execution allowance**: subscription state and monthly execution limits are authorization-adjacent commercial controls. SauceApproved's founder control-plane entitlement is explicitly marked as an internal owner entitlement and must not be inherited by customer tenants.
+19. **AppDeploy billing custody -> Supabase launch gate**: the owned Hercules Titan runtime may hold Stripe credentials in AppDeploy's encrypted backend-only secret store. The launch gate may consume only the exact HTTPS Titan origin's redacted live readiness, requires a successful Stripe account probe plus live-mode and webhook evidence, binds downstream catalog/payment evidence to a SHA-256 Stripe account fingerprint, and fails closed on timeout, malformed data, account mismatch, or unavailable evidence. No Stripe credential crosses this boundary.
 
 ## Primary threats and required controls
 
@@ -47,7 +48,7 @@ Controls: server-side workspace membership checks, role allowlists, project/work
 Controls: authenticated JWT ingress, RLS ownership checks, composite session/message ownership keys, server-only assistant/tool/accounting writes, bounded message and metadata sizes, explicit rather than automatic long-term memory writes, owner-scoped semantic retrieval, expired-memory cleanup, and system instructions that treat recalled memory and conversation history as untrusted context rather than authority.
 
 ### Secret disclosure
-Controls: no committed secrets, no secret-shaped audit fields, Vault custody for signer keys, no private-key return paths, no logging of bearer tokens, lifecycle tokens stored only by hash, and invite/recovery tokens carried in URL fragments so they are not sent in the initial HTTP request or referrer.
+Controls: no committed secrets, no secret-shaped audit fields, Vault custody for signer keys, AppDeploy encrypted backend-only custody for the Titan Stripe credential, no private-key or provider-secret return paths, no logging of bearer tokens, public billing readiness limited to redacted booleans/mode plus a one-way account fingerprint, lifecycle tokens stored only by hash, and invite/recovery tokens carried in URL fragments so they are not sent in the initial HTTP request or referrer.
 
 ### Remote-code and process escape
 Controls: generated-template constraints, restrictive preview environment, bounded request bodies, explicit child-process allowlist. Hercules does not claim hardened arbitrary-code sandboxing.
