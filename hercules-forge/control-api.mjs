@@ -162,6 +162,7 @@ export function createForgeControlService({
   readinessCheck = null,
   serviceMode = "development",
   publicOrigin = null,
+  smokeScreenObserver = null,
 }) {
   if (!root) throw new TypeError("root is required");
   if (typeof token !== "string" || token.length < 16) {
@@ -179,6 +180,28 @@ export function createForgeControlService({
   const artifactRoot = join(root, "artifacts");
 
   const server = http.createServer(async (req, res) => {
+    if (smokeScreenObserver) {
+      let smokePath = "/";
+      try {
+        smokePath = new URL(req.url ?? "/", "http://localhost").pathname;
+      } catch {
+        smokePath = String(req.url ?? "/").slice(0, 2048);
+      }
+      res.once("finish", () => {
+        const observation = smokeScreenObserver.observe({
+          method: req.method ?? "GET",
+          pathname: smokePath,
+          statusCode: res.statusCode,
+          remoteAddress: req.socket?.remoteAddress ?? "",
+          userAgent: req.headers["user-agent"] ?? "",
+          hasAuthorizationHeader: typeof req.headers.authorization === "string",
+        });
+        if (observation && typeof observation.catch === "function") {
+          void observation.catch(() => {});
+        }
+      });
+    }
+
     // Defense-in-depth headers apply to every Forge response. TLS terminators
     // may add stricter edge policy, but the application should fail safe when
     // deployed behind a transparent proxy.
@@ -222,7 +245,20 @@ export function createForgeControlService({
           auditEvents: true,
           identityLifecycle: Boolean(notificationAdapter && publicOrigin),
           runtimeDataMaxBytes,
+          smokeScreen: smokeScreenObserver?.publicStatus?.() ?? {
+            enabled: false,
+            mode: "OFF",
+            enforcement: false,
+          },
         });
+      }
+
+      if (req.method === "GET" && url.pathname === "/v1/security/smokescreen") {
+        requireToken(req, token);
+        if (!smokeScreenObserver || typeof smokeScreenObserver.snapshot !== "function") {
+          return send(res, 503, {error: "smokescreen_not_configured"});
+        }
+        return send(res, 200, smokeScreenObserver.snapshot());
       }
 
       if (req.method === "GET" && url.pathname === "/ready") {
@@ -1142,6 +1178,7 @@ export function listenForgeControlService({
   readinessCheck = null,
   serviceMode = "development",
   publicOrigin = null,
+  smokeScreenObserver = null,
   host = "127.0.0.1",
   port = 38700,
 }) {
@@ -1157,6 +1194,7 @@ export function listenForgeControlService({
     readinessCheck,
     serviceMode,
     publicOrigin,
+    smokeScreenObserver,
   });
   server.listen(port, host);
   return server;
