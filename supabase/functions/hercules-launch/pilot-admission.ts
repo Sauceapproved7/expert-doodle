@@ -60,11 +60,11 @@ async function contactForToken(admin:any,tokenSha256:string){
   if(admission.synthetic_certification===true&&!/@example\.com$/i.test(String(data.email||'')))return null;
   return data;
 }
-export async function pilotAdmissionGet(_req:Request,url:URL,ctx:{admin:any}){
+export async function pilotAdmissionGet(_req:Request,url:URL,ctx:{admin?:any;U:string;S:string}){\n  if(!ctx.S)return page('<h1>Service unavailable</h1><p class="err">server_auth_configuration_required</p>',503);\n  const admin=ctx.admin||createClient(ctx.U,ctx.S,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
   const token=tokenFrom(url);
   if(!token)return page('<h1>Invitation unavailable</h1><p class="muted">This controlled admission handoff is invalid or expired.</p>',404);
   const tokenSha256=await sha256Hex(token);
-  const contact=await contactForToken(ctx.admin,tokenSha256);
+  const contact=await contactForToken(admin,tokenSha256);
   if(!contact)return page('<h1>Invitation unavailable</h1><p class="muted">This controlled admission handoff is invalid or expired.</p>',404);
   return page(
     '<h1>Accept Hercules Founding Pilot access</h1>'+
@@ -158,7 +158,7 @@ function successPage(ctx:{U:string;K:string;session:any;organizationId:string;pa
     '<script type="module">history.replaceState(null,"",location.pathname);import{createClient}from"https://esm.sh/@supabase/supabase-js@2";const cfg='+publicConfig+';const session='+session+';const sb=createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:false}});const r=await sb.auth.setSession(session);if(r.error){document.getElementById("state").textContent="Session setup failed. Request a fresh pilot handoff."}else{document.getElementById("state").textContent="Session secured. Opening Hercules…";location.replace(location.pathname)}}</script>';
   return page(body);
 }
-export async function pilotAdmissionPost(req:Request,url:URL,ctx:{admin:any;U:string;K:string;S:string}){
+export async function pilotAdmissionPost(req:Request,url:URL,ctx:{admin?:any;U:string;K:string;S:string}){\n  const admin=ctx.admin||createClient(ctx.U,ctx.S,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
   const token=tokenFrom(url);
   if(!token)return page('<h1>Invitation unavailable</h1><p class="err">Invalid controlled-admission handoff.</p>',404);
   const form=await req.formData().catch(()=>null);
@@ -166,7 +166,7 @@ export async function pilotAdmissionPost(req:Request,url:URL,ctx:{admin:any;U:st
     return page('<h1>Acceptance required</h1><p class="err">explicit_acceptance_required</p>',400);
   }
   if(!ctx.S||!ctx.K)return page('<h1>Service unavailable</h1><p class="err">server_auth_configuration_required</p>',503);
-  if(!await registrationClosed(ctx.admin))return page('<h1>Admission paused</h1><p class="err">public_registration_must_remain_closed</p>',409);
+  if(!await registrationClosed(admin))return page('<h1>Admission paused</h1><p class="err">public_registration_must_remain_closed</p>',409);
 
   const tokenSha256=await sha256Hex(token);
   const contact=await contactForToken(ctx.admin,tokenSha256);
@@ -177,7 +177,7 @@ export async function pilotAdmissionPost(req:Request,url:URL,ctx:{admin:any;U:st
     ...(contact.metadata||{}),
     pilot_admission:{...(contact.metadata?.pilot_admission||{}),status:'redeeming',redeeming_at:now}
   };
-  const {data:claimed,error:claimError}=await ctx.admin.from('marketing_contacts')
+  const {data:claimed,error:claimError}=await admin.from('marketing_contacts')
     .update({metadata:claimedMetadata,updated_at:now})
     .eq('id',contact.id)
     .eq('updated_at',contact.updated_at)
@@ -198,12 +198,12 @@ export async function pilotAdmissionPost(req:Request,url:URL,ctx:{admin:any;U:st
       app_metadata:{...(user.app_metadata||{}),hercules_pilot:true,pilot_admission_version:PILOT_ADMISSION_VERSION}
     });
 
-    const org=await pilotOrganization(ctx.admin,claimed,user.id);
+    const org=await pilotOrganization(admin,claimed,user.id);
     const clientAuth=createClient(ctx.U,ctx.K,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
     const {data:verified,error:verifyError}=await clientAuth.auth.verifyOtp({token_hash:hashedToken,type:'email'});
     if(verifyError||!verified?.session)throw new Error('pilot_magiclink_exchange_failed');
 
-    const defense=await passwordDefense(ctx.admin);
+    const defense=await passwordDefense(admin);
     const acceptedAt=new Date().toISOString();
     const acceptedMetadata={
       ...(claimed.metadata||{}),
@@ -219,13 +219,13 @@ export async function pilotAdmissionPost(req:Request,url:URL,ctx:{admin:any;U:st
         password_signin_ready:false
       }
     };
-    const {error:finalizeError}=await ctx.admin.from('marketing_contacts')
+    const {error:finalizeError}=await admin.from('marketing_contacts')
       .update({metadata:acceptedMetadata,organization_id:org.id,updated_at:acceptedAt})
       .eq('id',claimed.id)
       .contains('metadata',{pilot_admission:{token_sha256:tokenSha256,status:'redeeming'}});
     if(finalizeError)throw new Error('pilot_admission_finalize_failed');
 
-    await ctx.admin.from('marketing_events').insert({
+    await admin.from('marketing_events').insert({
       event_name:'pilot_admission_accepted',
       event_source:'hercules-launch',
       url:'/controlled-pilot-admission',
@@ -245,7 +245,7 @@ export async function pilotAdmissionPost(req:Request,url:URL,ctx:{admin:any;U:st
     return successPage({U:ctx.U,K:ctx.K,session:verified.session,organizationId:org.id,passwordDefense:defense});
   }catch(error){
     const code=error instanceof Error?error.message:'pilot_admission_failed';
-    await markFailed(ctx.admin,claimed,code);
+    await markFailed(admin,claimed,code);
     return page('<h1>Pilot setup incomplete</h1><p class="err">'+code.replace(/[^a-z0-9_-]/gi,'_')+'</p><p class="muted">Request a fresh one-time pilot handoff.</p>',409);
   }
 }
