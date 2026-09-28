@@ -14,7 +14,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <section class="card"><h2>Shopify Direct</h2><p class="muted">First-party Hercules Shopify connection for production webhooks plus automatic <span class="mono">sauceapproved.com</span> attachment/SSL/primary-state monitoring. The connection is locked to Shop GID <span class="mono">gid://shopify/Shop/100002726208</span>.</p><input id="shopclient" class="input" autocomplete="off" placeholder="Shopify Client ID"><input id="shopsecret" class="input" type="password" autocomplete="new-password" placeholder="Shopify Client Secret"><div class="row" style="margin-top:10px"><button id="shopsave" class="btn primary">Save Shopify connection + arm monitor</button><button id="shopstatus" class="btn">Domain status</button></div><div id="shopout" class="status"></div></section>
 <section class="card"><h2>Stripe Direct</h2><p class="muted">Owner-controlled Hercules billing connection. Enter the Stripe secret key only here; Hercules validates the account, stores the key in Vault, and creates or reuses the webhook endpoint with webhook signing. Complete Stripe identity verification and payout-bank setup in Stripe before paid launch.</p><input id="stripekey" class="input" type="password" autocomplete="new-password" placeholder="Stripe Secret Key"><div class="row" style="margin-top:10px"><button id="stripesave" class="btn primary">Connect Stripe + webhook</button><button id="stripestatus" class="btn">Status</button></div><div id="stripeout" class="status"></div></section>
 <section class="card" style="grid-column:1/-1"><h2>Studio & Ads Commercial Decisions — plus Hercules Cleaner</h2><p class="muted">Product-specific owner approvals for SauceApproved Studio, SauceApproved Ads, and Hercules Cleaner. These decisions are separate from Hercules Revenue Recovery pricing and legal approvals. Checkout stays locked until pricing, Terms, Privacy, Stripe Direct readiness, and the controlled paid-path test are all verified.</p><div class="row"><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/SAUCEAPPROVED-SOFTWARE-TERMS-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Software Terms candidate</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Software Privacy candidate</a><button id="softwarecommercialrefresh" class="btn">Refresh product status</button></div><div class="status"><b>Candidate monthly catalog</b><br>Starter — $29 · Pro — $79 · Agency — $199<br><br>No charge is enabled by approving these documents. Payment activation remains a separate verified gate.</div><div class="status"><b>Studio + Ads owner packet</b><br>This one packet covers only SauceApproved Studio + SauceApproved Ads pricing, Terms, and Privacy. Hercules Cleaner stays separate. Stripe/payment gates are not part of this owner approval.<div id="softwarebundlesummary" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="softwarebundlerefresh" class="btn">Refresh Studio + Ads packet</button><button id="softwarebundleapprove" class="btn primary" disabled>Approve Studio + Ads commercial packet</button></div><div id="softwarebundleout" class="status"></div></div><div id="softwarecommercialrows" class="launch-summary"></div><div id="softwarecommercialout" class="status"></div><div class="status"><b>Controlled live payment verification</b><br>Each product uses its own isolated Stripe catalog and subscription state. Starting a verification creates a Stripe checkout session but does not charge until you complete Stripe checkout. If completed, Hercules automatically cancels the verification subscription, refunds the payment, validates signed lifecycle webhooks, and only then can activate paid checkout.<div id="softwarepaymentsummary" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="softwarepaymentrefresh" class="btn">Refresh payment verification</button><button id="softwarepaymentstudio" class="btn primary" disabled>Start Studio $29 refund test</button><button id="softwarepaymentads" class="btn primary" disabled>Start Ads $29 refund test</button></div><div id="softwarepaymentout" class="status"></div></div></section>
-<section class="card" style="grid-column:1/-1"><h2>Titan Founding Access Commercial Packet</h2><p class="muted">Owner-controlled approval for the separate Hercules Titan Founding Access offer. Candidate price: <b>$49 one-time</b>. This packet approves Titan pricing, entitlement/delivery/refund terms, Terms, and Privacy only. Stripe readiness, paid-path verification, Shopify reconciliation, and public paid launch remain separate fail-closed gates.</p><div class="row"><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/HERCULES-TITAN-TERMS-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Titan Terms candidate</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/HERCULES-TITAN-PRIVACY-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Titan Privacy candidate</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-TITAN-FOUNDING-ACCESS-OFFER-V1.md" target="_blank" rel="noopener noreferrer">Titan offer packet</a></div><div id="titanbundlesummary" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="titanbundlerefresh" class="btn">Refresh Titan packet</button><button id="titanbundleapprove" class="btn primary" disabled>Approve Titan commercial packet</button></div><div id="titanbundleout" class="status"></div></section>
+<section class="card" style="grid-column:1/-1"><h2>Titan Founding Access Commercial Packet</h2><p class="muted">Owner-controlled approval for the separate Hercules Titan Founding Access offer. Candidate price: <b>$49 one-time</b>. This packet approves Titan pricing, entitlement/delivery/refund terms, Terms, and Privacy only. Stripe readiness, paid-path verification, Shopify reconciliation, and public paid launch remain separate fail-closed gates.</p><div class="row"><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/HERCULES-TITAN-TERMS-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Titan Terms candidate</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/HERCULES-TITAN-PRIVACY-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Titan Privacy candidate</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/launch/HERCULES-TITAN-FOUNDING-ACCESS-OFFER-V1.md" target="_blank" rel="noopener noreferrer">Titan offer packet</a></div><div id="titanbundlesummary" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="titanbundlerefresh" class="btn">Refresh Titan packet</button><button id="titanbundleapprove" class="btn primary" disabled>Approve Titan commercial packet</button></div><div id="titanbundleout" class="status"></div><div class="status"><b>Titan one-time payment verification</b><br>This controlled test is isolated from Studio/Ads subscriptions. It creates no charge until the authenticated owner explicitly starts the $49 Stripe checkout and completes it. After a successful test payment, Hercules requests a refund automatically and verifies the signed checkout/refund events plus Stripe payout capability and balance-transaction state. It does not open public checkout.</div><div id="titanpaymentsummary" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="titanpaymentrefresh" class="btn">Refresh Titan payment status</button><button id="titanpaymentstart" class="btn primary" disabled>Start Titan $49 live verification</button><button id="titanpaymentreconcile" class="btn">Reconcile Titan verification</button></div><div id="titanpaymentout" class="status"></div></section>
 <section class="card" data-linear-issue="DA-24"><h2>SauceApproved Social</h2><p class="muted">Owner handoff for the first SauceApproved brand channel. LinkedIn is first; Metricool is the scheduling connection. This surface exposes only the prepared public company-page package. No passwords, cookies, session tokens, MFA codes, or Vault material are collected here.</p><div class="status"><b>Public setup package</b><br>Page: SauceApproved<br>Legal entity: SauceApproved enterprise LLC<br>Industry: Software Development<br>Company type: Privately Held<br>Tagline: Verifiable AI software that helps businesses recover cash, keep control, and prove every action.<br>Website: <span class="mono">https://sauceapproved.com/?utm_source=linkedin&amp;utm_medium=organic_social&amp;utm_campaign=founding-pilot-organic-v1&amp;utm_content=company-page</span></div><div class="row" style="margin-top:10px"><a class="btn primary" href="https://www.linkedin.com/company/setup/new/" target="_blank" rel="noopener noreferrer">Open LinkedIn Company Page setup</a><a class="btn" href="https://app.metricool.com/brands/connections?blogId=6894246" target="_blank" rel="noopener noreferrer">Open Metricool Connections</a></div><div class="status"><b>Owner action</b><br>Create/verify the SauceApproved LinkedIn Company Page and accept LinkedIn-required terms or verification.<br>Authorize Metricool and select the SauceApproved Company Page.<br><br><b>Automated after authorization</b><br>Verify the Metricool connection and scheduling availability, then record completion evidence in DA-24.<br><br>No post is published by this handoff.</div></section>
 <section class="card"><h2>Personal Browser Bridge</h2><p class="muted">Pair one explicitly approved browser tab with Hercules. The bridge never exports passwords, cookies, OTP/MFA codes, provider session tokens, or CAPTCHA state.</p><div class="row"><button id="browserpair" class="btn primary">Create pairing token</button><button id="browserstatus" class="btn">Status</button></div><div id="browserout" class="status"></div></section>
 <section class="card"><h2>Launch Readiness</h2><p class="muted">One production view of the live storefront and final custom-domain gate.</p><div class="row"><button id="launchstatus" class="btn primary">Refresh launch readiness</button></div><div id="launchsummary" class="launch-summary"></div><details><summary>Raw launch data</summary><div id="launchout" class="status"></div></details></section>
@@ -161,7 +161,7 @@ function renderLaunchSummary(p){
   );
   if(readiness?.storefront_verified_at)box.append(launchLine('Storefront verified at',String(readiness.storefront_verified_at),'pass'));
 }
-async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),stripeStatus(),softwareCommercialStatus(),softwareCommercialBundleStatus(),softwarePaymentVerificationStatus(),personalBrowserStatus(),launchReadinessStatus(),storefrontSmokeStatus(),launchDecisionStatus(),launchPacketStatus()]);const paymentReturn=new URLSearchParams(location.search).get('software_payment_verify');if(paymentReturn==='success'){await Promise.allSettled([reconcileSoftwarePaymentVerification('sauceapproved-studio'),reconcileSoftwarePaymentVerification('sauceapproved-ads')]);await softwarePaymentVerificationStatus().catch(()=>{})}}}
+async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),stripeStatus(),softwareCommercialStatus(),softwareCommercialBundleStatus(),softwarePaymentVerificationStatus(),titanCommercialBundleStatus(),titanPaymentVerificationStatus(),personalBrowserStatus(),launchReadinessStatus(),storefrontSmokeStatus(),launchDecisionStatus(),launchPacketStatus()]);const params=new URLSearchParams(location.search);const paymentReturn=params.get('software_payment_verify');if(paymentReturn==='success'){await Promise.allSettled([reconcileSoftwarePaymentVerification('sauceapproved-studio'),reconcileSoftwarePaymentVerification('sauceapproved-ads')]);await softwarePaymentVerificationStatus().catch(()=>{})}const titanReturn=params.get('titan_payment_verify');if(titanReturn==='success'){await reconcileTitanPaymentVerification().catch(()=>{});await titanPaymentVerificationStatus().catch(()=>{})}}}
 $('signin').onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error){$('authmsg').textContent=r.error.message;show('authmsg',true)}};
 $('signout').onclick=()=>sb.auth.signOut();
 async function driveStatus(){try{$('gout').textContent=fmt(await call('hercules-drive',{action:'status'}))}catch(e){$('gout').textContent='Drive: '+e.message}}
@@ -317,6 +317,70 @@ async function approveTitanCommercialBundle(){
   }
 }
 
+let titanPaymentState=null;
+function renderTitanPaymentVerification(d){
+  titanPaymentState=d||null;
+  const box=$('titanpaymentsummary');box.replaceChildren();
+  const stripeLive=d?.stripe?.status==='active'&&d?.stripe?.livemode===true;
+  const p=d?.prerequisites||{};
+  const catalog=d?.catalog||{};
+  const catalogReady=Boolean(
+    catalog?.active===true &&
+    catalog?.livemode===true &&
+    Number(catalog?.unit_amount_cents)===4900 &&
+    String(catalog?.currency||'').toLowerCase()==='usd'
+  );
+  const run=d?.latest_run||null;
+  box.append(
+    launchLine('Hercules Stripe Direct',stripeLive?'LIVE + OWNED':'LIVE CONNECTION REQUIRED',stripeLive?'pass':'wait'),
+    launchLine('Titan owner packet',p.ownerReady?'APPROVED':'PENDING',p.ownerReady?'pass':'wait'),
+    launchLine('Titan provider',p.providerReady?'READY':'PENDING',p.providerReady?'pass':'wait'),
+    launchLine('Titan Stripe catalog',catalogReady?'LIVE $49 ONE-TIME READY':'NOT READY',catalogReady?'pass':'wait'),
+    launchLine('Titan payment path',p.paymentPathVerified?'VERIFIED':String(run?.status||'PENDING').toUpperCase(),p.paymentPathVerified?'pass':'wait')
+  );
+  $('titanpaymentstart').disabled=!(
+    stripeLive &&
+    p.ownerReady===true &&
+    p.providerReady===true &&
+    p.paymentPathVerified!==true &&
+    catalogReady
+  );
+}
+async function titanPaymentVerificationStatus(){
+  try{
+    const d=await call('hercules-provider-connect',{action:'titan_payment_status'});
+    renderTitanPaymentVerification(d);$('titanpaymentout').textContent=fmt(d);return d
+  }catch(e){
+    titanPaymentState=null;$('titanpaymentstart').disabled=true;
+    $('titanpaymentsummary').replaceChildren(launchLine('Titan payment verification','UNAVAILABLE','fail'));
+    $('titanpaymentout').textContent='Titan payment verification: '+e.message;throw e
+  }
+}
+async function prepareTitanPaymentVerification(){
+  const phrase='START TITAN $49 LIVE VERIFICATION';
+  const confirmation=window.prompt('This controlled live verification charges $49 only if you complete Stripe checkout. Hercules will automatically request a refund and verify the Titan checkout/refund/payout state. Type exactly: '+phrase);
+  if(confirmation!==phrase){if(confirmation!==null)$('titanpaymentout').textContent='Verification not started: confirmation did not match.';return}
+  try{
+    const d=await call('hercules-provider-connect',{action:'prepare_titan_payment_verification'});
+    $('titanpaymentout').textContent=fmt(d);
+    if(d.checkout_url)location.href=d.checkout_url;
+  }catch(e){
+    $('titanpaymentout').textContent='Titan payment verification: '+e.message;
+  }
+}
+async function reconcileTitanPaymentVerification(){
+  try{
+    const d=await call('hercules-provider-connect',{action:'reconcile_titan_payment_verification'});
+    $('titanpaymentout').textContent=fmt(d);
+    await titanPaymentVerificationStatus();
+    await titanCommercialBundleStatus();
+    return d
+  }catch(e){
+    if(!String(e.message||'').includes('verification_run_not_found'))$('titanpaymentout').textContent='Titan payment reconciliation: '+e.message;
+    throw e
+  }
+}
+
 let softwarePaymentState=null;
 function renderSoftwarePaymentVerification(d){
   softwarePaymentState=d||null;
@@ -410,6 +474,9 @@ $('softwarebundlerefresh').onclick=()=>softwareCommercialBundleStatus().catch(()
 $('softwarebundleapprove').onclick=()=>approveSoftwareCommercialBundle().catch(e=>{$('softwarebundleout').textContent='Studio + Ads packet decision: '+e.message});
 $('titanbundlerefresh').onclick=()=>titanCommercialBundleStatus().catch(()=>{});
 $('titanbundleapprove').onclick=()=>approveTitanCommercialBundle().catch(e=>{$('titanbundleout').textContent='Titan packet decision: '+e.message});
+$('titanpaymentrefresh').onclick=()=>titanPaymentVerificationStatus().catch(()=>{});
+$('titanpaymentstart').onclick=()=>prepareTitanPaymentVerification().catch(e=>{$('titanpaymentout').textContent='Titan payment verification: '+e.message});
+$('titanpaymentreconcile').onclick=()=>reconcileTitanPaymentVerification().catch(()=>{});
 $('softwarepaymentrefresh').onclick=()=>softwarePaymentVerificationStatus().catch(()=>{});
 $('softwarepaymentstudio').onclick=()=>prepareSoftwarePaymentVerification('sauceapproved-studio');
 $('softwarepaymentads').onclick=()=>prepareSoftwarePaymentVerification('sauceapproved-ads');
@@ -424,6 +491,7 @@ $('stripesave').onclick=async()=>{
     $('stripeout').textContent=fmt(d);
     await stripeStatus();
     await softwareCommercialStatus();
+    await titanPaymentVerificationStatus().catch(()=>{});
   }catch(e){
     $('stripekey').value='';
     $('stripeout').textContent='Stripe: '+e.message;
