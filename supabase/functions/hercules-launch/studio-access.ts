@@ -71,7 +71,8 @@ export async function studioAccessRequest(body:any,ctx:{U:string;K:string;S:stri
   let email:string;
   try{email=normalizeEmail(body?.email)}catch{return json({ok:true,instructionsSent:true})}
   const buyerEmailSha256=await sha256Hex(email);
-  const admin=adminClient(ctx);\n  const {data}=await admin.from('hercules_studio_purchase_entitlements')
+  const admin=adminClient(ctx);
+  const {data}=await admin.from('hercules_studio_purchase_entitlements')
     .select('id,status')
     .eq('buyer_email_sha256',buyerEmailSha256)
     .in('status',['paid_pending_claim','claimed'])
@@ -100,7 +101,8 @@ export async function studioAccessClaim(req:Request,ctx:{U:string;K:string;S:str
   if(error||!user?.id||!user?.email)return json({ok:false,error:'authenticated_user_required'},401);
 
   const buyerEmailSha256=await sha256Hex(normalizeEmail(user.email));
-  const admin=adminClient(ctx);\n  const {data:claim,error:claimError}=await admin.rpc('hercules_claim_studio_purchase',{
+  const admin=adminClient(ctx);
+  const {data:claim,error:claimError}=await admin.rpc('hercules_claim_studio_purchase',{
     p_user_id:user.id,
     p_email_sha256:buyerEmailSha256
   });
