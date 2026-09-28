@@ -3,6 +3,7 @@ import {pathToFileURL} from "node:url";
 import {inspectLaunchRunStateFile} from "./run-status.mjs";
 import {buildStudioViewModel,createStudioManifest} from "./studio-contract.mjs";
 import {createContentMultiplierManifest} from "../sauceapproved-studio/content-multiplier/core.mjs";
+import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/core.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -101,6 +102,59 @@ a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-dec
 </html>`;
 }
 
+function renderSalesAgentShell(manifest) {
+  const descriptions={
+    "Objection Intelligence Map":"Groups explicit buyer friction into useful objection evidence without inferring sensitive traits.",
+    "Adaptive Pitch Memory":"Keeps only explicitly stated sales context for the active session so the conversation adapts without hidden profiling.",
+    "Confidence-to-Handoff Governor":"Uses approved-knowledge support, locked-fact coverage, ambiguity and action risk to decide whether to answer, clarify or hand off.",
+    "Objection-to-Asset Bridge":"Turns recurring objection evidence into review-required Content Multiplier briefs instead of silently changing brand truth."
+  };
+  const cards=manifest.differentiators.map((name,index)=>`
+    <article class="feature">
+      <span>0${index+1}</span>
+      <h2>${escapeHtml(name)}</h2>
+      <p>${escapeHtml(descriptions[name] || "Owned SauceApproved sales intelligence.")}</p>
+    </article>`).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SauceApproved AI Sales Agent</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f7f7f7}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% 0,#17221c 0,#0a0d0b 36%,#040404 74%)}
+main{width:min(1120px,100%);margin:auto;padding:clamp(18px,4vw,42px)}
+a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-decoration:none;font-weight:700}
+.hero{padding:clamp(24px,5vw,54px);border:1px solid #25312a;border-radius:32px;background:linear-gradient(145deg,#111713,#0a0b0a);box-shadow:0 28px 100px #0009}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#86b698}.title{font-size:clamp(42px,9vw,86px);line-height:.92;margin:10px 0 18px;font-weight:950;letter-spacing:-.055em}.title em{font-style:normal;color:#aee0bd}
+.sub{max-width:780px;color:#b5b5b5;font-size:clamp(16px,2vw,20px);line-height:1.6}
+.status{margin-top:24px;padding:16px 18px;border:1px solid #574224;border-radius:18px;background:#1c160d;color:#f0ce8e;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.feature{min-height:220px;padding:24px;border-radius:24px;border:1px solid #202b24;background:#0b0e0cee}.feature span{font-size:11px;letter-spacing:.18em;color:#6f967c}.feature h2{font-size:24px;margin:38px 0 10px}.feature p{color:#999;line-height:1.55;margin:0}
+.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px;padding:18px;border:1px solid #222;border-radius:20px;background:#090909;color:#888}.pill{font-size:12px;border:1px solid #333;padding:7px 10px;border-radius:999px;color:#bbb}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.hero{border-radius:24px}.feature{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">SauceApproved Studios / Hercules-owned module</div>
+<h1 class="title">AI Sales <em>Agent</em></h1>
+<p class="sub">Grounded sales intelligence built around approved products, explicit customer context, consent, auditable handoff decisions and controlled business actions.</p>
+<div class="status">Action adapter not connected — business actions stay fail-closed until an authorized adapter is configured.</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="footer">
+<span>Execution policy: <b>${escapeHtml(manifest.executionPolicy)}</b></span>
+<span class="pill">Sensitive profiling disabled</span>
+</div>
+</main>
+</body>
+</html>`;
+}
+
 function renderStudioShell({manifest,model,bridge}) {
   const bridgeConnected=bridge?.connected===true;
   const bridgeLabel=bridgeConnected ? "Execution bridge connected" : "Execution bridge unavailable";
@@ -148,7 +202,7 @@ ${statusBadge("Execution",bridgeLabel,bridgeConnected ? "good" : "warn")}
 <div><div class="eyebrow">Operator</div><h2>${escapeHtml(surfaces.get("project-brief"))}</h2><p>Capture the creative brief and prepare the run plan without pretending execution is connected.</p></div>
 <div class="notice">${escapeHtml(bridgeLabel)}. Start and resume stay locked until the owned execution bridge is verified.</div>
 <div class="surface-list">
-${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
+${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
 </div>
 <div>
 <h2>${escapeHtml(surfaces.get("run-status"))}</h2>
@@ -222,6 +276,14 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/content-multiplier") {
       return {status:200,headers:HTML_HEADERS,body:renderContentMultiplierShell(createContentMultiplierManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/ai-sales-agent/manifest") {
+      return json(createSalesAgentManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/ai-sales-agent") {
+      return {status:200,headers:HTML_HEADERS,body:renderSalesAgentShell(createSalesAgentManifest())};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/status") {
