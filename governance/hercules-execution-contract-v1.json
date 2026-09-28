@@ -160,5 +160,72 @@
   ],
   "verifier": "scripts/verify-hercules-execution-contract.mjs",
   "test": "tests/hercules-implementation-enforcement.test.mjs",
-  "workflow": ".github/workflows/hercules-implementation-enforcement.yml"
+  "workflow": ".github/workflows/hercules-implementation-enforcement.yml",
+  "founderDirectives": {
+    "effectiveDate": "2026-09-28",
+    "strengthAndNameStandard": {
+      "enabled": true,
+      "strongCohesiveDurableDistinctiveProductionGrade": true,
+      "rejectGenericWeakRushedPlaceholderCopycatExecution": true
+    },
+    "outsideTheBoxBuildRule": {
+      "enabled": true,
+      "seekCreativeUnconventionalHighLeverageSolutions": true,
+      "requireTechnicallySoundSecureLawfulAuthorizedMaintainable": true
+    },
+    "billionDollarOperatingStandard": {
+      "enabled": true,
+      "enterpriseGradeDiscipline": true,
+      "areas": [
+        "architecture",
+        "security",
+        "reliability",
+        "testing",
+        "observability",
+        "documentation",
+        "data_handling",
+        "customer_experience",
+        "governance",
+        "deployment",
+        "incident_readiness",
+        "long_term_scalability"
+      ],
+      "notAClaimOfCurrentRevenueValuationScaleOrMarketPosition": true
+    },
+    "marketLeadershipMindset": {
+      "enabled": true,
+      "phrase": "We're here to take it over",
+      "competeAtHighestLevel": true,
+      "pursueCategoryDefiningValue": true,
+      "lawfulEthicalAuthorizedCompetition": true,
+      "prohibitUnsupportedDominanceClaims": true
+    },
+    "differentiatorRequirement": {
+      "enabled": true,
+      "minimumPerBuild": 2,
+      "requireMeaningfulUsefulMaintainableDifferentiators": true,
+      "verifyCompetitorAbsenceClaimsWithCurrentResearch": true,
+      "otherwiseDescribeAsHerculesDifferentiators": true
+    },
+    "nightlyWholeHerculesAudit": {
+      "requiredOperatingTarget": true,
+      "localTime": "00:00",
+      "timezone": "America/New_York",
+      "scope": [
+        "code",
+        "infrastructure",
+        "deployments",
+        "integrations",
+        "security",
+        "tests",
+        "automation",
+        "documentation",
+        "launch_dependencies",
+        "operational_health"
+      ],
+      "improveThenReverify": true,
+      "preserveOwnerOnlyBoundaries": true,
+      "requireVerifiedSchedulerBeforeClaimingActive": true
+    }
+  }
 }
