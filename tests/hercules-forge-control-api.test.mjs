@@ -327,3 +327,48 @@ test("control API fails closed on malformed cookie and path encoding", async () 
     await rm(root, {recursive: true, force: true});
   }
 });
+
+
+test("control API acknowledges mutating requests only after durable state flush", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-durable-"));
+  const calls = [];
+  const durableState = {
+    async flush() {
+      calls.push({kind:"flush",at:Date.now()});
+      return {verified:true};
+    },
+    async status() {
+      calls.push({kind:"status",at:Date.now()});
+      return {ok:true,objectCount:0};
+    },
+  };
+  const server = createForgeControlService({root, token, durableState});
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = "http://127.0.0.1:" + server.address().port;
+
+  try {
+    const response = await fetch(base + "/v1/projects", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        authorization:"Bearer " + token,
+      },
+      body:JSON.stringify({spec,metadata:{projectId:"durable-control-app"}}),
+    });
+    assert.equal(response.status, 201);
+    assert.equal(calls.filter((call) => call.kind === "flush").length, 1);
+
+    const health = await fetch(base + "/health");
+    assert.equal(health.status, 200);
+    assert.equal((await health.json()).durableState, true);
+
+    const ready = await fetch(base + "/ready");
+    assert.equal(ready.status, 200);
+    const readyBody = await ready.json();
+    assert.equal(readyBody.durableState.ok, true);
+    assert.equal(calls.some((call) => call.kind === "status"), true);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive:true, force:true});
+  }
+});
