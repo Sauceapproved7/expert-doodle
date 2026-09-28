@@ -10,6 +10,8 @@ An original, parent-operated story planner inside SauceApproved Studio. Route: `
 
 The interface inherits the vintage camera's analog feel and links to its separate local capture surface. A parent or guardian must affirm review before a shot plan can be previewed and downloaded. Switching kits or changing input invalidates the reviewed plan. The privacy check is intentionally limited and is not a substitute for human review.
 
+The family-facing UI labels the kits by genre. Distinct campaign angles are documented in `docs/SAUCEAPPROVED-KIDS-STUDIO-CAMPAIGNS-V1.md`; none limits who can use a kit.
+
 No child account, server upload, public posting, cloud generation, or media storage is implemented. The plan exists in browser memory until explicitly downloaded as plain text; the camera does not automatically receive it. Server mutation endpoints remain default-deny. Parent review includes permission to film others. This is a parent-operated design, not a claim that the service has completed legal review for a child-directed account or collection flow.
 
 Verification: `node --test tests/sauceapproved-kids-studio.test.mjs tests/hercules-video-studio-server.test.mjs tests/hercules-video-studio-contract.test.mjs`; `node scripts/verify-hercules-execution-contract.mjs`.
