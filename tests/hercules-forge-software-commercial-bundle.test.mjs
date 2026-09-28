@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 
 const bridge=await readFile(new URL("../supabase/functions/hercules-private-bridge/index.ts",import.meta.url),"utf8");
 const ui=await readFile(new URL("../supabase/functions/hercules-integrations/index.ts",import.meta.url),"utf8");
+const migration=await readFile(new URL("../supabase/migrations/20260928100000_hercules_software_commercial_bundle_v1.sql",import.meta.url),"utf8");
 
 test("software commercial bundle is locked to exact legal docs and catalog",()=>{
   assert.match(bridge,/SAUCEAPPROVED_SOFTWARE_TERMS_SHA='d45b351965b1d93855b004ed230bbff32bee1272'/);
@@ -40,4 +41,17 @@ test("Integrations exposes one commercial packet approval without auto approval"
   assert.match(ui,/window\.prompt\('Type exactly: '/);
   assert.match(ui,/APPROVE SAUCEAPPROVED SOFTWARE COMMERCIAL PACKET /);
   assert.doesNotMatch(ui,/software_commercial_bundle_approve[^\n]+confirmation:['"]APPROVE/);
+});
+
+
+test("bundle approval is atomic in the database and cannot touch payment gates",()=>{
+  assert.match(migration,/hercules_software_owner_approve_bundle/);
+  assert.match(migration,/auth\.uid\(\)/);
+  assert.match(migration,/role='owner'/);
+  assert.match(migration,/software-commercial-v1/);
+  assert.match(migration,/760ce84a641a2642a46de1b039eabdd2e7d45ba9101633284d5bf69f27e09862/);
+  assert.match(migration,/approval_type in \('pricing','terms','privacy'\)/);
+  assert.match(migration,/product_code in \('sauceapproved-studio','sauceapproved-ads'\)/);
+  assert.doesNotMatch(migration,/payment_provider_ready['"]?\s*,?\s*status='approved'/);
+  assert.doesNotMatch(migration,/payment_path_verified['"]?\s*,?\s*status='approved'/);
 });
