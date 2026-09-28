@@ -198,6 +198,191 @@ async function certifyPublicVideoArtifact(b:any){
  return proof;
 }
 
+
+function benchmarkImageReference(request:any){
+ const refs=Array.isArray(request?.references)?request.references:[];
+ const ref=refs.find((x:any)=>x&&x.kind==='image'&&String(x.uri||'').startsWith('https://'));
+ if(!ref)throw new Error('benchmark_image_reference_required');
+ let u:URL;try{u=new URL(String(ref.uri))}catch{throw new Error('benchmark_image_reference_invalid')}
+ const allowed=u.hostname==='raw.githubusercontent.com'||u.hostname==='xbwuablxhhwsaoomsoco.supabase.co';
+ if(!allowed)throw new Error('benchmark_image_reference_host_denied');
+ const name=(u.pathname.split('/').filter(Boolean).pop()||'input.png').slice(0,120);
+ return {uri:u.toString(),name};
+}
+
+function parseGradioComplete(text:string){
+ const lines=String(text||'').split(/\r?\n/);
+ let event='message';
+ for(let i=0;i<lines.length;i++){
+   const line=lines[i];
+   if(line.startsWith('event:')){event=line.slice(6).trim();continue}
+   if(line.startsWith('data:')){
+     const data=line.slice(5).trim();
+     if(event==='error')throw new Error('benchmark_provider_error:'+data.slice(0,500));
+     if(event==='complete'){
+       let parsed:any;try{parsed=JSON.parse(data)}catch{throw new Error('benchmark_provider_complete_invalid')}
+       return parsed;
+     }
+   }
+ }
+ throw new Error('benchmark_provider_no_complete_event');
+}
+
+async function persistBenchmarkArtifact(artifactUrl:string,request:any,jobId:string,eventId:string,providerSeed:any){
+ const url=allowedCertificationArtifact(artifactUrl);
+ const response=await fetch(url,{headers:{accept:'video/mp4'},signal:AbortSignal.timeout(30000)});
+ if(!response.ok)throw new Error('benchmark_artifact_fetch_failed:'+response.status);
+ const ab=await response.arrayBuffer();
+ const bytes=new Uint8Array(ab);
+ if(bytes.byteLength<=0)throw new Error('benchmark_artifact_empty');
+ if(bytes.byteLength>25*1024*1024)throw new Error('benchmark_artifact_too_large');
+ if(String.fromCharCode(...bytes.slice(4,8))!=='ftyp')throw new Error('benchmark_artifact_not_mp4');
+ const digest=hex(await crypto.subtle.digest('SHA-256',ab));
+ const storagePath='video-renders/benchmark/'+jobId+'/'+digest+'.mp4';
+ const {error:uploadError}=await db.storage.from(BUCKET).upload(storagePath,bytes,{contentType:'video/mp4',upsert:true});
+ if(uploadError)throw new Error('benchmark_artifact_persist_failed:'+uploadError.message);
+ return {
+   uri:'hercules-storage://'+BUCKET+'/'+storagePath,
+   sourceUrl:url,
+   storageBucket:BUCKET,
+   storagePath,
+   mimeType:'video/mp4',
+   sizeBytes:bytes.byteLength,
+   sha256:digest,
+   providerEvidence:{
+     requestFingerprint:request.requestFingerprint,
+     modelRef:request.modelRef,
+     seed:Number(providerSeed),
+     eventId
+   }
+ };
+}
+
+async function runBenchmarkRender(actor:any,request:any){
+ if(request.shot.durationSeconds>0.5)throw new Error('benchmark_duration_limit');
+ if(request.output.fps!==16)throw new Error('benchmark_fps_must_be_16');
+ if(request.output.resolution!=='480p')throw new Error('benchmark_resolution_must_be_480p');
+ if(request.seed==null)throw new Error('benchmark_seed_required');
+ const image=benchmarkImageReference(request);
+ const {data:adapter,error:adapterError}=await db.from('hercules_execution_provider_adapters')
+   .select('id,provider_key,display_name,status,endpoint_ref,capabilities,metadata')
+   .eq('organization_id',ORG)
+   .eq('provider_key','hf-public-zerogpu-fast-wan22-i2v')
+   .eq('status','ready')
+   .maybeSingle();
+ if(adapterError||!adapter)throw new Error('benchmark_adapter_unavailable');
+ if(adapter.metadata?.benchmark_only!==true||!adapter.metadata?.certification_fingerprint)throw new Error('benchmark_adapter_not_certified');
+ if(adapter.metadata?.production_capacity_certified===true)throw new Error('benchmark_adapter_classification_invalid');
+
+ const idem='video-benchmark:'+request.requestFingerprint;
+ const {data:existing}=await db.from('hercules_execution_jobs')
+   .select('id,status,output,error,trace_id,created_at,completed_at')
+   .eq('organization_id',ORG).eq('idempotency_key',idem).maybeSingle();
+ if(existing?.status==='succeeded')return {reused:true,job:existing};
+
+ const traceId='video-benchmark-'+crypto.randomUUID();
+ let jobId=existing?.id||null;
+ if(!jobId){
+   const {data:job,error:jobError}=await db.from('hercules_execution_jobs').insert({
+     organization_id:ORG,
+     created_by:actor.user.id,
+     workload_type:'video.render',
+     status:'running',
+     sandbox_provider:'huggingface-zerogpu',
+     attempt:1,
+     max_attempts:1,
+     started_at:new Date().toISOString(),
+     input:{request,mode:'benchmark',adapter_key:adapter.provider_key},
+     policy:{network:'explicit_allowlist',filesystem:'ephemeral',secrets:'none',timeout_seconds:120},
+     idempotency_key:idem,
+     capability_envelope:{video:true,benchmark_only:true,production_capacity_certified:false},
+     execution_class:'benchmark',
+     provider_adapter_id:adapter.id,
+     trace_id:traceId
+   }).select('id').single();
+   if(jobError||!job)throw new Error('benchmark_job_create_failed:'+(jobError?.message||'unknown'));
+   jobId=job.id;
+ }else{
+   await db.from('hercules_execution_jobs').update({
+     status:'running',attempt:1,started_at:new Date().toISOString(),completed_at:null,error:null,
+     input:{request,mode:'benchmark',adapter_key:adapter.provider_key},
+     provider_adapter_id:adapter.id,trace_id:traceId,updated_at:new Date().toISOString()
+   }).eq('id',jobId);
+ }
+
+ try{
+   const submit=await fetch(String(adapter.endpoint_ref),{
+     method:'POST',
+     headers:{'content-type':'application/json','accept':'application/json'},
+     body:JSON.stringify({data:[
+       {path:image.uri,url:image.uri,orig_name:image.name,meta:{_type:'gradio.FileData'}},
+       request.shot.prompt,
+       1,
+       '',
+       0.5,
+       1.0,
+       1.0,
+       request.seed,
+       false
+     ]}),
+     signal:AbortSignal.timeout(15000)
+   });
+   const submitted=await submit.json().catch(()=>({}));
+   const eventId=String(submitted?.event_id||'');
+   if(!submit.ok||!eventId)throw new Error('benchmark_submit_failed:'+submit.status);
+
+   const resultResponse=await fetch(String(adapter.endpoint_ref)+'/'+encodeURIComponent(eventId),{
+     headers:{accept:'text/event-stream'},
+     signal:AbortSignal.timeout(100000)
+   });
+   const sse=await resultResponse.text();
+   if(!resultResponse.ok)throw new Error('benchmark_result_failed:'+resultResponse.status);
+   const outputs=parseGradioComplete(sse);
+   const file=Array.isArray(outputs)?outputs[0]:null;
+   const providerSeed=Array.isArray(outputs)?outputs[1]:request.seed;
+   const artifactUrl=String(file?.url||file?.path||'');
+   if(!artifactUrl)throw new Error('benchmark_artifact_url_missing');
+   const artifact=await persistBenchmarkArtifact(artifactUrl,request,String(jobId),eventId,providerSeed);
+
+   const output={
+     schema:'sauceapproved.hercules.video-benchmark-render-output',
+     version:1,
+     jobId,
+     traceId,
+     requestFingerprint:request.requestFingerprint,
+     certificationFingerprint:adapter.metadata.certification_fingerprint,
+     benchmarkOnly:true,
+     productionCapacityCertified:false,
+     artifact,
+     completedAt:new Date().toISOString()
+   };
+   await db.from('hercules_execution_jobs').update({
+     status:'succeeded',output,error:null,completed_at:output.completedAt,updated_at:output.completedAt
+   }).eq('id',jobId);
+   await db.from('hercules_audit_log').insert({
+     organization_id:ORG,actor_user_id:actor.user.id,action:'video.render.benchmark.completed',
+     resource_type:'hercules_execution_job',resource_id:String(jobId),
+     changes:{request_fingerprint:request.requestFingerprint,artifact_sha256:artifact.sha256,provider_key:adapter.provider_key},
+     metadata:{trace_id:traceId,benchmark_only:true,production_capacity_certified:false,authorization_bypassed:false,fabricated_output:false}
+   });
+   return {reused:false,job:{id:jobId,status:'succeeded',output,trace_id:traceId,completed_at:output.completedAt}};
+ }catch(e){
+   const message=e instanceof Error?e.message:'benchmark_render_failed';
+   const failedAt=new Date().toISOString();
+   await db.from('hercules_execution_jobs').update({
+     status:'failed',error:{code:'benchmark_render_failed',message,retryable:true},
+     completed_at:failedAt,updated_at:failedAt
+   }).eq('id',jobId);
+   await db.from('hercules_audit_log').insert({
+     organization_id:ORG,actor_user_id:actor.user.id,action:'video.render.benchmark.failed',
+     resource_type:'hercules_execution_job',resource_id:String(jobId),
+     changes:{request_fingerprint:request.requestFingerprint,error:message},
+     metadata:{trace_id:traceId,benchmark_only:true,production_capacity_certified:false,authorization_bypassed:false,fabricated_output:false}
+   });
+   throw e;
+ }
+}
+
 async function videoHealth(){
  const capacity=await videoCapacity();
  return {
