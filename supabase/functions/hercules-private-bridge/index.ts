@@ -43,7 +43,7 @@ async function actor(req:Request){
   if(error||!data.user)return null;
   const {data:m}=await db.from('hercules_memberships').select('organization_id,role,status')
     .eq('user_id',data.user.id).eq('status','active').in('role',['owner','admin']).limit(1).maybeSingle();
-  return m?{user:data.user,m}:null;
+  return m?{user:data.user,m,db}:null;
 }
 
 function validServerUrl(raw:string){
@@ -387,7 +387,7 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
     return out({ok:true,service:'hercules-private-bridge',version:'1.6.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission'],
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -407,6 +407,76 @@ Deno.serve(async(req:Request)=>{
       const result=await issuePilotAdmission(admin,b,{principal:'owner',actorUserId:uid,launchBaseUrl:U+'/functions/v1/hercules-launch'});
       return out(result.body,result.status);
     }catch{return out({error:'pilot_admission_issue_failed'},500)}
+  }
+
+  if(action==='software_commercial_status'){
+    try{
+      const productCodes=['sauceapproved-studio','sauceapproved-ads'];
+      const [{data:products,error:productError},{data:plans,error:planError},{data:approvals,error:approvalError},{data:stripe,error:stripeError}]=await Promise.all([
+        admin.from('hercules_software_products').select('code,name,descriptor,status,live_url,checkout_enabled').in('code',productCodes).order('code'),
+        admin.from('hercules_software_product_plans').select('product_code,plan_code,label,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',productCodes).order('candidate_monthly_price_cents'),
+        admin.from('hercules_software_commercial_approvals').select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at').in('product_code',productCodes).order('approval_type'),
+        admin.from('hercules_provider_connections').select('provider,account_key,status,connected_at,last_error,metadata,updated_at').eq('organization_id',org).eq('provider','stripe').order('updated_at',{ascending:false}).limit(1).maybeSingle()
+      ]);
+      if(productError||planError||approvalError||stripeError)throw (productError||planError||approvalError||stripeError);
+      const result=productCodes.map(code=>({
+        product:(products||[]).find((x:any)=>x.code===code)||null,
+        plans:(plans||[]).filter((x:any)=>x.product_code===code),
+        approvals:(approvals||[]).filter((x:any)=>x.product_code===code).map((x:any)=>({
+          approval_type:x.approval_type,
+          status:x.status,
+          approved_at:x.approved_at,
+          document_ref:x.document_ref,
+          evidence:x.evidence,
+          updated_at:x.updated_at
+        }))
+      }));
+      return out({ok:true,products:result,stripe:stripe||{provider:'stripe',status:'not_connected'}});
+    }catch(error){
+      return out({error:'software_commercial_status_failed',detail:error instanceof Error?error.message:String(error)},500);
+    }
+  }
+
+  if(action==='software_commercial_approve'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const productCode=String(b.product_code||'').trim();
+    const approvalType=String(b.approval_type||'').trim();
+    const confirmation=String(b.confirmation||'').trim();
+    if(!['sauceapproved-studio','sauceapproved-ads'].includes(productCode))return out({error:'valid_product_code_required'},400);
+    if(!['pricing','terms','privacy'].includes(approvalType))return out({error:'valid_approval_type_required'},400);
+    const expected='APPROVE '+productCode+' '+approvalType.toUpperCase()+' V1';
+    if(confirmation!==expected)return out({error:'explicit_confirmation_required',expected},400);
+    const {data,error}=await a.db.rpc('hercules_software_owner_approve',{
+      p_product_code:productCode,
+      p_approval_type:approvalType,
+      p_confirmation:confirmation
+    });
+    if(error)return out({error:'software_commercial_approval_failed',detail:error.message},500);
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'software.commercial.'+approvalType+'.approved',
+      resource_type:'hercules_software_product',
+      resource_id:productCode,
+      details:{approval_type:approvalType,confirmation_version:'v1'}
+    });
+    const statusReq=new Request(req.url,{method:'POST',headers:req.headers,body:JSON.stringify({action:'software_commercial_status'})});
+    const [{data:products},{data:plans},{data:approvals},{data:stripe}]=await Promise.all([
+      admin.from('hercules_software_products').select('code,name,descriptor,status,live_url,checkout_enabled').in('code',['sauceapproved-studio','sauceapproved-ads']).order('code'),
+      admin.from('hercules_software_product_plans').select('product_code,plan_code,label,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',['sauceapproved-studio','sauceapproved-ads']).order('candidate_monthly_price_cents'),
+      admin.from('hercules_software_commercial_approvals').select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at').in('product_code',['sauceapproved-studio','sauceapproved-ads']).order('approval_type'),
+      admin.from('hercules_provider_connections').select('provider,account_key,status,connected_at,last_error,metadata,updated_at').eq('organization_id',org).eq('provider','stripe').order('updated_at',{ascending:false}).limit(1).maybeSingle()
+    ]);
+    const productCodes=['sauceapproved-studio','sauceapproved-ads'];
+    const productsOut=productCodes.map(code=>({
+      product:(products||[]).find((x:any)=>x.code===code)||null,
+      plans:(plans||[]).filter((x:any)=>x.product_code===code),
+      approvals:(approvals||[]).filter((x:any)=>x.product_code===code).map((x:any)=>({
+        approval_type:x.approval_type,status:x.status,approved_at:x.approved_at,
+        document_ref:x.document_ref,evidence:x.evidence,updated_at:x.updated_at
+      }))
+    }));
+    return out({ok:true,approval:data,products:productsOut,stripe:stripe||{provider:'stripe',status:'not_connected'}});
   }
 
   if(action==='launch_approval_status'){
