@@ -232,6 +232,36 @@ async function ensureStripeCatalog(admin:any,key:string){
   return catalog;
 }
 
+
+const SOFTWARE_PRODUCTS=['sauceapproved-studio','sauceapproved-ads'] as const;
+
+async function syncSoftwareProviderReady(admin:any,connection:any){
+  const evidence={
+    provider:'stripe',
+    custody:'hercules-owned',
+    stripe_account_id:String(connection.account_key||''),
+    webhook_endpoint_id:String(connection.metadata?.webhook_endpoint_id||''),
+    receiver:String(connection.metadata?.receiver||''),
+    livemode:Boolean(connection.metadata?.livemode),
+    catalog_ready:Boolean(connection.metadata?.catalog_ready),
+    connected_at:connection.connected_at||null,
+    verified_at:new Date().toISOString()
+  };
+
+  const results:any[]=[];
+  for(const productCode of SOFTWARE_PRODUCTS){
+    const {data,error}=await admin.rpc('hercules_software_record_payment_gate',{
+      p_product_code:productCode,
+      p_gate:'payment_provider_ready',
+      p_verified:true,
+      p_evidence:evidence
+    });
+    if(error)throw error;
+    results.push({product_code:productCode,readiness:data});
+  }
+  return results;
+}
+
 async function activeShopifyConnection(admin:any,organizationId?:string){
   let query=admin.from('hercules_provider_connections')
     .select('id,organization_id,provider,account_key,client_id,secret_ref,access_secret_ref,status,connected_at,last_error,metadata,updated_at')
@@ -776,7 +806,15 @@ Deno.serve(async req=>{
         }
       });
 
-      return j({ok:true,connection,webhook_endpoint_id:endpoint.id,catalog});
+      const softwareProviderReadiness=await syncSoftwareProviderReady(admin,connection);
+
+      return j({
+        ok:true,
+        connection,
+        webhook_endpoint_id:endpoint.id,
+        catalog,
+        software_provider_readiness:softwareProviderReadiness
+      });
     }catch(error){
       return j({
         error:'stripe_connect_failed',
