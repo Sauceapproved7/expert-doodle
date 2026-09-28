@@ -129,3 +129,12 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - External operating-system infrastructure: Windows Task Scheduler, Apple launchd, and systemd user services are adapters only and remain third-party OS infrastructure.
 - Safety scope: user-scoped cleanup roots, explicit protected paths, dry-run plans, bounded scans, loopback-only dashboard control, transactional Recovery Capsules, integrity verification, and fail-closed restore semantics.
 - Market-research note: scheduled cleanup is common in Windows Storage Sense, CCleaner, BleachBit, Wise Disk Cleaner and CleanMyMac. Session Clean and Recovery Capsules are Hercules differentiators based on the reviewed mainstream feature sets; no absolute market-first claim is made.
+
+
+## Hercules Cleaner v1.0.0 release packaging provenance — 2026-09-28
+
+- Package paths: `releases/hercules-cleaner-v1.0.0/`, `scripts/package-hercules-cleaner-release.mjs`, `.github/workflows/hercules-cleaner-release-package.yml`, Forge package registration, and release-package tests.
+- Origin: original SauceApproved/Hercules packaging implementation created with AI assistance around the canonical Cleaner runtime.
+- Runtime/package dependencies: Node.js built-ins plus GitHub Actions infrastructure; no vendored third-party runtime source is added.
+- Distribution evidence: exact 40-character source commit identity, per-file SHA-256 hashes, deterministic archive checksum, and GitHub artifact attestation on main pushes.
+- Commercial boundary: Early Access package only; checkout remains disabled and candidate pricing remains owner-approval required.
