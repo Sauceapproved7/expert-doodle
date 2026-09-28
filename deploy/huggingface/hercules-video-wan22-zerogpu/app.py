@@ -52,6 +52,8 @@ def _validated_request(payload_json: str) -> dict:
     duration = float(shot.get("durationSeconds") or 0)
     if duration <= 0:
         raise gr.Error("Shot duration must be positive.")
+    if duration > 3:
+        raise gr.Error("Free ZeroGPU benchmark clips are limited to 3 seconds.")
 
     output = payload.get("output") or {}
     if str(output.get("resolution") or "720p") != "720p":
@@ -67,11 +69,11 @@ def _validated_request(payload_json: str) -> dict:
 
 
 def _frame_count(duration_seconds: float) -> int:
-    desired = min(121, max(9, int(round(duration_seconds * 24)) + 1))
+    desired = min(73, max(9, int(round(duration_seconds * 24)) + 1))
     return max(9, ((desired - 1) // 4) * 4 + 1)
 
 
-@spaces.GPU(size="large", duration=300)
+@spaces.GPU(size="large", duration=180)
 def generate(payload_json: str):
     request = _validated_request(payload_json)
     shot = request["shot"]
@@ -88,7 +90,7 @@ def generate(payload_json: str):
         height=height,
         width=width,
         num_frames=frames,
-        num_inference_steps=30,
+        num_inference_steps=35,
         guidance_scale=5.0,
         generator=generator,
     )
