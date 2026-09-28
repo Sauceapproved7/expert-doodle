@@ -43,6 +43,7 @@ jobs:
             hercules-training \
             hercules-video \
             hercules-hurc \
+            hercules-runtime \
             observability \
             scripts \
             staging-plane \
