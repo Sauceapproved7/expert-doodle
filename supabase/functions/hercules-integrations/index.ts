@@ -13,7 +13,7 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <section class="card"><h2>Production Domain</h2><p class="muted"><span class="mono">sauceapproved.com</span> → Shopify. Status reads live DNS. Once Spaceship credentials are saved, Hercules can reconcile only the required Shopify web-routing records while preserving unrelated DNS.</p><div class="row"><button id="domainstatus" class="btn">Refresh launch status</button><button id="domainreconcile" class="btn primary">Run DNS reconcile</button></div><div id="domainout" class="status"></div></section>
 <section class="card"><h2>Shopify Direct</h2><p class="muted">First-party Hercules Shopify connection for production webhooks plus automatic <span class="mono">sauceapproved.com</span> attachment/SSL/primary-state monitoring. The connection is locked to Shop GID <span class="mono">gid://shopify/Shop/100002726208</span>.</p><input id="shopclient" class="input" autocomplete="off" placeholder="Shopify Client ID"><input id="shopsecret" class="input" type="password" autocomplete="new-password" placeholder="Shopify Client Secret"><div class="row" style="margin-top:10px"><button id="shopsave" class="btn primary">Save Shopify connection + arm monitor</button><button id="shopstatus" class="btn">Domain status</button></div><div id="shopout" class="status"></div></section>
 <section class="card"><h2>Stripe Direct</h2><p class="muted">Owner-controlled Hercules billing connection. Enter the Stripe secret key only here; Hercules validates the account, stores the key in Vault, and creates or reuses the webhook endpoint with webhook signing. Complete Stripe identity verification and payout-bank setup in Stripe before paid launch.</p><input id="stripekey" class="input" type="password" autocomplete="new-password" placeholder="Stripe Secret Key"><div class="row" style="margin-top:10px"><button id="stripesave" class="btn primary">Connect Stripe + webhook</button><button id="stripestatus" class="btn">Status</button></div><div id="stripeout" class="status"></div></section>
-<section class="card" style="grid-column:1/-1"><h2>Studio & Ads Commercial Decisions — plus Hercules Cleaner</h2><p class="muted">Product-specific owner approvals for SauceApproved Studio, SauceApproved Ads, and Hercules Cleaner. These decisions are separate from Hercules Revenue Recovery pricing and legal approvals. Checkout stays locked until pricing, Terms, Privacy, Stripe Direct readiness, and the controlled paid-path test are all verified.</p><div class="row"><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/SAUCEAPPROVED-SOFTWARE-TERMS-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Software Terms candidate</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Software Privacy candidate</a><button id="softwarecommercialrefresh" class="btn">Refresh product status</button></div><div class="status"><b>Candidate monthly catalog</b><br>Starter — $29 · Pro — $79 · Agency — $199<br><br>No charge is enabled by approving these documents. Payment activation remains a separate verified gate.</div><div id="softwarecommercialrows" class="launch-summary"></div><div id="softwarecommercialout" class="status"></div></section>
+<section class="card" style="grid-column:1/-1"><h2>Studio & Ads Commercial Decisions — plus Hercules Cleaner</h2><p class="muted">Product-specific owner approvals for SauceApproved Studio, SauceApproved Ads, and Hercules Cleaner. These decisions are separate from Hercules Revenue Recovery pricing and legal approvals. Checkout stays locked until pricing, Terms, Privacy, Stripe Direct readiness, and the controlled paid-path test are all verified.</p><div class="row"><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/SAUCEAPPROVED-SOFTWARE-TERMS-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Software Terms candidate</a><a class="btn" href="https://github.com/Sauceapproved7/expert-doodle/blob/main/docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md" target="_blank" rel="noopener noreferrer">Software Privacy candidate</a><button id="softwarecommercialrefresh" class="btn">Refresh product status</button></div><div class="status"><b>Candidate monthly catalog</b><br>Starter — $29 · Pro — $79 · Agency — $199<br><br>No charge is enabled by approving these documents. Payment activation remains a separate verified gate.</div><div class="status"><b>Studio + Ads owner packet</b><br>This one packet covers only SauceApproved Studio + SauceApproved Ads pricing, Terms, and Privacy. Hercules Cleaner stays separate. Stripe/payment gates are not part of this owner approval.<div id="softwarebundlesummary" class="launch-summary"></div><div class="row" style="margin-top:10px"><button id="softwarebundlerefresh" class="btn">Refresh Studio + Ads packet</button><button id="softwarebundleapprove" class="btn primary" disabled>Approve Studio + Ads commercial packet</button></div><div id="softwarebundleout" class="status"></div></div><div id="softwarecommercialrows" class="launch-summary"></div><div id="softwarecommercialout" class="status"></div></section>
 <section class="card" data-linear-issue="DA-24"><h2>SauceApproved Social</h2><p class="muted">Owner handoff for the first SauceApproved brand channel. LinkedIn is first; Metricool is the scheduling connection. This surface exposes only the prepared public company-page package. No passwords, cookies, session tokens, MFA codes, or Vault material are collected here.</p><div class="status"><b>Public setup package</b><br>Page: SauceApproved<br>Legal entity: SauceApproved enterprise LLC<br>Industry: Software Development<br>Company type: Privately Held<br>Tagline: Verifiable AI software that helps businesses recover cash, keep control, and prove every action.<br>Website: <span class="mono">https://sauceapproved.com/?utm_source=linkedin&amp;utm_medium=organic_social&amp;utm_campaign=founding-pilot-organic-v1&amp;utm_content=company-page</span></div><div class="row" style="margin-top:10px"><a class="btn primary" href="https://www.linkedin.com/company/setup/new/" target="_blank" rel="noopener noreferrer">Open LinkedIn Company Page setup</a><a class="btn" href="https://app.metricool.com/brands/connections?blogId=6894246" target="_blank" rel="noopener noreferrer">Open Metricool Connections</a></div><div class="status"><b>Owner action</b><br>Create/verify the SauceApproved LinkedIn Company Page and accept LinkedIn-required terms or verification.<br>Authorize Metricool and select the SauceApproved Company Page.<br><br><b>Automated after authorization</b><br>Verify the Metricool connection and scheduling availability, then record completion evidence in DA-24.<br><br>No post is published by this handoff.</div></section>
 <section class="card"><h2>Personal Browser Bridge</h2><p class="muted">Pair one explicitly approved browser tab with Hercules. The bridge never exports passwords, cookies, OTP/MFA codes, provider session tokens, or CAPTCHA state.</p><div class="row"><button id="browserpair" class="btn primary">Create pairing token</button><button id="browserstatus" class="btn">Status</button></div><div id="browserout" class="status"></div></section>
 <section class="card"><h2>Launch Readiness</h2><p class="muted">One production view of the live storefront and final custom-domain gate.</p><div class="row"><button id="launchstatus" class="btn primary">Refresh launch readiness</button></div><div id="launchsummary" class="launch-summary"></div><details><summary>Raw launch data</summary><div id="launchout" class="status"></div></details></section>
@@ -160,7 +160,7 @@ function renderLaunchSummary(p){
   );
   if(readiness?.storefront_verified_at)box.append(launchLine('Storefront verified at',String(readiness.storefront_verified_at),'pass'));
 }
-async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),stripeStatus(),softwareCommercialStatus(),personalBrowserStatus(),launchReadinessStatus(),storefrontSmokeStatus(),launchDecisionStatus(),launchPacketStatus()])}}
+async function boot(){const s=(await sb.auth.getSession()).data.session;user=s?.user||null;show('auth',!user);show('app',!!user);show('signout',!!user);if(user){await Promise.allSettled([driveStatus(),forgeStatus(),spaceshipStatus(),domainStatus(),shopifyStatus(),stripeStatus(),softwareCommercialStatus(),softwareCommercialBundleStatus(),personalBrowserStatus(),launchReadinessStatus(),storefrontSmokeStatus(),launchDecisionStatus(),launchPacketStatus()])}}
 $('signin').onclick=async()=>{const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});if(r.error){$('authmsg').textContent=r.error.message;show('authmsg',true)}};
 $('signout').onclick=()=>sb.auth.signOut();
 async function driveStatus(){try{$('gout').textContent=fmt(await call('hercules-drive',{action:'status'}))}catch(e){$('gout').textContent='Drive: '+e.message}}
@@ -214,6 +214,55 @@ async function softwareCommercialStatus(){
     $('softwarecommercialout').textContent='Software commercial: '+e.message;throw e
   }
 }
+let softwareCommercialBundleEnvelope=null;
+function renderSoftwareCommercialBundle(d){
+  softwareCommercialBundleEnvelope=d||null;
+  const box=$('softwarebundlesummary');box.replaceChildren();
+  const p=d?.packet||{},r=d?.readiness||{};
+  box.append(
+    launchLine('Packet',String(p.version||'unavailable'),p.version?'pass':'fail'),
+    launchLine('Fingerprint',String(p.fingerprint||'—'),p.fingerprint?'pass':'fail'),
+    launchLine('Studio + Ads catalog',r.catalogMatches?'LOCKED $29 / $79 / $199':'MISMATCH',r.catalogMatches?'pass':'fail'),
+    launchLine('Terms document',r.termsRefsMatch?'LOCKED':'MISMATCH',r.termsRefsMatch?'pass':'fail'),
+    launchLine('Privacy document',r.privacyRefsMatch?'LOCKED':'MISMATCH',r.privacyRefsMatch?'pass':'fail'),
+    launchLine('Paid checkout',r.checkoutHeldClosed?'HELD CLOSED':'OPEN',r.checkoutHeldClosed?'pass':'fail'),
+    launchLine('Owner approvals',r.ownerApprovalsComplete?'APPROVED':'PENDING',r.ownerApprovalsComplete?'pass':'wait')
+  );
+  $('softwarebundleapprove').disabled=!r.canApprove;
+}
+async function softwareCommercialBundleStatus(){
+  try{
+    const d=await call('hercules-private-bridge',{action:'software_commercial_bundle_status'});
+    renderSoftwareCommercialBundle(d);$('softwarebundleout').textContent=fmt(d);return d
+  }catch(e){
+    softwareCommercialBundleEnvelope=null;$('softwarebundleapprove').disabled=true;
+    $('softwarebundlesummary').replaceChildren(launchLine('Studio + Ads packet','UNAVAILABLE','fail'));
+    $('softwarebundleout').textContent='Studio + Ads packet: '+e.message;throw e
+  }
+}
+async function approveSoftwareCommercialBundle(){
+  const d=softwareCommercialBundleEnvelope||await softwareCommercialBundleStatus();
+  if(!d?.readiness?.canApprove)throw Error('Studio + Ads commercial packet is not ready for owner approval.');
+  const phrase=String(d.packet?.confirmation||'');
+  if(!phrase.startsWith('APPROVE SAUCEAPPROVED SOFTWARE COMMERCIAL PACKET '))throw Error('Studio + Ads packet confirmation is unavailable.');
+  const confirmation=window.prompt('Type exactly: '+phrase);
+  if(confirmation===null)return;
+  try{
+    const result=await call('hercules-private-bridge',{
+      action:'software_commercial_bundle_approve',
+      bundle_version:d.packet.version,
+      bundle_digest:d.packet.digest,
+      confirmation
+    });
+    renderSoftwareCommercialBundle(result?.envelope||{});
+    $('softwarebundleout').textContent=fmt(result);
+    await softwareCommercialStatus();
+    await softwareCommercialBundleStatus();
+  }catch(e){
+    $('softwarebundleout').textContent='Studio + Ads packet decision: '+e.message;
+  }
+}
+
 async function approveSoftwareCommercial(productCode,approvalType){
   const phrase='APPROVE '+productCode+' '+approvalType.toUpperCase()+' V1';
   const confirmation=window.prompt('Type exactly: '+phrase);
@@ -238,6 +287,8 @@ async function storefrontSmokeRun(){try{const d=await call('hercules-provider-co
 $('shopstatus').onclick=shopifyStatus;
 $('stripestatus').onclick=stripeStatus;
 $('softwarecommercialrefresh').onclick=()=>softwareCommercialStatus().catch(()=>{});
+$('softwarebundlerefresh').onclick=()=>softwareCommercialBundleStatus().catch(()=>{});
+$('softwarebundleapprove').onclick=()=>approveSoftwareCommercialBundle().catch(e=>{$('softwarebundleout').textContent='Studio + Ads packet decision: '+e.message});
 $('browserstatus').onclick=personalBrowserStatus;
 $('browserpair').onclick=async()=>{try{const d=await personalBrowserCall({action:'personal_browser_create_pair'});$('browserout').textContent='One-time pairing token (expires '+d.expires_at+'):\n\n'+d.pair_token+'\n\nPaste this only into your Hercules Personal Browser Bridge extension.'}catch(e){$('browserout').textContent='Personal Browser: '+e.message}};
 $('stripesave').onclick=async()=>{
