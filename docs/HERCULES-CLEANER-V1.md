@@ -119,6 +119,8 @@ node scripts/security-baseline.mjs
 node scripts/verify-hercules-execution-contract.mjs
 ```
 
+Reviewable pull requests also carry the repository provenance-attestation checklist so origin, licensing, third-party notices, AI assistance, and owner-code scope are explicit evidence rather than implicit assumptions.
+
 ## Current non-claims
 
 v1 does not claim:
