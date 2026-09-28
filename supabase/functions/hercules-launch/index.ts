@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {pilotAdmissionGet,pilotAdmissionPost} from "./pilot-admission.ts";
+import {isStudioAccessPage,studioAccessPage,studioAccessRequest,studioAccessClaim} from "./studio-access.ts";
 
 const U = Deno.env.get("SUPABASE_URL") || "https://xbwuablxhhwsaoomsoco.supabase.co";
 const P = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
@@ -815,6 +816,17 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 
 Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
+  if(isStudioAccessPage(url)){
+    if(req.method==="GET")return studioAccessPage({U,K});
+    if(req.method==="POST"){
+      const body=await req.clone().json().catch(()=>({}));
+      const action=String(body?.action||"");
+      if(action==="studio_access_request")return studioAccessRequest(body,{U,K,S});
+      if(action==="studio_purchase_claim")return studioAccessClaim(req,{U,K,S});
+      return Response.json({ok:false,error:"unknown_studio_access_action"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
+  }
   if(url.searchParams.has("pilot_admission")){
     if(req.method==="GET")return pilotAdmissionGet(req,url,{U,K,S});
     if(req.method==="POST")return pilotAdmissionPost(req,url,{U,K,S});
