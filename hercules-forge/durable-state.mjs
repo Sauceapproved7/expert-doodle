@@ -152,7 +152,7 @@ export class ForgeDurableStateMirror {
   }
 
   async remoteManifest() {
-    const body = await this.request({action:"manifest"});
+    const body = await this.request({action:"forge_state_manifest"});
     const objects = Array.isArray(body?.objects) ? body.objects.map(normalizeManifestObject) : [];
     const seen = new Set();
     for (const object of objects) {
@@ -220,7 +220,7 @@ export class ForgeDurableStateMirror {
           const end = Math.min(object.bytes, start + this.chunkBytes);
           const chunk = object.content.subarray(start, end);
           await this.request({
-            action:"put_chunk",
+            action:"forge_state_put_chunk",
             path:object.path,
             index,
             bytes:chunk.byteLength,
@@ -230,7 +230,7 @@ export class ForgeDurableStateMirror {
           uploadedChunks += 1;
         }
         await this.request({
-          action:"commit_object",
+          action:"forge_state_commit_object",
           path:object.path,
           bytes:object.bytes,
           sha256:object.sha256,
@@ -241,7 +241,7 @@ export class ForgeDurableStateMirror {
       }
 
       for (const stale of remoteByPath.values()) {
-        await this.request({action:"delete_object", path:stale.path});
+        await this.request({action:"forge_state_delete_object", path:stale.path});
         deletedObjects += 1;
       }
 
@@ -278,7 +278,7 @@ export class ForgeDurableStateMirror {
           let totalBytes = 0;
           for (let index = 0; index < object.chunks; index += 1) {
             const response = await this.request({
-              action:"get_chunk",
+              action:"forge_state_get_chunk",
               path:object.path,
               index,
             });
@@ -335,7 +335,7 @@ export class ForgeDurableStateMirror {
   }
 
   async status() {
-    const body = await this.request({action:"status"});
+    const body = await this.request({action:"forge_state_status"});
     if (body?.ok !== true) throw new Error("durable state status verification failed");
     return {
       ok:true,
