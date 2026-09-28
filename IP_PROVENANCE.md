@@ -176,3 +176,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Third-party infrastructure: any future DAM, CMS, design, Figma, website, document, knowledge-base, model, or analytics provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
 - Trust scope: approved facts preserve source provenance; locked facts do not auto-overwrite; Constitution conflicts are rejected; fact changes remain review-required; cross-channel simulation never silently rewrites approved facts.
 - Differentiators: Brand Constitution, Cross-Channel Consistency Simulator, Rule Blast Radius Preview, and Brand Drift Time Machine. No absolute market-first claim is made without separate current verification.
+
+
+## SauceApproved Studios Market v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/market/*.mjs`, Studio market routing/rendering in `hercules-video/studio-*.mjs`, Studio integration tests, and `docs/SAUCEAPPROVED-STUDIOS-MARKET-V1.md`.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- External infrastructure: founding-access CTAs navigate to the existing protected Hercules launch/pilot intake hosted on the existing Supabase project; Supabase is external infrastructure and is not claimed as SauceApproved-owned code.
+- Commercial boundary: public discovery and applications are open, while paid checkout remains disabled pending explicit pricing/legal/payment-path gates. No charge or subscription is created by the Market surface.
+- Claims boundary: no fabricated testimonial, guaranteed ROI, unverified certification, or falsely connected integration is included.

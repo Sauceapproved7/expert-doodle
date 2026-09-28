@@ -5,6 +5,7 @@ import {buildStudioViewModel,createStudioManifest} from "./studio-contract.mjs";
 import {createContentMultiplierManifest} from "../sauceapproved-studio/content-multiplier/core.mjs";
 import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/core.mjs";
 import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core.mjs";
+import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -209,6 +210,62 @@ a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-dec
 </html>`;
 }
 
+function renderStudiosMarketShell(manifest) {
+  const cards=manifest.products.map((item,index)=>`
+    <article class="offer">
+      <div class="count">0${index+1}</div>
+      <h2>${escapeHtml(item.name)}</h2>
+      <p>${escapeHtml(item.summary)}</p>
+      <div class="actions">
+        <a class="secondary" href="${escapeHtml(item.route)}">View product</a>
+        <a class="primary" href="${escapeHtml(item.ctaUrl)}" rel="noreferrer">Request founding access</a>
+      </div>
+    </article>`).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SauceApproved Studios Market</title>
+<meta name="description" content="Explore SauceApproved Studios products and request controlled founding access.">
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f6f6f6}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% -10%,#2d201b 0,#10100f 32%,#040404 72%)}
+main{width:min(1180px,100%);margin:auto;padding:clamp(18px,4vw,46px)}
+a{color:inherit;text-decoration:none}.back{display:inline-flex;margin-bottom:24px;color:#aaa;font-weight:750}
+.hero{border:1px solid #332b27;border-radius:32px;padding:clamp(26px,5vw,58px);background:linear-gradient(145deg,#1b1512,#0b0b0b);box-shadow:0 28px 100px #0009}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#c6927d}
+h1{font-size:clamp(46px,9vw,92px);line-height:.9;letter-spacing:-.06em;margin:12px 0 20px;font-weight:950}
+h1 em{font-style:normal;color:#e8b7a4}.lead{max-width:820px;color:#bababa;font-size:clamp(17px,2vw,21px);line-height:1.6}
+.state{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:26px}.state div{border:1px solid #2d2927;border-radius:16px;padding:14px;background:#0d0c0b}.state span{display:block;color:#777;font-size:10px;letter-spacing:.14em;text-transform:uppercase}.state strong{display:block;margin-top:6px}.open{color:#9ee2af}.locked{color:#f0c787}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.offer{min-height:300px;border:1px solid #282422;border-radius:24px;padding:26px;background:#0b0b0bea;display:flex;flex-direction:column}.count{color:#876e63;font-size:11px;letter-spacing:.18em}.offer h2{font-size:28px;margin:42px 0 12px}.offer p{color:#999;line-height:1.6;margin:0 0 24px}.actions{margin-top:auto;display:flex;gap:10px;flex-wrap:wrap}.actions a{padding:12px 14px;border-radius:13px;font-weight:850;font-size:13px}.primary{background:#f2f2f2;color:#070707}.secondary{border:1px solid #34302e;color:#c8c8c8}
+.notice{margin-top:18px;border:1px solid #574224;background:#1b140d;color:#eccb91;padding:18px;border-radius:18px;line-height:1.55}
+.foot{margin-top:18px;color:#777;font-size:13px;line-height:1.6}
+@media(max-width:760px){.grid,.state{grid-template-columns:1fr}.hero{border-radius:24px}.offer{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">SauceApproved Studios / Market</div>
+<h1>Built to work. <em>Built to sell.</em></h1>
+<p class="lead">Three owned Hercules-grade products are open for controlled founding access. Explore each product, choose the workflow that fits your business, and submit a founding-access request through the protected Hercules intake.</p>
+<div class="state">
+  <div><span>Discovery</span><strong class="open">Public</strong></div>
+  <div><span>Founding applications</span><strong class="open">Open</strong></div>
+  <div><span>Paid checkout</span><strong class="locked">Locked pending verification</strong></div>
+</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="notice"><b>Paid checkout remains locked.</b> Pricing approval, Terms, Privacy, and the payout/checkout/refund path must be verified before SauceApproved accepts a public paid software order. Founding-access requests are open now; they do not create a charge.</div>
+<p class="foot">Current product surfaces show verified owned capabilities and clearly disclose unavailable provider integrations. No testimonial, ROI guarantee, uptime claim, or external integration is represented as live without evidence.</p>
+</main>
+</body>
+</html>`;
+}
+
 function renderStudioShell({manifest,model,bridge}) {
   const bridgeConnected=bridge?.connected===true;
   const bridgeLabel=bridgeConnected ? "Execution bridge connected" : "Execution bridge unavailable";
@@ -256,7 +313,7 @@ ${statusBadge("Execution",bridgeLabel,bridgeConnected ? "good" : "warn")}
 <div><div class="eyebrow">Operator</div><h2>${escapeHtml(surfaces.get("project-brief"))}</h2><p>Capture the creative brief and prepare the run plan without pretending execution is connected.</p></div>
 <div class="notice">${escapeHtml(bridgeLabel)}. Start and resume stay locked until the owned execution bridge is verified.</div>
 <div class="surface-list">
-${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : surface.id==="brand-brain" ? `<a class="surface" href="/brand-brain">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
+${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : surface.id==="brand-brain" ? `<a class="surface" href="/brand-brain">${escapeHtml(surface.label)}</a>` : surface.id==="market" ? `<a class="surface" href="/market">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
 </div>
 <div>
 <h2>${escapeHtml(surfaces.get("run-status"))}</h2>
@@ -346,6 +403,14 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/brand-brain") {
       return {status:200,headers:HTML_HEADERS,body:renderBrandBrainShell(createBrandBrainManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/market/manifest") {
+      return json(createStudiosMarketManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/market") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudiosMarketShell(createStudiosMarketManifest())};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/status") {
