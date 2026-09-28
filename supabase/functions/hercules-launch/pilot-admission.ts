@@ -161,8 +161,19 @@ function successPage(ctx:{U:string;K:string;session:any;organizationId:string;pa
 export async function pilotAdmissionPost(req:Request,url:URL,ctx:{admin?:any;U:string;K:string;S:string}){\n  const admin=ctx.admin||createClient(ctx.U,ctx.S,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
   const token=tokenFrom(url);
   if(!token)return page('<h1>Invitation unavailable</h1><p class="err">Invalid controlled-admission handoff.</p>',404);
-  const form=await req.formData().catch(()=>null);
-  if(String(form?.get('accept')||'')!==ACCEPTANCE||String(form?.get('confirmed')||'')!=='yes'){
+  const contentType=String(req.headers.get('content-type')||'').toLowerCase();
+  let accept='';
+  let confirmed='';
+  if(contentType.includes('application/json')){
+    const body=await req.json().catch(()=>({}));
+    accept=String(body?.accept||'');
+    confirmed=body?.confirmed===true?'yes':String(body?.confirmed||'');
+  }else{
+    const form=await req.formData().catch(()=>null);
+    accept=String(form?.get('accept')||'');
+    confirmed=String(form?.get('confirmed')||'');
+  }
+  if(accept!==ACCEPTANCE||confirmed!=='yes'){
     return page('<h1>Acceptance required</h1><p class="err">explicit_acceptance_required</p>',400);
   }
   if(!ctx.S||!ctx.K)return page('<h1>Service unavailable</h1><p class="err">server_auth_configuration_required</p>',503);
