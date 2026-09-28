@@ -1,9 +1,10 @@
 import {
   createHmac,
+  createHash,
   timingSafeEqual,
 } from "node:crypto";
 
-const POLICY_VERSION = "2.0.0";
+const POLICY_VERSION = "2.1.0";
 const MAX_ROUTE_BYTES = 2048;
 const MAX_SESSION_BYTES = 512;
 const MAX_DELAY_MS = 1500;
@@ -34,6 +35,14 @@ const BOOLEAN_SIGNALS = Object.freeze([
 ]);
 
 const SIGNAL_SET = new Set([...NUMERIC_SIGNALS, ...BOOLEAN_SIGNALS]);
+const LEARNING_CONTROLS = new Set([
+  "REVIEW_AUTH_ABUSE_CONTROLS",
+  "REVIEW_DISCOVERY_DECEPTION_DENSITY",
+  "REVIEW_REQUEST_VELOCITY_PROFILE",
+  "REVIEW_SIGNATURE_VALIDATION_CONTROLS",
+  "REVIEW_PRIVILEGE_BOUNDARY_CONTROLS",
+  "REVIEW_HONEYTOKEN_COVERAGE",
+]);
 
 function stable(value) {
   if (Array.isArray(value)) return value.map(stable);
@@ -143,6 +152,17 @@ function calculateRiskScore(signals) {
   return Math.min(100, score);
 }
 
+function evidenceFamilies(signals) {
+  const families = [];
+  if (signals.authFailures > 0 || signals.credentialStuffing) families.push("identity");
+  if (signals.routeProbes > 0 || signals.enumerationPattern) families.push("discovery");
+  if (signals.requestVelocity > 0) families.push("request");
+  if (signals.signatureMismatches > 0) families.push("integrity");
+  if (signals.impossibleSequence || signals.privilegeBoundaryProbe) families.push("behavioral-boundary");
+  if (signals.honeytokenTouched) families.push("honeytoken");
+  return Object.freeze(families);
+}
+
 function classify(score) {
   if (score >= 85) {
     return {
@@ -196,11 +216,59 @@ function classify(score) {
   };
 }
 
+function applyFalsePositiveGovernor(policy, score, signals) {
+  const families = evidenceFamilies(signals);
+  const independentEvidenceFamilies = families.filter((family) => family !== "honeytoken").length;
+  const honeytokenOverride = signals.honeytokenTouched === true;
+  const deceptionRequested = policy.routeMode === "DECOY";
+  const deceptionAllowed = !deceptionRequested
+    || honeytokenOverride
+    || independentEvidenceFamilies >= 2;
+
+  if (deceptionRequested && !deceptionAllowed) {
+    return {
+      policy: {
+        disposition: "THROTTLE",
+        severity: "ELEVATED",
+        routeMode: "REAL",
+        delayMs: Math.min(750, Math.max(100, score * 8)),
+        actions: ["LOG", "TARPIT", "RATE_LIMIT", "EVIDENCE_CAPTURE"],
+      },
+      governor: {
+        schema: "hercules.smokescreen.false-positive-governor.v1",
+        requiredEvidenceFamilies: 2,
+        independentEvidenceFamilies,
+        evidenceFamilies: families,
+        honeytokenOverride,
+        deceptionRequested,
+        deceptionAllowed: false,
+      },
+    };
+  }
+
+  return {
+    policy,
+    governor: {
+      schema: "hercules.smokescreen.false-positive-governor.v1",
+      requiredEvidenceFamilies: 2,
+      independentEvidenceFamilies,
+      evidenceFamilies: families,
+      honeytokenOverride,
+      deceptionRequested,
+      deceptionAllowed: deceptionRequested ? true : false,
+    },
+  };
+}
+
 function freezeDecision(decision) {
   return Object.freeze({
     ...decision,
     actions: Object.freeze([...decision.actions]),
     signalSummary: Object.freeze({...decision.signalSummary}),
+    governor: Object.freeze({
+      ...decision.governor,
+      evidenceFamilies: Object.freeze([...decision.governor.evidenceFamilies]),
+    }),
   });
 }
 
@@ -208,7 +276,9 @@ export function createSmokeScreenDecision(input = {}, options = {}) {
   const event = normalizeEvent(input);
   const key = keyBytes(options.hmacKey);
   const score = calculateRiskScore(event.signals);
-  const policy = classify(score);
+  const rawPolicy = classify(score);
+  const governed = applyFalsePositiveGovernor(rawPolicy, score, event.signals);
+  const policy = governed.policy;
   const sessionFingerprint = mac(key, {
     namespace: "hercules.smokescreen.session.v1",
     sessionId: event.sessionId,
@@ -240,6 +310,7 @@ export function createSmokeScreenDecision(input = {}, options = {}) {
     sessionFingerprint,
     routeFingerprint,
     signalSummary: event.signals,
+    governor: governed.governor,
     outboundCounterattack: false,
   });
 }
@@ -391,6 +462,132 @@ export function evolveMirageFabric(fabric = {}, observation = {}, options = {}) 
   }, options);
 }
 
+
+function digestHex(value) {
+  return createHash("sha256").update(stableJson(value)).digest("hex");
+}
+
+function recommendation(control, reason, evidenceCount) {
+  return Object.freeze({
+    control,
+    reason,
+    evidenceCount,
+    changeAuthority: "NONE",
+  });
+}
+
+export function createEvidenceLockedLearningCapsule(chain = [], options = {}) {
+  const key = keyBytes(options.hmacKey);
+  if (!verifyAuditChain(chain, {hmacKey: key})) {
+    throw new Error("valid SmokeScreen audit chain required");
+  }
+
+  const createdAt = new Date(options.createdAt ?? Date.now()).toISOString();
+  const counts = {
+    identity: 0,
+    discovery: 0,
+    request: 0,
+    integrity: 0,
+    boundary: 0,
+    honeytoken: 0,
+  };
+
+  for (const entry of chain) {
+    const signals = entry?.decision?.signalSummary ?? {};
+    if ((signals.authFailures ?? 0) > 0 || signals.credentialStuffing === true) counts.identity += 1;
+    if ((signals.routeProbes ?? 0) > 0 || signals.enumerationPattern === true) counts.discovery += 1;
+    if ((signals.requestVelocity ?? 0) >= 30) counts.request += 1;
+    if ((signals.signatureMismatches ?? 0) > 0) counts.integrity += 1;
+    if (signals.impossibleSequence === true || signals.privilegeBoundaryProbe === true) counts.boundary += 1;
+    if (signals.honeytokenTouched === true) counts.honeytoken += 1;
+  }
+
+  const recommendations = [];
+  if (counts.identity) recommendations.push(recommendation(
+    "REVIEW_AUTH_ABUSE_CONTROLS",
+    "Observed identity-abuse evidence warrants review of authentication throttling and credential defenses.",
+    counts.identity,
+  ));
+  if (counts.discovery) recommendations.push(recommendation(
+    "REVIEW_DISCOVERY_DECEPTION_DENSITY",
+    "Observed reconnaissance evidence warrants review of deception placement and discovery trip points.",
+    counts.discovery,
+  ));
+  if (counts.request) recommendations.push(recommendation(
+    "REVIEW_REQUEST_VELOCITY_PROFILE",
+    "Observed elevated request velocity warrants review of rate-limit profiles.",
+    counts.request,
+  ));
+  if (counts.integrity) recommendations.push(recommendation(
+    "REVIEW_SIGNATURE_VALIDATION_CONTROLS",
+    "Observed signature mismatches warrant review of request-integrity controls.",
+    counts.integrity,
+  ));
+  if (counts.boundary) recommendations.push(recommendation(
+    "REVIEW_PRIVILEGE_BOUNDARY_CONTROLS",
+    "Observed boundary-probing evidence warrants review of privilege and authorization controls.",
+    counts.boundary,
+  ));
+  if (counts.honeytoken) recommendations.push(recommendation(
+    "REVIEW_HONEYTOKEN_COVERAGE",
+    "Honeytoken interaction warrants review of token placement and adjacent containment controls.",
+    counts.honeytoken,
+  ));
+
+  const evidence = {
+    chainHead: chain.at(-1)?.chainHash ?? ZERO_HASH,
+    sampleCount: chain.length,
+    counts,
+  };
+  const unsigned = {
+    schema: "hercules.smokescreen.learning-capsule.v1",
+    policyVersion: POLICY_VERSION,
+    scope: "OWNED_INFRASTRUCTURE_ONLY",
+    createdAt,
+    evidenceDigest: digestHex(evidence),
+    chainHead: evidence.chainHead,
+    sampleCount: evidence.sampleCount,
+    recommendations,
+    executionAuthority: false,
+    autoApply: false,
+    requiresReview: true,
+    outboundCounterattack: false,
+  };
+  return Object.freeze({
+    ...unsigned,
+    recommendations: Object.freeze([...recommendations]),
+    signature: mac(key, unsigned),
+  });
+}
+
+export function verifyEvidenceLockedLearningCapsule(capsule = {}, options = {}) {
+  const key = keyBytes(options.hmacKey);
+  if (!capsule || typeof capsule !== "object" || Array.isArray(capsule)) return false;
+  if (
+    capsule.schema !== "hercules.smokescreen.learning-capsule.v1"
+    || capsule.scope !== "OWNED_INFRASTRUCTURE_ONLY"
+    || capsule.executionAuthority !== false
+    || capsule.autoApply !== false
+    || capsule.requiresReview !== true
+    || capsule.outboundCounterattack !== false
+    || !Array.isArray(capsule.recommendations)
+  ) return false;
+
+  for (const item of capsule.recommendations) {
+    if (
+      !item
+      || typeof item !== "object"
+      || !LEARNING_CONTROLS.has(item.control)
+      || item.changeAuthority !== "NONE"
+      || !Number.isInteger(item.evidenceCount)
+      || item.evidenceCount < 1
+    ) return false;
+  }
+
+  const {signature, ...unsigned} = capsule;
+  return safeEqualHex(signature, mac(key, unsigned));
+}
+
 function auditPayload(entry) {
   return {
     schema: entry.schema,
@@ -502,6 +699,10 @@ export const SMOKESCREEN_POLICY = Object.freeze({
   mirageNetworkPolicy: "ISOLATED_NO_EGRESS",
   mirageDataPolicy: "SYNTHETIC_ONLY",
   mirageFallback: "DENY",
+  falsePositiveGovernor: true,
+  minIndependentEvidenceFamiliesForDeception: 2,
+  evidenceLockedLearning: true,
+  learningAutoApply: false,
   supportedSignals: Object.freeze([...SIGNAL_SET].sort()),
 });
 
