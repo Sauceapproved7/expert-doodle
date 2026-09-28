@@ -1,0 +1,25 @@
+name: SauceApproved Content Multiplier
+
+on:
+  push:
+    branches:
+      - hercules/content-multiplier-v1
+  pull_request:
+    paths:
+      - "sauceapproved-studio/content-multiplier/**"
+      - "tests/sauceapproved-content-multiplier.test.mjs"
+      - ".github/workflows/content-multiplier.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run Content Multiplier tests
+        run: node --test tests/sauceapproved-content-multiplier.test.mjs
