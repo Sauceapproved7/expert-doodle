@@ -3,7 +3,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { handleSpaceshipDnsRequest } from './spaceship-dns-control.ts';
 import { handleSpaceshipMcpRequest, isSpaceshipMcpAction } from './spaceship-mcp.ts';
 import { handlePersonalBrowserRequest, isPersonalBrowserAction } from './personal-browser.ts';
-import { handleDomainAgentRequest, isDomainAgentAction, isDomainAgentGet } from './domain-agent.ts';\nimport {issuePilotAdmission,pilotAdmissionControlStatus,pilotAdmissionInternalAuthorized,PILOT_ADMISSION_OWNER_ERROR,PILOT_ADMISSION_INTERNAL_ERROR} from './pilot-admission.ts';
+import { handleDomainAgentRequest, isDomainAgentAction, isDomainAgentGet } from './domain-agent.ts';
+import {issuePilotAdmission,pilotAdmissionControlStatus,pilotAdmissionInternalAuthorized,PILOT_ADMISSION_OWNER_ERROR,PILOT_ADMISSION_INTERNAL_ERROR} from './pilot-admission.ts';
 
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}').default||Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -371,6 +372,11 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='POST'){
     const probe=await req.clone().json().catch(()=>({}));
     const probeAction=String(probe?.action||'');
+    if(probeAction==='pilot_admission_issue_internal'){
+      if(!await pilotAdmissionInternalAuthorized(req,admin))return out({error:PILOT_ADMISSION_INTERNAL_ERROR},403);
+      const result=await issuePilotAdmission(admin,probe,{principal:'hercules-internal',syntheticOnly:true,launchBaseUrl:U+'/functions/v1/hercules-launch'});
+      return out(result.body,result.status);
+    }
     if(isDomainAgentAction(probeAction))return handleDomainAgentRequest(req);
     if(isSpaceshipMcpAction(probeAction))return handleSpaceshipMcpRequest(req);
     if(isPersonalBrowserAction(probeAction))return handlePersonalBrowserRequest(req);
@@ -389,6 +395,19 @@ Deno.serve(async(req:Request)=>{
   const a=await actor(req); if(!a)return out({error:'owner_or_admin_required'},403);
   const org=String(a.m.organization_id), uid=String(a.user.id);
   const b=await req.json().catch(()=>({})), action=String(b.action||'status');
+
+  if(action==='pilot_admission_status'){
+    try{return out(await pilotAdmissionControlStatus(admin))}
+    catch{return out({error:'pilot_admission_status_failed'},500)}
+  }
+
+  if(action==='pilot_admission_issue'){
+    if(String(a.m.role)!=='owner')return out({error:PILOT_ADMISSION_OWNER_ERROR},403);
+    try{
+      const result=await issuePilotAdmission(admin,b,{principal:'owner',actorUserId:uid,launchBaseUrl:U+'/functions/v1/hercules-launch'});
+      return out(result.body,result.status);
+    }catch{return out({error:'pilot_admission_issue_failed'},500)}
+  }
 
   if(action==='launch_approval_status'){
     try{return out(await launchApprovalStatus())}
