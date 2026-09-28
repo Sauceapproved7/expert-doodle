@@ -45,3 +45,8 @@ The synthetic fixture is not a production detection-rate claim and is not a 100/
 - ATT&CK/TTP enrichment;
 - live production enforcement evidence;
 - independent red-team and multi-environment production proof.
+
+
+## Provenance
+
+This Community Preview packages original SauceApproved/Hercules source from the canonical repository under Apache-2.0. Public competitor documentation informed benchmark criteria only; no competitor source code is included.
