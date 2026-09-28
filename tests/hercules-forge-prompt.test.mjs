@@ -273,3 +273,84 @@ test("Hercules AI interpreter rejects missing credentials and unsafe endpoint co
     /must not embed credentials/i,
   );
 });
+
+
+test("Hercules AI interpreter repairs one invalid model generation before failing the build", async () => {
+  const received = [];
+  let attempt = 0;
+  const adapter = http.createServer(async (req, res) => {
+    let text = "";
+    for await (const chunk of req) text += chunk;
+    received.push(JSON.parse(text));
+    attempt += 1;
+    const result = attempt === 1
+      ? JSON.stringify({
+          version:"0.1",
+          name:"CanaryApp",
+          description:"First attempt has an invalid page kind.",
+          entities:[{name:"Check",fields:[{name:"label",type:"string",required:true}]}],
+          pages:[{name:"Checks",kind:"unknown",entity:"Check"}],
+          actions:[{name:"CreateCheck",kind:"create",entity:"Check"}],
+        })
+      : JSON.stringify({
+          version:"0.1",
+          name:"CanaryApp",
+          description:"Repaired canary app.",
+          entities:[{name:"Check",fields:[{name:"label",type:"string",required:true}]}],
+          pages:[{name:"Checks",kind:"list",entity:"Check"}],
+          actions:[{name:"CreateCheck",kind:"create",entity:"Check"}],
+        });
+    res.writeHead(200, {"content-type":"application/json"});
+    res.end(JSON.stringify({ok:true,result,provider:"test",model:"test"}));
+  });
+
+  const base = await listen(adapter);
+  try {
+    const interpreter = new HerculesAiForgeInterpreter({
+      endpoint:base + "/route",
+      internalKey:"k".repeat(48),
+    });
+    const repaired = await interpreter.interpret("build the production canary");
+    assert.equal(repaired.name, "CanaryApp");
+    assert.equal(repaired.pages[0].kind, "list");
+    assert.equal(received.length, 2);
+    assert.equal(received[0].prompt, "build the production canary");
+    assert.match(received[1].prompt, /repair the previous Forge specification/i);
+    assert.match(received[1].prompt, /unsupported page kind/i);
+    assert.doesNotMatch(received[1].prompt, /authorization|internalKey|secret/i);
+  } finally {
+    await new Promise((resolve) => adapter.close(resolve));
+  }
+});
+
+test("Hercules AI interpreter remains fail closed after one bounded repair attempt", async () => {
+  let calls = 0;
+  const adapter = http.createServer(async (req, res) => {
+    calls += 1;
+    res.writeHead(200, {"content-type":"application/json"});
+    res.end(JSON.stringify({
+      ok:true,
+      result:JSON.stringify({
+        version:"0.1",
+        name:"StillInvalid",
+        description:"Still invalid.",
+        entities:[{name:"Check",fields:[{name:"label",type:"string",required:true}]}],
+        pages:[{name:"Checks",kind:"unknown",entity:"Check"}],
+        actions:[{name:"CreateCheck",kind:"create",entity:"Check"}],
+      }),
+    }));
+  });
+  const base = await listen(adapter);
+  try {
+    await assert.rejects(
+      new HerculesAiForgeInterpreter({
+        endpoint:base + "/route",
+        internalKey:"k".repeat(48),
+      }).interpret("build invalid twice"),
+      /invalid Forge spec/i,
+    );
+    assert.equal(calls, 2);
+  } finally {
+    await new Promise((resolve) => adapter.close(resolve));
+  }
+});
