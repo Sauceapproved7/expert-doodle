@@ -164,56 +164,74 @@ export class HerculesAiForgeInterpreter extends ForgeInterpreter {
     if (typeof prompt !== "string" || !prompt.trim()) {
       throw new TypeError("prompt must be a non-empty string");
     }
+    const originalPrompt = prompt.trim();
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    const requestModelSpec = async (modelPrompt) => {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+      try {
+        const response = await this.fetchImpl(this.endpoint, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-hercules-internal-key": this.internalKey,
+          },
+          signal: controller.signal,
+          redirect: "error",
+          cache: "no-store",
+          body: JSON.stringify({
+            action: "route_internal",
+            system: HERCULES_FORGE_SPEC_SYSTEM,
+            prompt: modelPrompt,
+          }),
+        });
 
-    try {
-      const response = await this.fetchImpl(this.endpoint, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-hercules-internal-key": this.internalKey,
-        },
-        signal: controller.signal,
-        redirect: "error",
-        cache: "no-store",
-        body: JSON.stringify({
-          action: "route_internal",
-          system: HERCULES_FORGE_SPEC_SYSTEM,
-          prompt: prompt.trim(),
-        }),
-      });
+        if (!response.ok) {
+          throw new Error("Hercules AI interpreter request failed with status " + response.status);
+        }
 
-      if (!response.ok) {
-        throw new Error("Hercules AI interpreter request failed with status " + response.status);
-      }
+        const text = await boundedResponseText(response, this.maxResponseBytes);
+        const body = parseJson(text, "Hercules AI interpreter returned invalid JSON");
+        if (body?.ok !== true || typeof body?.result !== "string") {
+          throw new Error("Hercules AI interpreter did not return model output");
+        }
 
-      const text = await boundedResponseText(response, this.maxResponseBytes);
-      const body = parseJson(text, "Hercules AI interpreter returned invalid JSON");
-      if (body?.ok !== true || typeof body?.result !== "string") {
-        throw new Error("Hercules AI interpreter did not return model output");
-      }
-
-      const spec = parseJson(
-        cleanModelJson(body.result),
-        "Hercules AI interpreter returned invalid JSON",
-      );
-      if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
-        throw new Error("Hercules AI interpreter did not return a Forge spec object");
-      }
-
-      const validation = validateForgeSpec(spec);
-      if (!validation.ok) {
-        throw new Error(
-          "Hercules AI interpreter returned invalid Forge spec: " +
-          validation.errors.join("; "),
+        const spec = parseJson(
+          cleanModelJson(body.result),
+          "Hercules AI interpreter returned invalid JSON",
         );
+        if (!spec || typeof spec !== "object" || Array.isArray(spec)) {
+          throw new Error("Hercules AI interpreter did not return a Forge spec object");
+        }
+        return spec;
+      } finally {
+        clearTimeout(timer);
       }
-      return validation.spec;
-    } finally {
-      clearTimeout(timer);
+    };
+
+    const firstSpec = await requestModelSpec(originalPrompt);
+    const firstValidation = validateForgeSpec(firstSpec);
+    if (firstValidation.ok) return firstValidation.spec;
+
+    const repairPrompt = [
+      "Repair the previous Forge specification by regenerating the complete canonical Forge spec.",
+      "Return JSON only and obey the Forge specification system instructions.",
+      "Do not discuss the errors or add capabilities that were not requested.",
+      "Original product request:",
+      originalPrompt,
+      "Validator errors:",
+      ...firstValidation.errors.map((error) => "- " + error),
+    ].join("\n");
+
+    const repairedSpec = await requestModelSpec(repairPrompt);
+    const repairedValidation = validateForgeSpec(repairedSpec);
+    if (!repairedValidation.ok) {
+      throw new Error(
+        "Hercules AI interpreter returned invalid Forge spec: " +
+        repairedValidation.errors.join("; "),
+      );
     }
+    return repairedValidation.spec;
   }
 }
 
