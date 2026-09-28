@@ -69,6 +69,8 @@ export function createForgeSmokeScreenObserver({
 
   const clients=new Map();
   const totals={OBSERVE:0,THROTTLE:0,QUARANTINE:0,CONTAIN:0};
+  const attackTechniques={};
+  let attackTechniqueEvents=0;
   let observed=0;
   let lastDecisionAt=null;
 
@@ -144,6 +146,12 @@ export function createForgeSmokeScreenObserver({
       route:pathname,
       signals:decision.signalSummary,
     });
+    if(attackEnrichment.techniques.length>0){
+      attackTechniqueEvents+=1;
+      for(const technique of attackEnrichment.techniques){
+        attackTechniques[technique.id]=(attackTechniques[technique.id]??0)+1;
+      }
+    }
 
     const result=freezeResult({
       schema:"hercules.smokescreen.forge-observation.v1",
@@ -177,6 +185,10 @@ export function createForgeSmokeScreenObserver({
         observed,
         activeClients:clients.size,
         dispositions:Object.freeze({...totals}),
+        attackTechniqueEvents,
+        attackTechniques:Object.freeze(
+          Object.fromEntries(Object.entries(attackTechniques).sort(([a],[b])=>a.localeCompare(b))),
+        ),
         lastDecisionAt,
         auditCheckpoint:agent.checkpoint(),
       });
