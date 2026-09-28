@@ -1,4 +1,6 @@
-const PILOT_ADMISSION_PURPOSE='pilot-admission-control';\nexport const PILOT_ADMISSION_OWNER_ERROR='owner_required';\nexport const PILOT_ADMISSION_INTERNAL_ERROR='internal_authorization_required';
+const PILOT_ADMISSION_PURPOSE='pilot-admission-control';
+export const PILOT_ADMISSION_OWNER_ERROR='owner_required';
+export const PILOT_ADMISSION_INTERNAL_ERROR='internal_authorization_required';
 const PILOT_ADMISSION_VERSION='hercules-founding-pilot-admission-v1';
 const PILOT_QUALIFICATION_VERSION='pilot-qualification-v1';
 const PILOT_SCOPE='controlled-us-b2b-receivables';
