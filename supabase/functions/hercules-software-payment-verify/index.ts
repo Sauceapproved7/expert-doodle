@@ -63,6 +63,69 @@ async function stripeForm(key:string,path:string,form:URLSearchParams){
   });
 }
 
+async function reconcileRun(run:any,key:string){
+  if(!run?.id||run.status==='verified')return run;
+  let current=run;
+
+  if(current.provider_subscription_id&&!current.evidence?.cancel_requested){
+    try{
+      await stripe(key,'subscriptions/'+encodeURIComponent(String(current.provider_subscription_id)),{method:'DELETE'});
+    }catch(error){
+      const message=error instanceof Error?error.message:String(error);
+      if(!/canceled|No such subscription/i.test(message))throw error;
+    }
+    const evidence={...(current.evidence||{}),cancel_requested:true,reconcile_cancel:true};
+    const {data,error}=await admin.from('hercules_software_payment_verification_runs')
+      .update({evidence,updated_at:new Date().toISOString()})
+      .eq('id',current.id)
+      .select('*')
+      .single();
+    if(error)throw error;
+    current=data;
+  }
+
+  if(current.payment_intent_id&&!current.refund_id&&!current.evidence?.refund_requested){
+    const form=new URLSearchParams();
+    form.set('payment_intent',String(current.payment_intent_id));
+    form.set('metadata[verificationRunId]',String(current.id));
+    form.set('metadata[purpose]','software_payment_verification');
+    const refund=await stripeForm(key,'refunds',form);
+    const evidence={...(current.evidence||{}),refund_requested:true,reconcile_refund:true};
+    const {data,error}=await admin.from('hercules_software_payment_verification_runs')
+      .update({
+        refund_id:String(refund.id||''),
+        evidence,
+        updated_at:new Date().toISOString()
+      })
+      .eq('id',current.id)
+      .select('*')
+      .single();
+    if(error)throw error;
+    current=data;
+  }
+
+  const {data:certification,error:certificationError}=await admin.rpc(
+    'hercules_software_certify_payment_path',
+    {p_run_id:String(current.id)}
+  );
+  if(certificationError){
+    const message=String(certificationError.message||'');
+    if(!message.includes('verification_identifiers_incomplete')&&
+       !message.includes('commercial_prerequisites_not_approved')&&
+       !message.includes('live_software_stripe_catalog_mismatch')&&
+       !message.includes('live_mode_verification_required')){
+      throw certificationError;
+    }
+  }
+
+  const {data:fresh,error:freshError}=await admin.from('hercules_software_payment_verification_runs')
+    .select('id,product_code,plan_code,stripe_account_id,livemode,expected_amount_cents,status,checkout_session_id,provider_customer_id,provider_subscription_id,invoice_id,payment_intent_id,refund_id,evidence,created_at,updated_at,completed_at')
+    .eq('id',current.id)
+    .single();
+  if(freshError)throw freshError;
+  return {...fresh,certification:certification||null};
+}
+
 async function commercialPrerequisites(productCode:string){
   const {data,error}=await admin.from('hercules_software_commercial_approvals')
     .select('approval_type,status')
@@ -267,6 +330,22 @@ Deno.serve(async req=>{
       });
     }catch(error){
       return json({error:'prepare_live_verification_failed',detail:error instanceof Error?error.message:String(error)},502);
+    }
+  }
+
+  if(action==='reconcile_live_verification'){
+    try{
+      const productCode=String(body.product_code||'');
+      if(!PRODUCTS.includes(productCode as any))return json({error:'valid_product_code_required'},400);
+      const connection=await stripeConnection();
+      if(!connection?.access_secret_ref)return json({error:'stripe_provider_required'},409);
+      if(connection.metadata?.livemode!==true)return json({error:'live_stripe_required'},409);
+      const key=await secret(String(connection.access_secret_ref));
+      const run=await latestRun(productCode);
+      if(!run)return json({error:'verification_run_not_found'},404);
+      return json({ok:true,product_code:productCode,run:await reconcileRun(run,key)});
+    }catch(error){
+      return json({error:'reconcile_live_verification_failed',detail:error instanceof Error?error.message:String(error)},502);
     }
   }
 
