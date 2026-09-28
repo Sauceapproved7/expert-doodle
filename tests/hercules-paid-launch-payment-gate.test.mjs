@@ -27,10 +27,17 @@ test("commercialOk fails closed unless payment provider and paid flow are verifi
 });
 
 
-test("commercial launch can use owned AppDeploy Stripe custody only with live redacted proof",()=>{
+test("commercial launch can use owned AppDeploy Stripe custody only with live account-bound redacted proof",()=>{
   assert.match(gate,/sauceapproved-hercules-titan-dhakbi\.v2\.appdeploy\.ai\/api\/billing\/config/);
   assert.match(gate,/credentialMode===['"]live['"]/);
   assert.match(gate,/stripeReachable===true/);
   assert.match(gate,/webhookConfigured===true/);
+  assert.match(gate,/accountFingerprint/);
   assert.match(gate,/vaultStripeReady\|\|appDeployStripeReady/);
+});
+
+test("provider readiness keeps catalog verification separate and account-bound",()=>{
+  assert.match(gate,/stripe-catalog-verified/);
+  assert.match(gate,/catalogEvidenceValue\?\.accountFingerprint===providerAccountFingerprint/);
+  assert.match(gate,/paymentProviderAuthorized&&catalogReady/);
 });
