@@ -231,7 +231,7 @@ export function createForgeControlService({
       );
       const reply = async (status, body, headers = {}) => {
         if (shouldPersist) await durableState.flush();
-        return reply(status, body, headers);
+        return send(res, status, body, headers);
       };
 
       if (req.method === "GET") {
