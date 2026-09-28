@@ -45,7 +45,9 @@ jobs:
             hercules-video/launch-bootstrap.mjs \
             hercules-video/launch-state.mjs \
             hercules-video/run-status.mjs \
-            hercules-video/run-status-cli.mjs; then
+            hercules-video/run-status-cli.mjs \
+            hercules-video/studio-contract.mjs \
+            hercules-video/studio-server.mjs; then
             echo "Provider-specific dependency leaked into Hercules Video owned layer."
             exit 1
           fi
