@@ -2,7 +2,7 @@ import {randomBytes} from "node:crypto";
 import {mkdir, realpath, rm, stat, statfs, writeFile} from "node:fs/promises";
 import {join, resolve} from "node:path";
 import {listenForgeControlService} from "./control-api.mjs";
-import {HttpForgeInterpreter} from "./interpreter.mjs";
+import {HerculesAiForgeInterpreter, HttpForgeInterpreter} from "./interpreter.mjs";
 import {HttpForgeNotificationAdapter} from "./notifications.mjs";
 import {ForgeLoginRateLimiter} from "./rate-limit.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES} from "./runtime-data.mjs";
@@ -143,6 +143,23 @@ export function readForgeProductionConfig(env = process.env) {
   const interpreterUrl = env.FORGE_INTERPRETER_URL
     ? validateInterpreterUrl(env.FORGE_INTERPRETER_URL)
     : null;
+  const requestedInterpreterMode = String(env.FORGE_INTERPRETER_MODE ?? "").trim();
+  const interpreterMode = requestedInterpreterMode || (interpreterUrl ? "http" : null);
+  if (interpreterMode && !["http", "hercules-ai"].includes(interpreterMode)) {
+    throw new Error("FORGE_INTERPRETER_MODE must be one of: http, hercules-ai");
+  }
+  if (interpreterMode && !interpreterUrl) {
+    throw new Error("FORGE_INTERPRETER_URL is required when FORGE_INTERPRETER_MODE is configured");
+  }
+  const interpreterToken = interpreterUrl ? (env.FORGE_INTERPRETER_TOKEN ?? null) : null;
+  if (interpreterMode === "hercules-ai") {
+    if (typeof interpreterToken !== "string" || !interpreterToken.trim()) {
+      throw new Error("FORGE_INTERPRETER_TOKEN is required for hercules-ai mode");
+    }
+    if (interpreterToken.trim().length < 32) {
+      throw new Error("FORGE_INTERPRETER_TOKEN must be at least 32 characters in hercules-ai mode");
+    }
+  }
   const notificationUrl = env.FORGE_NOTIFICATION_URL
     ? validateNotificationUrl(env.FORGE_NOTIFICATION_URL)
     : null;
@@ -169,7 +186,8 @@ export function readForgeProductionConfig(env = process.env) {
     recoveryWindowMs,
     minFreeBytes,
     interpreterUrl,
-    interpreterToken: interpreterUrl ? (env.FORGE_INTERPRETER_TOKEN ?? null) : null,
+    interpreterMode,
+    interpreterToken: typeof interpreterToken === "string" ? interpreterToken.trim() : null,
     notificationUrl,
     notificationToken: notificationUrl ? (env.FORGE_NOTIFICATION_TOKEN ?? null) : null,
     durableStateUrl,
@@ -190,6 +208,7 @@ export function safeForgeProductionSummary(config) {
     recoveryWindowMs: config.recoveryWindowMs,
     minFreeBytes: config.minFreeBytes,
     promptIngress: Boolean(config.interpreterUrl),
+    interpreterMode: config.interpreterMode ?? null,
     identityLifecycle: Boolean(config.notificationUrl),
     durableState: Boolean(config.durableStateUrl),
     stateDurability: config.durableStateUrl ? "remote-mirror" : "host-filesystem",
@@ -284,10 +303,17 @@ export async function startForgeProductionService({env = process.env} = {}) {
   const durableStateStatus = durableState ? await durableState.status() : null;
   const durableHydration = durableState ? await durableState.hydrate() : null;
   const interpreter = config.interpreterUrl
-    ? new HttpForgeInterpreter({
-        endpoint: config.interpreterUrl,
-        token: config.interpreterToken,
-      })
+    ? (
+        config.interpreterMode === "hercules-ai"
+          ? new HerculesAiForgeInterpreter({
+              endpoint: config.interpreterUrl,
+              internalKey: config.interpreterToken,
+            })
+          : new HttpForgeInterpreter({
+              endpoint: config.interpreterUrl,
+              token: config.interpreterToken,
+            })
+      )
     : null;
   const loginRateLimiter = new ForgeLoginRateLimiter({
     maxFailures: config.loginMaxFailures,

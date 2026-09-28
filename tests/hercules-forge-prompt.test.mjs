@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {HttpForgeInterpreter} from "../hercules-forge/interpreter.mjs";
+import {HerculesAiForgeInterpreter, HttpForgeInterpreter} from "../hercules-forge/interpreter.mjs";
 import {createForgeControlService} from "../hercules-forge/control-api.mjs";
 
 const token = "x".repeat(24);
@@ -138,4 +138,138 @@ test("control API creates and revises projects through a replaceable prompt inte
     await new Promise((resolve) => server.close(resolve));
     await rm(root, {recursive: true, force: true});
   }
+});
+
+
+test("Hercules AI interpreter uses the internal router and returns a validated Forge spec", async () => {
+  let received;
+  let internalKey;
+  const adapter = http.createServer(async (req, res) => {
+    internalKey = req.headers["x-hercules-internal-key"];
+    let body = "";
+    for await (const chunk of req) body += chunk;
+    received = JSON.parse(body);
+    res.writeHead(200, {"content-type": "application/json"});
+    res.end(JSON.stringify({
+      ok: true,
+      result: "\`\`\`json\n" + JSON.stringify(spec) + "\n\`\`\`",
+      provider: "test-provider",
+      model: "test-model",
+    }));
+  });
+
+  const base = await listen(adapter);
+  try {
+    const interpreter = new HerculesAiForgeInterpreter({
+      endpoint: base + "/route",
+      internalKey: "k".repeat(48),
+    });
+    const result = await interpreter.interpret("build a lead tracker");
+    assert.deepEqual(result, spec);
+    assert.equal(internalKey, "k".repeat(48));
+    assert.equal(received.action, "route_internal");
+    assert.equal(received.prompt, "build a lead tracker");
+    assert.match(received.system, /Forge spec/i);
+    assert.match(received.system, /"version":"0\.1"/);
+    assert.match(received.system, /string, number, boolean, datetime, json/);
+    assert.match(received.system, /Return JSON only/i);
+  } finally {
+    await new Promise((resolve) => adapter.close(resolve));
+  }
+});
+
+test("Hercules AI interpreter rejects malformed, invalid, redirected, and oversized model output", async () => {
+  const invalidSpec = http.createServer((req, res) => {
+    res.writeHead(200, {"content-type": "application/json"});
+    res.end(JSON.stringify({
+      ok: true,
+      result: JSON.stringify({...spec, pages: [{name: "Leads", kind: "unknown", entity: "Lead"}]}),
+    }));
+  });
+  const invalidBase = await listen(invalidSpec);
+
+  const malformed = http.createServer((req, res) => {
+    res.writeHead(200, {"content-type": "application/json"});
+    res.end(JSON.stringify({ok: true, result: "not-json"}));
+  });
+  const malformedBase = await listen(malformed);
+
+  const target = http.createServer((req, res) => {
+    res.writeHead(200, {"content-type": "application/json"});
+    res.end(JSON.stringify({ok: true, result: JSON.stringify(spec)}));
+  });
+  const targetBase = await listen(target);
+
+  const redirector = http.createServer((req, res) => {
+    res.writeHead(302, {location: targetBase});
+    res.end();
+  });
+  const redirectBase = await listen(redirector);
+
+  const oversized = http.createServer((req, res) => {
+    res.writeHead(200, {"content-type": "application/json"});
+    res.end(JSON.stringify({ok: true, result: JSON.stringify({...spec, description: "x".repeat(4096)})}));
+  });
+  const oversizedBase = await listen(oversized);
+
+  try {
+    await assert.rejects(
+      new HerculesAiForgeInterpreter({
+        endpoint: invalidBase,
+        internalKey: "k".repeat(48),
+      }).interpret("invalid spec"),
+      /invalid Forge spec/i,
+    );
+    await assert.rejects(
+      new HerculesAiForgeInterpreter({
+        endpoint: malformedBase,
+        internalKey: "k".repeat(48),
+      }).interpret("malformed output"),
+      /invalid JSON/i,
+    );
+    await assert.rejects(
+      new HerculesAiForgeInterpreter({
+        endpoint: redirectBase,
+        internalKey: "k".repeat(48),
+      }).interpret("do not redirect"),
+    );
+    await assert.rejects(
+      new HerculesAiForgeInterpreter({
+        endpoint: oversizedBase,
+        internalKey: "k".repeat(48),
+        maxResponseBytes: 256,
+      }).interpret("bounded output"),
+      /response too large/i,
+    );
+  } finally {
+    await new Promise((resolve) => invalidSpec.close(resolve));
+    await new Promise((resolve) => malformed.close(resolve));
+    await new Promise((resolve) => redirector.close(resolve));
+    await new Promise((resolve) => target.close(resolve));
+    await new Promise((resolve) => oversized.close(resolve));
+  }
+});
+
+test("Hercules AI interpreter rejects missing credentials and unsafe endpoint configuration", () => {
+  assert.throws(
+    () => new HerculesAiForgeInterpreter({
+      endpoint: "https://models.example.test/route",
+      internalKey: "short",
+    }),
+    /at least 32/i,
+  );
+  assert.throws(
+    () => new HerculesAiForgeInterpreter({
+      endpoint: "file:///tmp/model",
+      internalKey: "k".repeat(48),
+    }),
+    /http or https/i,
+  );
+  assert.throws(
+    () => new HerculesAiForgeInterpreter({
+      endpoint: "https://user:pass@example.test/route",
+      internalKey: "k".repeat(48),
+    }),
+    /must not embed credentials/i,
+  );
 });
