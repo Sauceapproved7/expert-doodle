@@ -244,3 +244,14 @@ New safety properties:
 - a grant-pin mismatch is a deny condition, not an owner-consent escalation;
 - denial decisions are audit-fingerprinted;
 - the existing credential isolation, tenant isolation, least-privilege, 2FA/identity boundaries, and default-deny execution model remain unchanged.
+
+
+## Spaceship DNS inspection adapter
+
+The Domain Agent 2.2 profile adds a credential-free `spaceship.dns.inspect` adapter for SauceApproved domain operations.
+
+- It derives authorization state from the existing Spaceship DNS API/MCP control records.
+- It does not read Spaceship secret references or raw API credentials.
+- It reuses the existing `spaceship-dns` internal service boundary.
+- Until Spaceship authorization is configured, preflight and execution fail closed with `SPACESHIP_PROVIDER_AUTHORIZATION_REQUIRED`.
+- The first adapter is inspection-only. DNS mutation remains outside this adapter until authorization is active and a separate mutation policy is introduced.
