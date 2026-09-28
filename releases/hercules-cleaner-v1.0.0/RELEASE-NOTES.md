@@ -12,7 +12,12 @@
 - Windows, macOS and Linux user-level startup adapters;
 - Hercules command-surface routing;
 - Forge product-package registration;
-- exact-commit CI packaging path.
+- exact-commit CI packaging path;
+- fail-closed immutable update identity policy;
+- Windows per-user installer bundle with Start Menu launcher;
+- health-checked activation with rollback receipts;
+- SHA-256/HTTPS constrained update client with archive traversal protection;
+- Windows install/status/uninstall CI smoke coverage.
 
 ## Release posture
 
@@ -20,7 +25,7 @@ This is an **Early Access** release package. The runtime is merged and verified 
 
 ## Current limitation
 
-The release is source/runtime packaged and requires Node.js 22+. Standalone signed native installers are a later distribution milestone; this release does not claim that they exist.
+The release requires Node.js 22+. A Windows PowerShell/CMD Early Access installer bundle is included. A native EXE/MSI and Authenticode publisher signature remain later distribution milestones and are not claimed in v1.
 
 ## Provenance
 
