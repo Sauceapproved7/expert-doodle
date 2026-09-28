@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {mkdtemp,rm} from "node:fs/promises";
+import {mkdtemp,readFile,rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {createSmokeScreenAgent} from "../hercules-runtime/smokescreen-agent.mjs";
@@ -118,4 +118,16 @@ test("Forge Control API attaches SmokeScreen observation without changing custom
     await new Promise((resolve)=>server.close(resolve));
     await rm(root,{recursive:true,force:true});
   }
+});
+
+
+test("staging Forge mounts the SmokeScreen runtime read-only", async()=>{
+  const compose=await readFile(
+    new URL("../staging-plane/compose.yml",import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    compose,
+    /\.\.\/hercules-runtime:\/repo\/hercules-runtime:ro/,
+  );
 });
