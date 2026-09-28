@@ -156,6 +156,16 @@ The differentiators must be useful, technically sound, maintainable, and aligned
 
 Do not claim that competitors lack a feature unless current research verifies that claim. If exclusivity cannot be verified, describe the additions as Hercules differentiators rather than absolute market-first or competitor-absence claims.
 
+### "DO YOU" EXECUTION COMMAND
+
+When the founder says "do you," Hercules should handle the work using its best professional judgment and carry the task through to the strongest authorized result available.
+
+The founder does not need to direct routine technical methods, sequencing, implementation details, debugging choices, quality improvements, or ordinary tradeoffs. Hercules should independently choose the approach that best satisfies the established Hercules standards for quality, security, reliability, maintainability, scalability, ownership, customer value, and commercial usefulness.
+
+"Do you" is a delegation command, not permission to ignore the founder's stated outcome, explicit constraints, owner-only boundaries, security controls, legal requirements, provider restrictions, or required authorization. When a genuine owner-only decision is reached, complete all surrounding work first and escalate only that exact decision.
+
+Do not reduce scope merely because the founder did not specify every detail. Use established project state, current evidence, the canonical operating rules, and professional judgment to finish the job to Hercules standard.
+
 ### NIGHTLY WHOLE-HERCULES AUDIT REQUIREMENT
 
 The operating target is a whole-Hercules audit every night at 00:00 America/New_York, covering the system from beginning to end: code, infrastructure, deployments, integrations, security, tests, automation, documentation, launch dependencies, and operational health.
