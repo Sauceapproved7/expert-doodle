@@ -332,3 +332,40 @@ export const SMOKESCREEN_POLICY = Object.freeze({
   activeCounterattack: false,
   supportedSignals: Object.freeze([...SIGNAL_SET].sort()),
 });
+
+
+export async function runSmokeScreenWatcher({
+  source,
+  agent,
+  onDecision = async () => {},
+} = {}) {
+  if (!source || typeof source[Symbol.asyncIterator] !== "function") {
+    throw new Error("source must be an async iterable");
+  }
+  if (!agent || typeof agent.observe !== "function") {
+    throw new Error("agent with observe() required");
+  }
+  if (typeof onDecision !== "function") {
+    throw new Error("onDecision must be a function");
+  }
+
+  let observed = 0;
+  let quarantined = 0;
+  let contained = 0;
+
+  for await (const event of source) {
+    const decision = agent.observe(event);
+    observed += 1;
+    if (decision.disposition === "QUARANTINE") quarantined += 1;
+    if (decision.disposition === "CONTAIN") contained += 1;
+    await onDecision(decision);
+  }
+
+  return Object.freeze({
+    schema: "hercules.smokescreen.watcher-summary.v1",
+    observed,
+    quarantined,
+    contained,
+    scope: "OWNED_INFRASTRUCTURE_ONLY",
+  });
+}
