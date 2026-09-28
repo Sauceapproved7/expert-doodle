@@ -4,6 +4,7 @@ import {
   createSmokeScreenAgent,
   createSmokeScreenDecision,
   verifyAuditChain,
+  runSmokeScreenWatcher,
 } from "../hercules-runtime/smokescreen-agent.mjs";
 import {
   createCommandRequest,
@@ -139,4 +140,44 @@ test("unified Hercules command surface exposes SmokeScreen without execution aut
   const routed = routeCommand(command);
   assert.equal(routed.route, "hercules-runtime");
   assert.equal(routed.executionAuthority, false);
+});
+
+
+test("watcher consumes an authorized telemetry stream and emits bounded decisions", async () => {
+  async function* source() {
+    yield {
+      sessionId: "stream-safe",
+      route: "/health",
+      signals: { requestVelocity: 2 },
+    };
+    yield {
+      sessionId: "stream-recon",
+      route: "/admin",
+      signals: {
+        authFailures: 4,
+        routeProbes: 12,
+        requestVelocity: 90,
+        enumerationPattern: true,
+      },
+    };
+  }
+
+  const decisions = [];
+  const agent = createSmokeScreenAgent({
+    hmacKey: key,
+    now: () => 1_790_000_000_000,
+  });
+  const summary = await runSmokeScreenWatcher({
+    source: source(),
+    agent,
+    onDecision: async (decision) => decisions.push(decision),
+  });
+
+  assert.equal(summary.observed, 2);
+  assert.equal(summary.quarantined, 1);
+  assert.equal(summary.contained, 0);
+  assert.deepEqual(
+    decisions.map((decision) => decision.disposition),
+    ["OBSERVE", "QUARANTINE"],
+  );
 });
