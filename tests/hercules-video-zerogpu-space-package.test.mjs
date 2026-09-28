@@ -9,7 +9,7 @@ const readme=await readFile(new URL("../deploy/huggingface/hercules-video-wan22-
 test("ZeroGPU Space consumes the canonical Hercules render request",()=>{
   assert.match(app,/sauceapproved\.hercules\.video-render-request/);
   assert.match(app,/requestFingerprint/);
-  assert.match(app,/@spaces\.GPU\(size="large", duration=300\)/);
+  assert.match(app,/@spaces\.GPU\(size="large", duration=180\)/);
   assert.match(app,/Wan-AI\/Wan2\.2-TI2V-5B-Diffusers/);
 });
 
