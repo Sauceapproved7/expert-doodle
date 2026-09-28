@@ -83,7 +83,13 @@ export function buildStudioViewModel({runStatus,executionBridge={}}={}) {
       executionBridgeId:bridgeConnected ? String(executionBridge?.id || "trusted-bridge") : null,
       reason:bridgeConnected ? null : bridgeReason
     }),
-    identity:Object.freeze({...runStatus.identity}),
+    identity:Object.freeze({
+      executionPlanFingerprint:String(runStatus?.identity?.executionPlanFingerprint || ""),
+      upstreamCommit:String(runStatus?.identity?.upstreamCommit || ""),
+      checkpointSha256:String(runStatus?.identity?.checkpointSha256 || ""),
+      runtimeId:String(runStatus?.identity?.runtimeId || ""),
+      runnerId:String(runStatus?.identity?.runnerId || "")
+    }),
     timeline,
     reusableShotIds,
     resubmitShotIds,
