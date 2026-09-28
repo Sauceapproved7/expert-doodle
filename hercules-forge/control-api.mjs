@@ -150,6 +150,23 @@ function errorStatus(error) {
   return 500;
 }
 
+const SAFE_INTERNAL_CODES = new Set([
+  "forge_interpreter_failed",
+  "forge_project_create_failed",
+  "forge_audit_failed",
+  "forge_durable_flush_failed",
+]);
+
+function withInternalStage(error, code) {
+  if (!SAFE_INTERNAL_CODES.has(code)) throw new TypeError("invalid Forge internal stage code");
+  if (errorStatus(error) < 500) return error;
+  if (error && typeof error === "object") {
+    error.forgeCode ??= code;
+    return error;
+  }
+  return Object.assign(new Error("Forge internal stage failed"), {forgeCode: code});
+}
+
 export function createForgeControlService({
   root,
   token,
@@ -230,7 +247,13 @@ export function createForgeControlService({
         )
       );
       const reply = async (status, body, headers = {}) => {
-        if (shouldPersist) await durableState.flush();
+        if (shouldPersist) {
+          try {
+            await durableState.flush();
+          } catch (error) {
+            throw withInternalStage(error, "forge_durable_flush_failed");
+          }
+        }
         return send(res, status, body, headers);
       };
 
@@ -923,19 +946,33 @@ export function createForgeControlService({
         requireInterpreter(interpreter);
         const body = await readBody(req);
         const prompt = requirePrompt(body);
-        const spec = await interpreter.interpret(prompt);
+        let spec;
+        try {
+          spec = await interpreter.interpret(prompt);
+        } catch (error) {
+          throw withInternalStage(error, "forge_interpreter_failed");
+        }
         const metadata = {
           ...(body.metadata ?? {}),
           source: "prompt",
           promptSha256: promptHash(prompt),
         };
-        const result = await store.createProject(spec, metadata);
-        await audit.append({
-          type: "project.create",
-          actor: {kind: "control"},
-          projectId: result.project.projectId,
-          details: {revisionId: result.revision.revisionId, source: "prompt"},
-        });
+        let result;
+        try {
+          result = await store.createProject(spec, metadata);
+        } catch (error) {
+          throw withInternalStage(error, "forge_project_create_failed");
+        }
+        try {
+          await audit.append({
+            type: "project.create",
+            actor: {kind: "control"},
+            projectId: result.project.projectId,
+            details: {revisionId: result.revision.revisionId, source: "prompt"},
+          });
+        } catch (error) {
+          throw withInternalStage(error, "forge_audit_failed");
+        }
         return reply(201, result);
       }
 
@@ -1206,9 +1243,13 @@ export function createForgeControlService({
       const headers = error?.retryAfterSeconds
         ? {"retry-after": String(error.retryAfterSeconds)}
         : {};
-      return send(res, status, {
+      const body = {
         error: status >= 500 ? "internal_error" : error.message,
-      }, headers);
+      };
+      if (status >= 500 && SAFE_INTERNAL_CODES.has(error?.forgeCode)) {
+        body.code = error.forgeCode;
+      }
+      return send(res, status, body, headers);
     }
   });
 
