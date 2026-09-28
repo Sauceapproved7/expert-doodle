@@ -1,6 +1,6 @@
 # Hercules Cleaner v1
 
-Status: implementation candidate  
+Status: Early Access runtime; Windows installer v1 candidate  
 Runtime: `hercules-cleaner/`  
 Control surface: localhost-only dashboard + CLI  
 Primary platforms: Windows, macOS, Linux (Node.js runtime)
@@ -90,6 +90,16 @@ node hercules-cleaner/cli.mjs uninstall-autostart
 
 The scheduler/launch systems are operating-system infrastructure and are not SauceApproved-owned code.
 
+## Windows installer v1
+
+The Windows Early Access bundle installs per-user under `%LOCALAPPDATA%\\SauceApproved\\Hercules Cleaner` and keeps Cleaner state and Recovery Capsules separately under `%USERPROFILE%\\.hercules-cleaner`. The entrypoint is `install.cmd`; it invokes PowerShell without changing or bypassing the machine execution-policy setting.
+
+The bundle requires Node.js 22+ but does not package Node.js as SauceApproved code. Installation is versioned, performs an activation health check, creates a Start Menu shortcut, can register the Cleaner daemon at user logon, and can register a daily update check.
+
+Update safety is fail-closed: HTTPS host allowlisting, exact artifact SHA-256, resolved source commit identity, archive path-traversal rejection, staging into a new version directory, status health verification before activation, and an update receipt. Failed health checks leave the previous active version selected.
+
+Automatic update distribution remains disabled until a verified distribution asset exists. Windows Authenticode publisher signing is not claimed in v1. GitHub artifact attestation proves CI build provenance; it is not a substitute for an Authenticode publisher certificate.
+
 ## State
 
 Default local state directory:
@@ -108,7 +118,7 @@ Default local state directory:
 Focused suite:
 
 ```sh
-node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs
+node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-installer.test.mjs tests/hercules-cleaner-windows-package.test.mjs
 ```
 
 Repository gates:
@@ -129,7 +139,8 @@ v1 does not claim:
 - registry optimization;
 - secure forensic erasure;
 - autonomous deletion of arbitrary personal folders;
-- standalone native binaries that require no Node.js runtime;
+- a native EXE/MSI installer that requires no Node.js runtime;
+- an Authenticode publisher signature before a trusted signing certificate is configured;
 - installation on a customer device until that device has been explicitly connected/authorized.
 
 The design favors recoverability and explicit policy over aggressive deletion.
@@ -141,4 +152,4 @@ Hercules Cleaner is registered for SauceApproved Early Access discovery through 
 
 Commercial state remains fail-closed: candidate pricing is not approved, Terms and Privacy remain owner-decision gated, payment-provider readiness is separate, paid-path verification is separate, and checkout stays disabled until those controls are explicitly satisfied.
 
-The catalog record intentionally carries no live product URL until an actual customer-facing Cleaner delivery endpoint is deployed and verified.
+The catalog carries the verified Early Access presentation URL after Hercules deployment-ledger and outside-in HTTP verification. The catalog page does not itself grant local filesystem authority.
