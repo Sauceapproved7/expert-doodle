@@ -372,3 +372,69 @@ test("control API acknowledges mutating requests only after durable state flush"
     await rm(root, {recursive:true, force:true});
   }
 });
+
+
+test("control API returns only safe stage codes for internal prompt-create failures", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-stage-code-"));
+  const interpreter = {
+    async interpret() {
+      throw new Error("model output contained private diagnostic detail");
+    },
+  };
+  const server = createForgeControlService({root, token, interpreter});
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = "http://127.0.0.1:" + server.address().port;
+
+  try {
+    const response = await fetch(base + "/v1/projects/from-prompt", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        authorization:"Bearer " + token,
+      },
+      body:JSON.stringify({prompt:"build a canary",metadata:{projectId:"safe-stage-canary"}}),
+    });
+    assert.equal(response.status, 500);
+    const body = await response.json();
+    assert.equal(body.error, "internal_error");
+    assert.equal(body.code, "forge_interpreter_failed");
+    assert.equal(JSON.stringify(body).includes("private diagnostic detail"), false);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive:true, force:true});
+  }
+});
+
+test("control API identifies durable flush failure without exposing the underlying error", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-durable-stage-"));
+  const durableState = {
+    async flush() {
+      throw new Error("private durable backend failure detail");
+    },
+    async status() {
+      return {ok:true,objectCount:0};
+    },
+  };
+  const server = createForgeControlService({root, token, durableState});
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = "http://127.0.0.1:" + server.address().port;
+
+  try {
+    const response = await fetch(base + "/v1/projects", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        authorization:"Bearer " + token,
+      },
+      body:JSON.stringify({spec,metadata:{projectId:"durable-stage-canary"}}),
+    });
+    assert.equal(response.status, 500);
+    const body = await response.json();
+    assert.equal(body.error, "internal_error");
+    assert.equal(body.code, "forge_durable_flush_failed");
+    assert.equal(JSON.stringify(body).includes("private durable backend failure detail"), false);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive:true, force:true});
+  }
+});

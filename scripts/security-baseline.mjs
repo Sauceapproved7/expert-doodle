@@ -72,8 +72,11 @@ const checks = {
     /identity\.recovery\.complete/.test(control),
   forgeRecoveryEnumerationResistance:
     /identity\.recovery\.request/.test(control) &&
-    /return reply\(202, \{accepted: true\}\)/.test(control) &&
-    /if \(shouldPersist\) await durableState\.flush\(\)/.test(control) &&
+    /return await reply\(202, \{accepted: true\}\)/.test(control) &&
+    /if \(shouldPersist\)/.test(control) &&
+    /await durableState\.flush\(\)/.test(control) &&
+    /withInternalStage\(error, "forge_durable_flush_failed"\)/.test(control) &&
+    /SAFE_INTERNAL_CODES\.has\(error\?\.forgeCode\)/.test(control) &&
     /FORGE_RECOVERY_MAX_REQUESTS/.test(production),
   forgeNotificationBoundary:
     /redirect: "error"/.test(notifications) &&

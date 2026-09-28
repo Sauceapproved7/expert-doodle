@@ -139,10 +139,15 @@ export async function runForgeStartupPromptCanary({
     },
   });
   if (created.response.status !== 201) {
+    const safeCode = typeof created.payload?.code === "string" &&
+      /^forge_[a-z0-9_]{1,80}$/.test(created.payload.code)
+      ? created.payload.code
+      : null;
     throw new Error(
       "startup canary project creation failed with status " +
       created.response.status +
-      (created.payload?.error ? ": " + created.payload.error : ""),
+      (created.payload?.error ? ": " + created.payload.error : "") +
+      (safeCode ? " [" + safeCode + "]" : ""),
     );
   }
 

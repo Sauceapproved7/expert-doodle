@@ -203,3 +203,40 @@ test("startup prompt canary validates server-only configuration", async () => {
     /projectId/i,
   );
 });
+
+
+test("startup canary reports safe internal stage code without leaking private error detail", async () => {
+  const server = http.createServer((req, res) => {
+    if (req.method === "GET" && req.url === "/v1/projects/forge-prompt-canary-ai-v1") {
+      res.writeHead(404, {"content-type":"application/json"});
+      return res.end(JSON.stringify({error:"not_found"}));
+    }
+    if (req.method === "POST" && req.url === "/v1/projects/from-prompt") {
+      res.writeHead(500, {"content-type":"application/json"});
+      return res.end(JSON.stringify({
+        error:"internal_error",
+        code:"forge_durable_flush_failed",
+      }));
+    }
+    res.writeHead(404, {"content-type":"application/json"});
+    res.end(JSON.stringify({error:"not_found"}));
+  });
+
+  const origin = await listen(server);
+  try {
+    await assert.rejects(
+      runForgeStartupPromptCanary({
+        origin,
+        controlToken,
+        projectId:"forge-prompt-canary-ai-v1",
+      }),
+      (error) => {
+        assert.match(error.message, /forge_durable_flush_failed/);
+        assert.doesNotMatch(error.message, /private|secret|token/i);
+        return true;
+      },
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
