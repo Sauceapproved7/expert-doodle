@@ -347,8 +347,22 @@ Deno.serve(async req=>{
   });
 
   if(receiptError){
-    if(String(receiptError.code)==='23505')return json({received:true,duplicate:true});
-    return json({error:'receipt_write_failed'},500);
+    if(String(receiptError.code)==='23505'){
+      const {data:existing,error:existingError}=await admin.from('hercules_webhook_receipts')
+        .select('status')
+        .eq('provider','stripe')
+        .eq('delivery_id',delivery)
+        .single();
+      if(existingError)return json({error:'receipt_read_failed'},500);
+      if(existing.status==='processed')return json({received:true,duplicate:true});
+      const {error:retryError}=await admin.from('hercules_webhook_receipts')
+        .update({status:'received',error:null,received_at:new Date().toISOString()})
+        .eq('provider','stripe')
+        .eq('delivery_id',delivery);
+      if(retryError)return json({error:'receipt_retry_reset_failed'},500);
+    }else{
+      return json({error:'receipt_write_failed'},500);
+    }
   }
 
   let organizationId='';
