@@ -43,7 +43,7 @@ jobs:
           node scripts/security-baseline.mjs
           node scripts/verify-hercules-execution-contract.mjs
       - name: Run Cleaner release tests
-        run: node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-release-package.test.mjs tests/hercules-cleaner-installer.test.mjs
+        run: node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-release-package.test.mjs tests/hercules-cleaner-installer.test.mjs tests/hercules-cleaner-windows-package.test.mjs
       - name: Build exact-commit source package
         run: |
           rm -rf /tmp/hercules-cleaner-v1.0.0
