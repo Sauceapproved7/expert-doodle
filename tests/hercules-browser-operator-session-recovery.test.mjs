@@ -13,7 +13,8 @@ test("operator browser retries one dead reused session with a fresh session",()=
   assert.match(browser,/sessionRecoveryAttempts/);
   assert.match(browser,/delete freshPayload\.sessionId/);
   assert.match(browser,/freshPayload\.persistSession=true/);
-  assert.match(browser,/sessionRecovered:true/);
+  assert.match(browser,/sessionRecovered=true/);
+  assert.match(browser,/sessionRecovered,/);
 });
 
 test("operator browser never treats anti-bot challenges as recoverable session failure",()=>{
