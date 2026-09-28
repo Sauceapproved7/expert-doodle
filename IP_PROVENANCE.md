@@ -138,3 +138,12 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Runtime/package dependencies: Node.js built-ins plus GitHub Actions infrastructure; no vendored third-party runtime source is added.
 - Distribution evidence: exact 40-character source commit identity, per-file SHA-256 hashes, deterministic archive checksum, and GitHub artifact attestation on main pushes.
 - Commercial boundary: Early Access package only; checkout remains disabled and candidate pricing remains owner-approval required.
+
+## SauceApproved Content Multiplier v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/content-multiplier/*.mjs`, `tests/sauceapproved-content-multiplier.test.mjs`, `docs/HERCULES-CONTENT-MULTIPLIER-V1.md`, and the dedicated CI workflow.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- Third-party infrastructure: any future model, social-publishing, analytics, storage or messaging provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
+- Trust scope: generation fails closed without an injected provider; locked facts and banned phrases are validated before generated assets are accepted.
+- Market-position note: Content DNA, Variation Tree, Content Opportunity Radar and Variant Fatigue Guard are SauceApproved differentiators. No absolute market-first claim is made without separate current verification.
