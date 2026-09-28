@@ -1,4 +1,4 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";\nimport {pilotAdmissionGet,pilotAdmissionPost} from "./pilot-admission.ts";
 
 const U = Deno.env.get("SUPABASE_URL") || "https://xbwuablxhhwsaoomsoco.supabase.co";
 const P = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
