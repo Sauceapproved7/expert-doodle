@@ -135,4 +135,9 @@ test("Forge observe-only ingress emits ATT&CK enrichment without gaining enforce
   assert.ok(ids(result.attackEnrichment).includes("T1110.004"));
   assert.equal(result.attackEnrichment.automaticResponseAuthority,false);
   assert.equal(result.attackEnrichment.outboundCounterattack,false);
+
+  const snapshot=observer.snapshot();
+  assert.equal(snapshot.attackTechniques["T1110.004"],1);
+  assert.equal(snapshot.attackTechniqueEvents,1);
+  assert.equal(JSON.stringify(snapshot).includes("/login"),false);
 });
