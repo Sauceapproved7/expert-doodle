@@ -83,7 +83,7 @@ async function run(){
     db.from('hercules_software_commercial_approvals')
       .select('approval_type,status,approved_at,document_ref,evidence')
       .eq('product_code',TITAN_PRODUCT_CODE)
-      .in('approval_type',['pricing','terms','privacy'])
+      .in('approval_type',['pricing','terms','privacy','payment_path_verified'])
       .order('approval_type'),
     db.rpc('hercules_password_defense_status')
   ]);
@@ -148,9 +148,13 @@ async function run(){
 
   const titanOwnerApprovalTypes=['pricing','terms','privacy'];
   const titanOwnerApprovalsComplete=Boolean(
-    (titanOwnerApprovals||[]).length===3 &&
     titanOwnerApprovalTypes.every(type=>
       (titanOwnerApprovals||[]).some((row:any)=>row.approval_type===type&&row.status==='approved')
+    )
+  );
+  const titanPaymentPathVerified=Boolean(
+    (titanOwnerApprovals||[]).some((row:any)=>
+      row.approval_type==='payment_path_verified'&&row.status==='approved'
     )
   );
 
@@ -171,6 +175,7 @@ async function run(){
   const shopifyOfferAligned=Boolean(
     shopifyOfferBase &&
     titanOwnerApprovalsComplete &&
+    titanPaymentPathVerified &&
     shopifyOfferValue?.disposition==='aligned_to_approved_offer' &&
     shopifyOfferValue?.priceCadenceVerified===true &&
     shopifyOfferValue?.entitlementVerified===true &&
@@ -227,6 +232,7 @@ async function run(){
         approvalPacketVersion:shopifyOfferValue?.approvalPacketVersion||null,
         approvalPacketDigest:shopifyOfferValue?.approvalPacketDigest||null,
         titanOwnerApprovalsComplete,
+        titanPaymentPathVerified,
         titanOwnerApprovals:(titanOwnerApprovals||[]).map((row:any)=>({
           approvalType:row.approval_type,
           status:row.status,
@@ -264,7 +270,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.8.0',
+      version:'1.9.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt
