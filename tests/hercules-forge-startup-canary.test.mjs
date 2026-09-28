@@ -240,3 +240,49 @@ test("startup canary reports safe internal stage code without leaking private er
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+
+test("startup prompt canary accepts the canonical direct-project GET response shape", async () => {
+  const server = http.createServer((req, res) => {
+    if (req.method === "GET" && req.url === "/v1/projects/forge-prompt-canary-ai-v1") {
+      res.writeHead(200, {"content-type":"application/json"});
+      return res.end(JSON.stringify({
+        projectId:"forge-prompt-canary-ai-v1",
+        metadata:{
+          source:"prompt",
+          canary:"forge-startup-prompt-v1",
+          purpose:"synthetic-production-certification",
+          promptSha256:"c".repeat(64),
+        },
+      }));
+    }
+    if (req.method === "GET" && req.url === "/ready") {
+      res.writeHead(200, {"content-type":"application/json"});
+      return res.end(JSON.stringify({
+        ready:true,
+        durableState:{
+          ok:true,
+          schema:"sauceapproved.hercules.forge.durable-state.v1",
+          carriesCredentials:false,
+          objectCount:10,
+        },
+      }));
+    }
+    res.writeHead(500, {"content-type":"application/json"});
+    res.end(JSON.stringify({error:"unexpected"}));
+  });
+
+  const origin = await listen(server);
+  try {
+    const result = await runForgeStartupPromptCanary({
+      origin,
+      controlToken,
+      projectId:"forge-prompt-canary-ai-v1",
+    });
+    assert.equal(result.status, "already_verified");
+    assert.equal(result.projectId, "forge-prompt-canary-ai-v1");
+    assert.equal(result.durableObjectCount, 10);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
