@@ -67,6 +67,22 @@ test("production config is fail-closed and safe summary omits credentials", () =
   );
   assert.equal(herculesAiConfig.interpreterToken, "i".repeat(48));
 
+  const canaryConfig = readForgeProductionConfig({
+    ...env,
+    FORGE_STARTUP_PROMPT_CANARY_ID: "forge-prompt-canary-ai-v1",
+  });
+  assert.equal(canaryConfig.startupPromptCanaryId, "forge-prompt-canary-ai-v1");
+  const canarySummary = safeForgeProductionSummary(canaryConfig);
+  assert.equal(canarySummary.startupPromptCanaryId, "forge-prompt-canary-ai-v1");
+  assert.equal(JSON.stringify(canarySummary).includes(env.FORGE_CONTROL_TOKEN), false);
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_STARTUP_PROMPT_CANARY_ID: "../escape",
+    }),
+    /FORGE_STARTUP_PROMPT_CANARY_ID/,
+  );
+
   const durableConfig = readForgeProductionConfig({
     ...env,
     FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
