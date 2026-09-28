@@ -146,6 +146,8 @@ export function createAgentDiscoveryDocument(identity) {
       auditFingerprints: true,
       multiTenantIsolation: true,
       ownerBoundaryDetection: true,
+      grantFingerprintPinning: true,
+      taskValidityWindows: true,
     },
     security: {
       leastPrivilege: true,
@@ -208,12 +210,41 @@ export function evaluateDomainAgentTask({
     impact: requiredString(request.impact, "request.impact"),
     at: requestAt,
     requiredScopes: normalizedStrings(request.requiredScopes, "request.requiredScopes"),
+    expectedGrantSha256: request.expectedGrantSha256 == null
+      ? null
+      : String(request.expectedGrantSha256).trim().toLowerCase(),
+    notBefore: request.notBefore == null ? null : instant(request.notBefore, "request.notBefore"),
+    expiresAt: request.expiresAt == null ? null : instant(request.expiresAt, "request.expiresAt"),
   };
+
+  if (normalizedRequest.expectedGrantSha256 && !SHA256.test(normalizedRequest.expectedGrantSha256)) {
+    throw new TypeError("request.expectedGrantSha256 must be a SHA-256 digest");
+  }
+  if (
+    normalizedRequest.notBefore
+    && normalizedRequest.expiresAt
+    && Date.parse(normalizedRequest.expiresAt) <= Date.parse(normalizedRequest.notBefore)
+  ) {
+    throw new TypeError("request.expiresAt must be after request.notBefore");
+  }
 
   if (identity.tenantId !== normalizedRequest.tenantId) {
     return decision({
       identity, request: normalizedRequest, disposition: "DENY",
       reasonCodes: ["TENANT_MISMATCH"],
+    });
+  }
+
+  if (normalizedRequest.notBefore && Date.parse(requestAt) < Date.parse(normalizedRequest.notBefore)) {
+    return decision({
+      identity, request: normalizedRequest, disposition: "DENY",
+      reasonCodes: ["TASK_NOT_YET_VALID"],
+    });
+  }
+  if (normalizedRequest.expiresAt && Date.parse(requestAt) >= Date.parse(normalizedRequest.expiresAt)) {
+    return decision({
+      identity, request: normalizedRequest, disposition: "DENY",
+      reasonCodes: ["TASK_EXPIRED"],
     });
   }
 
@@ -256,6 +287,15 @@ export function evaluateDomainAgentTask({
     return decision({
       identity, request: normalizedRequest, disposition: "DENY",
       reasonCodes: ["PROVIDER_MISMATCH"],
+    });
+  }
+  if (
+    normalizedRequest.expectedGrantSha256
+    && providerGrant.grantSha256 !== normalizedRequest.expectedGrantSha256
+  ) {
+    return decision({
+      identity, request: normalizedRequest, disposition: "DENY",
+      reasonCodes: ["PROVIDER_GRANT_PIN_MISMATCH"],
     });
   }
 
