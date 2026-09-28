@@ -81,6 +81,7 @@ services:
     command: ["node", "/repo/hercules-forge/production-cli.mjs"]
     volumes:
       - ../hercules-forge:/repo/hercules-forge:ro
+      - ../hercules-runtime:/repo/hercules-runtime:ro
       - hercules_forge_state:/forge-state
     ports:
       - "127.0.0.1:38700:38700"
