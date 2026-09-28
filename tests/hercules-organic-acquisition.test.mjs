@@ -56,3 +56,18 @@ test("public launch includes first educational proof asset with tracked pilot CT
   assert.match(launch,/utm_content=proof-overdue-invoices-001/);
   assert.match(launch,/Request a founding pilot/);
 });
+
+
+test("founding pilot intake captures controlled qualification before accepting a request",()=>{
+  assert.match(launch,/id="pilotOwnReceivables"/);
+  assert.match(launch,/id="pilotExcludedUse"/);
+  assert.match(launch,/id="pilotApprovalGated"/);
+  assert.match(launch,/id="pilotDataMode"/);
+  assert.match(launch,/manages_own_receivables/);
+  assert.match(launch,/excluded_use_ack/);
+  assert.match(launch,/approval_gated_ack/);
+  assert.match(launch,/data_mode/);
+  assert.match(launch,/qualification_required/);
+  assert.match(launch,/synthetic/);
+  assert.match(launch,/authorized_real/);
+});
