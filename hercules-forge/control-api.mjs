@@ -192,6 +192,7 @@ export function createForgeControlService({
           method: req.method ?? "GET",
           pathname: smokePath,
           statusCode: res.statusCode,
+          sessionId: parseCookies(req).forge_session ?? "",
           remoteAddress: req.socket?.remoteAddress ?? "",
           userAgent: req.headers["user-agent"] ?? "",
           hasAuthorizationHeader: typeof req.headers.authorization === "string",
