@@ -54,6 +54,47 @@ test("production config is fail-closed and safe summary omits credentials", () =
   assert.equal(config.minFreeBytes, 1048576);
   assert.equal(config.notificationUrl, "https://notify.example.test/send");
 
+  const herculesAiConfig = readForgeProductionConfig({
+    ...env,
+    FORGE_INTERPRETER_MODE: "hercules-ai",
+    FORGE_INTERPRETER_URL: "https://models.example.test/functions/v1/hercules-ai",
+    FORGE_INTERPRETER_TOKEN: "i".repeat(48),
+  });
+  assert.equal(herculesAiConfig.interpreterMode, "hercules-ai");
+  assert.equal(
+    herculesAiConfig.interpreterUrl,
+    "https://models.example.test/functions/v1/hercules-ai",
+  );
+  assert.equal(herculesAiConfig.interpreterToken, "i".repeat(48));
+
+  const canaryConfig = readForgeProductionConfig({
+    ...env,
+    FORGE_INTERPRETER_MODE: "hercules-ai",
+    FORGE_INTERPRETER_URL: "https://models.example.test/functions/v1/hercules-ai",
+    FORGE_INTERPRETER_TOKEN: "i".repeat(48),
+    FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
+    FORGE_DURABLE_STATE_TOKEN: "d".repeat(48),
+    FORGE_STARTUP_PROMPT_CANARY_ID: "forge-prompt-canary-ai-v1",
+  });
+  assert.equal(canaryConfig.startupPromptCanaryId, "forge-prompt-canary-ai-v1");
+  const canarySummary = safeForgeProductionSummary(canaryConfig);
+  assert.equal(canarySummary.startupPromptCanaryId, "forge-prompt-canary-ai-v1");
+  assert.equal(JSON.stringify(canarySummary).includes(env.FORGE_CONTROL_TOKEN), false);
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_STARTUP_PROMPT_CANARY_ID: "forge-prompt-canary-ai-v1",
+    }),
+    /requires prompt ingress/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_STARTUP_PROMPT_CANARY_ID: "../escape",
+    }),
+    /FORGE_STARTUP_PROMPT_CANARY_ID/,
+  );
+
   const durableConfig = readForgeProductionConfig({
     ...env,
     FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
@@ -66,6 +107,11 @@ test("production config is fail-closed and safe summary omits credentials", () =
   assert.equal(durableConfig.durableStateToken, "d".repeat(48));
 
   const summary = safeForgeProductionSummary(config);
+  const herculesAiSummary = safeForgeProductionSummary(herculesAiConfig);
+  assert.equal(herculesAiSummary.promptIngress, true);
+  assert.equal(herculesAiSummary.interpreterMode, "hercules-ai");
+  assert.equal("interpreterToken" in herculesAiSummary, false);
+  assert.equal(JSON.stringify(herculesAiSummary).includes(herculesAiConfig.interpreterToken), false);
   assert.equal(summary.secureSessionCookies, true);
   assert.equal(summary.identityLifecycle, true);
   assert.equal(summary.durableState, false);
@@ -120,6 +166,39 @@ test("production config is fail-closed and safe summary omits credentials", () =
       FORGE_INTERPRETER_URL: "http://127.0.0.1:39000/interpret",
     }).interpreterUrl,
     "http://127.0.0.1:39000/interpret",
+  );
+  assert.equal(
+    readForgeProductionConfig({
+      ...env,
+      FORGE_INTERPRETER_URL: "http://127.0.0.1:39000/interpret",
+    }).interpreterMode,
+    "http",
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_INTERPRETER_MODE: "hercules-ai",
+      FORGE_INTERPRETER_URL: "https://models.example.test/functions/v1/hercules-ai",
+    }),
+    /FORGE_INTERPRETER_TOKEN is required/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_INTERPRETER_MODE: "hercules-ai",
+      FORGE_INTERPRETER_URL: "https://models.example.test/functions/v1/hercules-ai",
+      FORGE_INTERPRETER_TOKEN: "short",
+    }),
+    /at least 32 characters/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_INTERPRETER_MODE: "unknown",
+      FORGE_INTERPRETER_URL: "https://models.example.test/interpret",
+      FORGE_INTERPRETER_TOKEN: "i".repeat(48),
+    }),
+    /FORGE_INTERPRETER_MODE must be one of/,
   );
   assert.throws(
     () => readForgeProductionConfig({

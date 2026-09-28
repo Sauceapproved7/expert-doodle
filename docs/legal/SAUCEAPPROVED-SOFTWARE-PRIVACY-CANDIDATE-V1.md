@@ -154,3 +154,9 @@ Before this policy becomes effective:
 - confirm the monitored privacy/support request channel;
 - ensure public wording matches the final Terms and live products;
 - record affirmative owner approval through the Hercules product-specific approval path.
+
+
+### Hercules Cleaner
+Hercules Cleaner is designed to keep cleanup execution and local file metadata on the user's device. The core cleaner does not require uploading a user's local file inventory, filenames, file contents, Recovery Capsule contents, or protected-path contents to the SauceApproved web catalog.
+
+The Early Access catalog may process ordinary account and access-request information such as email, name, company, requested plan, message, attribution fields, and product-access status. If future optional remote fleet or centralized receipt features are introduced, their data flows must be documented and approved before activation; they are not represented as part of the current v1.0.0 local-agent release.

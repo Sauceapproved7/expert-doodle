@@ -2,11 +2,12 @@ import {randomBytes} from "node:crypto";
 import {mkdir, realpath, rm, stat, statfs, writeFile} from "node:fs/promises";
 import {join, resolve} from "node:path";
 import {listenForgeControlService} from "./control-api.mjs";
-import {HttpForgeInterpreter} from "./interpreter.mjs";
+import {HerculesAiForgeInterpreter, HttpForgeInterpreter} from "./interpreter.mjs";
 import {HttpForgeNotificationAdapter} from "./notifications.mjs";
 import {ForgeLoginRateLimiter} from "./rate-limit.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES} from "./runtime-data.mjs";
 import {ForgeDurableStateMirror} from "./durable-state.mjs";
+import {runForgeStartupPromptCanary} from "./startup-canary.mjs";
 import {createSmokeScreenAgent} from "../hercules-runtime/smokescreen-agent.mjs";
 import {
   createForgeSmokeScreenObserver,
@@ -143,6 +144,23 @@ export function readForgeProductionConfig(env = process.env) {
   const interpreterUrl = env.FORGE_INTERPRETER_URL
     ? validateInterpreterUrl(env.FORGE_INTERPRETER_URL)
     : null;
+  const requestedInterpreterMode = String(env.FORGE_INTERPRETER_MODE ?? "").trim();
+  const interpreterMode = requestedInterpreterMode || (interpreterUrl ? "http" : null);
+  if (interpreterMode && !["http", "hercules-ai"].includes(interpreterMode)) {
+    throw new Error("FORGE_INTERPRETER_MODE must be one of: http, hercules-ai");
+  }
+  if (interpreterMode && !interpreterUrl) {
+    throw new Error("FORGE_INTERPRETER_URL is required when FORGE_INTERPRETER_MODE is configured");
+  }
+  const interpreterToken = interpreterUrl ? (env.FORGE_INTERPRETER_TOKEN ?? null) : null;
+  if (interpreterMode === "hercules-ai") {
+    if (typeof interpreterToken !== "string" || !interpreterToken.trim()) {
+      throw new Error("FORGE_INTERPRETER_TOKEN is required for hercules-ai mode");
+    }
+    if (interpreterToken.trim().length < 32) {
+      throw new Error("FORGE_INTERPRETER_TOKEN must be at least 32 characters in hercules-ai mode");
+    }
+  }
   const notificationUrl = env.FORGE_NOTIFICATION_URL
     ? validateNotificationUrl(env.FORGE_NOTIFICATION_URL)
     : null;
@@ -154,6 +172,19 @@ export function readForgeProductionConfig(env = process.env) {
     : null;
   if (durableStateToken && durableStateToken.length < 32) {
     throw new Error("FORGE_DURABLE_STATE_TOKEN must be at least 32 characters in production");
+  }
+  const startupPromptCanaryId = String(env.FORGE_STARTUP_PROMPT_CANARY_ID ?? "").trim() || null;
+  if (
+    startupPromptCanaryId &&
+    !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(startupPromptCanaryId)
+  ) {
+    throw new Error("FORGE_STARTUP_PROMPT_CANARY_ID must be a safe Forge identifier");
+  }
+  if (startupPromptCanaryId && !interpreterUrl) {
+    throw new Error("FORGE_STARTUP_PROMPT_CANARY_ID requires prompt ingress");
+  }
+  if (startupPromptCanaryId && !durableStateUrl) {
+    throw new Error("FORGE_STARTUP_PROMPT_CANARY_ID requires durable state");
   }
 
   return {
@@ -169,11 +200,13 @@ export function readForgeProductionConfig(env = process.env) {
     recoveryWindowMs,
     minFreeBytes,
     interpreterUrl,
-    interpreterToken: interpreterUrl ? (env.FORGE_INTERPRETER_TOKEN ?? null) : null,
+    interpreterMode,
+    interpreterToken: typeof interpreterToken === "string" ? interpreterToken.trim() : null,
     notificationUrl,
     notificationToken: notificationUrl ? (env.FORGE_NOTIFICATION_TOKEN ?? null) : null,
     durableStateUrl,
     durableStateToken,
+    startupPromptCanaryId,
   };
 }
 
@@ -190,9 +223,11 @@ export function safeForgeProductionSummary(config) {
     recoveryWindowMs: config.recoveryWindowMs,
     minFreeBytes: config.minFreeBytes,
     promptIngress: Boolean(config.interpreterUrl),
+    interpreterMode: config.interpreterMode ?? null,
     identityLifecycle: Boolean(config.notificationUrl),
     durableState: Boolean(config.durableStateUrl),
     stateDurability: config.durableStateUrl ? "remote-mirror" : "host-filesystem",
+    startupPromptCanaryId: config.startupPromptCanaryId ?? null,
     secureSessionCookies: true,
     smokeScreen: {
       enabled: true,
@@ -284,10 +319,17 @@ export async function startForgeProductionService({env = process.env} = {}) {
   const durableStateStatus = durableState ? await durableState.status() : null;
   const durableHydration = durableState ? await durableState.hydrate() : null;
   const interpreter = config.interpreterUrl
-    ? new HttpForgeInterpreter({
-        endpoint: config.interpreterUrl,
-        token: config.interpreterToken,
-      })
+    ? (
+        config.interpreterMode === "hercules-ai"
+          ? new HerculesAiForgeInterpreter({
+              endpoint: config.interpreterUrl,
+              internalKey: config.interpreterToken,
+            })
+          : new HttpForgeInterpreter({
+              endpoint: config.interpreterUrl,
+              token: config.interpreterToken,
+            })
+      )
     : null;
   const loginRateLimiter = new ForgeLoginRateLimiter({
     maxFailures: config.loginMaxFailures,
@@ -339,6 +381,23 @@ export async function startForgeProductionService({env = process.env} = {}) {
     server.once("listening", onListening);
   });
 
+  let startupPromptCanary = null;
+  if (config.startupPromptCanaryId) {
+    try {
+      startupPromptCanary = await runForgeStartupPromptCanary({
+        origin:"http://127.0.0.1:" + config.port,
+        controlToken:config.token,
+        projectId:config.startupPromptCanaryId,
+      });
+    } catch (error) {
+      await new Promise((resolveClose) => server.close(() => resolveClose()));
+      if (durableState) {
+        try { await durableState.flush(); } catch {}
+      }
+      throw error;
+    }
+  }
+
   let stopping = null;
   const shutdown = () => {
     if (stopping) return stopping;
@@ -358,6 +417,7 @@ export async function startForgeProductionService({env = process.env} = {}) {
       ...preflight.summary,
       durableStateStatus,
       durableHydration,
+      startupPromptCanary,
     },
     durableState,
     shutdown,

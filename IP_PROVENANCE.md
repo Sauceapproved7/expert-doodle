@@ -157,3 +157,12 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Third-party infrastructure: any future CRM, helpdesk, messaging, email, SMS, voice, booking, checkout, model, or analytics provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
 - Trust scope: recommendations are grounded in approved active product data; unsupported recommendations fail safely; lead capture is consent-gated; sensitive profiling is excluded from Adaptive Pitch Memory; business actions require explicit allowlisting plus a configured adapter.
 - Differentiators: Objection Intelligence Map, Adaptive Pitch Memory, Confidence-to-Handoff Governor, and Objection-to-Asset Bridge. No absolute market-first claim is made without separate current verification.
+
+
+## Hercules Cleaner catalog integration provenance — 2026-09-28
+
+- Component paths: `supabase/migrations/20260928120000_hercules_cleaner_software_catalog_v1.sql`, `hercules-forge/offers/hercules-cleaner/index.html`, Cleaner commercial-control registration, legal candidate disclosures, and `tests/hercules-forge-cleaner-commerce.test.mjs`.
+- Origin: SauceApproved/Hercules-owned catalog and Early Access integration created with AI assistance around the existing Cleaner v1.0.0 runtime and release package.
+- External infrastructure: Supabase Data API/database/Edge Functions and browser runtime remain third-party infrastructure; they are not represented as SauceApproved-owned source.
+- Commercial boundary: product status is Early Access, candidate pricing remains owner-approval required, and checkout remains disabled. This integration does not approve pricing, Terms, Privacy, provider readiness, or the paid checkout path.
+- Privacy boundary: the public access-request surface does not require local file inventory or Recovery Capsule contents; Cleaner filesystem authority remains local to the authorized device.

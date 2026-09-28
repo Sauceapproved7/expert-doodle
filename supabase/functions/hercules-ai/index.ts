@@ -14,11 +14,10 @@ async function internalAuthorized(req:Request){
   if(!key)return false;
   const digest=await sha(key);
   const {data}=await globalAdmin.from('hercules_internal_service_keys')
-    .select('key_sha256,enabled')
-    .eq('purpose','agent-coordinator')
-    .eq('enabled',true)
-    .maybeSingle();
-  return Boolean(data?.enabled&&data.key_sha256===digest);
+    .select('purpose,key_sha256,enabled')
+    .in('purpose',['agent-coordinator','forge-interpreter'])
+    .eq('enabled',true);
+  return Boolean((data||[]).some((row:any)=>row.enabled&&row.key_sha256===digest));
 }
 
 async function routeInternal(system:string,prompt:string){

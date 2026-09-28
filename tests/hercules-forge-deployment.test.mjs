@@ -110,6 +110,7 @@ test("public deployment verifier requires matching HTTPS production health and r
           version: "1.6",
           mode: "production",
           publicOrigin: "https://forge.example.test",
+          promptIngress: true,
           durableState: true,
         }
       : {
@@ -147,9 +148,48 @@ test("public deployment verifier requires matching HTTPS production health and r
   assert.equal(evidence.auditVerified, true);
   assert.equal(evidence.storageWritable, true);
   assert.equal(evidence.durableStateVerified, true);
+  assert.equal(evidence.promptIngressVerified, true);
   assert.equal(evidence.durableStateSchema, "sauceapproved.hercules.forge.durable-state.v1");
   assert.equal(calls.length, 2);
   assert.equal(calls.every((call) => call.options.redirect === "error"), true);
+
+  await assert.rejects(
+    verifyForgePublicDeployment({
+      origin: "https://forge.example.test",
+      fetchImpl: async (url, options) => {
+        const pathname = new URL(url).pathname;
+        const body = pathname === "/health"
+          ? {
+              ok: true,
+              version: "1.6",
+              mode: "production",
+              publicOrigin: "https://forge.example.test",
+              promptIngress: false,
+              durableState: true,
+            }
+          : {
+              ready: true,
+              version: "1.6",
+              mode: "production",
+              publicOrigin: "https://forge.example.test",
+              auditVerified: true,
+              durableState: {
+                ok: true,
+                schema: "sauceapproved.hercules.forge.durable-state.v1",
+                carriesCredentials: false,
+              },
+              storage: {writable: true, freeBytes: 500_000_000, minFreeBytes: 1_000_000},
+            };
+        return {
+          ok: true,
+          status: 200,
+          headers: {get: () => "application/json"},
+          json: async () => body,
+        };
+      },
+    }),
+    /prompt ingress is not enabled/i,
+  );
 
   await assert.rejects(
     verifyForgePublicDeployment({
