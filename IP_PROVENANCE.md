@@ -176,3 +176,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Third-party infrastructure: any future DAM, CMS, design, Figma, website, document, knowledge-base, model, or analytics provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
 - Trust scope: approved facts preserve source provenance; locked facts do not auto-overwrite; Constitution conflicts are rejected; fact changes remain review-required; cross-channel simulation never silently rewrites approved facts.
 - Differentiators: Brand Constitution, Cross-Channel Consistency Simulator, Rule Blast Radius Preview, and Brand Drift Time Machine. No absolute market-first claim is made without separate current verification.
+
+
+## Hercules Cleaner Windows installer provenance — 2026-09-28
+
+- Component paths: `hercules-cleaner/installer.mjs`, `hercules-cleaner/windows/`, `scripts/package-hercules-cleaner-windows.mjs`, Windows installer tests, and the Windows installer workflow.
+- Origin: original SauceApproved/Hercules installer/update implementation created with AI assistance around the owned Cleaner runtime.
+- Packaged source: SauceApproved/Hercules files only. Node.js, PowerShell, Windows Task Scheduler, Windows tar, and GitHub Actions are external infrastructure and are not represented as SauceApproved-owned code.
+- Distribution model: per-user versioned installation with local state preserved outside the app tree; exact-commit bundle manifest and SHA-256 file hashes.
+- Update controls: HTTPS/host constraints, artifact SHA-256, resolved source commit, traversal rejection, health-check activation, rollback receipt.
+- Signing boundary: the Early Access bundle is Authenticode-signature-ready in process/design terms but is not claimed as publisher-signed. A trusted owner-controlled code-signing certificate remains an owner-controlled distribution prerequisite for a signed Windows publisher experience.
