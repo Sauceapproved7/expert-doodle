@@ -55,6 +55,15 @@ function startStateFixture() {
         res.writeHead(409, {"content-type":"application/json"});
         return res.end(JSON.stringify({error:"object_size"}));
       }
+      const assembled = Buffer.concat(
+        Array.from({length: body.chunks}, (_, i) =>
+          Buffer.from(chunks.get(key(body.path, body.sha256, i)).contentBase64, "base64"),
+        ),
+      );
+      if (sha256(assembled) !== body.sha256) {
+        res.writeHead(409, {"content-type":"application/json"});
+        return res.end(JSON.stringify({error:"object_integrity"}));
+      }
       objects.set(body.path, {
         path:body.path,sha256:body.sha256,bytes:body.bytes,chunks:body.chunks,
       });
@@ -196,6 +205,59 @@ test("durable state hydrate fails closed on corrupted remote chunks", async () =
       chunkBytes:8,
     });
     await assert.rejects(() => restored.hydrate(), /chunk integrity mismatch/i);
+  } finally {
+    await new Promise((resolve) => remote.server.close(resolve));
+    await Promise.all([
+      rm(root, {recursive:true, force:true}),
+      rm(restoredRoot, {recursive:true, force:true}),
+    ]);
+  }
+});
+
+test("uncommitted replacement generation cannot displace the last committed object", async () => {
+  const remote = await startStateFixture();
+  const root = await mkdtemp(join(tmpdir(), "forge-durable-crash-old-"));
+  const restoredRoot = await mkdtemp(join(tmpdir(), "forge-durable-crash-restored-"));
+  try {
+    await mkdir(join(root, "projects", "p1"), {recursive:true});
+    const sourcePath = join(root, "projects", "p1", "project.json");
+    const originalText = JSON.stringify({projectId:"p1",version:"committed"});
+    await writeFile(sourcePath, originalText, "utf8");
+
+    const mirror = new ForgeDurableStateMirror({root,endpoint:remote.endpoint,token,chunkBytes:8});
+    await mirror.flush();
+    const committed = remote.objects.get("projects/p1/project.json");
+    assert.ok(committed);
+
+    const replacementText = JSON.stringify({projectId:"p1",version:"uncommitted"});
+    const replacement = Buffer.from(replacementText);
+    const replacementSha = sha256(replacement);
+    remote.chunks.set(
+      "projects/p1/project.json#" + replacementSha + "#0",
+      {
+        path:"projects/p1/project.json",
+        objectSha256:replacementSha,
+        index:0,
+        bytes:Math.min(8,replacement.byteLength),
+        sha256:sha256(replacement.subarray(0,8)),
+        contentBase64:replacement.subarray(0,8).toString("base64"),
+      },
+    );
+
+    assert.equal(remote.objects.get("projects/p1/project.json").sha256, committed.sha256);
+
+    const restored = new ForgeDurableStateMirror({
+      root:restoredRoot,
+      endpoint:remote.endpoint,
+      token,
+      chunkBytes:8,
+    });
+    const hydrated = await restored.hydrate();
+    assert.equal(hydrated.verified, true);
+    assert.equal(
+      await readFile(join(restoredRoot, "projects", "p1", "project.json"), "utf8"),
+      originalText,
+    );
   } finally {
     await new Promise((resolve) => remote.server.close(resolve));
     await Promise.all([
