@@ -274,6 +274,10 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
         <label class="tag" for="pilotEmail" style="display:block;margin-top:12px">Business email</label><input class="input" id="pilotEmail" type="email" maxlength="254" required autocomplete="email" placeholder="you@company.com">
         <label class="tag" for="pilotCompany" style="display:block;margin-top:12px">Company</label><input class="input" id="pilotCompany" maxlength="160" autocomplete="organization" placeholder="Company name">
         <label class="tag" for="pilotRole" style="display:block;margin-top:12px">Role</label><select class="input" id="pilotRole"><option>Owner / Founder</option><option>Finance / AR</option><option>Accountant / Bookkeeper</option><option>Fractional CFO / Consultant</option><option>Agency / Operator</option><option>Other</option></select>
+        <label class="tag" for="pilotDataMode" style="display:block;margin-top:12px">Pilot data mode</label><select class="input" id="pilotDataMode"><option value="synthetic">Synthetic first — recommended</option><option value="authorized_real">Authorized real data after explicit approval</option></select>
+        <label style="display:flex;gap:10px;align-items:flex-start;margin-top:14px"><input id="pilotOwnReceivables" type="checkbox" required style="margin-top:3px"><span class="muted">This business manages its own commercial B2B receivables.</span></label>
+        <label style="display:flex;gap:10px;align-items:flex-start;margin-top:10px"><input id="pilotExcludedUse" type="checkbox" required style="margin-top:3px"><span class="muted">This request is not for consumer debt collection, third-party collections, debt purchasing, credit scoring, or legal collections.</span></label>
+        <label style="display:flex;gap:10px;align-items:flex-start;margin-top:10px"><input id="pilotApprovalGated" type="checkbox" required style="margin-top:3px"><span class="muted">I understand consequential external actions remain human-approval gated.</span></label>
         <input class="hidden" id="pilotWebsite" tabindex="-1" autocomplete="off" aria-hidden="true">
         <button class="btn primary" style="width:100%;margin-top:14px" type="submit">Request founding pilot</button>
         <div class="notice hidden" id="pilotMsg"></div>
@@ -598,7 +602,45 @@ $("privacyForm").onsubmit=async e=>{
     setNotice("privacyRequestMsg","Request could not be recorded: "+err.message,"bad");
   }finally{if(btn)btn.disabled=false}
 };
-$("pilotForm").onsubmit=async e=>{e.preventDefault();setNotice("pilotMsg","");const email=$("pilotEmail").value.trim(),first_name=$("pilotName").value.trim(),company=$("pilotCompany").value.trim(),role=$("pilotRole").value,website=$("pilotWebsite").value;if(!email){setNotice("pilotMsg","Enter a business email.","bad");return}const btn=e.submitter||$("pilotForm").querySelector("button[type=submit]");if(btn)btn.disabled=true;try{const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"pilot_request",email,first_name,company,role,website,referrer:document.referrer||null,attribution:acquisition})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Request failed");setNotice("pilotMsg","Pilot request received. Hercules recorded the request for controlled follow-up.","good");e.target.reset()}catch(err){setNotice("pilotMsg","Pilot request could not be recorded: "+err.message,"bad")}finally{if(btn)btn.disabled=false}};
+$("pilotForm").onsubmit=async e=>{
+  e.preventDefault();
+  setNotice("pilotMsg","");
+  const email=$("pilotEmail").value.trim();
+  const first_name=$("pilotName").value.trim();
+  const company=$("pilotCompany").value.trim();
+  const role=$("pilotRole").value;
+  const website=$("pilotWebsite").value;
+  const data_mode=$("pilotDataMode").value;
+  const manages_own_receivables=$("pilotOwnReceivables").checked;
+  const excluded_use_ack=$("pilotExcludedUse").checked;
+  const approval_gated_ack=$("pilotApprovalGated").checked;
+  if(!email){setNotice("pilotMsg","Enter a business email.","bad");return}
+  if(!manages_own_receivables||!excluded_use_ack||!approval_gated_ack){
+    setNotice("pilotMsg","Confirm the controlled pilot scope before requesting access.","bad");
+    return;
+  }
+  const btn=e.submitter||$("pilotForm").querySelector("button[type=submit]");
+  if(btn)btn.disabled=true;
+  try{
+    const r=await fetch(location.href,{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify({
+        action:"pilot_request",
+        email,first_name,company,role,website,
+        manages_own_receivables,excluded_use_ack,approval_gated_ack,data_mode,
+        referrer:document.referrer||null,
+        attribution:acquisition
+      })
+    });
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||"Request failed");
+    setNotice("pilotMsg","Pilot request received. Hercules recorded the request for controlled follow-up.","good");
+    e.target.reset();
+  }catch(err){
+    setNotice("pilotMsg","Pilot request could not be recorded: "+err.message,"bad");
+  }finally{if(btn)btn.disabled=false}
+};
 
 $("authSwitch").onclick=async()=>{if(authMode==="signin"&&!publicSignupOpen){const open=await refreshRegistrationState();if(!open){setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn");return}}authMode=authMode==="signin"?"signup":"signin";$("authTitle").textContent=authMode==="signin"?"Sign in":"Create account";$("authSubmit").textContent=authMode==="signin"?"Sign in":"Create account";$("authSwitch").disabled=false;$("authSwitch").textContent=authMode==="signin"?(publicSignupOpen?"Create account":"Early access — sign-in only"):"Sign in instead";setNotice("authMsg","")};
 async function checkPasswordSafety(password){const r=await fetch(location.href,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"password_breach_check",password})});const d=await r.json().catch(()=>({}));if(r.ok&&d.safe===true)return true;if(d.error==="compromised_password")throw new Error("Choose a password that has not appeared in known data breaches.");if(d.error==="weak_password_length")throw new Error("Use at least 12 characters for your password.");throw new Error("Password safety check is unavailable. Account creation is temporarily paused.")}
@@ -844,10 +886,17 @@ Deno.serve(async(req:Request)=>{
         if(cleanText((body as any).website,120))return Response.json({ok:true},{headers:{"cache-control":"no-store"}});
         const email=cleanText((body as any).email,254).toLowerCase();
         if(!validEmail(email))return Response.json({ok:false,error:"invalid_email"},{status:400,headers:{"cache-control":"no-store"}});
+        const managesOwnReceivables=(body as any).manages_own_receivables===true;
+        const excludedUseAck=(body as any).excluded_use_ack===true;
+        const approvalGatedAck=(body as any).approval_gated_ack===true;
+        const dataMode=cleanText((body as any).data_mode,32);
+        if(!managesOwnReceivables||!excludedUseAck||!approvalGatedAck||!["synthetic","authorized_real"].includes(dataMode)){
+          return Response.json({ok:false,error:"qualification_required"},{status:400,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+        }
         const attribution=safeMarketingProperties((body as any).attribution);
         const source=attribution.source||"direct",medium=attribution.medium||"organic",campaign=attribution.campaign||"founding-pilot-organic-v1";
         if(!await existingPilot(email)){
-          await restInsert("marketing_contacts",{email,first_name:cleanText((body as any).first_name,100)||null,source,medium,campaign,referrer:cleanText((body as any).referrer,500)||null,status:"lead",metadata:{company:cleanText((body as any).company,160)||null,role:cleanText((body as any).role,100)||null,scope:"controlled-us-b2b-receivables",consent_version:"pilot-request-v1",attribution_id:attribution.attribution_id,content:attribution.content}});
+          await restInsert("marketing_contacts",{email,first_name:cleanText((body as any).first_name,100)||null,source,medium,campaign,referrer:cleanText((body as any).referrer,500)||null,status:"lead",metadata:{company:cleanText((body as any).company,160)||null,role:cleanText((body as any).role,100)||null,scope:"controlled-us-b2b-receivables",consent_version:"pilot-request-v1",qualification_version:"pilot-qualification-v1",manages_own_receivables:managesOwnReceivables,excluded_use_ack:excludedUseAck,approval_gated_ack:approvalGatedAck,data_mode:dataMode,attribution_id:attribution.attribution_id,content:attribution.content}});
         }
         await restInsert("marketing_events",{event_name:"pilot_request",event_source:"hercules-launch",url:"/pilot",properties:{...attribution,source,medium,campaign,surface:"pilot"},occurred_at:new Date().toISOString()});
         return Response.json({ok:true,accepted:true},{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
