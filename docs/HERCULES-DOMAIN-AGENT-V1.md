@@ -124,7 +124,16 @@ The domain-agent service passes adapters only:
 
 Actual provider credential custody remains inside the authorized connector/adapter boundary.
 
-## Replay and retry safety
+## Replay, validity, and grant-drift safety
+
+Every mutating task request requires an idempotency key.
+
+The hardened agent also supports two additional fail-closed controls:
+
+- **Task validity windows** — callers may bind a task to `notBefore` / `expiresAt` in the core authority engine and `not_before` / `expires_at` on the live private-bridge API. Premature and expired tasks are denied before provider resolution or execution.
+- **Provider grant pinning** — callers may pin execution to the exact provider-grant fingerprint they preflighted. The core engine uses `expectedGrantSha256`; the live bridge returns `grant_fingerprint_sha256` and accepts `expected_grant_fingerprint_sha256`. A mismatch returns `PROVIDER_GRANT_PIN_MISMATCH` and no provider action is performed.
+
+These controls reduce time-of-check/time-of-use permission drift and stale-instruction replay without expanding provider authority.
 
 Every mutating task request requires an idempotency key.
 
@@ -221,3 +230,17 @@ The custom hostname remains **pending** until all three are independently verifi
 3. TLS active for `agent.sauceapproved.com`.
 
 Repository code or a DNS intent record alone is not proof that the hostname is live.
+
+
+## 2.1 hardening profile
+
+The multiplexed production backend reports version `2.1.0-multiplex` after the authorization hardening upgrade.
+
+New safety properties:
+
+- task validity windows are evaluated before owner-boundary handling, entitlement checks, provider-grant resolution, or execution;
+- provider grant fingerprints are derived from provider/account/connection authorization state and are returned by grant-status and preflight responses;
+- provider execution can be conditionally pinned to that fingerprint;
+- a grant-pin mismatch is a deny condition, not an owner-consent escalation;
+- denial decisions are audit-fingerprinted;
+- the existing credential isolation, tenant isolation, least-privilege, 2FA/identity boundaries, and default-deny execution model remain unchanged.
