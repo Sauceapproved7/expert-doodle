@@ -542,7 +542,30 @@ Deno.serve(async(req:Request)=>{
       }
     });
 
-    return out({ok:true,approval:data,envelope:await softwareCommercialBundleStatus()});
+    let softwareCatalogSync:any={ok:false,status:'stripe_not_connected_or_sync_unavailable'};
+    try{
+      const response=await fetch(U+'/functions/v1/hercules-provider-connect',{
+        method:'POST',
+        headers:{
+          'content-type':'application/json',
+          'authorization':req.headers.get('authorization')||'',
+          'apikey':A
+        },
+        body:JSON.stringify({action:'sync_software_catalog'}),
+        signal:AbortSignal.timeout(30000)
+      });
+      const payload=await response.json().catch(()=>({}));
+      softwareCatalogSync=response.ok?payload:{ok:false,status:payload?.error||('http_'+response.status)};
+    }catch(error){
+      softwareCatalogSync={ok:false,status:'software_catalog_sync_deferred',detail:error instanceof Error?error.message:String(error)};
+    }
+
+    return out({
+      ok:true,
+      approval:data,
+      envelope:await softwareCommercialBundleStatus(),
+      software_catalog_sync:softwareCatalogSync
+    });
   }
 
   if(action==='software_commercial_status'){
