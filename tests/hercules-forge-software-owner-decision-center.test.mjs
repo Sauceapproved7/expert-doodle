@@ -29,7 +29,7 @@ test("Integrations exposes product-specific owner decision center without auto a
   assert.match(ui,/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1\.md/);
   assert.match(ui,/SauceApproved Studio/);
   assert.match(ui,/SauceApproved Ads/);
-  assert.match(ui,/window\.confirm/);
+  assert.match(ui,/window\.prompt\('Type exactly: '/);
   assert.match(ui,/software_commercial_approve/);
   assert.doesNotMatch(ui,/software_commercial_approve[^\n]+APPROVE sauceapproved/i);
 });
