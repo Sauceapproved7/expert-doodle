@@ -6,6 +6,7 @@ const db=createClient(U,S,{auth:{persistSession:false}});
 const ORG='ea5fb196-67f9-42fa-b592-49eeb3b84346';
 const APPDEPLOY_STRIPE_APP_ID='sauceapproved-hercules-titan-dhakbi';
 const SHOPIFY_TITAN_PRODUCT_ID='gid://shopify/Product/10261114782016';
+const TITAN_PRODUCT_CODE='hercules-titan-founding-access';
 const SHOPIFY_STORE_DOMAIN='sauceapproved-2.myshopify.com';
 const TITAN_OFFER_PACKET_VERSION='hercules-titan-founding-access-offer-v1';
 const TITAN_OFFER_PACKET_DIGEST='8e9330f7cf70103e8fd8691cdd14a22d70eb466849c1b5a5fc98bc45c378a00f';
@@ -51,7 +52,7 @@ async function run(){
       .catch(()=>({ok:false,status:0,control:null,probe:null}))
   ]);
 
-  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:appDeployProviderEvidence},{data:paymentEvidence},{data:shopifyOfferEvidence},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
+  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:appDeployProviderEvidence},{data:paymentEvidence},{data:shopifyOfferEvidence},{data:titanOwnerApprovals},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
     db.from('hercules_devbrain_fabric_checks').select('overall_ok,checked_at').eq('organization_id',ORG).order('checked_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_release_queue').select('release_id,status,environment,admission_decision,flight_record_hash,updated_at').eq('organization_id',ORG).eq('environment','production').eq('status','verified').eq('admission_decision','allow').order('updated_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_recovery_snapshots').select('snapshot_id,status,verified_at,recovery_region').eq('organization_id',ORG).eq('status','verified').order('verified_at',{ascending:false}).limit(1).maybeSingle(),
@@ -79,6 +80,11 @@ async function run(){
       .select('status,value,provenance,verified_at')
       .eq('key','shopify-hercules-paid-offer-reconciled')
       .maybeSingle(),
+    db.from('hercules_software_commercial_approvals')
+      .select('approval_type,status,approved_at,document_ref,evidence')
+      .eq('product_code',TITAN_PRODUCT_CODE)
+      .in('approval_type',['pricing','terms','privacy'])
+      .order('approval_type'),
     db.rpc('hercules_password_defense_status')
   ]);
   const passwordDefense={
@@ -140,6 +146,14 @@ async function run(){
     paymentEvidenceValue?.payoutStateVerified===true
   );
 
+  const titanOwnerApprovalTypes=['pricing','terms','privacy'];
+  const titanOwnerApprovalsComplete=Boolean(
+    (titanOwnerApprovals||[]).length===3 &&
+    titanOwnerApprovalTypes.every(type=>
+      (titanOwnerApprovals||[]).some((row:any)=>row.approval_type===type&&row.status==='approved')
+    )
+  );
+
   const shopifyOfferValue=shopifyOfferEvidence?.value||{};
   const shopifyOfferFresh=Boolean(
     shopifyOfferEvidence?.verified_at &&
@@ -156,6 +170,7 @@ async function run(){
   );
   const shopifyOfferAligned=Boolean(
     shopifyOfferBase &&
+    titanOwnerApprovalsComplete &&
     shopifyOfferValue?.disposition==='aligned_to_approved_offer' &&
     shopifyOfferValue?.priceCadenceVerified===true &&
     shopifyOfferValue?.entitlementVerified===true &&
@@ -211,6 +226,13 @@ async function run(){
         shopDomain:shopifyOfferValue?.shopDomain||SHOPIFY_STORE_DOMAIN,
         approvalPacketVersion:shopifyOfferValue?.approvalPacketVersion||null,
         approvalPacketDigest:shopifyOfferValue?.approvalPacketDigest||null,
+        titanOwnerApprovalsComplete,
+        titanOwnerApprovals:(titanOwnerApprovals||[]).map((row:any)=>({
+          approvalType:row.approval_type,
+          status:row.status,
+          approvedAt:row.approved_at||null,
+          documentRef:row.document_ref||null
+        })),
         expectedPacketVersion:TITAN_OFFER_PACKET_VERSION,
         expectedPacketDigest:TITAN_OFFER_PACKET_DIGEST,
         verifiedAt:shopifyOfferEvidence?.verified_at||null,
@@ -242,7 +264,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.7.0',
+      version:'1.8.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt

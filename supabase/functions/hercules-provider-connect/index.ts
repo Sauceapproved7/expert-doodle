@@ -367,7 +367,7 @@ async function activeStripeConnection(admin:any,organizationId:string){
   return data;
 }
 
-const SOFTWARE_PRODUCTS=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'] as const;
+const SOFTWARE_PRODUCTS=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner','hercules-titan-founding-access'] as const;
 
 async function syncSoftwareProviderReady(admin:any,connection:any){
   const evidence={
@@ -800,7 +800,7 @@ Deno.serve(async req=>{
     return j({
       ok:true,
       service:'hercules-provider-connect',
-      version:'1.3.0',
+      version:'1.4.0',
       providers:['shopify','stripe'],
       store:STORE,
       shopGid:SHOP_GID,
