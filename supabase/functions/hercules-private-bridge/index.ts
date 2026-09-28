@@ -35,6 +35,22 @@ const LAUNCH_PACKET={
   }
 } as const;
 const LAUNCH_PACKET_CONFIRMATION='APPROVE HERCULES LAUNCH PACKET '+LAUNCH_PACKET.digest.slice(0,12).toUpperCase();
+const SAUCEAPPROVED_SOFTWARE_TERMS_SHA='d45b351965b1d93855b004ed230bbff32bee1272';
+const SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA='4b1c5cfabb935d069e8de85c91300f9482709695';
+const SOFTWARE_COMMERCIAL_BUNDLE_VERSION='software-commercial-v1';
+const SOFTWARE_COMMERCIAL_BUNDLE_DIGEST='760ce84a641a2642a46de1b039eabdd2e7d45ba9101633284d5bf69f27e09862';
+const SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION='APPROVE SAUCEAPPROVED SOFTWARE COMMERCIAL PACKET '+SOFTWARE_COMMERCIAL_BUNDLE_DIGEST.slice(0,12).toUpperCase();
+const SOFTWARE_COMMERCIAL_BUNDLE={
+  version:SOFTWARE_COMMERCIAL_BUNDLE_VERSION,
+  digest:SOFTWARE_COMMERCIAL_BUNDLE_DIGEST,
+  products:['sauceapproved-studio','sauceapproved-ads'],
+  approvals:['pricing','terms','privacy'],
+  pricing:{starter:2900,pro:7900,agency:19900},
+  documents:{
+    terms:{path:'docs/legal/SAUCEAPPROVED-SOFTWARE-TERMS-CANDIDATE-V1.md',sha:SAUCEAPPROVED_SOFTWARE_TERMS_SHA},
+    privacy:{path:'docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md',sha:SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA}
+  }
+} as const;
 
 async function actor(req:Request){
   const h=req.headers.get('authorization')||'', token=h.startsWith('Bearer ')?h.slice(7):'';
@@ -174,6 +190,69 @@ async function launchApprovalEnvelopeStatus(){
     approvals:packetApprovals,
     gate:status.gate||null,
     publicRegistrationOpen:status.publicRegistrationOpen
+  };
+}
+
+async function softwareCommercialBundleStatus(){
+  const productCodes=[...SOFTWARE_COMMERCIAL_BUNDLE.products];
+  const [{data:products,error:productError},{data:plans,error:planError},{data:approvals,error:approvalError}]=await Promise.all([
+    admin.from('hercules_software_products').select('code,name,status,checkout_enabled').in('code',productCodes).order('code'),
+    admin.from('hercules_software_product_plans').select('product_code,plan_code,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',productCodes).order('candidate_monthly_price_cents'),
+    admin.from('hercules_software_commercial_approvals').select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at').in('product_code',productCodes).order('approval_type')
+  ]);
+  if(productError||planError||approvalError)throw (productError||planError||approvalError);
+
+  const expectedPlanEntries=Object.entries(SOFTWARE_COMMERCIAL_BUNDLE.pricing);
+  const catalogMatches=productCodes.every(code=>{
+    const rows=(plans||[]).filter((row:any)=>row.product_code===code);
+    return rows.length===expectedPlanEntries.length && expectedPlanEntries.every(([planCode,amount])=>{
+      const row=rows.find((x:any)=>x.plan_code===planCode);
+      return Boolean(row&&Number(row.candidate_monthly_price_cents)===Number(amount)&&row.checkout_enabled===false);
+    });
+  });
+  const termsRefsMatch=productCodes.every(code=>{
+    const row=(approvals||[]).find((x:any)=>x.product_code===code&&x.approval_type==='terms');
+    return row?.document_ref===SOFTWARE_COMMERCIAL_BUNDLE.documents.terms.path;
+  });
+  const privacyRefsMatch=productCodes.every(code=>{
+    const row=(approvals||[]).find((x:any)=>x.product_code===code&&x.approval_type==='privacy');
+    return row?.document_ref===SOFTWARE_COMMERCIAL_BUNDLE.documents.privacy.path;
+  });
+  const checkoutHeldClosed=productCodes.every(code=>
+    (products||[]).find((x:any)=>x.code===code)?.checkout_enabled===false
+  );
+  const ownerRows=(approvals||[]).filter((x:any)=>
+    productCodes.includes(x.product_code)&&SOFTWARE_COMMERCIAL_BUNDLE.approvals.includes(x.approval_type)
+  );
+  const ownerApprovalsComplete=ownerRows.length===6&&ownerRows.every((x:any)=>x.status==='approved');
+
+  return {
+    ok:true,
+    packet:{
+      version:SOFTWARE_COMMERCIAL_BUNDLE.version,
+      digest:SOFTWARE_COMMERCIAL_BUNDLE.digest,
+      fingerprint:SOFTWARE_COMMERCIAL_BUNDLE.digest.slice(0,12).toUpperCase(),
+      confirmation:SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION,
+      products:SOFTWARE_COMMERCIAL_BUNDLE.products,
+      pricing:SOFTWARE_COMMERCIAL_BUNDLE.pricing,
+      documents:SOFTWARE_COMMERCIAL_BUNDLE.documents
+    },
+    readiness:{
+      catalogMatches,
+      termsRefsMatch,
+      privacyRefsMatch,
+      checkoutHeldClosed,
+      ownerApprovalsComplete,
+      canApprove:catalogMatches&&termsRefsMatch&&privacyRefsMatch&&checkoutHeldClosed&&!ownerApprovalsComplete
+    },
+    approvals:ownerRows.map((x:any)=>({
+      product_code:x.product_code,
+      approval_type:x.approval_type,
+      status:x.status,
+      approved_at:x.approved_at,
+      document_ref:x.document_ref,
+      updated_at:x.updated_at
+    }))
   };
 }
 
@@ -389,7 +468,7 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
     return out({ok:true,service:'hercules-private-bridge',version:'1.6.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state'],
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','software_commercial_bundle_status','software_commercial_bundle_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -409,6 +488,61 @@ Deno.serve(async(req:Request)=>{
       const result=await issuePilotAdmission(admin,b,{principal:'owner',actorUserId:uid,launchBaseUrl:U+'/functions/v1/hercules-launch'});
       return out(result.body,result.status);
     }catch{return out({error:'pilot_admission_issue_failed'},500)}
+  }
+
+  if(action==='software_commercial_bundle_status'){
+    try{return out(await softwareCommercialBundleStatus())}
+    catch(error){return out({error:'software_commercial_bundle_status_failed',detail:error instanceof Error?error.message:String(error)},500)}
+  }
+
+  if(action==='software_commercial_bundle_approve'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const bundleVersion=String(b.bundle_version||'').trim();
+    const bundleDigest=String(b.bundle_digest||'').trim().toLowerCase();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+
+    if(bundleVersion!==SOFTWARE_COMMERCIAL_BUNDLE_VERSION)return out({
+      error:'software_commercial_bundle_version_mismatch',
+      expected:SOFTWARE_COMMERCIAL_BUNDLE_VERSION
+    },409);
+    if(bundleDigest!==SOFTWARE_COMMERCIAL_BUNDLE_DIGEST)return out({
+      error:'software_commercial_bundle_digest_mismatch',
+      expected:SOFTWARE_COMMERCIAL_BUNDLE_DIGEST
+    },409);
+    if(confirmation!==SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION)return out({
+      error:'explicit_confirmation_required',
+      expected:SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION
+    },400);
+
+    const envelope=await softwareCommercialBundleStatus();
+    if(!envelope.readiness.catalogMatches)return out({error:'software_commercial_catalog_mismatch'},409);
+    if(!envelope.readiness.termsRefsMatch)return out({error:'software_terms_document_mismatch'},409);
+    if(!envelope.readiness.privacyRefsMatch)return out({error:'software_privacy_document_mismatch'},409);
+    if(!envelope.readiness.checkoutHeldClosed)return out({error:'checkout_must_remain_locked_during_owner_bundle_approval'},409);
+
+    const {data,error}=await a.db.rpc('hercules_software_owner_approve_bundle',{
+      p_bundle_version:SOFTWARE_COMMERCIAL_BUNDLE_VERSION,
+      p_bundle_digest:SOFTWARE_COMMERCIAL_BUNDLE_DIGEST,
+      p_confirmation:SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION
+    });
+    if(error)return out({error:'software_commercial_bundle_approval_failed',detail:error.message},500);
+
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'software.commercial.bundle.approved',
+      resource_type:'hercules_software_commercial_bundle',
+      resource_id:SOFTWARE_COMMERCIAL_BUNDLE_VERSION,
+      details:{
+        bundle_digest:SOFTWARE_COMMERCIAL_BUNDLE_DIGEST,
+        products:SOFTWARE_COMMERCIAL_BUNDLE.products,
+        approvals:SOFTWARE_COMMERCIAL_BUNDLE.approvals,
+        terms_sha:SAUCEAPPROVED_SOFTWARE_TERMS_SHA,
+        privacy_sha:SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA
+      }
+    });
+
+    return out({ok:true,approval:data,envelope:await softwareCommercialBundleStatus()});
   }
 
   if(action==='software_commercial_status'){
