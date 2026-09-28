@@ -29,6 +29,9 @@ test("public access request surface exposes RPC but not protected request table"
   assert.match(sql, /grant execute on function public\.hercules_request_software_access/);
   assert.match(sql, /request_rate_limited/);
   assert.match(sql, /p_website/);
+  assert.match(sql, /private\.hercules_software_access_rate_limits/);
+  assert.match(sql, /x-forwarded-for/);
+  assert.match(sql, /security invoker/);
 });
 
 test("Studio and Ads offer pages expose planned tiers and live-product links", () => {
