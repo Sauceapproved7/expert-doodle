@@ -231,7 +231,7 @@ export function createForgeControlService({
       );
       const reply = async (status, body, headers = {}) => {
         if (shouldPersist) await durableState.flush();
-        return reply( status, body, headers);
+        return reply(status, body, headers);
       };
 
       if (req.method === "GET") {
@@ -248,7 +248,7 @@ export function createForgeControlService({
       }
 
       if (req.method === "GET" && url.pathname === "/health") {
-        return reply( 200, {
+        return reply(200, {
           ok: true,
           service: "hercules-forge-control-api",
           version: "1.6",
@@ -273,15 +273,16 @@ export function createForgeControlService({
       if (req.method === "GET" && url.pathname === "/v1/security/smokescreen") {
         requireToken(req, token);
         if (!smokeScreenObserver || typeof smokeScreenObserver.snapshot !== "function") {
-          return reply( 503, {error: "smokescreen_not_configured"});
+          return reply(503, {error: "smokescreen_not_configured"});
         }
-        return reply( 200, smokeScreenObserver.snapshot());
+        return reply(200, smokeScreenObserver.snapshot());
       }
 
       if (req.method === "GET" && url.pathname === "/ready") {
         const integrity = await audit.verify();
         const storage = readinessCheck ? await readinessCheck() : null;
-        return reply( 200, {
+        const durable = durableState ? await durableState.status() : null;
+        return reply(200, {
           ready: true,
           service: "hercules-forge-control-api",
           version: "1.6",
@@ -289,6 +290,7 @@ export function createForgeControlService({
           publicOrigin,
           auditVerified: integrity.verified === true,
           storage,
+          durableState: durable,
         });
       }
 
@@ -307,7 +309,7 @@ export function createForgeControlService({
             role: accepted.membership.role,
           },
         });
-        return reply( 201, {
+        return reply(201, {
           accepted: true,
           user: accepted.user,
           membership: accepted.membership,
