@@ -318,3 +318,145 @@ revoke all on function public.hercules_public_software_catalog() from public;
 revoke all on function public.hercules_request_software_access(text,text,text,text,text,text,text,text,jsonb) from public;
 grant execute on function public.hercules_public_software_catalog() to anon, authenticated;
 grant execute on function public.hercules_request_software_access(text,text,text,text,text,text,text,text,jsonb) to anon, authenticated;
+
+
+-- Public catalog is ordinary RLS-governed read access; request writes stay behind a constrained RPC.
+create table if not exists private.hercules_software_access_rate_limits (
+  ip text not null,
+  requested_at timestamptz not null default now()
+);
+create index if not exists hercules_software_access_rate_limits_ip_time_idx
+  on private.hercules_software_access_rate_limits(ip, requested_at desc);
+
+drop policy if exists hercules_software_products_public_read on public.hercules_software_products;
+create policy hercules_software_products_public_read
+  on public.hercules_software_products
+  for select
+  to anon, authenticated
+  using (status in ('early_access','active'));
+
+drop policy if exists hercules_software_product_plans_public_read on public.hercules_software_product_plans;
+create policy hercules_software_product_plans_public_read
+  on public.hercules_software_product_plans
+  for select
+  to anon, authenticated
+  using (
+    exists (
+      select 1 from public.hercules_software_products p
+      where p.code=hercules_software_product_plans.product_code
+        and p.status in ('early_access','active')
+    )
+  );
+
+grant select on public.hercules_software_products to anon, authenticated;
+grant select on public.hercules_software_product_plans to anon, authenticated;
+
+create or replace function public.hercules_public_software_catalog()
+returns jsonb
+language sql
+stable
+security invoker
+set search_path to 'public','pg_temp'
+as $function$
+  select jsonb_build_object(
+    'products',
+    coalesce(jsonb_agg(
+      jsonb_build_object(
+        'code',p.code,'name',p.name,'descriptor',p.descriptor,
+        'status',p.status,'live_url',p.live_url,'checkout_enabled',p.checkout_enabled,
+        'plans',(
+          select coalesce(jsonb_agg(jsonb_build_object(
+            'plan_code',pl.plan_code,'label',pl.label,
+            'candidate_monthly_price_cents',pl.candidate_monthly_price_cents,
+            'pricing_status',pl.pricing_status,'checkout_enabled',pl.checkout_enabled,
+            'entitlements',pl.entitlements
+          ) order by pl.candidate_monthly_price_cents),'[]'::jsonb)
+          from public.hercules_software_product_plans pl
+          where pl.product_code=p.code
+        )
+      ) order by p.name
+    ),'[]'::jsonb)
+  )
+  from public.hercules_software_products p
+  where p.status in ('early_access','active')
+$function$;
+
+create or replace function public.hercules_request_software_access(
+  p_product_code text,
+  p_plan_code text,
+  p_email text,
+  p_full_name text default null,
+  p_company text default null,
+  p_role text default null,
+  p_message text default null,
+  p_website text default null,
+  p_attribution jsonb default '{}'::jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public','private','pg_temp'
+as $function$
+declare
+  v_product public.hercules_software_products%rowtype;
+  v_plan public.hercules_software_product_plans%rowtype;
+  v_email text := lower(trim(coalesce(p_email,'')));
+  v_recent integer;
+  v_ip text := split_part(coalesce((current_setting('request.headers',true)::jsonb->>'x-forwarded-for'),'unknown'), ',', 1);
+  v_ip_recent integer := 0;
+  v_id uuid;
+begin
+  if length(trim(coalesce(p_website,''))) > 0 then
+    return jsonb_build_object('ok',true,'accepted',true);
+  end if;
+  if v_email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' or length(v_email)>254 then
+    raise exception 'invalid_email';
+  end if;
+
+  if v_ip <> 'unknown' then
+    delete from private.hercules_software_access_rate_limits where requested_at < now()-interval '7 days';
+    select count(*) into v_ip_recent
+    from private.hercules_software_access_rate_limits
+    where ip=v_ip and requested_at >= now()-interval '10 minutes';
+    if v_ip_recent >= 10 then raise exception 'request_rate_limited'; end if;
+    insert into private.hercules_software_access_rate_limits(ip) values(v_ip);
+  end if;
+
+  select * into v_product from public.hercules_software_products
+  where code=p_product_code and status in ('early_access','active');
+  if not found then raise exception 'product_unavailable'; end if;
+
+  select * into v_plan from public.hercules_software_product_plans
+  where product_code=p_product_code and plan_code=p_plan_code
+    and pricing_status in ('owner_approval_required','approved');
+  if not found then raise exception 'plan_unavailable'; end if;
+
+  select count(*) into v_recent from public.hercules_software_access_requests
+  where email=v_email and product_code=p_product_code and created_at >= now()-interval '24 hours';
+  if v_recent >= 3 then raise exception 'request_rate_limited'; end if;
+
+  insert into public.hercules_software_access_requests(
+    product_code,plan_code,email,full_name,company,role,message,
+    source,medium,campaign,content,attribution_id,metadata
+  ) values(
+    p_product_code,p_plan_code,v_email,
+    nullif(left(trim(coalesce(p_full_name,'')),100),''),
+    nullif(left(trim(coalesce(p_company,'')),160),''),
+    nullif(left(trim(coalesce(p_role,'')),100),''),
+    nullif(left(trim(coalesce(p_message,'')),1200),''),
+    left(coalesce(p_attribution->>'source','direct'),100),
+    left(coalesce(p_attribution->>'medium','web'),100),
+    left(coalesce(p_attribution->>'campaign','software-founding-access-v1'),120),
+    left(coalesce(p_attribution->>'content',p_product_code),120),
+    left(coalesce(p_attribution->>'attribution_id',''),120),
+    jsonb_build_object('pricing_status',v_plan.pricing_status,'checkout_enabled',v_plan.checkout_enabled,'commercial_mode','founding_access')
+  ) returning id into v_id;
+
+  return jsonb_build_object('ok',true,'accepted',true,'request_id',v_id);
+end;
+$function$;
+
+revoke all on function public.hercules_public_software_catalog() from public;
+revoke all on function public.hercules_request_software_access(text,text,text,text,text,text,text,text,jsonb) from public;
+grant execute on function public.hercules_public_software_catalog() to anon, authenticated;
+grant execute on function public.hercules_request_software_access(text,text,text,text,text,text,text,text,jsonb) to anon, authenticated;
