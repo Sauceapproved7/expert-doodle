@@ -233,7 +233,7 @@ async function ensureStripeCatalog(admin:any,key:string){
 }
 
 
-const SOFTWARE_PRODUCTS=['sauceapproved-studio','sauceapproved-ads'] as const;
+const SOFTWARE_PRODUCTS=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'] as const;
 
 async function syncSoftwareProviderReady(admin:any,connection:any){
   const evidence={
