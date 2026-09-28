@@ -76,6 +76,27 @@ test("DevBrain monitoring distinguishes functional evidence from freshness",()=>
   assert.equal(fresh.freshness_ok,true);
 });
 
+test("declared HTML health surfaces are validated as functional HTML, not forced through JSON",()=>{
+  for(const expected of ["html","html-ok","html-200"]){
+    const good=evaluateMonitorContract({
+      expected,
+      status:200,
+      contentType:"text/html; charset=utf-8",
+      text:"<!doctype html><title>Hercules</title>"
+    });
+    assert.equal(good.ok,true,expected);
+    assert.equal(good.functional_ok,true,expected);
+  }
+  const empty=evaluateMonitorContract({
+    expected:"html-200",
+    status:200,
+    contentType:"text/html",
+    text:""
+  });
+  assert.equal(empty.ok,false);
+  assert.equal(empty.reason,"html_health_failed");
+});
+
 test("legacy protected 401 is reachability evidence, never functional proof",()=>{
   const result=evaluateMonitorContract({
     expected:"auth-or-json-health",
