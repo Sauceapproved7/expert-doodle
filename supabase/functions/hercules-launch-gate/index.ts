@@ -5,6 +5,7 @@ const S=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default||Deno.env
 const db=createClient(U,S,{auth:{persistSession:false}});
 const ORG='ea5fb196-67f9-42fa-b592-49eeb3b84346';
 const APPDEPLOY_STRIPE_APP_ID='sauceapproved-hercules-titan-dhakbi';
+const APPDEPLOY_STRIPE_ATTESTATION_URL='https://sauceapproved-hercules-titan-dhakbi.v2.appdeploy.ai/api/provider-attestation';
 const SHOPIFY_TITAN_PRODUCT_ID='gid://shopify/Product/10261114782016';
 const TITAN_PRODUCT_CODE='hercules-titan-founding-access';
 const SHOPIFY_STORE_DOMAIN='sauceapproved-2.myshopify.com';
@@ -35,7 +36,7 @@ async function publicRegistrationOpen(){
 
 async function run(){
   const started=Date.now();
-  const [launch,passwordProbe]=await Promise.all([
+  const [launch,passwordProbe,liveAppDeployProvider]=await Promise.all([
     fetch(U+'/functions/v1/hercules-launch?health=1',{signal:AbortSignal.timeout(10_000)})
       .then(async r=>({ok:r.ok&&(await r.json()).ok===true,status:r.status}))
       .catch(()=>({ok:false,status:0})),
@@ -49,7 +50,10 @@ async function run(){
           probe:body?.probe||null
         };
       })
-      .catch(()=>({ok:false,status:0,control:null,probe:null}))
+      .catch(()=>({ok:false,status:0,control:null,probe:null})),
+    fetch(APPDEPLOY_STRIPE_ATTESTATION_URL,{headers:{'accept':'application/json','cache-control':'no-cache'},signal:AbortSignal.timeout(10_000)})
+      .then(async r=>({ok:r.ok,status:r.status,body:await r.json().catch(()=>({}))}))
+      .catch(()=>({ok:false,status:0,body:{}}))
   ]);
 
   const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:appDeployProviderEvidence},{data:paymentEvidence},{data:shopifyOfferEvidence},{data:titanOwnerApprovals},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
@@ -110,14 +114,30 @@ async function run(){
     stripe?.metadata?.livemode===true &&
     stripe?.metadata?.webhook_endpoint_id
   );
+  const liveAppDeployProviderValue=liveAppDeployProvider?.body||{};
+  const liveAppDeployProviderFresh=Boolean(
+    liveAppDeployProvider?.ok===true &&
+    liveAppDeployProviderValue?.observedAt &&
+    Math.abs(Date.now()-new Date(liveAppDeployProviderValue.observedAt).getTime())<5*60*1000
+  );
+  const liveAppDeployStripeReady=Boolean(
+    liveAppDeployProviderFresh &&
+    liveAppDeployProviderValue?.provider==='stripe' &&
+    liveAppDeployProviderValue?.custody==='appdeploy' &&
+    liveAppDeployProviderValue?.appId===APPDEPLOY_STRIPE_APP_ID &&
+    liveAppDeployProviderValue?.credentialMode==='live' &&
+    liveAppDeployProviderValue?.stripeReachable===true &&
+    liveAppDeployProviderValue?.webhookConfigured===true
+  );
+
   const appDeployProviderValue=appDeployProviderEvidence?.value||{};
-  const appDeployProviderFresh=Boolean(
+  const ledgerAppDeployProviderFresh=Boolean(
     appDeployProviderEvidence?.verified_at &&
     Date.now()-new Date(appDeployProviderEvidence.verified_at).getTime()<24*60*60*1000
   );
-  const appDeployStripeReady=Boolean(
+  const ledgerAppDeployStripeReady=Boolean(
     appDeployProviderEvidence?.status==='active' &&
-    appDeployProviderFresh &&
+    ledgerAppDeployProviderFresh &&
     appDeployProviderValue?.provider==='stripe' &&
     appDeployProviderValue?.custody==='appdeploy' &&
     appDeployProviderValue?.appId===APPDEPLOY_STRIPE_APP_ID &&
@@ -125,6 +145,7 @@ async function run(){
     appDeployProviderValue?.stripeReachable===true &&
     appDeployProviderValue?.webhookConfigured===true
   );
+  const appDeployStripeReady=Boolean(liveAppDeployStripeReady||ledgerAppDeployStripeReady);
   const paymentProviderReady=Boolean(vaultStripeReady||appDeployStripeReady);
   const paymentEvidenceValue=paymentEvidence?.value||{};
   const paymentEvidenceBound=Boolean(
@@ -270,7 +291,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.9.0',
+      version:'2.0.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt
