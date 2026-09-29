@@ -480,3 +480,35 @@ test("Campaign Forge serves owned showcase surface and manifest",async()=>{
   assert.equal(body.product,"Hercules Campaign Forge");
   assert.equal(body.serverUpload,false);
 });
+
+
+test("Studio Director serves owned control-tower surface and manifest",async()=>{
+  const handle=createStudioHttpHandler();
+  const page=await handle({method:"GET",pathname:"/studio-director"});
+  assert.equal(page.status,200);
+  assert.match(page.headers["content-type"],/text\/html/);
+  assert.match(page.body,/Hercules<br>Studio Director/);
+  assert.match(page.body,/CHAIN-REACTION REHEARSAL/);
+  assert.match(page.body,/CREATIVE DNA LEDGER/);
+
+  const manifest=await handle({method:"GET",pathname:"/api/studio/studio-director/manifest"});
+  assert.equal(manifest.status,200);
+  const body=JSON.parse(manifest.body);
+  assert.equal(body.product,"Hercules Studio Director");
+  assert.equal(body.executionPolicy,"route-plan-proof-handoff-fail-closed");
+  assert.equal(body.autonomousMutation,false);
+  assert.equal(body.autoPublish,false);
+  assert.deepEqual(body.competitionGapFeatures,["Chain-Reaction Rehearsal","Creative DNA Ledger"]);
+});
+
+test("Studio public surfaces advertise Studio Director",async()=>{
+  const handle=createStudioHttpHandler();
+  const root=await handle({method:"GET",pathname:"/"});
+  assert.equal(root.status,200);
+  assert.match(root.body,/Studio Director/);
+  assert.match(root.body,/href="\/studio-director"/);
+
+  const onboarding=await handle({method:"GET",pathname:"/api/studio/onboarding/manifest"});
+  assert.equal(onboarding.status,200);
+  assert.ok(JSON.parse(onboarding.body).publicRoutes.includes("/studio-director"));
+});
