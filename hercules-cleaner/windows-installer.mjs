@@ -1,13 +1,21 @@
 import {createHash} from "node:crypto";
 import {access, cp, mkdir, readFile, rm, stat, writeFile} from "node:fs/promises";
 import {homedir, platform as currentPlatform} from "node:os";
-import {join, resolve, win32} from "node:path";
+import {dirname, join, resolve, win32} from "node:path";
 import {evaluateCleanerUpdate} from "./update-policy.mjs";
 import {uninstallAutostart} from "./autostart.mjs";
 
 function sha256(bytes){return createHash("sha256").update(bytes).digest("hex")}
 
 function validVersion(value){return /^\d+\.\d+\.\d+$/.test(String(value??""))}
+
+function packagePathParts(value){
+  const path=String(value??"");
+  if(!path||path.includes("\\")||path.startsWith("/")||/^[a-zA-Z]:/.test(path))return null;
+  const parts=path.split("/");
+  if(parts.some(part=>!part||part==="."||part===".."))return null;
+  return parts;
+}
 
 function windowsBase(localAppData){
   if(!localAppData)throw new Error("LOCALAPPDATA is required for Windows install");
@@ -47,7 +55,9 @@ export async function verifyWindowsPackageFiles({sourceRoot,manifest}={}){
     if(!item||typeof item.path!=="string"||!/^[a-f0-9]{64}$/i.test(String(item.sha256??""))){
       return {allowed:false,reason:"invalid-file-manifest"};
     }
-    const target=join(resolve(sourceRoot),...item.path.split("/"));
+    const parts=packagePathParts(item.path);
+    if(!parts)return {allowed:false,reason:"invalid-package-path",path:item.path};
+    const target=join(resolve(sourceRoot),...parts);
     let bytes;
     try{bytes=await readFile(target)}catch{return {allowed:false,reason:"package-file-missing",path:item.path}}
     if(Number(item.bytes)!==bytes.length||sha256(bytes)!==String(item.sha256).toLowerCase()){
@@ -87,6 +97,7 @@ export function planWindowsInstall({
     launcherContent:launcher(resolve(nodePath),cliPath),
     cliPath,
     copySource:sourceRoot,
+    verifiedFilesOnly:true,
     stateRoot:windowsStateRoot(home),
   });
 }
@@ -196,8 +207,30 @@ export async function installWindowsCleaner({
   const transition=nextWindowsInstallState({previous,candidate,expected,stateRoot:plan.stateRoot,installedAt:now});
   if(!transition.allowed)throw new Error(transition.reason);
   await assertMissing(plan.installRoot);
-  await mkdir(win32.dirname(plan.installRoot),{recursive:true});
-  await cp(sourceRoot,plan.installRoot,{recursive:true,errorOnExist:true,force:false});
+  await mkdir(plan.installRoot,{recursive:true});
+  try{
+    for(const item of candidate.files){
+      const parts=packagePathParts(item.path);
+      if(!parts)throw new Error("invalid-package-path");
+      const source=join(resolve(sourceRoot),...parts);
+      const target=join(plan.installRoot,...parts);
+      await mkdir(dirname(target),{recursive:true});
+      await cp(source,target,{errorOnExist:true,force:false});
+    }
+    await writeFile(
+      join(plan.installRoot,"package-identity.json"),
+      JSON.stringify({
+        schema:"sauceapproved.hercules-cleaner.installed-package.v1",
+        version:candidate.version,
+        sourceCommit:candidate.commitSha,
+        aggregateSha256:candidate.aggregateSha256,
+      },null,2)+"\n",
+      {mode:0o600},
+    );
+  }catch(error){
+    await rm(plan.installRoot,{recursive:true,force:true});
+    throw error;
+  }
   await mkdir(plan.binPath,{recursive:true});
   await writeFile(plan.launcherPath,plan.launcherContent,{mode:0o700});
   await writeFile(plan.metadataPath,JSON.stringify(transition.state,null,2)+"\n",{mode:0o600});
