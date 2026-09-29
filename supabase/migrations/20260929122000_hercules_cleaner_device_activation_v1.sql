@@ -59,7 +59,10 @@ revoke all on public.hercules_cleaner_activation_codes from anon, authenticated;
 revoke all on public.hercules_cleaner_device_challenges from anon, authenticated;
 revoke all on public.hercules_cleaner_devices from anon, authenticated;
 
-create or replace function public.hercules_activate_cleaner_device(
+create schema if not exists private;
+grant usage on schema private to service_role;
+
+create or replace function private.hercules_activate_cleaner_device(
   p_activation_code_sha256 text,
   p_challenge_id uuid,
   p_device_id uuid,
@@ -147,4 +150,32 @@ begin
 end
 $$;
 
+revoke all on function private.hercules_activate_cleaner_device(text,uuid,uuid,text,text,text,text) from public;
+grant execute on function private.hercules_activate_cleaner_device(text,uuid,uuid,text,text,text,text) to service_role;
+
+create or replace function public.hercules_activate_cleaner_device(
+  p_activation_code_sha256 text,
+  p_challenge_id uuid,
+  p_device_id uuid,
+  p_platform text,
+  p_cleaner_version text,
+  p_public_key_pem text,
+  p_credential_sha256 text
+) returns jsonb
+language sql
+security invoker
+set search_path = public, private, pg_temp
+as $
+  select private.hercules_activate_cleaner_device(
+    p_activation_code_sha256,
+    p_challenge_id,
+    p_device_id,
+    p_platform,
+    p_cleaner_version,
+    p_public_key_pem,
+    p_credential_sha256
+  );
+$;
+
 revoke all on function public.hercules_activate_cleaner_device(text,uuid,uuid,text,text,text,text) from public, anon, authenticated;
+grant execute on function public.hercules_activate_cleaner_device(text,uuid,uuid,text,text,text,text) to service_role;
