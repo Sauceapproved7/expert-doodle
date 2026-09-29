@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="KayNate Jamaican Kitchen in Middletown, Connecticut. Jamaican comfort food, bold island flavor, online ordering and catering.">
+  <title>KayNate Jamaican Kitchen | Middletown, CT</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="KayNate Jamaican Kitchen home">
+      <span class="brand-mark">KN</span>
+      <span><strong>KayNate</strong><small>Jamaican Kitchen</small></span>
+    </a>
+    <nav>
+      <a href="#menu">Menu</a>
+      <a href="#story">Story</a>
+      <a href="#flavor-finder">Flavor Finder</a>
+      <a href="#catering">Catering</a>
+    </nav>
+    <a class="pill-link" href="https://kaynatekitchen.com/" target="_blank" rel="noopener">Order Online</a>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="kicker">MIDDLETOWN · JAMAICAN KITCHEN</span>
+        <h1>Island flavor.<br><em>Made to hit home.</em></h1>
+        <p>Bold Jamaican comfort food, slow-cooked classics, breakfast favorites, patties, sides and catering—served from the heart of Middletown.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="https://kaynatekitchen.com/" target="_blank" rel="noopener">Start an Order</a>
+          <a class="btn ghost" href="#flavor-finder">Find My Plate</a>
+        </div>
+        <div class="trust-strip">
+          <span>50 Rapallo Avenue</span>
+          <span>Middletown, CT</span>
+          <span>(860) 788-7661</span>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <div class="sun-disc"></div>
+        <div class="plate plate-one"><span>JERK</span></div>
+        <div class="plate plate-two"><span>OXTAIL</span></div>
+        <div class="signal-card"><b>FLAVOR STATUS</b><span>Bold · Warm · Jamaican</span></div>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="featured dishes">
+      <span>JERK CHICKEN</span><span>CURRY CHICKEN</span><span>OXTAIL</span><span>CURRY GOAT</span><span>ACKee &amp; SALTFISH</span><span>BEEF PATTIES</span>
+    </section>
+
+    <section class="section split" id="story">
+      <div>
+        <span class="eyebrow">THE KAYNATE STORY</span>
+        <h2>Jamaican food that tastes like somebody cared.</h2>
+      </div>
+      <div class="story-copy">
+        <p>KayNate Jamaican Kitchen is built around the food people come back for: deep seasoning, slow-cooked comfort, bright spice, and plates that feel generous from the first bite to the last.</p>
+        <p>The kitchen brings together Jamaican staples and everyday favorites in a way that feels familiar, satisfying, and full of island character. From curry chicken and oxtail to ackee &amp; saltfish, patties, plantains and rice &amp; peas, the focus stays on real flavor and a welcoming experience.</p>
+        <p>This is a neighborhood Jamaican kitchen with its own rhythm—good food, strong portions, and a menu made for breakfast, lunch, dinner, takeout and gatherings.</p>
+      </div>
+    </section>
+
+    <section class="section menu-section" id="menu">
+      <div class="section-head">
+        <div><span class="eyebrow">SIGNATURE PLATES</span><h2>Start with the heavy hitters.</h2></div>
+        <a class="text-link" href="https://kaynatekitchen.com/" target="_blank" rel="noopener">View full live menu ↗</a>
+      </div>
+      <div class="dish-grid">
+        <article class="dish-card"><span class="dish-num">01</span><h3>Oxtail</h3><p>Rich, slow-cooked beef with classic Jamaican sides.</p><span class="tag">Fan favorite</span></article>
+        <article class="dish-card"><span class="dish-num">02</span><h3>Curry Chicken</h3><p>Comforting curry flavor with rice and peas or white rice.</p><span class="tag">Everyday classic</span></article>
+        <article class="dish-card"><span class="dish-num">03</span><h3>Curry Goat</h3><p>Deeply seasoned, tender and made for a full plate.</p><span class="tag">Island staple</span></article>
+        <article class="dish-card"><span class="dish-num">04</span><h3>Ackee &amp; Saltfish</h3><p>A Jamaican breakfast classic served with traditional sides.</p><span class="tag">Breakfast</span></article>
+        <article class="dish-card"><span class="dish-num">05</span><h3>Beef Patty</h3><p>Flaky pastry, spiced beef, quick bite, big flavor.</p><span class="tag">Grab &amp; go</span></article>
+        <article class="dish-card accent-card"><span class="dish-num">06</span><h3>Jerk Chicken</h3><p>Smoky, spicy, unmistakably Jamaican.</p><span class="tag">Must try</span></article>
+      </div>
+    </section>
+
+    <section class="section intelligence" id="flavor-finder">
+      <div class="ai-panel">
+        <span class="eyebrow">KAYNATE FLAVOR FINDER</span>
+        <h2>Tell us your mood. We’ll point you to a plate.</h2>
+        <p class="muted">A fast interactive guide built into the site—no account, no signup.</p>
+        <div class="controls">
+          <label>Heat
+            <select id="heat">
+              <option value="mild">Keep it mild</option>
+              <option value="medium">Give me some kick</option>
+              <option value="hot">Bring the heat</option>
+            </select>
+          </label>
+          <label>Craving
+            <select id="craving">
+              <option value="comfort">Comfort food</option>
+              <option value="rich">Rich & slow-cooked</option>
+              <option value="quick">Quick bite</option>
+              <option value="breakfast">Breakfast</option>
+            </select>
+          </label>
+        </div>
+        <button id="findDish" class="btn primary" type="button">Find My Plate</button>
+        <div class="result-card" id="dishResult" aria-live="polite">
+          <span class="result-label">YOUR MATCH</span>
+          <strong>Choose your flavor settings.</strong>
+        </div>
+      </div>
+      <aside class="signal-stack">
+        <div><span>01</span><b>Food-first</b><small>Recommendations stay grounded in the actual menu.</small></div>
+        <div><span>02</span><b>Fast decisions</b><small>Built for mobile customers who want to order quickly.</small></div>
+        <div><span>03</span><b>No fake AI claims</b><small>Smart interaction without pretending there is a human chef behind the screen.</small></div>
+      </aside>
+    </section>
+
+    <section class="section catering" id="catering">
+      <div class="section-head">
+        <div><span class="eyebrow">CATERING BUILDER</span><h2>Plan the crowd before you call.</h2></div>
+      </div>
+      <div class="catering-grid">
+        <div class="planner">
+          <label>Guests <input id="guests" type="number" min="5" max="250" value="25"></label>
+          <label>Style
+            <select id="eventStyle">
+              <option value="balanced">Balanced spread</option>
+              <option value="hearty">Heavy plates</option>
+              <option value="light">Lighter mix</option>
+            </select>
+          </label>
+          <button id="buildCatering" class="btn primary" type="button">Build My Estimate</button>
+        </div>
+        <div class="estimate" id="cateringResult" aria-live="polite">
+          <span class="result-label">ESTIMATED STARTING POINT</span>
+          <strong>25 guests</strong>
+          <p>Plan for about 3 entrées, 2 rice/side trays and 2 vegetable/plantain trays.</p>
+          <small>Planning guide only. Call KayNate for final quantities, availability and pricing.</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="section visit">
+      <div><span class="eyebrow">VISIT KAYNATE</span><h2>Come hungry.</h2></div>
+      <div class="visit-card">
+        <p><strong>KayNate Jamaican Kitchen</strong><br>50 Rapallo Avenue<br>Middletown, CT 06457</p>
+        <p><a href="tel:+18607887661">(860) 788-7661</a></p>
+        <div class="hero-actions">
+          <a class="btn primary" href="https://kaynatekitchen.com/" target="_blank" rel="noopener">Order Online</a>
+          <a class="btn ghost" href="https://www.google.com/maps/search/?api=1&query=50+Rapallo+Avenue+Middletown+CT+06457" target="_blank" rel="noopener">Directions</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="brand"><span class="brand-mark">KN</span><span><strong>KayNate</strong><small>Jamaican Kitchen</small></span></div>
+    <p>Jamaican flavor in Middletown, Connecticut.</p>
+    <a href="#top">Back to top ↑</a>
+  </footer>
+
+  <script src="./app.js"></script>
+</body>
+</html>
