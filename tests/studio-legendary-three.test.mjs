@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {buildSceneForgePlan} from '../sauceapproved-studio/sceneforge/core.mjs';
+import {buildSoundWorldPlan} from '../sauceapproved-studio/soundworld/core.mjs';
+import {buildActorLabPlan} from '../sauceapproved-studio/actor-lab/core.mjs';
+test('SceneForge catches continuity and director-intent drift',()=>{const p=buildSceneForgePlan({title:'Pilot',intent:'moody street drama',scenes:[{id:'1',character:'Ace',wardrobe:'black',style:'moody street drama'},{id:'2',character:'Ace',wardrobe:'white',style:'bright comedy'}]});assert.equal(p.continuityStressLab.ok,false);assert.equal(p.directorIntentLock.ok,false);assert.equal(p.executionReady,false)});
+test('SoundWorld maps emotion and remembers audio continuity',()=>{const p=buildSoundWorldPlan({title:'Alley',scenes:[{id:'1',emotion:'tension',ambience:'rain',music:'low pulse'},{id:'2',emotion:'tension',ambience:'rain',music:'low pulse'}]});assert.equal(p.audioContinuityMemory.ok,true);assert.equal(p.emotionalSoundMap.length,2);assert.equal(p.executionReady,false)});
+test('Actor Lab blocks real likeness/voice without consent',()=>{const p=buildActorLabPlan({name:'Ace',realPerson:true,syntheticVoice:true});assert.ok(p.blockers.some(x=>x.code==='likeness_consent_required'));assert.ok(p.blockers.some(x=>x.code==='voice_consent_required'));assert.equal(p.executionReady,false)});
+test('Actor Lab preserves fictional performer specification',()=>{const p=buildActorLabPlan({name:'Nova',fictional:true,appearance:'braids',wardrobe:'silver jacket',personality:'bold',voice:'warm alto',mannerisms:['slow nod']});assert.equal(p.performerMemory.name,'Nova');assert.equal(p.performerMemory.voice,'warm alto');assert.equal(p.publishReady,false)});
