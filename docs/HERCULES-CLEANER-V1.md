@@ -161,10 +161,10 @@ The exact-commit Early Access package now includes `HerculesCleaner-Setup.cmd` a
 The Windows distribution path is deliberately user-scoped and fail-closed:
 - install root is below `%LOCALAPPDATA%\SauceApproved\Hercules Cleaner\app\<version>`;
 - Cleaner state remains under `~/.hercules-cleaner/` and is not an install/update payload;
-- activation requires the generated exact-commit package manifest, aggregate SHA-256, and every packaged file hash to verify;
+- activation requires the separate generated exact-commit `cleaner-release-trust.json` lock to match package version, source commit, and aggregate SHA-256, followed by verification of every manifest-listed file hash;
 - same-version replacement, downgrade, malformed identity, digest mismatch, commercial-gate drift, and tampering are rejected;
-- the previous version is retained as the rollback target;
-- uninstall removes the installed app and startup integration without silently deleting Recovery Capsules or local state;
+- the previous version is retained as the rollback target and its recorded identity plus manifest-listed files are re-verified before rollback activation;
+- uninstall removes startup integration first and aborts app deletion if that cleanup cannot be confirmed; Recovery Capsules and local state are not silently deleted;
 - no administrator/elevation control is bypassed.
 
 Paid checkout remains a separate owner-controlled launch gate and is not enabled by installer availability.
