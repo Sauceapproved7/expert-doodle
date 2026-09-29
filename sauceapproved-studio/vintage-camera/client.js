@@ -1,11 +1,20 @@
+import {assessCapture} from './capture-quality.mjs';
+
 const $=id=>document.getElementById(id);
 const source=$('source'),view=$('view'),preview=view.getContext('2d',{alpha:false});
 const output=document.createElement('canvas');output.width=1280;output.height=720;
 const frame=output.getContext('2d',{alpha:false});
-const grainCanvas=document.createElement('canvas');grainCanvas.width=160;grainCanvas.height=90;
-const grainContext=grainCanvas.getContext('2d');
+const grainTextures=Array.from({length:16},()=>{
+  const texture=document.createElement('canvas');texture.width=160;texture.height=90;
+  const context=texture.getContext('2d'),pixels=context.createImageData(160,90);
+  for(let i=0;i<pixels.data.length;i+=4){
+    const value=Math.floor(Math.random()*256);
+    pixels.data[i]=value;pixels.data[i+1]=value;pixels.data[i+2]=value;pixels.data[i+3]=255;
+  }
+  context.putImageData(pixels,0,0);return texture;
+});
 let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
-let recordingStarted=0,animation=0,mode='idle',chunks=[],rawChunks=[];
+let recordingStarted=0,recordingEnded=0,renderedFrames=0,grainIndex=0,animation=0,mode='idle',chunks=[],rawChunks=[];
 const setStatus=message=>{$('status').textContent=message;};
 const setButtonState=()=>{
   const ready=mode==='camera'||mode==='clip';
@@ -34,13 +43,9 @@ function imageTo(ctx,filter='none'){
 }
 function grainOverlay(ctx,amount){
   if(amount<=0)return;
-  const pixels=grainContext.createImageData(grainCanvas.width,grainCanvas.height);
-  for(let i=0;i<pixels.data.length;i+=4){
-    const value=Math.floor(Math.random()*256);
-    pixels.data[i]=value;pixels.data[i+1]=value;pixels.data[i+2]=value;pixels.data[i+3]=Math.floor(amount*.55);
-  }
-  grainContext.putImageData(pixels,0,0);
-  ctx.drawImage(grainCanvas,0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.save();ctx.globalAlpha=amount*.55/255;
+  ctx.drawImage(grainTextures[grainIndex++%grainTextures.length],0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.restore();
 }
 function draw(){
   const settings=recipe();
@@ -56,13 +61,14 @@ function draw(){
     preview.fillText('A STORY IS WAITING.',view.width/2,view.height/2);
   }
   if(mode==='recording'){
+    if(source.readyState>=2)renderedFrames++;
     const seconds=Math.floor((Date.now()-recordingStarted)/1000);
     $('timecode').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
   }
   animation=requestAnimationFrame(draw);
 }
 function releaseSource(){
-  if(recorder?.state==='recording')recorder.stop();
+  if(recorder?.state==='recording'){recordingEnded=Date.now();recorder.stop();}
   if(rawRecorder?.state==='recording')rawRecorder.stop();
   if(cameraStream){cameraStream.getTracks().forEach(track=>track.stop());cameraStream=null;}
   source.pause();source.srcObject=null;source.removeAttribute('src');source.load();
@@ -108,7 +114,13 @@ $('record').addEventListener('click',async()=>{
     recorder=new MediaRecorder(stream,{mimeType:mime});
     recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
     recorder.onstop=()=>{
-      if(chunks.length){processedUrl=URL.createObjectURL(new Blob(chunks,{type:mime}));$('download').href=processedUrl;$('download').download='sauceapproved-vintage-look.webm';$('download').hidden=false;setStatus('Processed clip ready to download. The source stayed local.');}
+      const quality=assessCapture({frames:renderedFrames,elapsedMs:(recordingEnded||Date.now())-recordingStarted});
+      if(chunks.length){
+        processedUrl=URL.createObjectURL(new Blob(chunks,{type:mime}));$('download').href=processedUrl;
+        $('download').download='sauceapproved-vintage-look.webm';$('download').hidden=false;
+        $('download').textContent=quality.ok?'Download processed clip':'Download low-frame-rate preview';
+        setStatus(quality.ok?'Processed clip ready to download. The source stayed local.':`Capture quality warning: ${quality.fps} rendered frames per second. Keep this tab active and try again before using the clip. This preview is not a verified full-quality export.`);
+      }else setStatus('No video data was recorded. No processed clip is available.');
       stream.getVideoTracks().forEach(track=>track.stop());
     };
     if(mode==='camera'){
@@ -117,12 +129,13 @@ $('record').addEventListener('click',async()=>{
       rawRecorder.onstop=()=>{if(rawChunks.length){originalUrl=URL.createObjectURL(new Blob(rawChunks,{type:mime}));setButtonState();}};
       rawRecorder.start(1000);
     }
-    recorder.start(1000);mode='recording';recordingStarted=Date.now();setButtonState();
+    recorder.start(1000);mode='recording';recordingStarted=Date.now();recordingEnded=0;renderedFrames=0;setButtonState();
     setStatus('Recording locally. Stop to finish and download.');
   }catch{if(rawRecorder?.state==='recording')rawRecorder.stop();setStatus('Recording could not start on this browser.');}
 });
 $('stop').addEventListener('click',()=>{
   if(mode==='recording'){
+    recordingEnded=Date.now();
     if(recorder?.state==='recording')recorder.stop();
     if(rawRecorder?.state==='recording')rawRecorder.stop();
     mode=cameraStream?'camera':'clip';
