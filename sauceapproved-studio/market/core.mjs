@@ -22,6 +22,18 @@ function product(id,name,route,content,summary){
   });
 }
 
+function freePreview(id,name,route,summary){
+  return Object.freeze({
+    id,
+    name,
+    route,
+    summary,
+    availability:"free-preview",
+    ctaLabel:"Try free preview",
+    ctaUrl:route
+  });
+}
+
 export function createStudiosMarketManifest(){
   return Object.freeze({
     schema:"sauceapproved.studio.market-manifest",
@@ -59,6 +71,12 @@ export function createStudiosMarketManifest(){
         "/brand-brain",
         "studio-brand-brain",
         "Govern approved brand truth with Constitution rules, cross-channel consistency, impact previews and historical drift comparison."
+      ),
+      freePreview(
+        "vintage-camera",
+        "Vintage Camera",
+        "/vintage-camera",
+        "Shoot or load a clip, compare the untouched source against four original vintage looks, keep the original, and export locally in the browser."
       ),
       product(
         "studios-bundle",

@@ -229,7 +229,7 @@ function renderStudiosMarketShell(manifest) {
       <p>${escapeHtml(item.summary)}</p>
       <div class="actions">
         <a class="secondary" href="${escapeHtml(item.route)}">View product</a>
-        <a class="primary" href="${escapeHtml(item.ctaUrl)}" rel="noreferrer">Request founding access</a>
+        <a class="primary" href="${escapeHtml(item.ctaUrl)}" rel="noreferrer">${escapeHtml(item.ctaLabel)}</a>
       </div>
     </article>`).join("");
 
@@ -262,7 +262,7 @@ h1 em{font-style:normal;color:#e8b7a4}.lead{max-width:820px;color:#bababa;font-s
 <section class="hero">
 <div class="eyebrow">SauceApproved Studios / Market</div>
 <h1>Built to work. <em>Built to sell.</em></h1>
-<p class="lead">Three owned Hercules-grade products are open for controlled founding access. Explore each product, choose the workflow that fits your business, and submit a founding-access request through the protected Hercules intake.</p>
+<p class="lead">Four owned Hercules-grade products plus the controlled Studios Bundle are open for public discovery. Vintage Camera is available as a free preview; founding-access products still use the protected Hercules intake.</p>
 <div class="state">
   <div><span>Discovery</span><strong class="open">Public</strong></div>
   <div><span>Founding applications</span><strong class="open">Open</strong></div>
