@@ -160,3 +160,12 @@ Before this policy becomes effective:
 Hercules Cleaner is designed to keep cleanup execution and local file metadata on the user's device. The core cleaner does not require uploading a user's local file inventory, filenames, file contents, Recovery Capsule contents, or protected-path contents to the SauceApproved web catalog.
 
 The Early Access catalog may process ordinary account and access-request information such as email, name, company, requested plan, message, attribution fields, and product-access status. If future optional remote fleet or centralized receipt features are introduced, their data flows must be documented and approved before activation; they are not represented as part of the current v1.0.0 local-agent release.
+
+
+#### Cleaner device activation
+
+Hercules Cleaner device activation uses a privacy-minimized registration record. The activation service may process an opaque device UUID, operating-system family, Cleaner version, Ed25519 public key, one-time activation code, signed challenge proof, activation timestamps, and a server-side SHA-256 hash of the issued device credential.
+
+The Cleaner device activation service does **not** require or collect hostname, hardware serial number, MAC address, local username, filenames, file paths, cleanup inventory, Recovery Capsule contents, or the device private key. The private key and plaintext device credential remain local to the activated device.
+
+Activation codes and device credentials are stored server-side only as SHA-256 hashes. Device activation does not itself enable billing, paid checkout, or any commercial approval.

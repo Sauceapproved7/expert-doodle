@@ -67,6 +67,8 @@ node hercules-cleaner/cli.mjs scan
 node hercules-cleaner/cli.mjs clean
 node hercules-cleaner/cli.mjs "clean my computer"
 node hercules-cleaner/cli.mjs dashboard
+node hercules-cleaner/cli.mjs device-init --version 1.0.0
+node hercules-cleaner/cli.mjs device-status
 
 node hercules-cleaner/cli.mjs schedule --profile quick-safe --type daily
 node hercules-cleaner/cli.mjs schedule --profile quick-safe --type everyNDays --days 2
@@ -151,3 +153,46 @@ Cleaner updates are fail-closed against immutable release identity. An update ca
 The update policy cannot enable checkout or change the release out of Early Access. A verified update retains the currently installed version as the explicit rollback version. Recovery Capsule data and local Cleaner state are not update payloads and must not be deleted or migrated implicitly by update eligibility checks.
 
 This v1 certification defines update eligibility and rollback identity; it does not claim a silent auto-updater or native installer. Installation or replacement on a customer device remains subject to that device's explicit authorization and operating-system permissions.
+
+
+## Device activation
+
+Cleaner device activation is privacy-preserving and separate from filesystem authority.
+
+An installed Cleaner creates:
+- a random opaque device UUID;
+- an Ed25519 public/private keypair stored locally;
+- a pending local device identity before activation.
+
+Activation uses a one-time owner-issued code and a two-step server challenge. Cleaner signs the challenge locally with its private key. The private key never leaves the device.
+
+The activation service accepts only:
+- product code (`hercules-cleaner`);
+- opaque device UUID;
+- platform family (`windows`, `macos`, or `linux`);
+- Cleaner semantic version;
+- Ed25519 public key;
+- one-time activation code;
+- challenge/signature proof.
+
+It does **not** accept or require hostname, hardware serial, MAC address, username, filenames, file paths, cleanup inventory, or Recovery Capsule contents.
+
+Server-side activation codes and device credentials are stored only as SHA-256 hashes. Device tables are RLS-protected and are not directly granted to anonymous or authenticated clients. The Edge Function uses the service-role boundary for the protected transaction. Activation does not enable checkout or change any commercial approval.
+
+CLI:
+
+```sh
+node hercules-cleaner/cli.mjs device-init --version 1.0.0
+node hercules-cleaner/cli.mjs device-activate --code HC-XXXX-XXXX --endpoint https://<project>.supabase.co/functions/v1/hercules-cleaner-device
+node hercules-cleaner/cli.mjs device-status
+```
+
+Local device state:
+
+```text
+~/.hercules-cleaner/
+  device-pending.json
+  device.json
+```
+
+`device.json` contains the local private key and returned opaque device credential, so it must remain local and protected by the user's operating-system permissions.
