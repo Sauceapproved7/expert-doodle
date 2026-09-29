@@ -27,10 +27,17 @@ test("KayNate flagship includes Hercules-grade interactive restaurant software f
   assert.match(js, /orderUrl/);
 });
 
-test("KayNate flagship exposes real menu anchors from the current ordering catalog", async () => {
+test("KayNate flagship exposes the complete current menu structure, not only featured dishes", async () => {
   const html = await readFile(new URL("index.html", root), "utf8");
 
-  for (const dish of ["Curry Chicken", "Oxtail", "Curry Goat", "Ackee & Saltfish", "Beef Patty"]) {
+  for (const dish of ["Curry Chicken", "Oxtail", "Curry Goat", "Ackee & Saltfish", "Beef Patty", "Jerk Salmon", "Red Peas Soup", "Rice n Peas", "Sweet Potato Pudding", "Plantain Chips"]) {
     assert.match(html, new RegExp(dish.replace("&", "\\&"), "i"));
   }
+
+  for (const category of ["Breakfast", "Kids Menu", "Lunch / Dinner", "Porridge", "Seafood", "Sides", "Soup", "Drinks", "Vegan food", "Half Pan", "Full Pan", "Baked Products", "Snacks"]) {
+    assert.match(html, new RegExp(category.replace("/", "\\/"), "i"));
+  }
+
+  const menuRows = html.match(/class="menu-row/g) || [];
+  assert.ok(menuRows.length >= 120, "expected the full catalog to be rendered");
 });
