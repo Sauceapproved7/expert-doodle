@@ -31,6 +31,9 @@ test("Movie Machine turns one story brief into a traceable multi-act cinematic b
   assert.ok(plan.scenes.every(scene=>scene.cameraIntent && scene.emotionalBeat));
   assert.equal(plan.renderReady,false);
   assert.equal(plan.providerStatus,"not-connected");
+  assert.equal(plan.directorsProofMap.length,plan.scenes.length);
+  assert.equal(plan.emotionCameraGraph.length,plan.scenes.length);
+  assert.ok(plan.directorsProofMap.every(item=>item.status==="review-required"));
 });
 
 test("Movie Machine fails closed on incomplete story truth",()=>{
@@ -62,6 +65,22 @@ test("HoloStage builds blocking, camera and lighting choreography without claimi
   assert.ok(plan.lightCues.length>=3);
   assert.ok(plan.blocking.length>=3);
   assert.equal(plan.safety.collisionsDetected,0);
+  assert.equal(plan.oneTakeStressTest.pass,true);
+});
+
+test("HoloStage collision guard and one-take stress test expose physical-plan failures",()=>{
+  const plan=buildStagePlan({
+    title:"Tight Stage",
+    stageWidth:8,
+    stageDepth:8,
+    subjects:["host"],
+    beats:["one","two","three"],
+    maxContinuousMoveMeters:0.25,
+    lights:[{id:"key-1",x:1,z:7}]
+  });
+  assert.equal(plan.oneTakeStressTest.pass,false);
+  assert.ok(plan.safety.collisionsDetected>0);
+  assert.ok(plan.safety.collisions.some(item=>item.kind==="camera-light"));
 });
 
 test("HoloStage rejects impossible stage geometry",()=>{
@@ -96,6 +115,26 @@ test("Legacy Vault builds a documentary plan from approved memories while preser
   assert.ok(plan.reviewGates.includes("consent"));
   assert.ok(plan.reviewGates.includes("privacy"));
   assert.ok(plan.reviewGates.includes("provenance"));
+  assert.equal(plan.sourceLedger[0].consentHorizon.publicUse,false);
+  assert.ok(plan.memoryProvenanceChain.every(item=>item.sourceType));
+});
+
+test("Legacy Vault preserves source-specific consent horizons",()=>{
+  const plan=buildLegacyFilmPlan({
+    title:"Private Family Cut",
+    subject:"Family archive",
+    approvedSources:[{
+      id:"voice-9",
+      type:"voice-note",
+      label:"Private memory",
+      approved:true,
+      consent:{allowedUses:["private-edit"],publicUse:false,expiresAt:"2030-01-01"}
+    }],
+    chapters:["Origins"]
+  });
+  assert.deepEqual(plan.sourceLedger[0].consentHorizon.allowedUses,["private-edit"]);
+  assert.equal(plan.sourceLedger[0].consentHorizon.publicUse,false);
+  assert.equal(plan.sourceLedger[0].consentHorizon.expiration,"2030-01-01");
 });
 
 test("Legacy Vault refuses unapproved source material",()=>{
