@@ -53,3 +53,13 @@ test("KayNate full menu has fast customer navigation controls", async () => {
   assert.match(js, /filterMenu/);
   assert.match(js, /data-menu-name/);
 });
+
+
+test("KayNate full menu exposes category jump navigation", async () => {
+  const html = await readFile(new URL("index.html", root), "utf8");
+  const js = await readFile(new URL("app.js", root), "utf8");
+
+  assert.match(html, /id="menuCategoryNav"/);
+  assert.match(html, /data-menu-category=/);
+  assert.match(js, /scrollIntoView/);
+});
