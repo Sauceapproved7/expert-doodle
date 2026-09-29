@@ -179,7 +179,7 @@ export async function runForgeStartupPromptCanary({
   });
   if (created.response.status !== 201) {
     const creationError=String(created.payload?.error ?? "");
-    const isSafeExistCollision=created.response.status === 409 && /\\bEEXIST\\b/i.test(creationError);
+    const isSafeExistCollision=created.response.status === 409 && /\bEEXIST\b/i.test(creationError);
     if (isSafeExistCollision && collisionFallback && collisionAttempt < 8) {
       const fallbackId=reservedCanaryProjectId(projectId, collisionAttempt);
       const fallback=await runForgeStartupPromptCanary({
