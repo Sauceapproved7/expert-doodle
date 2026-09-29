@@ -56,3 +56,16 @@ test("activation endpoint never auto-enables commerce",()=>{
   assert.doesNotMatch(sql,/checkout_enabled\s*=\s*true/i);
   assert.doesNotMatch(sql,/pricing_status\s*=\s*'approved'/i);
 });
+
+
+test("Cleaner privacy candidate discloses device activation fields and local-data exclusions",async()=>{
+  const privacy=await readFile(new URL("../docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md",import.meta.url),"utf8");
+  assert.match(privacy,/Cleaner device activation/i);
+  assert.match(privacy,/opaque device/i);
+  assert.match(privacy,/public key/i);
+  assert.match(privacy,/activation code/i);
+  assert.match(privacy,/hostname/i);
+  assert.match(privacy,/MAC address/i);
+  assert.match(privacy,/filenames/i);
+  assert.match(privacy,/Recovery Capsule/i);
+});
