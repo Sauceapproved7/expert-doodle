@@ -4,15 +4,15 @@ import {readFile} from "node:fs/promises";
 
 const bridge=await readFile(new URL("../supabase/functions/hercules-private-bridge/index.ts",import.meta.url),"utf8");
 const ui=await readFile(new URL("../supabase/functions/hercules-integrations/index.ts",import.meta.url),"utf8");
-const migration=await readFile(new URL("../supabase/migrations/20260928100000_hercules_software_commercial_bundle_v1.sql",import.meta.url),"utf8");
+const migration=await readFile(new URL("../supabase/migrations/20260929160000_hercules_software_commercial_bundle_v2.sql",import.meta.url),"utf8");
 
 test("software commercial bundle is locked to exact legal docs and catalog",()=>{
-  assert.match(bridge,/SAUCEAPPROVED_SOFTWARE_TERMS_SHA='d45b351965b1d93855b004ed230bbff32bee1272'/);
-  assert.match(bridge,/SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA='4b1c5cfabb935d069e8de85c91300f9482709695'/);
+  assert.match(bridge,/SAUCEAPPROVED_SOFTWARE_TERMS_SHA='2bf27cfb7f94d5599de509aa8c529a94751023d3'/);
+  assert.match(bridge,/SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA='04f6217770cbc53829da36c25ecf3fa6584704fb'/);
   assert.match(bridge,/starter:2900/);
   assert.match(bridge,/pro:7900/);
   assert.match(bridge,/agency:19900/);
-  assert.match(bridge,/SOFTWARE_COMMERCIAL_BUNDLE_VERSION='software-commercial-v1'/);
+  assert.match(bridge,/SOFTWARE_COMMERCIAL_BUNDLE_VERSION='software-commercial-v2'/);
 });
 
 test("bundle approval is owner-only and requires one exact typed phrase",()=>{
@@ -50,7 +50,7 @@ test("bundle approval is atomic in the database and cannot touch payment gates",
   assert.match(migration,/auth\.uid\(\)/);
   assert.match(migration,/role='owner'/);
   assert.match(migration,/software-commercial-v1/);
-  assert.match(migration,/760ce84a641a2642a46de1b039eabdd2e7d45ba9101633284d5bf69f27e09862/);
+  assert.match(migration,/cd8f2488748f0aed1e85726816ace5c86288de3f873de7719d136ed9e4275b72/);
   assert.match(migration,/approval_type in \('pricing','terms','privacy'\)/);
   assert.match(migration,/product_code in \('sauceapproved-studio','sauceapproved-ads'\)/);
   assert.doesNotMatch(migration,/payment_provider_ready['"]?\s*,?\s*status='approved'/);
