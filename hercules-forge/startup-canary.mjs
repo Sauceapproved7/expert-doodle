@@ -71,6 +71,13 @@ function reservedCanaryProjectId(projectId) {
   return "ForgeCanary_"+suffix;
 }
 
+function projectFromPayload(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  return payload.project && typeof payload.project === "object"
+    ? payload.project
+    : payload;
+}
+
 function assertCertifiedProject(project, projectId) {
   if (
     project?.projectId !== projectId ||
@@ -118,7 +125,7 @@ export async function runForgeStartupPromptCanary({
 
   if (existing.response.status === 200) {
     try {
-      assertCertifiedProject(existing.payload?.project, projectId);
+      assertCertifiedProject(projectFromPayload(existing.payload), projectId);
       const ready = await requestJson(fetchImpl, base + "/ready", {timeoutMs});
       if (!ready.response.ok) throw new Error("startup canary readiness request failed");
       return {
@@ -183,7 +190,7 @@ export async function runForgeStartupPromptCanary({
     timeoutMs,
   });
   if (!reread.response.ok) throw new Error("startup canary project reread failed");
-  assertCertifiedProject(reread.payload?.project, projectId);
+  assertCertifiedProject(projectFromPayload(reread.payload), projectId);
 
   const ready = await requestJson(fetchImpl, base + "/ready", {timeoutMs});
   if (!ready.response.ok) throw new Error("startup canary readiness request failed");
