@@ -9,7 +9,8 @@ const SURFACE_LABELS=Object.freeze({
   kids:'Kids Studio',
   'content-multiplier':'Content Multiplier',
   'brand-brain':'Brand Brain',
-  'reality-forge':'Reality Forge'
+  'reality-forge':'Reality Forge',
+  'performance-lab':'Performance Lab'
 });
 
 function clean(value){return String(value??'').trim();}
@@ -52,6 +53,7 @@ function chooseStages(input){
   if(/legacy|documentary|memory|family history/.test(goal)) add('legacy-vault','Build the source-traceable documentary structure and consent boundaries.','consent-provenance-review');
   if(/movie|film|cinematic|story|trailer/.test(goal)) add('movie-machine','Build acts, scenes, continuity, camera intent, and director proof.','director-proof-review');
   if(input.requiresLiveStage===true || /stage|virtual production|blocking|lighting/.test(goal)) add('holostage','Pre-plan blocking, camera paths, lights, clearances, and continuous moves.','simulation-review');
+  if(/actor|performance|character|dialogue|voice|emotion|gesture|blocking/.test(goal)) add('performance-lab','Direct protected character performance, emotion, voice, timing, gestures, and blocking.','performance-proof-review');
   if(/transform|rebuild|restyle|relight|era|weather|environment|world|vfx/.test(goal)) add('reality-forge','Rebuild the visual world around approved footage while protecting identity and cross-shot continuity.','reality-proof-review');
   if(/vintage|retro|camera|capture/.test(goal)) add('vintage-camera','Apply the owned capture/look pipeline for vintage visual language.','capture-review');
   if(/campaign|ad|commercial|launch|promo|marketing/.test(goal) || channels.length) add('campaign-forge','Translate the approved creative into campaign-ready deliverables.','campaign-review');
