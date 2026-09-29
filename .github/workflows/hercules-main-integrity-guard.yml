@@ -69,16 +69,56 @@ jobs:
 
           PR_HEAD="$(jq -r '[.[] | select(.merged_at != null and .base.ref == "main")][0].head.sha // empty' /tmp/hercules-prs.json)"
           if [ -n "$PR_HEAD" ]; then
-            if ! gh api -H "Accept: application/vnd.github+json" \
-              "/repos/${GITHUB_REPOSITORY}/commits/${PR_HEAD}/check-runs?per_page=100" \
-              > /tmp/hercules-checks.json; then
-              fail_closed "required_check_evidence_unavailable"
+            required_checks=(
+              "implementation-enforcement"
+              "owner-code-only"
+              "security-baseline"
+              "codeql"
+              "workflow-integrity"
+              "provenance-attestation"
+              "main-guard-contract"
+            )
+
+            evidence_ready=false
+            for attempt in $(seq 1 12); do
+              if ! gh api -H "Accept: application/vnd.github+json" \
+                "/repos/${GITHUB_REPOSITORY}/commits/${PR_HEAD}/check-runs?per_page=100" \
+                > /tmp/hercules-checks.json; then
+                if [ "$attempt" -eq 12 ]; then
+                  fail_closed "required_check_evidence_unavailable"
+                  exit 0
+                fi
+                sleep 5
+                continue
+              fi
+
+              missing=0
+              for check_name in "${required_checks[@]}"; do
+                if ! jq -e --arg name "$check_name" \
+                  '.check_runs[] | select(.name == $name and .status == "completed" and .conclusion == "success")' \
+                  /tmp/hercules-checks.json >/dev/null; then
+                  missing=1
+                  break
+                fi
+              done
+
+              if [ "$missing" -eq 0 ]; then
+                evidence_ready=true
+                break
+              fi
+
+              if [ "$attempt" -lt 12 ]; then
+                sleep 5
+              fi
+            done
+
+            if [ "$evidence_ready" != "true" ]; then
+              fail_closed "required_check_evidence_not_ready"
               exit 0
             fi
           else
             printf '{"check_runs":[]}' > /tmp/hercules-checks.json
           fi
-
           if ! node scripts/hercules-main-guard.mjs \
             --event "$GITHUB_EVENT_PATH" \
             --prs /tmp/hercules-prs.json \
