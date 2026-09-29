@@ -6,6 +6,7 @@ import {buildStudioViewModel,createStudioManifest} from "./studio-contract.mjs";
 import {createContentMultiplierManifest} from "../sauceapproved-studio/content-multiplier/core.mjs";
 import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/core.mjs";
 import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core.mjs";
+import {createCampaignForgeManifest,renderCampaignForge} from "../sauceapproved-studio/campaign-forge/core.mjs";
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
 import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
@@ -327,7 +328,7 @@ ${statusBadge("Execution",bridgeLabel,bridgeConnected ? "good" : "warn")}
 <div><div class="eyebrow">Operator</div><h2>${escapeHtml(surfaces.get("project-brief"))}</h2><p>Capture the creative brief and prepare the run plan without pretending execution is connected.</p></div>
 <div class="notice">${escapeHtml(bridgeLabel)}. Start and resume stay locked until the owned execution bridge is verified.</div>
 <div class="surface-list">
-${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : surface.id==="brand-brain" ? `<a class="surface" href="/brand-brain">${escapeHtml(surface.label)}</a>` : surface.id==="market" ? `<a class="surface" href="/market">${escapeHtml(surface.label)}</a>` : surface.id==="vintage-camera" ? `<a class="surface" href="/vintage-camera">${escapeHtml(surface.label)}</a>` : surface.id==="kids" ? `<a class="surface" href="/kids">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
+${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : surface.id==="brand-brain" ? `<a class="surface" href="/brand-brain">${escapeHtml(surface.label)}</a>` : surface.id==="campaign-forge" ? `<a class="surface" href="/campaign-forge">${escapeHtml(surface.label)}</a>` : surface.id==="market" ? `<a class="surface" href="/market">${escapeHtml(surface.label)}</a>` : surface.id==="vintage-camera" ? `<a class="surface" href="/vintage-camera">${escapeHtml(surface.label)}</a>` : surface.id==="kids" ? `<a class="surface" href="/kids">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
 </div>
 <div>
 <h2>${escapeHtml(surfaces.get("run-status"))}</h2>
@@ -417,6 +418,14 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/brand-brain") {
       return {status:200,headers:HTML_HEADERS,body:renderBrandBrainShell(createBrandBrainManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/campaign-forge/manifest") {
+      return json(createCampaignForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/campaign-forge") {
+      return {status:200,headers:HTML_HEADERS,body:renderCampaignForge()};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/market/manifest") {
