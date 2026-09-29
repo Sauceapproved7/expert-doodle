@@ -38,7 +38,7 @@ export function createStudioCommercialManifest(){
 
 
 export function renderStudioPricingShell(){
-  const cards=STUDIO_COMMERCIAL_PLANS.map((p,i)=>'<article class="plan '+(i===1?'featured':'')+'"><span class="count">0'+(i+1)+'</span><h2>'+esc(p.name)+'</h2><div class="price">
+  const cards=STUDIO_COMMERCIAL_PLANS.map((p,i)=>'<article class="plan '+(i===1?'featured':'')+'"><span class="count">0'+(i+1)+'</span><h2>'+esc(p.name)+'</h2><div class="price">$' + esc(p.monthlyUsd) + '<small>/month</small></div><p>'+esc(p.tag)+'</p><ul>'+p.features.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul><a class="cta" href="/market">Request founding access</a></article>').join('');
   return wrap("SauceApproved Studio Pricing",'<section class="hero"><div class="eyebrow">Founding Customer Release</div><h1>Studio plans built to grow with the work.</h1><p class="lead">Choose the Studio level that matches your creative workflow. Paid checkout remains intentionally locked until SauceApproved verifies its business payout, billing identity, checkout and refund path.</p><div class="notice">Pricing is public for evaluation. No charge is created from this page. Founding-access requests remain controlled until paid launch verification is complete.</div></section><section class="grid">'+cards+'</section><p class="foot"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p>');
 }
 
