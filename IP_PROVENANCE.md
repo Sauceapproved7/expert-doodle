@@ -200,3 +200,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Origin: original SauceApproved/Hercules implementation created with AI assistance for parent-operated family storytelling.
 - Runtime dependencies: browser-standard JavaScript and Node.js built-ins; no copied third-party templates, artwork, binaries, or vendor source.
 - Scope: local browser-memory planning and explicit text download. No child account, server upload, public posting, AI media generation, or automatic video linkage. The six planning additions are Hercules differentiators, with no exclusivity claim about competitors.
+
+
+## Hercules Cleaner device activation v1 provenance — 2026-09-29
+
+- Component paths: `hercules-cleaner/device-identity.mjs`, Cleaner CLI device commands, `supabase/functions/hercules-cleaner-device/index.ts`, `supabase/migrations/20260929122000_hercules_cleaner_device_activation_v1.sql`, and focused device-activation tests.
+- Origin: original SauceApproved/Hercules implementation created with AI assistance under the repository's existing ownership/provenance controls.
+- Runtime dependencies: Node.js built-ins for local Ed25519 identity and Supabase Edge Functions/Postgres as external infrastructure; no vendored third-party runtime source is added.
+- Privacy boundary: activation transmits opaque device identity, platform family, Cleaner version, public key, one-time activation code, and signed challenge proof only. Hostname, hardware identifiers, usernames, filenames, paths, cleanup inventory, Recovery Capsule contents, and the private key are excluded.
+- Secret-storage boundary: activation codes and returned device credentials are stored server-side only as SHA-256 hashes; the private key and plaintext device credential remain local to the activated device.
+- Commercial boundary: device activation does not approve or enable pricing, checkout, Terms, Privacy, payment-provider readiness, or paid-path verification.
