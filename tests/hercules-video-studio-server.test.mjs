@@ -24,6 +24,9 @@ test("Vintage Camera serves an owned local-first capture surface and client",asy
   assert.equal(quality.status,200);
   const receipt=await handle({method:"GET",pathname:"/assets/capture-receipt.mjs"});
   assert.equal(receipt.status,200);
+  const dimensions=await handle({method:"GET",pathname:"/assets/export-dimensions.mjs"});
+  assert.equal(dimensions.status,200);
+  assert.match(dimensions.body,/planExportDimensions/);
   assert.match(page.body,/Save QA receipt/);
   assert.match(quality.body,/low_frame_cadence/);
   const root=await handle({method:"GET",pathname:"/"});
