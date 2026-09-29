@@ -2,11 +2,18 @@ import {assessCapture} from './capture-quality.mjs';
 import {createCaptureReceipt} from './capture-receipt.mjs';
 import {scheduleVideoFrame,cancelScheduledVideoFrame} from './frame-scheduler.mjs';
 import {createDeviceProofReceipt} from './device-proof.mjs';
+import {planExportDimensions} from './export-dimensions.mjs';
 
 const $=id=>document.getElementById(id);
 const source=$('source'),view=$('view'),preview=view.getContext('2d',{alpha:false});
 const output=document.createElement('canvas');output.width=1280;output.height=720;
 const frame=output.getContext('2d',{alpha:false});
+function configureOutputForSource(){
+  const plan=planExportDimensions({sourceWidth:source.videoWidth,sourceHeight:source.videoHeight});
+  if(output.width!==plan.width)output.width=plan.width;
+  if(output.height!==plan.height)output.height=plan.height;
+  return plan;
+}
 const grainTextures=Array.from({length:16},()=>{
   const texture=document.createElement('canvas');texture.width=160;texture.height=90;
   const context=texture.getContext('2d'),pixels=context.createImageData(160,90);
@@ -94,7 +101,7 @@ $('camera').addEventListener('click',async()=>{
   try{
     const wantAudio=$('microphone').checked;
     cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:wantAudio});
-    source.srcObject=cameraStream;source.muted=true;await source.play();mode='camera';deviceProof.cameraOpened=true;deviceProof.looksUsed.add($('stock').value);setButtonState();
+    source.srcObject=cameraStream;source.muted=true;await source.play();configureOutputForSource();mode='camera';deviceProof.cameraOpened=true;deviceProof.looksUsed.add($('stock').value);setButtonState();
     $('finder-label').textContent='LIVE / SOURCE ↔ LOOK';
     setStatus(`Camera live. ${wantAudio?'Microphone enabled by your choice.':'Microphone off.'} Recording has not started.`);
   }catch(error){releaseSource();setStatus(error?.name==='NotAllowedError'?'Camera permission was denied. No capture started.':'Camera unavailable. Try Load a clip.');}
@@ -105,7 +112,7 @@ $('file').addEventListener('change',async event=>{
   if(!file.type.startsWith('video/')){setStatus('Choose a video file. Nothing was uploaded.');return;}
   releaseSource();releaseDownloads();sourceUrl=URL.createObjectURL(file);originalUrl=sourceUrl;sourceName=file.name;
   source.src=sourceUrl;source.loop=false;source.muted=true;
-  try{await source.play();mode='clip';setButtonState();$('finder-label').textContent='CLIP / SOURCE ↔ LOOK';setStatus('Clip loaded locally. Processing exports video without source audio on this version.');}
+  try{await source.play();const plan=configureOutputForSource();mode='clip';setButtonState();$('finder-label').textContent='CLIP / SOURCE ↔ LOOK';setStatus(`Clip loaded locally. Export preserves source aspect at ${plan.width}×${plan.height} without upscaling. Processing exports video without source audio on this version.`);}
   catch{mode='clip';setButtonState();setStatus('Clip loaded locally. Tap the video processing control to start playback.');}
   event.target.value='';
 });
@@ -114,6 +121,7 @@ $('record').addEventListener('click',async()=>{
   const mime=supportedMime();if(!mime){setStatus('This browser cannot encode WebM. No recording started.');return;}
   try{
     if(mode==='clip'){source.currentTime=0;await source.play();}
+    const exportPlan=configureOutputForSource();
     const stream=output.captureStream(30);
     if(mode==='camera')cameraStream.getAudioTracks().forEach(track=>stream.addTrack(track));
     chunks=[];rawChunks=[];
@@ -143,7 +151,7 @@ $('record').addEventListener('click',async()=>{
     }
     captureMode=mode;captureLook=recipe();captureReceipt=null;
     recorder.start(1000);mode='recording';recordingStarted=Date.now();recordingEnded=0;renderedFrames=0;captureInterrupted=false;setButtonState();
-    setStatus('Recording locally. Stop to finish and download.');
+    setStatus(`Recording locally at ${exportPlan.width}×${exportPlan.height} without upscaling. Stop to finish and download.`);
   }catch{if(rawRecorder?.state==='recording')rawRecorder.stop();setStatus('Recording could not start on this browser.');}
 });
 $('stop').addEventListener('click',()=>{
