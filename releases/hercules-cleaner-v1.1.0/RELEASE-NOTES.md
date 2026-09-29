@@ -29,3 +29,11 @@ Windows one-click setup still requires Node.js 22+. No third-party Node runtime 
 ## Provenance
 
 Original SauceApproved/Hercules implementation created with AI assistance under the repository's ownership/provenance controls. Node.js, Windows command shell, and Windows Task Scheduler remain external operating-system/runtime infrastructure.
+
+
+## Windows lifecycle hardening
+
+- exact-commit packages now emit a separate `cleaner-release-trust.json` identity lock consumed by setup before manifest activation;
+- retained rollback packages are re-verified against stored version, commit, aggregate SHA-256, and manifest-listed file hashes before launcher activation;
+- uninstall now fails safely before deleting the app if user-level startup integration removal cannot be confirmed;
+- local `~/.hercules-cleaner/` state and Recovery Capsules remain outside install/update/uninstall deletion scope.
