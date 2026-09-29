@@ -317,3 +317,27 @@ test("Studios Market manifest keeps public discovery open and paid checkout clos
   assert.ok(body.products.some(item=>item.id==="vintage-camera"&&item.availability==="free-preview"&&item.ctaUrl==="/vintage-camera"));
   assert.ok(body.products.some(item=>item.id==="studios-bundle"));
 });
+
+
+test("Studio commercial manifest is canonical and paid checkout stays fail-closed",async()=>{
+  const handle=createStudioHttpHandler();
+  const manifest=await handle({method:"GET",pathname:"/api/studio/commercial/manifest"});
+  assert.equal(manifest.status,200);
+  const body=JSON.parse(manifest.body);
+  assert.equal(body.product,"SauceApproved Studio");
+  assert.equal(body.plans.length,3);
+  assert.deepEqual(body.plans.map(plan=>plan.monthlyUsd),[29,79,199]);
+  assert.equal(body.ownerApproval.pricing,false);
+  assert.equal(body.ownerApproval.terms,false);
+  assert.equal(body.ownerApproval.privacy,false);
+  assert.equal(body.paymentPathVerified,false);
+  assert.equal(body.paidCheckoutEnabled,false);
+  assert.equal(body.checkoutPolicy,"fail-closed");
+
+  const checkout=await handle({method:"POST",pathname:"/api/studio/checkout"});
+  assert.equal(checkout.status,423);
+  const checkoutBody=JSON.parse(checkout.body);
+  assert.equal(checkoutBody.ok,false);
+  assert.equal(checkoutBody.error,"studio_commercial_approval_and_payment_path_required");
+  assert.equal(checkoutBody.commercial.paidCheckoutEnabled,false);
+});
