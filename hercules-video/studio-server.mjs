@@ -9,7 +9,7 @@ import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
 import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
-import {createStudioCommercialManifest,renderStudioPricingShell,renderStudioLegalShell} from "./studio-commercial.mjs";
+import {createStudioCommercialManifest,createStudioOnboardingManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell} from "./studio-commercial.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -313,7 +313,7 @@ main{width:min(1180px,100%);margin:auto;padding:24px}.top{display:grid;gap:18px;
 <section class="top">
 <div><div class="eyebrow">SauceApproved / Owned Video System</div><h1 class="title">SauceApproved <span class="accent">Studio</span></h1></div>
 <p class="sub">A verified operator surface for Hercules Video. Run identity, shot state, quality gates, recovery and evidence stay visible. Execution stays fail-closed until a trusted bridge is connected.</p>
-<p class="sub"><a href="/pricing">View Studio plans</a> · <a href="/market">Founding access</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">Ads Engine</a></p>
+<p class="sub"><a href="/getting-started">Getting started</a> · <a href="/pricing">View Studio plans</a> · <a href="/market">Founding access</a> · <a href="/support">Support</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">Ads Engine</a></p>
 <div class="rail">
 ${statusBadge("Mode",mode)}
 ${statusBadge("Run stage",stage)}
@@ -434,6 +434,18 @@ export function createStudioHttpHandler({
     if (normalizedMethod==="POST" && normalizedPath==="/api/studio/checkout") {
       const commercial=createStudioCommercialManifest();
       return json({ok:false,error:commercial.checkoutLockedReason,commercial},423);
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/onboarding/manifest") {
+      return json(createStudioOnboardingManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/getting-started") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioGettingStartedShell()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/support") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioSupportShell()};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/pricing") {

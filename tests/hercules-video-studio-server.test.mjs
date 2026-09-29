@@ -365,3 +365,45 @@ test("Studio legal routes publish the canonical commercial candidates",async()=>
   assert.equal(body.ownerApproval.termsDocument,"docs/legal/SAUCEAPPROVED-SOFTWARE-TERMS-CANDIDATE-V1.md");
   assert.equal(body.ownerApproval.privacyDocument,"docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md");
 });
+
+
+test("Studio onboarding and support surfaces are public, mobile-safe and commercially fail-closed",async()=>{
+  const handle=createStudioHttpHandler();
+
+  const onboarding=await handle({method:"GET",pathname:"/getting-started"});
+  assert.equal(onboarding.status,200);
+  assert.match(onboarding.headers["content-type"],/text\/html/);
+  assert.match(onboarding.body,/FOUNDING CUSTOMER ONBOARDING/);
+  assert.match(onboarding.body,/Start strong\. Keep the evidence\./);
+  assert.match(onboarding.body,/Paid checkout is still locked/);
+  assert.match(onboarding.body,/href="\/support"/);
+
+  const support=await handle({method:"GET",pathname:"/support"});
+  assert.equal(support.status,200);
+  assert.match(support.body,/SAUCEAPPROVED STUDIO \/ SUPPORT/);
+  assert.match(support.body,/fail closed/i);
+  assert.match(support.body,/SauceApproved Ads Engine/);
+
+  const manifest=await handle({method:"GET",pathname:"/api/studio/onboarding/manifest"});
+  assert.equal(manifest.status,200);
+  const body=JSON.parse(manifest.body);
+  assert.equal(body.product,"SauceApproved Studio");
+  assert.equal(body.release,"founding-customer");
+  assert.equal(body.commercial.paidCheckoutEnabled,false);
+  assert.equal(body.commercial.checkoutPolicy,"fail-closed");
+  assert.ok(body.publicRoutes.includes("/getting-started"));
+  assert.ok(body.publicRoutes.includes("/support"));
+  assert.equal(body.firstRun.length,5);
+  assert.ok(body.trustRules.some(rule=>/Paid checkout stays disabled/.test(rule)));
+});
+
+test("Studio root links customers to onboarding and support",async()=>{
+  const handle=createStudioHttpHandler({
+    statusReader:async()=>statusFixture(),
+    executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
+  });
+  const root=await handle({method:"GET",pathname:"/"});
+  assert.equal(root.status,200);
+  assert.match(root.body,/href="\/getting-started"/);
+  assert.match(root.body,/href="\/support"/);
+});
