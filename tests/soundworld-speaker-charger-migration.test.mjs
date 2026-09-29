@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {evaluateChargerMigration} from '../hardware/soundworld/eda/charger-migration-v1.mjs';
+const good={from:'BQ25792',to:'BQ25798',cells:4,packagePins:29,packageMm:'4x4',tps25751Supported:true,referenceEvm:true,i2c:true,inputMaxV:24,chargeCurrentMaxA:5,pinMapVerified:false,registerMapVerified:false,referenceNetworkCaptured:false};
+test('approves migration direction but not schematic substitution',()=>{const r=evaluateChargerMigration(good);assert.equal(r.migrationSelected,true);assert.equal(r.dropInAuthorized,false)});
+test('requires pin register and network verification before capture freeze',()=>assert.equal(evaluateChargerMigration({...good,pinMapVerified:true,registerMapVerified:true,referenceNetworkCaptured:true}).captureFreezeReady,true));
+test('never authorizes fabrication',()=>assert.equal(evaluateChargerMigration({...good,pinMapVerified:true,registerMapVerified:true,referenceNetworkCaptured:true}).fabricationReady,false));
