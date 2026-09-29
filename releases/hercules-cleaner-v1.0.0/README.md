@@ -3,6 +3,7 @@
 **Release class:** Early Access  
 **Runtime:** local-first Node.js agent  
 **Supported operating systems:** Windows, macOS, Linux  
+**Windows distribution:** per-user verified Early Access bundle  
 **Checkout:** disabled pending owner-approved commercial gates
 
 Hercules Cleaner is a recoverable computer-maintenance agent. It cleans only policy-approved temporary/cache targets and keeps destructive behavior fail-closed.
@@ -44,3 +45,12 @@ node scripts/verify-hercules-execution-contract.mjs
 ```
 
 See `INSTALL.md`, `SECURITY.md`, and `RELEASE-NOTES.md`.
+
+
+## Windows distribution
+
+The v1.0.0 Windows path is a per-user installer. It validates exact source-commit and aggregate package identity plus manifest-listed file hashes before activation, preserves `~/.hercules-cleaner/` outside the application tree, retains rollback identity across verified updates, and fails closed if uninstall integration cleanup cannot be confirmed.
+
+Main-branch Windows ZIP builds are covered by GitHub artifact provenance attestation. That attestation is build provenance, not an Authenticode publisher signature.
+
+See `INSTALL.md` for the Windows install/update/uninstall contract.
