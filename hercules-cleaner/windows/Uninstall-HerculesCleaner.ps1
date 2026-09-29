@@ -26,3 +26,4 @@ if($RemoveUserData){
   Write-Host "Hercules Cleaner removed. Recovery Capsules and local Cleaner state were preserved at $StateRoot."
   Write-Host "Run uninstall again with -RemoveUserData only if you deliberately want that data removed."
 }
+exit 0
