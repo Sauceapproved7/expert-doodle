@@ -2,7 +2,7 @@
 
 **Status:** FINAL CANDIDATE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE  
 **Company:** SauceApproved enterprise LLC  
-**Products:** SauceApproved Studio (AI Video Maker) and SauceApproved Ads (AI Ad Maker)
+**Products:** SauceApproved Studio (AI Video Maker) and SauceApproved Ads Engine (AI Ad Maker)
 
 This candidate describes the intended launch privacy model for these products. It is **not effective** until SauceApproved enterprise LLC affirmatively approves and publishes it.
 
@@ -49,7 +49,7 @@ Payment-card details should be collected and handled by the payment processor ra
 ## 3. How information is used
 
 Information may be used to:
-- provide and operate SauceApproved Studio and SauceApproved Ads;
+- provide and operate SauceApproved Studio and SauceApproved Ads Engine;
 - authenticate users and enforce permissions;
 - generate, transform, render, assemble, analyze, or export requested content;
 - apply plan and usage limits;
