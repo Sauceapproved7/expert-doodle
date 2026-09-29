@@ -263,3 +263,28 @@ test("startup canary reports safe internal stage code without leaking private er
     await new Promise((resolve) => server.close(resolve));
   }
 });
+
+
+test("startup prompt canary permits only one reserved collision fallback", async () => {
+  let postCount=0;
+  const server=http.createServer((req,res)=>{
+    if(req.method==="GET" && req.url?.startsWith("/v1/projects/")){
+      const projectId=decodeURIComponent(req.url.split("/").at(-1));
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId,metadata:{source:"manual"}}}));
+    }
+    if(req.method==="POST" && req.url==="/v1/projects/from-prompt") postCount+=1;
+    res.writeHead(404,{"content-type":"application/json"});
+    res.end(JSON.stringify({error:"not_found"}));
+  });
+  const origin=await listen(server);
+  try{
+    await assert.rejects(
+      runForgeStartupPromptCanary({origin,controlToken,projectId:"forge-prompt-canary-ai-v1"}),
+      /collides with non-canary project/i,
+    );
+    assert.equal(postCount,0);
+  }finally{
+    await new Promise(resolve=>server.close(resolve));
+  }
+});
