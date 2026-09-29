@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';
 import {evaluateChargerMigration} from '../hardware/soundworld/eda/charger-migration-v1.mjs';
-const good={from:'BQ25792',to:'BQ25798',cells:4,packagePins:29,packageMm:'4x4',tps25751Supported:true,referenceEvm:true,i2c:true,inputMaxV:24,chargeCurrentMaxA:5,pinMapVerified:false,registerMapVerified:false,referenceNetworkCaptured:false};
-test('approves migration direction but not schematic substitution',()=>{const r=evaluateChargerMigration(good);assert.equal(r.migrationSelected,true);assert.equal(r.dropInAuthorized,false)});
-test('requires pin register and network verification before capture freeze',()=>assert.equal(evaluateChargerMigration({...good,pinMapVerified:true,registerMapVerified:true,referenceNetworkCaptured:true}).captureFreezeReady,true));
-test('never authorizes fabrication',()=>assert.equal(evaluateChargerMigration({...good,pinMapVerified:true,registerMapVerified:true,referenceNetworkCaptured:true}).fabricationReady,false));
+const good={from:'BQ25792RQMR',to:'BQ25798RQMR',cells:4,package:'RQM-29 4x4mm VQFN-HR',tps25751Supported:true,referenceEvm:true,i2c:true,inputMinV:3.6,inputMaxV:24,chargeCurrentMaxA:5,pinMapReviewed:true,registerMapReviewed:true,pdConfigReviewed:true,referenceNetworkReviewed:true};
+test('freezes BQ25798 only after controlled migration review',()=>{const r=evaluateChargerMigration(good);assert.equal(r.productionChargerFrozen,true);assert.equal(r.lifecycleHold,false)});
+test('never calls migration drop-in compatible',()=>assert.equal(evaluateChargerMigration(good).dropInAuthorized,false));
+test('requires pin register PD and network review',()=>assert.equal(evaluateChargerMigration({...good,registerMapReviewed:false}).captureFreezeReady,false));
+test('never authorizes fabrication',()=>assert.equal(evaluateChargerMigration(good).fabricationReady,false));
