@@ -9,6 +9,7 @@ import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
 import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
+import {renderStudioPricingShell,renderStudioLegalShell} from "./studio-commercial.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -271,6 +272,7 @@ h1 em{font-style:normal;color:#e8b7a4}.lead{max-width:820px;color:#bababa;font-s
 </section>
 <section class="grid">${cards}</section>
 <div class="notice"><b>Paid checkout remains locked.</b> Pricing approval, Terms, Privacy, and the payout/checkout/refund path must be verified before SauceApproved accepts a public paid software order. Founding-access requests are open now; they do not create a charge.</div>
+<p class="foot"><a href="/pricing">Studio pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p>
 <p class="foot">Current product surfaces show verified owned capabilities and clearly disclose unavailable provider integrations. No testimonial, ROI guarantee, uptime claim, or external integration is represented as live without evidence.</p>
 </main>
 </body>
@@ -311,6 +313,7 @@ main{width:min(1180px,100%);margin:auto;padding:24px}.top{display:grid;gap:18px;
 <section class="top">
 <div><div class="eyebrow">SauceApproved / Owned Video System</div><h1 class="title">SauceApproved <span class="accent">Studio</span></h1></div>
 <p class="sub">A verified operator surface for Hercules Video. Run identity, shot state, quality gates, recovery and evidence stay visible. Execution stays fail-closed until a trusted bridge is connected.</p>
+<p class="sub"><a href="/pricing">View Studio plans</a> · <a href="/market">Founding access</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">Ads Engine</a></p>
 <div class="rail">
 ${statusBadge("Mode",mode)}
 ${statusBadge("Run stage",stage)}
@@ -424,7 +427,7 @@ export function createStudioHttpHandler({
       return {status:200,headers:HTML_HEADERS,body:renderStudiosMarketShell(createStudiosMarketManifest())};
     }
 
-    if (normalizedMethod==="GET" && normalizedPath==="/vintage-camera") {
+    if (normalizedMethod==="GET" && normalizedPath==="/pricing") {\n      return {status:200,headers:HTML_HEADERS,body:renderStudioPricingShell()};\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/terms") {\n      return {status:200,headers:HTML_HEADERS,body:renderStudioLegalShell("terms")};\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/privacy") {\n      return {status:200,headers:HTML_HEADERS,body:renderStudioLegalShell("privacy")};\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/vintage-camera") {
       return {status:200,headers:CAMERA_HTML_HEADERS,body:renderVintageCamera()};
     }
 
