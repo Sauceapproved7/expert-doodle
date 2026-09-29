@@ -96,3 +96,44 @@ export async function loadDeviceCredential({stateRoot}={}){
   if(parsed?.schema!=="sauceapproved.hercules-cleaner.device-credential")throw new Error("invalid Cleaner device credential state");
   return parsed;
 }
+
+
+async function postJson(fetchImpl,endpoint,body){
+  const response=await fetchImpl(endpoint,{
+    method:"POST",
+    headers:{"content-type":"application/json"},
+    body:JSON.stringify(body),
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data?.ok!==true){
+    throw new Error(String(data?.error||"Cleaner device activation request failed"));
+  }
+  return data;
+}
+
+export async function activateCleanerDevice({
+  endpoint,
+  identity,
+  activationCode,
+  fetchImpl=globalThis.fetch,
+}={}){
+  const url=new URL(String(endpoint||""));
+  if(url.protocol!=="https:")throw new Error("Cleaner device activation endpoint must use HTTPS");
+  if(typeof fetchImpl!=="function")throw new Error("fetch implementation required");
+  const base=buildActivationRequest({identity,activationCode});
+  const challenge=await postJson(fetchImpl,url.toString(),{
+    action:"registration_challenge",
+    ...base,
+  });
+  if(!challenge?.challengeId||!challenge?.challenge)throw new Error("Cleaner activation challenge response invalid");
+  const signature=signDeviceChallenge({privateKeyPem:identity.privateKeyPem,challenge:String(challenge.challenge)});
+  const activated=await postJson(fetchImpl,url.toString(),{
+    action:"activate_device",
+    ...base,
+    challengeId:String(challenge.challengeId),
+    challenge:String(challenge.challenge),
+    signature,
+  });
+  if(!activated?.deviceCredential)throw new Error("Cleaner device credential missing from activation response");
+  return activated;
+}
