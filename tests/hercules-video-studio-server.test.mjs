@@ -343,3 +343,25 @@ test("Studio commercial manifest is canonical and paid checkout stays fail-close
   assert.equal(checkoutBody.error,"studio_commercial_approval_and_payment_path_required");
   assert.equal(checkoutBody.commercial.paidCheckoutEnabled,false);
 });
+
+
+test("Studio legal routes publish the canonical commercial candidates",async()=>{
+  const handle=createStudioHttpHandler();
+  const terms=await handle({method:"GET",pathname:"/terms"});
+  assert.equal(terms.status,200);
+  assert.match(terms.body,/SauceApproved Software Terms — FINAL CANDIDATE v1/);
+  assert.match(terms.body,/Business — \$199\/month/);
+  assert.match(terms.body,/SauceApproved Ads Engine/);
+  assert.match(terms.body,/OWNER\/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE/);
+
+  const privacy=await handle({method:"GET",pathname:"/privacy"});
+  assert.equal(privacy.status,200);
+  assert.match(privacy.body,/SauceApproved Software Privacy Policy — FINAL CANDIDATE v1/);
+  assert.match(privacy.body,/SauceApproved Ads Engine/);
+  assert.match(privacy.body,/OWNER\/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE/);
+
+  const manifest=await handle({method:"GET",pathname:"/api/studio/commercial/manifest"});
+  const body=JSON.parse(manifest.body);
+  assert.equal(body.ownerApproval.termsDocument,"docs/legal/SAUCEAPPROVED-SOFTWARE-TERMS-CANDIDATE-V1.md");
+  assert.equal(body.ownerApproval.privacyDocument,"docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md");
+});
