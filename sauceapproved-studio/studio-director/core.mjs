@@ -10,7 +10,10 @@ const SURFACE_LABELS=Object.freeze({
   'content-multiplier':'Content Multiplier',
   'brand-brain':'Brand Brain',
   'reality-forge':'Reality Forge',
-  'performance-lab':'Performance Lab'
+  'performance-lab':'Performance Lab',
+  'scene-forge':'SceneForge',
+  'sound-world':'SoundWorld',
+  'actor-lab':'Actor Lab'
 });
 
 function clean(value){return String(value??'').trim();}
@@ -53,6 +56,9 @@ function chooseStages(input){
   if(/legacy|documentary|memory|family history/.test(goal)) add('legacy-vault','Build the source-traceable documentary structure and consent boundaries.','consent-provenance-review');
   if(/movie|film|cinematic|story|trailer/.test(goal)) add('movie-machine','Build acts, scenes, continuity, camera intent, and director proof.','director-proof-review');
   if(input.requiresLiveStage===true || /stage|virtual production|blocking|lighting/.test(goal)) add('holostage','Pre-plan blocking, camera paths, lights, clearances, and continuous moves.','simulation-review');
+  if(/scene|continuity|production|episode|sequence/.test(goal)) add('scene-forge','Lock scene continuity and director intent across the production.','scene-proof-review');
+  if(/sound|audio|foley|music|ambience|sonic/.test(goal)) add('sound-world','Design the complete sonic environment with continuity and emotional mapping.','audio-proof-review');
+  if(/character|persistent actor|digital performer|cast/.test(goal)) add('actor-lab','Protect persistent character identity, role, wardrobe, personality, voice specification, and mannerisms.','character-contract-review');
   if(/actor|performance|character|dialogue|voice|emotion|gesture|blocking/.test(goal)) add('performance-lab','Direct protected character performance, emotion, voice, timing, gestures, and blocking.','performance-proof-review');
   if(/transform|rebuild|restyle|relight|era|weather|environment|world|vfx/.test(goal)) add('reality-forge','Rebuild the visual world around approved footage while protecting identity and cross-shot continuity.','reality-proof-review');
   if(/vintage|retro|camera|capture/.test(goal)) add('vintage-camera','Apply the owned capture/look pipeline for vintage visual language.','capture-review');
