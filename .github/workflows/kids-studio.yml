@@ -1,0 +1,30 @@
+name: SauceApproved Kids Studio
+
+on:
+  pull_request:
+    paths:
+      - "sauceapproved-studio/kids/**"
+      - "tests/sauceapproved-kids-studio.test.mjs"
+      - "docs/SAUCEAPPROVED-KIDS-STUDIO-*.md"
+      - ".github/workflows/kids-studio.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  kids-studio:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Enforce owner-code policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Run Kids Studio tests
+        run: node --test tests/sauceapproved-kids-studio.test.mjs tests/hercules-video-studio-server.test.mjs tests/hercules-video-studio-contract.test.mjs
+      - name: Enforce Hercules execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
+      - name: Security baseline
+        run: node scripts/security-baseline.mjs
