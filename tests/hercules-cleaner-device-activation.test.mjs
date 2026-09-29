@@ -11,6 +11,8 @@ import {
   signDeviceChallenge,
   verifyDeviceChallenge,
   activateCleanerDevice,
+  saveDeviceIdentity,
+  loadDeviceIdentity,
 } from "../hercules-cleaner/device-identity.mjs";
 
 test("device identity uses a random opaque id and Ed25519 keys without hardware identifiers",()=>{
@@ -102,4 +104,16 @@ test("Cleaner CLI exposes device init, activation, and status commands",async()=
   assert.match(cli,/device-activate/);
   assert.match(cli,/device-status/);
   assert.match(cli,/HERCULES_CLEANER_DEVICE_ENDPOINT/);
+});
+
+
+test("pending device identity can be stored locally before activation",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"hc-device-pending-"));
+  try{
+    const identity=createDeviceIdentity({platform:"linux",version:"1.0.0"});
+    await saveDeviceIdentity({stateRoot:root,identity});
+    const loaded=await loadDeviceIdentity({stateRoot:root});
+    assert.equal(loaded.deviceId,identity.deviceId);
+    assert.equal(loaded.privateKeyPem,identity.privateKeyPem);
+  }finally{await rm(root,{recursive:true,force:true})}
 });
