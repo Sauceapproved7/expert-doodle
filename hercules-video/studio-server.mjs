@@ -13,6 +13,7 @@ import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio
 import {createMovieMachineManifest,renderMovieMachine} from "../sauceapproved-studio/movie-machine/core.mjs";
 import {createHoloStageManifest,renderHoloStage} from "../sauceapproved-studio/holostage/core.mjs";
 import {createLegacyVaultManifest,renderLegacyVault} from "../sauceapproved-studio/legacy-vault/core.mjs";
+import {createStudioDirectorManifest,renderStudioDirector} from "../sauceapproved-studio/studio-director/core.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 
 const JSON_HEADERS=Object.freeze({
@@ -453,6 +454,14 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/legacy-vault") {
       return {status:200,headers:HTML_HEADERS,body:renderLegacyVault()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/studio-director/manifest") {
+      return json(createStudioDirectorManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/studio-director") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioDirector()};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/market/manifest") {
