@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {speakerMajorBom} from '../hardware/soundworld/eda/speaker-major-bom-v1.mjs';
+test('major silicon anchors are fixed',()=>{assert.equal(speakerMajorBom.amplifiers.part,'TAS5825M');assert.equal(speakerMajorBom.amplifiers.quantity,2);assert.equal(speakerMajorBom.dsp.part,'ADAU1467');assert.equal(speakerMajorBom.wireless.part,'nRF5340');assert.equal(speakerMajorBom.pd.part,'TPS25751');assert.equal(speakerMajorBom.charger.part,'BQ25792');});
+test('major BOM remains EVT-only',()=>{assert.equal(speakerMajorBom.exactPassiveBomFrozen,false);assert.equal(speakerMajorBom.fabricationReady,false);});
