@@ -66,8 +66,8 @@ jobs:
         with:
           name: hercules-cleaner-v1.1.0-${{ env.SOURCE_SHA }}
           path: |
+            /tmp/hercules-cleaner-v1.1.0/
             /tmp/hercules-cleaner-v1.1.0.tgz
             /tmp/hercules-cleaner-v1.1.0.tgz.sha256
-            /tmp/hercules-cleaner-v1.1.0/cleaner-release-manifest.json
           if-no-files-found: error
           retention-days: 90
