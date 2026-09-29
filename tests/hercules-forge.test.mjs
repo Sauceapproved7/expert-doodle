@@ -78,6 +78,12 @@ test("compiles deterministic runnable source with loopback and request limits", 
   assert.ok(a.files["public/index.html"].includes("/app.js"));
   assert.ok(a.files["public/app.js"].includes("Customer"));
   assert.ok(a.files["public/app.css"].includes(".grid"));
+  assert.ok(a.files["public/index.html"].includes("HERCULES FORGE"));
+  assert.ok(a.files["public/index.html"].includes("forge-shell"));
+  assert.ok(a.files["public/app.css"].includes(".command-deck"));
+  assert.ok(a.files["public/app.css"].includes(".status-rail"));
+  assert.ok(a.files["public/app.js"].includes("forge-status"));
+  assert.equal(/base44/i.test(a.files["public/index.html"] + a.files["public/app.css"] + a.files["public/app.js"]), false);
 });
 
 test("escapes prompt-derived descriptions in generated HTML", () => {
