@@ -165,7 +165,7 @@ create or replace function public.hercules_activate_cleaner_device(
 language sql
 security invoker
 set search_path = public, private, pg_temp
-as $
+as $$
   select private.hercules_activate_cleaner_device(
     p_activation_code_sha256,
     p_challenge_id,
@@ -175,7 +175,7 @@ as $
     p_public_key_pem,
     p_credential_sha256
   );
-$;
+$$;
 
 revoke all on function public.hercules_activate_cleaner_device(text,uuid,uuid,text,text,text,text) from public, anon, authenticated;
 grant execute on function public.hercules_activate_cleaner_device(text,uuid,uuid,text,text,text,text) to service_role;
