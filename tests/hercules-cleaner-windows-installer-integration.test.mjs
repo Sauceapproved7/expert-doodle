@@ -87,3 +87,54 @@ test("Windows install-update-rollback-uninstall preserves Cleaner state and copi
     await rm(root,{recursive:true,force:true});
   }
 });
+
+
+test("Windows rollback fails closed when the retained package payload no longer matches its recorded identity",winOnly,async()=>{
+  const root=await mkdtemp(join(tmpdir(),"hercules-cleaner-rollback-integrity-"));
+  const localAppData=join(root,"LocalAppData");
+  const home=join(root,"Home");
+  try{
+    const v100=await makePackage(root,"1.0.0","export const version='1.0.0';\n");
+    const first=await installWindowsCleaner({
+      localAppData,home,sourceRoot:v100.sourceRoot,candidate:v100.candidate,expected:v100.expected,platform:"win32",nodePath:process.execPath,
+    });
+    const v110=await makePackage(root,"1.1.0","export const version='1.1.0';\n");
+    await installWindowsCleaner({
+      localAppData,home,sourceRoot:v110.sourceRoot,candidate:v110.candidate,expected:v110.expected,platform:"win32",nodePath:process.execPath,
+    });
+    await writeFile(win32.join(first.plan.installRoot,"hercules-cleaner","cli.mjs"),"tampered rollback payload\n");
+    await assert.rejects(
+      rollbackWindowsCleaner({localAppData,home,platform:"win32",nodePath:process.execPath}),
+      /rollback-package-integrity-mismatch/,
+    );
+  }finally{
+    await rm(root,{recursive:true,force:true});
+  }
+});
+
+test("Windows uninstall fails safely when startup integration cannot be removed",winOnly,async()=>{
+  const root=await mkdtemp(join(tmpdir(),"hercules-cleaner-uninstall-safe-"));
+  const localAppData=join(root,"LocalAppData");
+  const home=join(root,"Home");
+  const stateRoot=join(home,".hercules-cleaner");
+  const marker=join(stateRoot,"recovery-vault","keep.txt");
+  await mkdir(join(stateRoot,"recovery-vault"),{recursive:true});
+  await writeFile(marker,"preserve me");
+  try{
+    const v100=await makePackage(root,"1.0.0","export const version='1.0.0';\n");
+    const first=await installWindowsCleaner({
+      localAppData,home,sourceRoot:v100.sourceRoot,candidate:v100.candidate,expected:v100.expected,platform:"win32",nodePath:process.execPath,
+    });
+    await assert.rejects(
+      uninstallWindowsCleaner({
+        localAppData,home,platform:"win32",nodePath:process.execPath,
+        uninstallAutostartFn:async()=>{throw new Error("task scheduler unavailable")},
+      }),
+      /autostart-removal-failed/,
+    );
+    assert.equal(await readFile(marker,"utf8"),"preserve me");
+    assert.equal(await absent(first.plan.installRoot),false);
+  }finally{
+    await rm(root,{recursive:true,force:true});
+  }
+});
