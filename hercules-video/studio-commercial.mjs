@@ -5,7 +5,7 @@ const wrap=(title,body)=>'<!doctype html><html lang="en"><head><meta charset="ut
 export const STUDIO_COMMERCIAL_PLANS=Object.freeze([
   Object.freeze({code:"starter",name:"Starter",monthlyUsd:29,tag:"For solo creators and small businesses.",features:Object.freeze(["Studio workspace access","Project brief + storyboard workflow","Quality and evidence views","Vintage Camera + Kids Studio"])}),
   Object.freeze({code:"pro",name:"Pro",monthlyUsd:79,tag:"For growing brands producing more creative.",features:Object.freeze(["Everything in Starter","Content Multiplier","Brand Brain","AI Sales Agent surface","Expanded production workflow"])}),
-  Object.freeze({code:"business",name:"Business",monthlyUsd:199,tag:"For teams and higher-volume creative operations.",features:Object.freeze(["Everything in Pro","Business-ready workflow lane","Higher-volume creative operations","Priority commercial onboarding","Cross-product Ads Engine path"])})
+  Object.freeze({code:"agency",name:"Business",monthlyUsd:199,tag:"For teams and higher-volume creative operations.",features:Object.freeze(["Everything in Pro","Business-ready workflow lane","Higher-volume creative operations","Priority commercial onboarding","Cross-product Ads Engine path"])})
 ]);
 
 export function createStudioCommercialManifest(){

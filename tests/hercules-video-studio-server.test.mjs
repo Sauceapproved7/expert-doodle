@@ -327,6 +327,8 @@ test("Studio commercial manifest is canonical and paid checkout stays fail-close
   assert.equal(body.product,"SauceApproved Studio");
   assert.equal(body.plans.length,3);
   assert.deepEqual(body.plans.map(plan=>plan.monthlyUsd),[29,79,199]);
+  assert.deepEqual(body.plans.map(plan=>plan.code),["starter","pro","agency"]);
+  assert.deepEqual(body.plans.map(plan=>plan.name),["Starter","Pro","Business"]);
   assert.equal(body.ownerApproval.pricing,false);
   assert.equal(body.ownerApproval.terms,false);
   assert.equal(body.ownerApproval.privacy,false);
