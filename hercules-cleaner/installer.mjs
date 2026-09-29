@@ -1,5 +1,5 @@
 import {execFile} from "node:child_process";
-import {randomUUID} from "node:crypto";
+import {createHash, randomUUID} from "node:crypto";
 import {mkdir, readFile, rename, stat, writeFile} from "node:fs/promises";
 import {homedir, platform as currentPlatform} from "node:os";
 import path, {dirname, join, resolve} from "node:path";
@@ -63,6 +63,29 @@ function httpsUrl(value){
   if(url.protocol!=="https:")throw new Error("update artifact URL must use HTTPS");
   if(!UPDATE_HOSTS.has(url.hostname.toLowerCase()))throw new Error("update artifact host is not allowed");
   return url.toString();
+}
+
+export function validateBundleIdentity(bundle){
+  if(bundle?.schema!=="sauceapproved.hercules-cleaner.windows-bundle")throw new Error("invalid Hercules Cleaner Windows bundle schema");
+  strictSemver(bundle.version);
+  if(bundle.releaseClass!=="early_access")throw new Error("invalid Windows bundle release class");
+  const sourceCommit=String(bundle.sourceCommit||"").toLowerCase();
+  if(!/^[a-f0-9]{40}$/.test(sourceCommit))throw new Error("resolved 40-character source commit required");
+  const aggregateSha256=String(bundle.aggregateSha256||"").toLowerCase();
+  if(!/^[a-f0-9]{64}$/.test(aggregateSha256))throw new Error("valid aggregate SHA-256 required");
+  if(!Array.isArray(bundle.files)||bundle.files.length<1)throw new Error("bundle file manifest required");
+  const rows=[];
+  for(const item of bundle.files){
+    const pathValue=String(item?.path||"");
+    validateArchiveEntries([pathValue]);
+    const digest=String(item?.sha256||"").toLowerCase();
+    if(!/^[a-f0-9]{64}$/.test(digest))throw new Error("valid file SHA-256 required");
+    if(!Number.isInteger(Number(item?.bytes))||Number(item.bytes)<1)throw new Error("valid file size required");
+    rows.push(pathValue+":"+digest);
+  }
+  const actual=createHash("sha256").update(Buffer.from(rows.join("\n"),"utf8")).digest("hex");
+  if(actual!==aggregateSha256)throw new Error("bundle aggregate identity mismatch");
+  return {version:String(bundle.version),sourceCommit,aggregateSha256};
 }
 
 export function validateUpdateChannel(channel){
@@ -301,6 +324,11 @@ async function main(){
     const list=String(parsed.values["list-file"]||"");
     const entries=(await readFile(list,"utf8")).split(/\r?\n/).filter(Boolean);
     process.stdout.write(JSON.stringify({ok:true,entries:validateArchiveEntries(entries).length})+"\n");
+    return;
+  }
+  if(parsed.command==="bundle-identity"){
+    const manifest=JSON.parse(await readFile(String(parsed.values.manifest||""),"utf8"));
+    process.stdout.write(JSON.stringify({ok:true,...validateBundleIdentity(manifest)})+"\n");
     return;
   }
   if(parsed.command==="decision"){
