@@ -11,7 +11,7 @@ function recommendDish({heat, craving}) {
 
 function estimateCatering({guests, style}) {
   const count=Math.max(5,Math.min(250,Number(guests)||25));
-  const factor=style==="hearty"?1.2:style==="light"?.82:1;
+  const factor=style==="hearty"?1.2:style==="light"?0.82:1;
   const entree=Math.max(2,Math.ceil((count/12)*factor));
   const starch=Math.max(2,Math.ceil(count/18));
   const veg=Math.max(1,Math.ceil(count/22));
@@ -45,4 +45,4 @@ if(buildCatering){
   });
 }
 
-export {recommendDish, estimateCatering, orderUrl};
+
