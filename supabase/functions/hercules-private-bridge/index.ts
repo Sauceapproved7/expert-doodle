@@ -545,7 +545,7 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
     return out({ok:true,service:'hercules-private-bridge',version:'1.7.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','software_commercial_bundle_status','software_commercial_bundle_approve','titan_commercial_bundle_status','titan_commercial_bundle_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state','cleaner_device_activation'],
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','software_commercial_bundle_status','software_commercial_bundle_approve','titan_commercial_bundle_status','titan_commercial_bundle_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state','cleaner_device_activation','cleaner_activation_requests'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -553,6 +553,18 @@ Deno.serve(async(req:Request)=>{
   const a=await actor(req); if(!a)return out({error:'owner_or_admin_required'},403);
   const org=String(a.m.organization_id), uid=String(a.user.id);
   const b=await req.json().catch(()=>({})), action=String(b.action||'status');
+
+  if(action==='cleaner_activation_requests'){
+    const allowedStatuses=['new','reviewing','qualified','invited'];
+    const {data,error}=await admin.from('hercules_software_access_requests')
+      .select('id,product_code,plan_code,email,full_name,company,role,status,created_at,updated_at')
+      .eq('product_code','hercules-cleaner')
+      .in('status',allowedStatuses)
+      .order('created_at',{ascending:false})
+      .limit(50);
+    if(error)return out({error:'cleaner_activation_requests_failed'},500);
+    return out({ok:true,productCode:'hercules-cleaner',requests:data||[],eligibleStatuses:allowedStatuses});
+  }
 
   if(action==='pilot_admission_status'){
     try{return out(await pilotAdmissionControlStatus(admin))}
