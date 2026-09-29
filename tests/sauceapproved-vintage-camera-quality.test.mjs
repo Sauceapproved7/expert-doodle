@@ -12,3 +12,8 @@ test('accepts a sustained render cadence and bounds invalid measurements',()=>{
   assert.deepEqual(assessCapture({frames:75,elapsedMs:5000}),{ok:true,fps:15,reason:null});
   assert.equal(assessCapture({frames:NaN,elapsedMs:-1}).reason,'invalid_capture_metrics');
 });
+
+test('rejects a capture interrupted by tab visibility even at an otherwise good cadence',()=>{
+  assert.deepEqual(assessCapture({frames:75,elapsedMs:5000,interrupted:true}),
+    {ok:false,fps:15,reason:'capture_interrupted'});
+});

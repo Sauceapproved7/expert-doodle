@@ -14,13 +14,13 @@ const grainTextures=Array.from({length:16},()=>{
   context.putImageData(pixels,0,0);return texture;
 });
 let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
-let recordingStarted=0,recordingEnded=0,renderedFrames=0,grainIndex=0,animation=0,mode='idle',chunks=[],rawChunks=[];
+let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,animation=0,mode='idle',chunks=[],rawChunks=[];
 const setStatus=message=>{$('status').textContent=message;};
 const setButtonState=()=>{
   const ready=mode==='camera'||mode==='clip';
-  $('camera').disabled=mode==='recording';$('load').disabled=mode==='recording';
-  $('record').disabled=!ready||typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream;
-  $('stop').disabled=mode==='idle';$('original').disabled=!originalUrl;
+  $('camera').disabled=mode==='recording'||recordingFinalizing;$('load').disabled=mode==='recording'||recordingFinalizing;
+  $('record').disabled=!ready||recordingFinalizing||typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream;
+  $('stop').disabled=mode==='idle'||recordingFinalizing;$('original').disabled=!originalUrl;
   $('record').textContent=mode==='clip'?'Process clip':'Record look';
 };
 const recipe=()=>({schema:'sauceapproved.vintage-camera.recipe',version:1,stock:$('stock').value,strength:Number($('strength').value),grain:Number($('grain').value),export:'webm',sourceMediaIncluded:false});
@@ -114,14 +114,15 @@ $('record').addEventListener('click',async()=>{
     recorder=new MediaRecorder(stream,{mimeType:mime});
     recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
     recorder.onstop=()=>{
-      const quality=assessCapture({frames:renderedFrames,elapsedMs:(recordingEnded||Date.now())-recordingStarted});
+      const quality=assessCapture({frames:renderedFrames,elapsedMs:(recordingEnded||Date.now())-recordingStarted,interrupted:captureInterrupted});
       if(chunks.length){
         processedUrl=URL.createObjectURL(new Blob(chunks,{type:mime}));$('download').href=processedUrl;
         $('download').download='sauceapproved-vintage-look.webm';$('download').hidden=false;
         $('download').textContent=quality.ok?'Download processed clip':'Download low-frame-rate preview';
-        setStatus(quality.ok?'Processed clip ready to download. The source stayed local.':`Capture quality warning: ${quality.fps} rendered frames per second. Keep this tab active and try again before using the clip. This preview is not a verified full-quality export.`);
+        setStatus(quality.ok?'Processed clip ready to download. The source stayed local.':quality.reason==='capture_interrupted'?'Capture interrupted when the tab was hidden. This is only a preview; keep the tab active and record again before using the clip.':`Capture quality warning: ${quality.fps} rendered frames per second. Keep this tab active and try again before using the clip. This preview is not a verified full-quality export.`);
       }else setStatus('No video data was recorded. No processed clip is available.');
       stream.getVideoTracks().forEach(track=>track.stop());
+      recordingFinalizing=false;setButtonState();
     };
     if(mode==='camera'){
       rawRecorder=new MediaRecorder(cameraStream,{mimeType:mime});
@@ -129,13 +130,14 @@ $('record').addEventListener('click',async()=>{
       rawRecorder.onstop=()=>{if(rawChunks.length){originalUrl=URL.createObjectURL(new Blob(rawChunks,{type:mime}));setButtonState();}};
       rawRecorder.start(1000);
     }
-    recorder.start(1000);mode='recording';recordingStarted=Date.now();recordingEnded=0;renderedFrames=0;setButtonState();
+    recorder.start(1000);mode='recording';recordingStarted=Date.now();recordingEnded=0;renderedFrames=0;captureInterrupted=false;setButtonState();
     setStatus('Recording locally. Stop to finish and download.');
   }catch{if(rawRecorder?.state==='recording')rawRecorder.stop();setStatus('Recording could not start on this browser.');}
 });
 $('stop').addEventListener('click',()=>{
   if(mode==='recording'){
     recordingEnded=Date.now();
+    recordingFinalizing=true;
     if(recorder?.state==='recording')recorder.stop();
     if(rawRecorder?.state==='recording')rawRecorder.stop();
     mode=cameraStream?'camera':'clip';
@@ -144,6 +146,11 @@ $('stop').addEventListener('click',()=>{
   setButtonState();
 });
 source.addEventListener('ended',()=>{if(mode==='recording'&&!cameraStream)$('stop').click();});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden&&mode==='recording'){
+    captureInterrupted=true;$('stop').click();
+  }
+});
 $('recipe').addEventListener('click',()=>saveBlob(new Blob([JSON.stringify(recipe(),null,2)],{type:'application/json'}),'sauceapproved-look-recipe.json'));
 $('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||'sauceapproved-original.webm';link.click();});
 for(const id of ['strength','grain'])$(id).addEventListener('input',()=>{$(id+'-value').value=$(id).value+'%';});

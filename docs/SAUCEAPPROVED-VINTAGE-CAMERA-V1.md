@@ -15,6 +15,7 @@ Four original looks are Golden Hour, Street Tape, Silver Noir and Clean Archive.
 - The browser may release object URLs when the tab closes; users must download wanted outputs before leaving. No draft or media is retained by a server.
 - Recording settings do not guarantee a fixed output frame rate or resolution on every Android browser. Test a short export on the target device before claiming support for that browser.
 - A local render-cadence check marks captures below 12 rendered frames per second as a low-frame-rate preview instead of a completed-quality clip. This is a conservative browser-side signal, not a decoder-level certification of the encoded file. Keep the tab active while recording.
+- If the tab becomes hidden during recording, capture stops and any resulting file is labeled as an interrupted preview even if its measured render cadence was otherwise high. Record again with the tab visible before using it.
 - Studio's operator start/resume endpoints retain their separate default-deny behavior. Vintage Camera has no server mutation or upload endpoint.
 
 ## Market entry
