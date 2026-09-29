@@ -75,3 +75,16 @@ const menuSearch=document.getElementById("menuSearch");
 const availabilityFilter=document.getElementById("availabilityFilter");
 if(menuSearch) menuSearch.addEventListener("input",filterMenu);
 if(availabilityFilter) availabilityFilter.addEventListener("change",filterMenu);
+
+const menuCategoryNav=document.getElementById("menuCategoryNav");
+if(menuCategoryNav){
+  menuCategoryNav.addEventListener("click",(event)=>{
+    const button=event.target.closest("[data-menu-category]");
+    if(!button) return;
+    const target=[...document.querySelectorAll(".menu-category")].find(section=>section.dataset.category===button.dataset.menuCategory);
+    if(target){
+      target.hidden=false;
+      target.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  });
+}
