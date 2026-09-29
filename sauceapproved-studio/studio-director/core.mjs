@@ -8,7 +8,8 @@ const SURFACE_LABELS=Object.freeze({
   'vintage-camera':'Vintage Camera',
   kids:'Kids Studio',
   'content-multiplier':'Content Multiplier',
-  'brand-brain':'Brand Brain'
+  'brand-brain':'Brand Brain',
+  'reality-forge':'Reality Forge'
 });
 
 function clean(value){return String(value??'').trim();}
@@ -51,6 +52,7 @@ function chooseStages(input){
   if(/legacy|documentary|memory|family history/.test(goal)) add('legacy-vault','Build the source-traceable documentary structure and consent boundaries.','consent-provenance-review');
   if(/movie|film|cinematic|story|trailer/.test(goal)) add('movie-machine','Build acts, scenes, continuity, camera intent, and director proof.','director-proof-review');
   if(input.requiresLiveStage===true || /stage|virtual production|blocking|lighting/.test(goal)) add('holostage','Pre-plan blocking, camera paths, lights, clearances, and continuous moves.','simulation-review');
+  if(/transform|rebuild|restyle|relight|era|weather|environment|world|vfx/.test(goal)) add('reality-forge','Rebuild the visual world around approved footage while protecting identity and cross-shot continuity.','reality-proof-review');
   if(/vintage|retro|camera|capture/.test(goal)) add('vintage-camera','Apply the owned capture/look pipeline for vintage visual language.','capture-review');
   if(/campaign|ad|commercial|launch|promo|marketing/.test(goal) || channels.length) add('campaign-forge','Translate the approved creative into campaign-ready deliverables.','campaign-review');
   if(channels.length>1 || /repurpose|multichannel|multi-channel|content/.test(goal)) add('content-multiplier','Adapt the approved master into channel-specific derivatives.','channel-review');
