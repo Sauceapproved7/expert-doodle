@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 11,
+  "version": 12,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -212,6 +212,13 @@
         "windows-task-scheduler",
         "launchd",
         "systemd"
+      ]
+    },
+    {
+      "path": "hercules-cleaner/installer.mjs",
+      "kind": "owned-internal-process",
+      "dependencies": [
+        "nodejs"
       ]
     }
   ],
