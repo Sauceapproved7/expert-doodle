@@ -10,6 +10,7 @@ import {
   createInstallLayout,
   validateArchiveEntries,
   validateUpdateChannel,
+  validateInstallIdentity,
 } from "../hercules-cleaner/installer.mjs";
 
 const commit="a".repeat(40), digest="b".repeat(64);
@@ -120,4 +121,52 @@ test("Windows scripts are per-user and never bypass execution policy",async()=>{
   assert.match(launcher,/active\.json/);
   assert.doesNotMatch(cmd,/ExecutionPolicy\s+Bypass/i);
   assert.doesNotMatch(install,/RunAs|requireAdministrator/i);
+});
+
+
+test("initial Windows install requires a separately trusted exact release identity",()=>{
+  const bundle={version:"1.0.0",sourceCommit:commit,aggregateSha256:digest,releaseClass:"early_access"};
+  assert.throws(()=>validateInstallIdentity({bundle}),/expected install identity required/i);
+  assert.deepEqual(
+    validateInstallIdentity({bundle,expected:{version:"1.0.0",commitSha:commit,aggregateSha256:digest}}),
+    {version:"1.0.0",commitSha:commit,aggregateSha256:digest}
+  );
+  assert.throws(
+    ()=>validateInstallIdentity({bundle,expected:{version:"1.0.0",commitSha:"c".repeat(40),aggregateSha256:digest}}),
+    /install identity mismatch/i
+  );
+});
+
+test("successful update activation retains exact previous identity for rollback",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"hercules-cleaner-rollback-identity-"));
+  try{
+    await mkdir(join(root,"versions","1.0.0"),{recursive:true});
+    await mkdir(join(root,"versions","1.1.0"),{recursive:true});
+    await writeFile(join(root,"active.json"),JSON.stringify({
+      schema:"sauceapproved.hercules-cleaner.active-install",
+      version:"1.0.0",
+      versionRoot:join(root,"versions","1.0.0"),
+      sourceCommit:"1".repeat(40),
+      artifactSha256:"2".repeat(64),
+    }));
+    await activateInstalledVersion({
+      installRoot:root,version:"1.1.0",sourceCommit:"3".repeat(40),artifactSha256:"4".repeat(64),
+      healthCheck:async()=>({ok:true}),
+      now:()=>new Date("2026-09-29T13:20:00Z"),
+    });
+    const active=JSON.parse(await readFile(join(root,"active.json"),"utf8"));
+    assert.deepEqual(active.rollback,{
+      version:"1.0.0",
+      versionRoot:join(root,"versions","1.0.0"),
+      sourceCommit:"1".repeat(40),
+      artifactSha256:"2".repeat(64),
+    });
+  }finally{await rm(root,{recursive:true,force:true})}
+});
+
+test("Windows uninstall source fails closed instead of swallowing integration-removal errors",async()=>{
+  const uninstall=await readFile(new URL("../hercules-cleaner/windows/Uninstall-HerculesCleaner.ps1",import.meta.url),"utf8");
+  assert.doesNotMatch(uninstall,/catch\s*\{\s*\}/);
+  assert.match(uninstall,/if\s*\(\$LASTEXITCODE\s*-ne\s*0\).*throw/is);
+  assert.doesNotMatch(uninstall,/Remove-Item\s+-LiteralPath\s+\$InstallRoot[^\r\n]*ErrorAction\s+SilentlyContinue/i);
 });
