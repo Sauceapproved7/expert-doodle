@@ -129,8 +129,9 @@ v1 does not claim:
 - registry optimization;
 - secure forensic erasure;
 - autonomous deletion of arbitrary personal folders;
-- standalone native binaries that require no Node.js runtime;
-- installation on a customer device until that device has been explicitly connected/authorized.
+- a bundled third-party Node.js runtime;
+- silent background self-updates;
+- installation on a customer device without that device user's explicit action and operating-system permissions.
 
 The design favors recoverability and explicit policy over aggressive deletion.
 
@@ -150,4 +151,20 @@ Cleaner updates are fail-closed against immutable release identity. An update ca
 
 The update policy cannot enable checkout or change the release out of Early Access. A verified update retains the currently installed version as the explicit rollback version. Recovery Capsule data and local Cleaner state are not update payloads and must not be deleted or migrated implicitly by update eligibility checks.
 
-This v1 certification defines update eligibility and rollback identity; it does not claim a silent auto-updater or native installer. Installation or replacement on a customer device remains subject to that device's explicit authorization and operating-system permissions.
+This v1 certification defines update eligibility and rollback identity. Cleaner v1.1.0 adds an explicit, user-invoked Windows setup entrypoint that installs a versioned copy under the current user's local application data, verifies the exact package identity and per-file hashes, preserves `~/.hercules-cleaner/` including Recovery Capsules, retains the prior version for rollback, and removes only app integration on uninstall. It still requires Node.js 22+ and does not claim a bundled native runtime or silent auto-update. Installation or replacement on a customer device remains subject to that device user's explicit action and operating-system permissions.
+
+
+## Windows one-click distribution — v1.1.0
+
+The exact-commit Early Access package now includes `HerculesCleaner-Setup.cmd` and the owned `hercules-cleaner/windows-installer*.mjs` implementation.
+
+The Windows distribution path is deliberately user-scoped and fail-closed:
+- install root is below `%LOCALAPPDATA%\SauceApproved\Hercules Cleaner\app\<version>`;
+- Cleaner state remains under `~/.hercules-cleaner/` and is not an install/update payload;
+- activation requires the generated exact-commit package manifest, aggregate SHA-256, and every packaged file hash to verify;
+- same-version replacement, downgrade, malformed identity, digest mismatch, commercial-gate drift, and tampering are rejected;
+- the previous version is retained as the rollback target;
+- uninstall removes the installed app and startup integration without silently deleting Recovery Capsules or local state;
+- no administrator/elevation control is bypassed.
+
+Paid checkout remains a separate owner-controlled launch gate and is not enabled by installer availability.
