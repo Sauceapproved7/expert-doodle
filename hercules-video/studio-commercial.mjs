@@ -95,6 +95,7 @@ export function createStudioOnboardingManifest(){
     publicRoutes:[
       "/",
       "/operator",
+      "/demo",
       "/pricing",
       "/market",
       "/getting-started",
@@ -162,6 +163,49 @@ export function renderStudioSupportShell(){
     '<article class="doc"><h2>Current commercial state</h2><p>Checkout policy: <strong>'+esc(commercial.checkoutPolicy)+'</strong>. Paid checkout enabled: <strong>'+esc(commercial.paidCheckoutEnabled)+'</strong>.</p><div class="notice">If a workflow says it is unavailable, do not work around the lock. The Studio is intentionally designed to fail closed until the required trust boundary is satisfied.</div><p class="foot"><a href="/getting-started">Getting started</a> · <a href="/pricing">Pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">Ads Engine</a></p></article>');
 }
 
+
+export function createStudioDemoManifest(){
+  return {
+    schema:"sauceapproved.studio.demo-manifest",
+    version:1,
+    product:"SauceApproved Studio",
+    mode:"guided-demo",
+    simulated:true,
+    chargeable:false,
+    providerExecution:false,
+    disclaimer:"Demonstration data only. No external model call, customer campaign, payment, or production run is represented as completed.",
+    steps:[
+      {id:"brief",label:"Creative Brief",state:"sample",detail:"Launch a 15-second product teaser for a fictional coffee brand. Objective: product awareness. Format: vertical social video."},
+      {id:"storyboard",label:"Storyboard",state:"sample",detail:"Three-shot structure: opening product reveal, texture/detail moment, closing CTA card."},
+      {id:"routing",label:"Provider Routing",state:"blocked-demo",detail:"Hercules would compare approved providers by capability, quality policy and cost. No provider is called in this demo."},
+      {id:"quality",label:"Quality Gate",state:"sample",detail:"Example gate checks framing, duration, caption safety, brand facts and evidence completeness."},
+      {id:"assembly",label:"Assembly",state:"sample",detail:"Example timeline combines selected shots, captions and audio instructions without creating a real media artifact."},
+      {id:"evidence",label:"Evidence Receipt",state:"sample",detail:"The demo shows how fingerprints, provider choice, approvals and final evidence would be recorded."}
+    ],
+    differentiators:[
+      "Evidence-first production",
+      "Provider-transparent routing"
+    ],
+    nextPaths:{
+      gettingStarted:"/getting-started",
+      operator:"/operator",
+      market:"/market",
+      pricing:"/pricing"
+    }
+  };
+}
+
+export function renderStudioDemoShell(){
+  const manifest=createStudioDemoManifest();
+  const cards=manifest.steps.map((step,index)=>
+    '<article class="plan"><span class="count">'+String(index+1).padStart(2,"0")+'</span><h2>'+esc(step.label)+'</h2><p>'+esc(step.detail)+'</p><div class="notice">'+esc(step.state)+'</div></article>'
+  ).join("");
+  return wrap("SauceApproved Studio — Guided Demo",
+    '<section class="hero"><div class="eyebrow">GUIDED PRODUCT DEMO / NO PROVIDER CALLS</div><h1>See the Hercules production chain without pretending anything ran.</h1><p class="lead">This demo uses clearly labeled sample data to show how SauceApproved Studio moves from brief to evidence. It does not call an external model, create a customer asset, or trigger billing.</p><div class="notice">'+esc(manifest.disclaimer)+'</div><p class="foot"><a href="/operator">Open operator workspace</a> · <a href="/getting-started">Getting started</a> · <a href="/pricing">Pricing</a></p></section>'+
+    '<section class="grid">'+cards+'</section>'+
+    '<article class="doc"><div class="eyebrow">WHY THIS MATTERS</div><h2>Evidence-first production</h2><p>Every real run is designed to keep the planning, execution, quality and final evidence connected instead of reducing the workflow to an opaque generation button.</p><h2>Provider-transparent routing</h2><p>Hercules keeps orchestration in the SauceApproved layer and treats external models as replaceable execution backends. If a provider is unavailable or unauthorized, the production action stays locked.</p><p class="foot"><a href="/market">Studios Market</a> · <a href="/support">Support</a> · <a href="/">Back to Studio</a></p></article>');
+}
+
 export function renderStudioLandingShell(){
   const commercial=createStudioCommercialManifest();
   const planCards=commercial.plans.map((plan,index)=>
@@ -177,7 +221,7 @@ export function renderStudioLandingShell(){
   ];
   const productCards=products.map((item,i)=>'<article class="plan"><span class="count">'+String(i+1).padStart(2,"0")+'</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[2])+'</p><a class="cta" href="'+esc(item[1])+'">Open</a></article>').join("");
   return wrap("SauceApproved Studio",
-    '<section class="hero"><div class="eyebrow">SAUCEAPPROVED / HERCULES-POWERED CREATIVE SYSTEM</div><h1>One Studio. A controlled creative production chain.</h1><p class="lead">SauceApproved Studio turns creative work into a visible system instead of a black box: brief, planning, generation routing, quality checks, assembly, recovery and evidence all stay connected.</p><div class="notice">Founding Customer release. Paid checkout remains locked until SauceApproved finishes owner approvals and live payment verification.</div><p class="foot"><a href="/getting-started">Getting started</a> · <a href="/operator">Open operator workspace</a> · <a href="/market">Studios Market</a> · <a href="/support">Support</a></p></section>'+
+    '<section class="hero"><div class="eyebrow">SAUCEAPPROVED / HERCULES-POWERED CREATIVE SYSTEM</div><h1>One Studio. A controlled creative production chain.</h1><p class="lead">SauceApproved Studio turns creative work into a visible system instead of a black box: brief, planning, generation routing, quality checks, assembly, recovery and evidence all stay connected.</p><div class="notice">Founding Customer release. Paid checkout remains locked until SauceApproved finishes owner approvals and live payment verification.</div><p class="foot"><a href="/demo">Guided demo</a> · <a href="/getting-started">Getting started</a> · <a href="/operator">Open operator workspace</a> · <a href="/market">Studios Market</a> · <a href="/support">Support</a></p></section>'+
     '<section class="grid">'+productCards+'</section>'+
     '<article class="doc"><div class="eyebrow">TWO HERCULES DIFFERENTIATORS</div><h2>Evidence-first production</h2><p>Run identity, shot state, quality gates, recovery and final-output proof stay visible so teams can see what was actually verified.</p><h2>Provider-transparent routing</h2><p>External models stay replaceable rendering backends. Hercules keeps the workflow brain, routing, provenance and fail-closed controls in the owned SauceApproved layer.</p></article>'+
     '<section class="grid">'+planCards+'</section>'+
