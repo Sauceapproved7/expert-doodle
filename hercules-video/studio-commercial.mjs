@@ -212,16 +212,17 @@ export function renderStudioLandingShell(){
     '<article class="plan '+(index===1?'featured':'')+'"><span class="count">0'+(index+1)+'</span><h2>'+esc(plan.name)+'</h2><div class="price">$'+esc(plan.monthlyUsd)+'<small>/month</small></div><p>'+esc(plan.features.slice(0,2).join(" · "))+'</p><a class="cta" href="/pricing">See plan</a></article>'
   ).join("");
   const products=[
-    ["Hercules Video","/operator","Brief → storyboard → shot plan → routing → quality → assembly → evidence."],
-    ["Content Multiplier","/content-multiplier","Turn one approved source into governed platform-ready content branches."],
-    ["Brand Brain","/brand-brain","Keep brand rules versioned, reviewable and consistent across channels."],
-    ["AI Sales Agent","/ai-sales-agent","Ground sales conversations in approved product facts and controlled handoffs."],
-    ["Vintage Camera","/vintage-camera","Local-first capture with quality checks, QA receipts and device proof."],
-    ["Kids Studio","/kids","Child-focused creative surfaces with explicit safety and review boundaries."]
+    ["Hercules Video","/operator","Turn a brief into a planned, checked video workflow with visible proof."],
+    ["Content Multiplier","/content-multiplier","Turn one approved piece of content into more useful content without losing the brand."],
+    ["Brand Brain","/brand-brain","Keep your voice, facts and brand rules consistent wherever Hercules creates."],
+    ["AI Sales Agent","/ai-sales-agent","Help sales conversations stay grounded in approved product facts and clear handoffs."],
+    ["Vintage Camera","/vintage-camera","Capture with an old-school feel while Hercules checks quality and keeps proof."],
+    ["Kids Studio","/kids","Create child-focused stories and media with clear safety and review boundaries."]
   ];
   const productCards=products.map((item,i)=>'<article class="plan"><span class="count">'+String(i+1).padStart(2,"0")+'</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[2])+'</p><a class="cta" href="'+esc(item[1])+'">Open</a></article>').join("");
   return wrap("SauceApproved Studio",
-    '<section class="hero"><div class="eyebrow">SAUCEAPPROVED / HERCULES-POWERED CREATIVE SYSTEM</div><h1>One Studio. A controlled creative production chain.</h1><p class="lead">SauceApproved Studio turns creative work into a visible system instead of a black box: brief, planning, generation routing, quality checks, assembly, recovery and evidence all stay connected.</p><div class="notice">Founding Customer release. Paid checkout remains locked until SauceApproved finishes owner approvals and live payment verification.</div><p class="foot"><a href="/demo">Guided demo</a> · <a href="/getting-started">Getting started</a> · <a href="/operator">Open operator workspace</a> · <a href="/market">Studios Market</a> · <a href="/support">Support</a></p></section>'+
+    '<section class="hero"><div class="eyebrow">SAUCEAPPROVED / HERCULES-POWERED CREATIVE SYSTEM</div><h1>Tell Hercules what you want. Get finished work.</h1><p class="lead">Start with an idea. Hercules turns it into a clear path from planning to creation to review, so you can focus on the result instead of learning the machinery underneath it.</p><div class="notice">Founding Customer release. Paid checkout remains locked until SauceApproved finishes owner approvals and live payment verification.</div><p class="foot"><a href="/demo">See how it works</a> · <a href="/getting-started">Start here</a> · <a href="/market">Studios Market — explore Hercules tools</a> · <a href="/support">Support</a></p></section>'+
+    '<article class="doc"><div class="eyebrow">THE SIMPLE VERSION</div><h2>Idea → Hercules → Finished Result.</h2><p>Tell Hercules what you want to make. Hercules organizes the work, keeps the important checks visible, and brings you back a result you can review. You do not need to understand every model, provider, server or workflow behind it.</p></article>'+
     '<section class="grid">'+productCards+'</section>'+
     '<article class="doc"><div class="eyebrow">TWO HERCULES DIFFERENTIATORS</div><h2>Evidence-first production</h2><p>Run identity, shot state, quality gates, recovery and final-output proof stay visible so teams can see what was actually verified.</p><h2>Provider-transparent routing</h2><p>External models stay replaceable rendering backends. Hercules keeps the workflow brain, routing, provenance and fail-closed controls in the owned SauceApproved layer.</p></article>'+
     '<section class="grid">'+planCards+'</section>'+
