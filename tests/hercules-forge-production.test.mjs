@@ -4,7 +4,7 @@ import {randomBytes} from "node:crypto";
 import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {createForgeControlService} from "../hercules-forge/control-api.mjs";
+import {createForgeControlService, listenForgeControlService} from "../hercules-forge/control-api.mjs";
 import {ForgeIdentityStore} from "../hercules-forge/identity.mjs";
 import {ForgeLoginRateLimiter} from "../hercules-forge/rate-limit.mjs";
 import {
@@ -342,5 +342,48 @@ test("production session cookies are Secure and failed login throttling returns 
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(root, {recursive: true, force: true});
+  }
+});
+
+
+test("production listener forwards durable state into readiness", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-production-durable-ready-"));
+  const controlToken = fixtureCredential("control", "durable", "listener", "fixture");
+  const durableState = {
+    async flush() { return {verified:true}; },
+    async status() {
+      return {
+        ok:true,
+        schema:"sauceapproved.hercules.forge.durable-state.v1",
+        carriesCredentials:false,
+        objectCount:1,
+      };
+    },
+  };
+  const server = listenForgeControlService({
+    root,
+    token:controlToken,
+    durableState,
+    readinessCheck:async () => ({writable:true}),
+    serviceMode:"production",
+    host:"127.0.0.1",
+    port:0,
+  });
+  await new Promise((resolve, reject) => {
+    if (server.listening) return resolve();
+    server.once("listening", resolve);
+    server.once("error", reject);
+  });
+  const base = "http://127.0.0.1:" + server.address().port;
+  try {
+    const response = await fetch(base + "/ready");
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ready, true);
+    assert.equal(body.durableState?.ok, true);
+    assert.equal(body.durableState?.objectCount, 1);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive:true, force:true});
   }
 });
