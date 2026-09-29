@@ -75,7 +75,10 @@ export async function installAutostart(options = {}) {
 export async function uninstallAutostart(options = {}) {
   const plan = createAutostartPlan(options);
   const steps = Array.isArray(plan.uninstall) ? plan.uninstall : [plan.uninstall];
-  for (const step of steps) await runCommand(step).catch(() => {});
+  for (const step of steps) {
+    if (options.strict) await runCommand(step);
+    else await runCommand(step).catch(() => {});
+  }
   if (plan.file) await rm(plan.file.path, {force: true});
   return {installed: false, kind: plan.kind};
 }
