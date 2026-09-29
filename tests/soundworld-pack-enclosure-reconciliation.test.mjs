@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {reconcilePackEnclosure} from '../hardware/soundworld/pack-enclosure-reconciliation-v1.mjs';
+test('4S2P pack computes eight cells and raw cell mass',()=>{const r=reconcilePackEnclosure({series:4,parallel:2,cellDiameterMm:21.6,cellHeightMm:70.2,cellMassG:69});assert.equal(r.cellCount,8);assert.equal(r.rawCellMassG,552);});
+test('requires added mechanical allowance beyond raw cell block',()=>assert.throws(()=>reconcilePackEnclosure({series:4,parallel:2,cellDiameterMm:21.6,cellHeightMm:70.2,cellMassG:69,mechanicalAllowanceMm:-1}));
