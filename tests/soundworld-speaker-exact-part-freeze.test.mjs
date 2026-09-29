@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {speakerExactPartFreeze} from '../hardware/soundworld/eda/exact-part-freeze-v1.mjs';
+test('locks verified package identities',()=>{assert.equal(speakerExactPartFreeze.amplifier.mpn,'TAS5825MRHBT');assert.equal(speakerExactPartFreeze.amplifier.package,'RHB-32 VQFN');assert.equal(speakerExactPartFreeze.pd.mpn,'TPS25751SRSMR');assert.equal(speakerExactPartFreeze.pd.package,'RSM-32 VQFN');});
+test('does not fake unresolved implementation values',()=>{assert.equal(speakerExactPartFreeze.passivesFrozen,false);assert.equal(speakerExactPartFreeze.rfNetworkFrozen,false);assert.equal(speakerExactPartFreeze.connectorMpnsFrozen,false);});
+test('remains pre-ERC and non-fabrication',()=>{assert.equal(speakerExactPartFreeze.ercReady,false);assert.equal(speakerExactPartFreeze.fabricationReady,false);});
