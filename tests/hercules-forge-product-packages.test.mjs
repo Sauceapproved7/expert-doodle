@@ -29,6 +29,8 @@ test("product packages point at owned canonical product cores", () => {
   assert.ok(studio.sourceRoots.includes("hercules-video/"));
   assert.ok(ads.sourceRoots.includes("hercules-forge/ad-studio/index.html"));
   assert.ok(cleaner.sourceRoots.includes("hercules-cleaner/"));
+  assert.ok(cleaner.sourceRoots.includes("HerculesCleaner-Setup.cmd"));
+  assert.ok(cleaner.sourceRoots.includes("releases/hercules-cleaner-v1.1.0/"));
   assert.equal(studio.ownership.core, "SauceApproved-owned");
   assert.equal(ads.ownership.core, "SauceApproved-owned");
   assert.equal(cleaner.ownership.core, "SauceApproved-owned");
