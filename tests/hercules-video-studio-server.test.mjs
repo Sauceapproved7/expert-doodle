@@ -431,3 +431,35 @@ test("Studio onboarding manifest includes the operator workspace",async()=>{
   const body=JSON.parse(response.body);
   assert.ok(body.publicRoutes.includes("/operator"));
 });
+
+
+test("Studio guided demo is explicit simulation with no provider execution or billing",async()=>{
+  const handle=createStudioHttpHandler();
+  const page=await handle({method:"GET",pathname:"/demo"});
+  assert.equal(page.status,200);
+  assert.match(page.headers["content-type"],/text\/html/);
+  assert.match(page.body,/GUIDED PRODUCT DEMO \/ NO PROVIDER CALLS/);
+  assert.match(page.body,/does not call an external model/i);
+  assert.match(page.body,/does not.*trigger billing/i);
+  assert.match(page.body,/Evidence-first production/);
+  assert.match(page.body,/Provider-transparent routing/);
+
+  const manifest=await handle({method:"GET",pathname:"/api/studio/demo/manifest"});
+  assert.equal(manifest.status,200);
+  const body=JSON.parse(manifest.body);
+  assert.equal(body.mode,"guided-demo");
+  assert.equal(body.simulated,true);
+  assert.equal(body.chargeable,false);
+  assert.equal(body.providerExecution,false);
+  assert.equal(body.steps.length,6);
+  assert.ok(body.steps.some(step=>step.id==="routing"&&step.state==="blocked-demo"));
+});
+
+test("Studio public root links to the guided demo",async()=>{
+  const handle=createStudioHttpHandler();
+  const root=await handle({method:"GET",pathname:"/"});
+  assert.equal(root.status,200);
+  assert.match(root.body,/href="\/demo"/);
+  const onboarding=JSON.parse((await handle({method:"GET",pathname:"/api/studio/onboarding/manifest"})).body);
+  assert.ok(onboarding.publicRoutes.includes("/demo"));
+});
