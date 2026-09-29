@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {speakerEdaSource} from '../hardware/soundworld/eda/speaker-source-manifest-v1.mjs';
+test('speaker EDA source paths are fixed',()=>{assert.equal(speakerEdaSource.project,'hardware/soundworld/eda/soundworld-speaker-v1.kicad_pro');assert.equal(speakerEdaSource.schematic,'hardware/soundworld/eda/soundworld-speaker-v1.kicad_sch');assert.equal(speakerEdaSource.pcb,'hardware/soundworld/eda/soundworld-speaker-v1.kicad_pcb');});
+test('unvalidated source cannot claim ERC or DRC',()=>{assert.equal(speakerEdaSource.ercValidated,false);assert.equal(speakerEdaSource.drcValidated,false);assert.equal(speakerEdaSource.fabricationReady,false);});
+test('reference design provenance is explicit',()=>assert.equal(speakerEdaSource.amplifierReference,'TI-TIDA-060026'));
