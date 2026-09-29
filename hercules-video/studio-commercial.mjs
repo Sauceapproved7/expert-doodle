@@ -85,3 +85,79 @@ export function renderStudioLegalShell(kind){
   return wrap("SauceApproved Studio "+title,body);
 }
 
+export function createStudioOnboardingManifest(){
+  const commercial=createStudioCommercialManifest();
+  return {
+    schema:"sauceapproved.studio.onboarding-manifest",
+    version:1,
+    product:"SauceApproved Studio",
+    release:"founding-customer",
+    publicRoutes:[
+      "/",
+      "/pricing",
+      "/market",
+      "/getting-started",
+      "/support",
+      "/terms",
+      "/privacy",
+      "/vintage-camera",
+      "/kids"
+    ],
+    firstRun:[
+      {step:1,id:"choose-workflow",label:"Choose a Studio workflow",path:"/"},
+      {step:2,id:"build-brief",label:"Create or review the creative brief",path:"/"},
+      {step:3,id:"review-shot-plan",label:"Review storyboard, shot plan, routing and evidence",path:"/"},
+      {step:4,id:"connect-approved-provider",label:"Connect only an authorized execution provider when required",path:"/"},
+      {step:5,id:"approve-output",label:"Review evidence before export or publication",path:"/"}
+    ],
+    trustRules:[
+      "No provider is represented as connected unless Hercules verifies it.",
+      "Mutation and execution stay fail-closed without trusted authorization.",
+      "AI and rendered outputs require human review before commercial publication.",
+      "Paid checkout stays disabled until owner approvals and the payment path are verified."
+    ],
+    commercial:{
+      plans:commercial.plans,
+      paidCheckoutEnabled:commercial.paidCheckoutEnabled,
+      checkoutPolicy:commercial.checkoutPolicy,
+      checkoutLockedReason:commercial.checkoutLockedReason,
+      foundingAccessPath:commercial.foundingAccessPath
+    }
+  };
+}
+
+export function renderStudioGettingStartedShell(){
+  const manifest=createStudioOnboardingManifest();
+  const steps=manifest.firstRun.map(step=>
+    '<article class="plan"><span class="count">0'+esc(step.step)+'</span><h2>'+esc(step.label)+'</h2><p>'+esc(
+      step.id==="choose-workflow" ? "Start with the workflow that matches the job: video production, Content Multiplier, Brand Brain, AI Sales Agent, Vintage Camera, or Kids Studio." :
+      step.id==="build-brief" ? "Lock the objective, audience, offer, format, constraints and approved brand facts before asking Hercules to produce." :
+      step.id==="review-shot-plan" ? "Hercules keeps shot requirements, provider routing, quality evidence, recovery and provenance visible instead of hiding the work behind one button." :
+      step.id==="connect-approved-provider" ? "Provider-dependent actions remain unavailable until an authorized rendering or action adapter is connected." :
+      "Review the output, quality evidence and commercial claims before export, publication or customer delivery."
+    )+'</p></article>'
+  ).join("");
+  const rules=manifest.trustRules.map(rule=>'<li>'+esc(rule)+'</li>').join("");
+  return wrap("SauceApproved Studio — Getting Started",
+    '<section class="hero"><div class="eyebrow">FOUNDING CUSTOMER ONBOARDING</div><h1>Start strong. Keep the evidence.</h1><p class="lead">SauceApproved Studio is built around a visible production chain: brief → plan → shots → provider routing → quality checks → assembly → evidence. The first-run path below keeps that workflow clear without pretending unavailable providers or billing are ready.</p></section>'+
+    '<section class="grid">'+steps+'</section>'+
+    '<article class="doc"><h2>Hercules trust rules</h2><ul>'+rules+'</ul><div class="notice">Paid checkout is still locked. You can review the product and founding-access path now; no subscription charge can be created until the commercial and payment gates are cleared.</div><p class="foot"><a href="/market">Founding access</a> · <a href="/pricing">Pricing</a> · <a href="/support">Support</a> · <a href="/">Open Studio</a></p></article>');
+}
+
+export function renderStudioSupportShell(){
+  const commercial=createStudioCommercialManifest();
+  const rows=[
+    ["Studio access","Use the Studio root and public modules to review the product. Paid subscriber access is not enabled until checkout verification passes."],
+    ["Provider connection","If a render or action provider is unavailable, Hercules keeps the affected action locked rather than fabricating a result."],
+    ["Run recovery","Verified run identity, recovery state and evidence are preserved by the Hercules Video contract. Resume remains gated by integrity and authorization."],
+    ["Billing","The current pricing is public for review, but checkout stays fail-closed until owner approval, Stripe readiness, and the controlled payment/refund verification are complete."],
+    ["Terms and Privacy","The public Terms and Privacy pages are rendered from the canonical version-controlled candidates used by the Hercules approval gate."],
+    ["Ads Engine","For paid-ad planning and campaign governance, use the separate SauceApproved Ads Engine product surface."]
+  ];
+  const cards=rows.map((row,i)=>'<article class="plan"><span class="count">0'+(i+1)+'</span><h2>'+esc(row[0])+'</h2><p>'+esc(row[1])+'</p></article>').join("");
+  return wrap("SauceApproved Studio — Support",
+    '<section class="hero"><div class="eyebrow">SAUCEAPPROVED STUDIO / SUPPORT</div><h1>Know what is live, locked, and verified.</h1><p class="lead">This support surface separates real Studio capabilities from anything that still depends on provider authorization or commercial launch approval.</p></section>'+
+    '<section class="grid">'+cards+'</section>'+
+    '<article class="doc"><h2>Current commercial state</h2><p>Checkout policy: <strong>'+esc(commercial.checkoutPolicy)+'</strong>. Paid checkout enabled: <strong>'+esc(commercial.paidCheckoutEnabled)+'</strong>.</p><div class="notice">If a workflow says it is unavailable, do not work around the lock. The Studio is intentionally designed to fail closed until the required trust boundary is satisfied.</div><p class="foot"><a href="/getting-started">Getting started</a> · <a href="/pricing">Pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">Ads Engine</a></p></article>');
+}
+
