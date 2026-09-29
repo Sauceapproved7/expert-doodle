@@ -381,3 +381,44 @@ test("startup canary rotates to a fresh reserved identifier while preserving raw
     assert.ok(reservedLookups>=2);
   }finally{await new Promise(resolve=>server.close(resolve));}
 });
+
+
+test("startup canary rotates when creation races with an EEXIST collision", async () => {
+  let firstCreate=true;
+  let createdId=null;
+  const server=http.createServer(async (req,res)=>{
+    if(req.method==="GET" && req.url?.startsWith("/v1/projects/")){
+      const id=decodeURIComponent(req.url.split("/").at(-1));
+      if(createdId===id){
+        res.writeHead(200,{"content-type":"application/json"});
+        return res.end(JSON.stringify({projectId:id,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"a".repeat(64)}}));
+      }
+      res.writeHead(404,{"content-type":"application/json"});
+      return res.end(JSON.stringify({error:"not_found"}));
+    }
+    if(req.method==="POST" && req.url==="/v1/projects/from-prompt"){
+      let raw=""; for await(const chunk of req) raw+=chunk; const body=JSON.parse(raw);
+      if(firstCreate){
+        firstCreate=false;
+        res.writeHead(409,{"content-type":"application/json"});
+        return res.end(JSON.stringify({error:"EEXIST: file already exists, mkdir '/tmp/hercules-forge/projects/"+body.metadata.projectId+"'"}));
+      }
+      createdId=body.metadata.projectId;
+      res.writeHead(201,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:createdId,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"a".repeat(64)}},revision:{revisionId:"post409-r1"}}));
+    }
+    if(req.url==="/ready"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({ready:true,durableState:{ok:true,schema:"sauceapproved.hercules.forge.durable-state.v1",carriesCredentials:false,objectCount:6}}));
+    }
+    res.writeHead(404,{"content-type":"application/json"}); res.end();
+  });
+  const origin=await listen(server);
+  try{
+    const result=await runForgeStartupPromptCanary({origin,controlToken,projectId:"forge-prompt-canary-ai-v3"});
+    assert.equal(result.ok,true);
+    assert.equal(result.collisionAvoided,true);
+    assert.equal(result.status,"created_and_verified");
+    assert.equal(result.projectId,createdId);
+  }finally{await new Promise(resolve=>server.close(resolve));}
+});
