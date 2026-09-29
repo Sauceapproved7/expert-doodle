@@ -31,6 +31,19 @@ function launcher(nodePath,cliPath){
   return `@echo off\r\n"${nodePath}" "${cliPath}" %*\r\n`;
 }
 
+export function verifyWindowsReleaseTrust({candidate,trust}={}){
+  if(!candidate||!trust)return {allowed:false,reason:"missing-release-trust"};
+  if(!validVersion(trust.version)||!/^[a-f0-9]{40}$/i.test(String(trust.commitSha??""))||!/^[a-f0-9]{64}$/i.test(String(trust.aggregateSha256??""))){
+    return {allowed:false,reason:"invalid-release-trust"};
+  }
+  if(String(candidate.version)!==String(trust.version)||
+     String(candidate.commitSha??"").toLowerCase()!==String(trust.commitSha).toLowerCase()||
+     String(candidate.aggregateSha256??"").toLowerCase()!==String(trust.aggregateSha256).toLowerCase()){
+    return {allowed:false,reason:"release-trust-mismatch"};
+  }
+  return {allowed:true,reason:"verified-release-trust"};
+}
+
 export function verifyWindowsInstallIdentity({candidate,expected}={}){
   if(!candidate||!expected)return {allowed:false,reason:"missing-install-identity"};
   if(!validVersion(candidate.version))return {allowed:false,reason:"invalid-version"};
