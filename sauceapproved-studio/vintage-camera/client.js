@@ -1,5 +1,6 @@
 import {assessCapture} from './capture-quality.mjs';
 import {createCaptureReceipt} from './capture-receipt.mjs';
+import {scheduleVideoFrame,cancelScheduledVideoFrame} from './frame-scheduler.mjs';
 
 const $=id=>document.getElementById(id);
 const source=$('source'),view=$('view'),preview=view.getContext('2d',{alpha:false});
@@ -15,7 +16,7 @@ const grainTextures=Array.from({length:16},()=>{
   context.putImageData(pixels,0,0);return texture;
 });
 let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
-let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,animation=0,mode='idle',captureMode='idle',captureLook=null,captureReceipt=null,chunks=[],rawChunks=[];
+let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,scheduledFrame=null,mode='idle',captureMode='idle',captureLook=null,captureReceipt=null,chunks=[],rawChunks=[];
 const setStatus=message=>{$('status').textContent=message;};
 const setButtonState=()=>{
   const ready=mode==='camera'||mode==='clip';
@@ -68,7 +69,7 @@ function draw(){
     const seconds=Math.floor((Date.now()-recordingStarted)/1000);
     $('timecode').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
   }
-  animation=requestAnimationFrame(draw);
+  scheduledFrame=scheduleVideoFrame(source,draw);
 }
 function releaseSource(){
   if(recorder?.state==='recording'){recordingEnded=Date.now();recorder.stop();}
@@ -162,5 +163,5 @@ $('recipe').addEventListener('click',()=>saveBlob(new Blob([JSON.stringify(recip
 $('receipt').addEventListener('click',()=>{if(captureReceipt)saveBlob(new Blob([JSON.stringify(captureReceipt,null,2)],{type:'application/json'}),'sauceapproved-capture-qa.json');});
 $('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||'sauceapproved-original.webm';link.click();});
 for(const id of ['strength','grain'])$(id).addEventListener('input',()=>{$(id+'-value').value=$(id).value+'%';});
-window.addEventListener('pagehide',()=>{cancelAnimationFrame(animation);releaseSource();releaseDownloads();});
+window.addEventListener('pagehide',()=>{cancelScheduledVideoFrame(source,scheduledFrame);releaseSource();releaseDownloads();});
 setButtonState();draw();
