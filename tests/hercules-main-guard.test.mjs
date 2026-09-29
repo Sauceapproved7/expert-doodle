@@ -59,6 +59,9 @@ test("runtime workflow can restore the previous tree without rewriting history",
   assert.match(workflow,/git commit-tree/);
   assert.match(workflow,/CURRENT[\s\S]*AFTER/);
   assert.match(workflow,/main-guard-contract/);
+  assert.match(workflow,/for attempt in \\$\\(seq 1 12\\)/);
+  assert.match(workflow,/required_check_evidence_not_ready/);
+  assert.match(workflow,/sleep 5/);
 });
 
 test("native GitHub protection will require the main-guard contract too", async () => {
