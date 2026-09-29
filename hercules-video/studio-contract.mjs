@@ -14,6 +14,7 @@ const SURFACES=Object.freeze([
   Object.freeze({id:"movie-machine",label:"Movie Machine"}),
   Object.freeze({id:"holostage",label:"HoloStage"}),
   Object.freeze({id:"legacy-vault",label:"Legacy Vault"}),
+  Object.freeze({id:"studio-director",label:"Studio Director"}),
   Object.freeze({id:"market",label:"Studios Market"}),
   Object.freeze({id:"vintage-camera",label:"Vintage Camera"}),
   Object.freeze({id:"kids",label:"Kids Studio"}),
