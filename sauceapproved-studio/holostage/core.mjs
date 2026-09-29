@@ -45,9 +45,60 @@ export function buildStagePlan(input={}){
     keyIntensity:Number((0.62+index*0.06).toFixed(2)),
     direction:index%2===0?"camera-left":"camera-right"
   }));
-  const stressSegments=cameraPath.slice(1).map((point,index)=>Object.freeze({
-    from:cameraPath[index].beatId,to:point.beatId,resetSeconds:0,feasible:true,reason:"continuous-path-clear"
-  }));
+  const maxContinuousMoveMeters=Number.isFinite(Number(input.maxContinuousMoveMeters)) && Number(input.maxContinuousMoveMeters)>0
+    ? Number(input.maxContinuousMoveMeters)
+    : Math.max(width,depth);
+  const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
+  const stressSegments=cameraPath.slice(1).map((point,index)=>{
+    const meters=Number(distance(cameraPath[index],point).toFixed(2));
+    const feasible=meters<=maxContinuousMoveMeters;
+    return Object.freeze({
+      from:cameraPath[index].beatId,
+      to:point.beatId,
+      meters,
+      maxContinuousMoveMeters,
+      resetSeconds:feasible?0:Math.ceil((meters-maxContinuousMoveMeters)*2),
+      feasible,
+      reason:feasible?"continuous-path-clear":"continuous-move-threshold-exceeded"
+    });
+  });
+  const lights=(Array.isArray(input.lights)?input.lights:[]).map((light,index)=>Object.freeze({
+    id:clean(light?.id)||"light-"+(index+1),
+    x:n(light?.x),
+    z:n(light?.z)
+  })).filter(light=>Number.isFinite(light.x)&&Number.isFinite(light.z));
+  const clearanceMeters=Number.isFinite(Number(input.clearanceMeters)) && Number(input.clearanceMeters)>0
+    ? Number(input.clearanceMeters)
+    : 0.65;
+  const collisions=[];
+  for(const camera of cameraPath){
+    for(const light of lights){
+      const meters=Number(distance(camera,light).toFixed(2));
+      if(meters<clearanceMeters){
+        collisions.push(Object.freeze({
+          kind:"camera-light",
+          beatId:camera.beatId,
+          cameraId:camera.cameraId,
+          obstacleId:light.id,
+          meters,
+          requiredClearanceMeters:clearanceMeters
+        }));
+      }
+    }
+    for(const subject of blocking.filter(item=>item.beatId===camera.beatId)){
+      const meters=Number(distance(camera,subject).toFixed(2));
+      if(meters<clearanceMeters){
+        collisions.push(Object.freeze({
+          kind:"camera-subject",
+          beatId:camera.beatId,
+          cameraId:camera.cameraId,
+          obstacleId:subject.subject,
+          meters,
+          requiredClearanceMeters:clearanceMeters
+        }));
+      }
+    }
+  }
   return Object.freeze({
     schema:"sauceapproved.studio.holostage.plan",
     version:1,
@@ -58,8 +109,17 @@ export function buildStagePlan(input={}){
     blocking:Object.freeze(blocking),
     cameraPath:Object.freeze(cameraPath),
     lightCues:Object.freeze(lightCues),
-    oneTakeStressTest:Object.freeze({pass:stressSegments.every(x=>x.feasible),segments:Object.freeze(stressSegments)}),
-    safety:Object.freeze({collisionsDetected:0,guard:"camera-light-subject-clearance"}),
+    oneTakeStressTest:Object.freeze({
+      pass:stressSegments.every(x=>x.feasible),
+      maxContinuousMoveMeters,
+      segments:Object.freeze(stressSegments)
+    }),
+    safety:Object.freeze({
+      collisionsDetected:collisions.length,
+      collisions:Object.freeze(collisions),
+      clearanceMeters,
+      guard:"camera-light-subject-clearance"
+    }),
     spatialContinuityLock:Object.freeze(blocking.map(item=>Object.freeze({beatId:item.beatId,x:item.x,z:item.z})))
   });
 }
