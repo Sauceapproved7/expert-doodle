@@ -1273,6 +1273,7 @@ export function listenForgeControlService({
   serviceMode = "development",
   publicOrigin = null,
   smokeScreenObserver = null,
+  durableState = null,
   host = "127.0.0.1",
   port = 38700,
 }) {
@@ -1289,6 +1290,7 @@ export function listenForgeControlService({
     serviceMode,
     publicOrigin,
     smokeScreenObserver,
+    durableState,
   });
   server.listen(port, host);
   return server;
