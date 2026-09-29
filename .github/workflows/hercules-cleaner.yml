@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: "22"
       - name: Hercules Cleaner tests
-        run: node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-update-policy.test.mjs
+        run: node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-update-policy.test.mjs tests/hercules-cleaner-windows-installer.test.mjs
       - name: Owner-code boundary
         run: node scripts/verify-owner-code-only.mjs
       - name: Security baseline
