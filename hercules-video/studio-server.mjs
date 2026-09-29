@@ -9,7 +9,7 @@ import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
 import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
-import {renderStudioPricingShell,renderStudioLegalShell} from "./studio-commercial.mjs";
+import {createStudioCommercialManifest,renderStudioPricingShell,renderStudioLegalShell} from "./studio-commercial.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -425,6 +425,15 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/market") {
       return {status:200,headers:HTML_HEADERS,body:renderStudiosMarketShell(createStudiosMarketManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/commercial/manifest") {
+      return json(createStudioCommercialManifest());
+    }
+
+    if (normalizedMethod==="POST" && normalizedPath==="/api/studio/checkout") {
+      const commercial=createStudioCommercialManifest();
+      return json({ok:false,error:commercial.checkoutLockedReason,commercial},423);
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/pricing") {
