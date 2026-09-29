@@ -335,12 +335,26 @@ function renderIndex(spec) {
     "<head>",
     '  <meta charset="utf-8" />',
     '  <meta name="viewport" content="width=device-width,initial-scale=1" />',
-    "  <title>" + escapeHtml(spec.name) + "</title>",
+    "  <title>" + escapeHtml(spec.name) + " · Hercules Forge</title>",
     '  <link rel="stylesheet" href="/app.css" />',
     "</head>",
-    "<body>",
-    '  <header class="hero"><div><span class="eyebrow">Hercules Forge App</span><h1>' + escapeHtml(spec.name) + "</h1><p>" + escapeHtml(spec.description) + "</p></div></header>",
-    '  <main><nav id="entityNav"></nav><section id="app"></section></main>',
+    '<body class="forge-shell">',
+    '  <div class="forge-frame">',
+    '    <aside class="status-rail">',
+    '      <div class="forge-mark"><span class="mark-core">H</span><div><strong>HERCULES FORGE</strong><small>OWNED BUILD SYSTEM</small></div></div>',
+    '      <div class="rail-block"><span class="rail-label">ENGINE</span><b>Hercules Core</b><small>Owner-controlled runtime</small></div>',
+    '      <div class="rail-block"><span class="rail-label">PROJECT</span><b>' + escapeHtml(spec.name) + '</b><small>Generated locally by Forge</small></div>',
+    '      <div class="rail-block"><span class="rail-label">STATE</span><b class="state-ready">READY</b><small id="forge-status">System online</small></div>',
+    '      <div class="rail-foot">SAUCEAPPROVED · HERCULES</div>',
+    '    </aside>',
+    '    <div class="forge-workspace">',
+    '      <header class="command-deck">',
+    '        <div><span class="eyebrow">HERCULES FORGE / ACTIVE BUILD</span><h1>' + escapeHtml(spec.name) + '</h1><p>' + escapeHtml(spec.description) + '</p></div>',
+    '        <div class="command-badge"><span>BUILD MODE</span><strong>OWNED</strong></div>',
+    '      </header>',
+    '      <main class="workspace-body"><nav id="entityNav" class="forge-nav"></nav><section id="app"></section></main>',
+    '    </div>',
+    '  </div>',
     '  <script src="/app.js" defer></script>',
     "</body>",
     "</html>",
@@ -350,16 +364,20 @@ function renderIndex(spec) {
 
 function renderAppCss() {
   return [
-    ":root{font-family:Inter,system-ui,sans-serif;color:#eef2ff;background:#080b12}",
-    "*{box-sizing:border-box}body{margin:0}",
-    ".hero{padding:28px clamp(18px,5vw,64px);border-bottom:1px solid #253047;background:#0d111a}",
-    ".hero h1{margin:5px 0;font-size:clamp(28px,5vw,48px)}.hero p{color:#aab4c8;max-width:760px}.eyebrow{font-size:12px;letter-spacing:.16em;color:#8bc4ff;text-transform:uppercase}",
-    "main{padding:24px clamp(18px,5vw,64px);max-width:1200px;margin:auto}nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}",
-    "button{border:0;border-radius:9px;padding:10px 13px;font-weight:700;cursor:pointer}nav button{background:#172033;color:#dce6ff}.primary{background:#f5f7ff;color:#0b0f17}.danger{background:#331922;color:#ffb6c5}",
-    ".grid{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:20px}.panel{background:#111724;border:1px solid #273047;border-radius:14px;padding:18px}",
-    "label{display:block;color:#aab4c8;font-size:13px;margin:10px 0}input,textarea{width:100%;margin-top:5px;background:#090d15;color:#fff;border:1px solid #303b52;border-radius:8px;padding:10px}textarea{min-height:90px}",
-    ".item{border:1px solid #273047;border-radius:10px;padding:12px;margin:9px 0}.item pre{white-space:pre-wrap;overflow-wrap:anywhere}.muted{color:#8791a7;font-size:12px}.empty{color:#8791a7;padding:20px 0}",
-    "@media(max-width:760px){.grid{grid-template-columns:1fr}}",
+    ":root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#f5f7fb;background:#06080c;--panel:#0d1118;--panel2:#121823;--line:#293241;--steel:#9ca8b8;--hot:#f2f4f8;--accent:#d8ff3e;--danger:#ff5f6d}",
+    "*{box-sizing:border-box}html,body{min-height:100%}body{margin:0;background:radial-gradient(circle at 72% 18%,rgba(216,255,62,.08),transparent 24%),linear-gradient(180deg,#07090d,#05070a 58%,#090c11)}",
+    ".forge-frame{min-height:100vh;display:grid;grid-template-columns:248px 1fr}.status-rail{position:sticky;top:0;height:100vh;padding:24px 18px;border-right:1px solid #202734;background:linear-gradient(180deg,#090c11 0%,#07090d 100%);display:flex;flex-direction:column;gap:18px}",
+    ".forge-mark{display:flex;gap:12px;align-items:center;padding-bottom:20px;border-bottom:1px solid #202734}.forge-mark strong{display:block;font-size:13px;letter-spacing:.11em}.forge-mark small{display:block;color:#707b8c;font-size:9px;letter-spacing:.17em;margin-top:3px}.mark-core{display:grid;place-items:center;width:42px;height:42px;border:1px solid #5f6a79;background:#111720;font-weight:950;font-size:22px;box-shadow:inset 0 0 0 3px #080b10}",
+    ".rail-block{padding:14px;border:1px solid #202734;background:#0b0f15}.rail-block b,.rail-block small{display:block}.rail-block b{font-size:13px;margin:5px 0}.rail-block small{color:#7e899a;font-size:11px;line-height:1.45}.rail-label{font-size:9px;letter-spacing:.18em;color:#8894a5}.state-ready{color:var(--accent)}.rail-foot{margin-top:auto;color:#5d6674;font-size:9px;letter-spacing:.16em}",
+    ".forge-workspace{min-width:0}.command-deck{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;padding:32px clamp(20px,4vw,56px);border-bottom:1px solid #202734;background:linear-gradient(180deg,rgba(17,22,31,.96),rgba(9,12,17,.94));box-shadow:0 20px 50px rgba(0,0,0,.18)}",
+    ".command-deck h1{margin:7px 0 8px;font-size:clamp(30px,4.8vw,56px);letter-spacing:-.04em;line-height:.95}.command-deck p{margin:0;color:#929daf;max-width:760px;line-height:1.6}.eyebrow{font-size:10px;letter-spacing:.2em;color:var(--accent);font-weight:900}.command-badge{min-width:126px;padding:12px 14px;border:1px solid #394354;background:#0a0e14;text-align:right}.command-badge span,.command-badge strong{display:block}.command-badge span{font-size:9px;color:#778293;letter-spacing:.17em}.command-badge strong{font-size:18px;margin-top:3px}",
+    ".workspace-body{padding:24px clamp(20px,4vw,56px);max-width:1500px}.forge-nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px;padding-bottom:16px;border-bottom:1px solid #1d2430}",
+    "button{appearance:none;border:1px solid #313b4b;border-radius:4px;padding:10px 13px;font-weight:800;cursor:pointer;background:#111722;color:#e7ebf2;transition:transform .15s ease,border-color .15s ease,background .15s ease}button:hover{transform:translateY(-1px);border-color:#667387;background:#171f2c}.forge-nav button{font-size:11px;letter-spacing:.04em}.primary{background:var(--accent);border-color:var(--accent);color:#07090d}.danger{background:#221015;border-color:#4b222b;color:#ffabb3}",
+    ".grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:18px}.panel{background:linear-gradient(180deg,#101620,#0c1118);border:1px solid #232c39;border-radius:6px;padding:20px;box-shadow:0 18px 42px rgba(0,0,0,.16)}.panel h2{margin:0 0 14px;font-size:14px;letter-spacing:.04em;text-transform:uppercase}",
+    "label{display:block;color:#9aa5b6;font-size:11px;letter-spacing:.04em;margin:12px 0}input,textarea{width:100%;margin-top:6px;background:#070a0f;color:#fff;border:1px solid #2c3543;border-radius:4px;padding:11px;outline:none}input:focus,textarea:focus{border-color:#778498;box-shadow:0 0 0 2px rgba(216,255,62,.07)}textarea{min-height:110px;resize:vertical}",
+    ".item{border:1px solid #252e3b;background:#0a0e14;border-radius:5px;padding:13px;margin:9px 0}.item pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#c7d0dc;font-size:11px;line-height:1.5}.item button{margin-right:7px}.muted{color:#7f8a9b;font-size:11px}.empty{color:#6f7988;padding:20px 0}",
+    "@media(max-width:900px){.forge-frame{grid-template-columns:1fr}.status-rail{position:relative;height:auto;display:grid;grid-template-columns:1fr 1fr;padding:14px}.forge-mark{grid-column:1/-1}.rail-foot{display:none}.grid{grid-template-columns:1fr}.command-deck{padding-top:24px}}",
+    "@media(max-width:620px){.status-rail{grid-template-columns:1fr}.command-deck{flex-direction:column}.command-badge{width:100%;text-align:left}.workspace-body{padding:18px}.panel{padding:15px}}",
     "",
   ].join("\n");
 }
@@ -370,12 +388,12 @@ function renderAppJs(spec) {
   return `(() => {
 const entities=${entities}; const pages=${pages};
 const entityByName=new Map(entities.map((entity)=>[entity.name,entity]));
-const nav=document.getElementById("entityNav"); const app=document.getElementById("app");
+const nav=document.getElementById("entityNav"); const app=document.getElementById("app"); const forgeStatus=document.getElementById("forge-status");
 let active=pages[0]?.entity?entityByName.get(pages[0].entity):entities[0]||null; let editing=null;
 const esc=(v)=>String(v).replace(/[&<>"']/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const inputType=(t)=>t==="number"?"number":t==="datetime"?"datetime-local":"text";
 function coerce(field,value,checked){if(field.type==="boolean")return checked;if(field.type==="number")return value===""?null:Number(value);if(field.type==="json"){if(value==="")return null;return JSON.parse(value)}if(field.type==="datetime")return value?new Date(value).toISOString():null;return value}
-async function request(path,options={}){const r=await fetch(path,{method:options.method||"GET",headers:{"content-type":"application/json"},body:options.body===undefined?undefined:JSON.stringify(options.body)});if(r.status===204)return null;const b=await r.json();if(!r.ok)throw new Error(b.error||("HTTP "+r.status));return b}
+async function request(path,options={}){if(forgeStatus)forgeStatus.textContent="Working";try{const r=await fetch(path,{method:options.method||"GET",headers:{"content-type":"application/json"},body:options.body===undefined?undefined:JSON.stringify(options.body)});if(r.status===204){if(forgeStatus)forgeStatus.textContent="System online";return null}const b=await r.json();if(!r.ok)throw new Error(b.error||("HTTP "+r.status));if(forgeStatus)forgeStatus.textContent="System online";return b}catch(error){if(forgeStatus)forgeStatus.textContent="Action blocked";throw error}}
 function renderNav(){nav.innerHTML="";const items=pages.length?pages:entities.map((entity)=>({name:entity.name,entity:entity.name}));for(const page of items){const b=document.createElement("button");b.textContent=page.name;b.onclick=()=>{active=page.entity?entityByName.get(page.entity):null;editing=null;render(page)};nav.appendChild(b)}}
 function fieldControl(field,item={}){const label=document.createElement("label");label.textContent=field.name+(field.required?" *":"");let input;if(field.type==="boolean"){input=document.createElement("input");input.type="checkbox";input.checked=Boolean(item[field.name])}else if(field.type==="json"){input=document.createElement("textarea");input.value=item[field.name]===undefined||item[field.name]===null?"":JSON.stringify(item[field.name],null,2)}else{input=document.createElement("input");input.type=inputType(field.type);const raw=item[field.name];input.value=raw===undefined||raw===null?"":(field.type==="datetime"?String(raw).slice(0,16):raw)}input.dataset.field=field.name;label.appendChild(input);return label}
 async function refreshList(entity,list){const data=await request("/api/"+encodeURIComponent(entity.name));list.innerHTML="";if(!data.items.length){list.innerHTML='<div class="empty">No records yet.</div>';return}for(const item of data.items){const card=document.createElement("div");card.className="item";card.innerHTML="<pre>"+esc(JSON.stringify(item,null,2))+"</pre>";const edit=document.createElement("button");edit.textContent="Edit";edit.onclick=()=>{editing=item;render()};const del=document.createElement("button");del.className="danger";del.textContent="Delete";del.onclick=async()=>{await request("/api/"+encodeURIComponent(entity.name)+"/"+encodeURIComponent(item.id),{method:"DELETE"});if(editing?.id===item.id)editing=null;render()};card.append(edit,del);list.appendChild(card)}}
