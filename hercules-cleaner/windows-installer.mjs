@@ -237,6 +237,7 @@ export async function installWindowsCleaner({
         version:candidate.version,
         sourceCommit:candidate.commitSha,
         aggregateSha256:candidate.aggregateSha256,
+        files:candidate.files,
       },null,2)+"\n",
       {mode:0o600},
     );
@@ -265,6 +266,17 @@ export async function rollbackWindowsCleaner({
   const plan=planWindowsRollback({localAppData,home,currentVersion:previous.currentVersion,rollbackVersion:previous.rollbackVersion,nodePath});
   try{const info=await stat(plan.rollbackRoot);if(!info.isDirectory())throw new Error("rollback-version-missing")}
   catch(error){if(error?.message==="rollback-version-missing")throw error;throw new Error("rollback-version-missing")}
+  let rollbackIdentity;
+  try{rollbackIdentity=JSON.parse(await readFile(win32.join(plan.rollbackRoot,"package-identity.json"),"utf8"))}
+  catch{throw new Error("rollback-package-integrity-mismatch")}
+  if(rollbackIdentity?.version!==previous.rollbackVersion||
+     String(rollbackIdentity?.sourceCommit??"").toLowerCase()!==String(previous.rollbackCommitSha??"").toLowerCase()||
+     String(rollbackIdentity?.aggregateSha256??"").toLowerCase()!==String(previous.rollbackAggregateSha256??"").toLowerCase()||
+     !Array.isArray(rollbackIdentity?.files)){
+    throw new Error("rollback-package-integrity-mismatch");
+  }
+  const rollbackFiles=await verifyWindowsPackageFiles({sourceRoot:plan.rollbackRoot,manifest:rollbackIdentity});
+  if(!rollbackFiles.allowed)throw new Error("rollback-package-integrity-mismatch");
   await mkdir(win32.dirname(plan.launcherPath),{recursive:true});
   await writeFile(plan.launcherPath,plan.launcherContent,{mode:0o700});
   const state={
@@ -286,6 +298,7 @@ export async function uninstallWindowsCleaner({
   home=homedir(),
   nodePath=process.execPath,
   platform=currentPlatform(),
+  uninstallAutostartFn=uninstallAutostart,
 }={}){
   if(platform!=="win32")throw new Error("windows uninstall can run only on Windows");
   const baseRoot=windowsBase(localAppData);
@@ -294,7 +307,12 @@ export async function uninstallWindowsCleaner({
   const plan=planWindowsUninstall({localAppData,home,version:previous?.currentVersion});
   if(previous?.currentVersion){
     const cliPath=win32.join(baseRoot,"app",previous.currentVersion,"hercules-cleaner","cli.mjs");
-    await uninstallAutostart({platform:"win32",home,nodePath,cliPath}).catch(()=>{});
+    try{
+      await uninstallAutostartFn({platform:"win32",home,nodePath,cliPath,strict:true});
+    }catch(error){
+      const detail=error instanceof Error?error.message:String(error);
+      throw new Error("autostart-removal-failed:"+detail);
+    }
   }
   await rm(baseRoot,{recursive:true,force:true});
   return {uninstalled:true,statePreserved:true,stateRoot:plan.stateRoot};
