@@ -93,7 +93,14 @@ export async function buildWindowsInstallerBundle({commitSha,outputDir}={}){
     aggregateSha256
   };
   await writeFile(join(destination,"bundle-manifest.json"),JSON.stringify(manifest,null,2)+"\n");
-  return {destination,manifest,aggregateSha256};
+  const expectedIdentity={
+    schema:"sauceapproved.hercules-cleaner.install-identity",
+    version:VERSION,
+    commitSha:sourceCommit,
+    aggregateSha256,
+  };
+  await writeFile(join(destination,"expected-install-identity.json"),JSON.stringify(expectedIdentity,null,2)+"\n",{mode:0o600});
+  return {destination,manifest,aggregateSha256,expectedIdentity};
 }
 
 function parse(argv){
