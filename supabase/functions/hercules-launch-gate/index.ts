@@ -279,6 +279,26 @@ async function run(){
 
 Deno.serve(async req=>{
   if(req.method==='GET'){
+    const url=new URL(req.url);
+    if(url.searchParams.get('titan_verification_authorization')==='1'){
+      const {data:rows,error}=await db.from('hercules_software_commercial_approvals')
+        .select('approval_type,status,approved_at')
+        .eq('product_code',TITAN_PRODUCT_CODE)
+        .in('approval_type',['pricing','terms','privacy'])
+        .order('approval_type');
+      if(error)return out({ok:false,error:'titan_verification_authorization_unavailable'},500);
+      const required=['pricing','terms','privacy'];
+      const commercialApproved=Boolean(
+        (rows||[]).length===3 &&
+        required.every(type=>(rows||[]).some((row:any)=>row.approval_type===type&&row.status==='approved'))
+      );
+      return out({
+        ok:true,
+        commercialApproved,
+        packetFingerprint:'33C0F4567B6C',
+        productCode:TITAN_PRODUCT_CODE
+      });
+    }
     const [{data},registration]=await Promise.all([
       db.from('hercules_launch_gate_checks')
         .select('technical_ok,commercial_ok,launch_ready,checks,checked_at')
@@ -291,7 +311,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'2.0.0',
+      version:'2.1.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt
