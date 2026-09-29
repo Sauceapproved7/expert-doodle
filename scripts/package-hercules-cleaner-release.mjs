@@ -88,7 +88,14 @@ export async function writeCleanerReleasePackage({commitSha,outputDir}={}){
     await cp(join(ROOT,item.path),target);
   }
   await writeFile(join(destination,"cleaner-release-manifest.json"),JSON.stringify(manifest,null,2)+"\n");
-  return {destination,manifest};
+  const trust=Object.freeze({
+    schema:"sauceapproved.hercules.cleaner.release-trust.v1",
+    version:manifest.version,
+    sourceCommit:manifest.sourceCommit,
+    aggregateSha256:manifest.aggregateSha256,
+  });
+  await writeFile(join(destination,"cleaner-release-trust.json"),JSON.stringify(trust,null,2)+"\n",{mode:0o600});
+  return {destination,manifest,trust};
 }
 
 function parseArgs(argv){
