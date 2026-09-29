@@ -1,0 +1,19 @@
+{
+  "board": {},
+  "boards": [],
+  "cvpcb": {},
+  "erc": {},
+  "libraries": {},
+  "meta": {
+    "filename": "soundworld-speaker-v1.kicad_pro",
+    "version": 1
+  },
+  "net_settings": {},
+  "pcbnew": {},
+  "schematic": {},
+  "text_variables": {
+    "PROJECT": "SoundWorld Speaker V1",
+    "RELEASE_CLASS": "EVT-EDA",
+    "FABRICATION_READY": "false"
+  }
+}
