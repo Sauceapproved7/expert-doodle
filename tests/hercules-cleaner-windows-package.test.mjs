@@ -23,6 +23,11 @@ test("Windows bundle is exact-commit owner-code-only and does not claim publishe
     assert.equal(manifest.autoUpdate.trustedExpectedIdentityRequired,true);
     assert.equal((await stat(join(root,"install.cmd"))).isFile(),true);
     assert.equal((await stat(join(root,"Install-HerculesCleaner.ps1"))).isFile(),true);
+    assert.equal((await stat(join(root,"expected-install-identity.json"))).isFile(),true);
+    const expectedIdentity=JSON.parse(await readFile(join(root,"expected-install-identity.json"),"utf8"));
+    assert.equal(expectedIdentity.version,"1.0.0");
+    assert.equal(expectedIdentity.commitSha,"a".repeat(40));
+    assert.equal(expectedIdentity.aggregateSha256,manifest.aggregateSha256);
     assert.equal((await stat(join(root,"app","hercules-cleaner","cli.mjs"))).isFile(),true);
     assert.equal((await stat(join(root,"app","hercules-cleaner","installer.mjs"))).isFile(),true);
     for(const item of manifest.files){
