@@ -94,6 +94,7 @@ export function createStudioOnboardingManifest(){
     release:"founding-customer",
     publicRoutes:[
       "/",
+      "/operator",
       "/pricing",
       "/market",
       "/getting-started",
@@ -167,14 +168,14 @@ export function renderStudioLandingShell(){
     '<article class="plan '+(index===1?'featured':'')+'"><span class="count">0'+(index+1)+'</span><h2>'+esc(plan.name)+'</h2><div class="price">$'+esc(plan.monthlyUsd)+'<small>/month</small></div><p>'+esc(plan.features.slice(0,2).join(" · "))+'</p><a class="cta" href="/pricing">See plan</a></article>'
   ).join("");
   const products=[
-    ["Hercules Video","Brief → storyboard → shot plan → routing → quality → assembly → evidence."],
-    ["Content Multiplier","Turn one approved source into governed platform-ready content branches."],
-    ["Brand Brain","Keep brand rules versioned, reviewable and consistent across channels."],
-    ["AI Sales Agent","Ground sales conversations in approved product facts and controlled handoffs."],
-    ["Vintage Camera","Local-first capture with quality checks, QA receipts and device proof."],
-    ["Kids Studio","Child-focused creative surfaces with explicit safety and review boundaries."]
+    ["Hercules Video","/operator","Brief → storyboard → shot plan → routing → quality → assembly → evidence."],
+    ["Content Multiplier","/content-multiplier","Turn one approved source into governed platform-ready content branches."],
+    ["Brand Brain","/brand-brain","Keep brand rules versioned, reviewable and consistent across channels."],
+    ["AI Sales Agent","/ai-sales-agent","Ground sales conversations in approved product facts and controlled handoffs."],
+    ["Vintage Camera","/vintage-camera","Local-first capture with quality checks, QA receipts and device proof."],
+    ["Kids Studio","/kids","Child-focused creative surfaces with explicit safety and review boundaries."]
   ];
-  const productCards=products.map((item,i)=>'<article class="plan"><span class="count">'+String(i+1).padStart(2,"0")+'</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[1])+'</p></article>').join("");
+  const productCards=products.map((item,i)=>'<article class="plan"><span class="count">'+String(i+1).padStart(2,"0")+'</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[2])+'</p><a class="cta" href="'+esc(item[1])+'">Open</a></article>').join("");
   return wrap("SauceApproved Studio",
     '<section class="hero"><div class="eyebrow">SAUCEAPPROVED / HERCULES-POWERED CREATIVE SYSTEM</div><h1>One Studio. A controlled creative production chain.</h1><p class="lead">SauceApproved Studio turns creative work into a visible system instead of a black box: brief, planning, generation routing, quality checks, assembly, recovery and evidence all stay connected.</p><div class="notice">Founding Customer release. Paid checkout remains locked until SauceApproved finishes owner approvals and live payment verification.</div><p class="foot"><a href="/getting-started">Getting started</a> · <a href="/operator">Open operator workspace</a> · <a href="/market">Explore Studio modules</a> · <a href="/support">Support</a></p></section>'+
     '<section class="grid">'+productCards+'</section>'+
