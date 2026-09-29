@@ -15,7 +15,15 @@ test("commercial launch preserves the active production Stripe Vault provider pa
   assert.match(gate,/payment_provider_ready/);
 });
 
-test("owned AppDeploy Stripe custody requires a fresh credential-free live attestation",()=>{
+test("owned AppDeploy Stripe custody prefers fresh live HTTPS attestation with ledger fallback",()=>{
+  assert.match(gate,/APPDEPLOY_STRIPE_ATTESTATION_URL/);
+  assert.match(gate,/\/api\/provider-attestation/);
+  assert.match(gate,/fetch\(APPDEPLOY_STRIPE_ATTESTATION_URL/);
+  assert.match(gate,/observedAt/);
+  assert.match(gate,/5\*60\*1000/);
+  assert.match(gate,/liveAppDeployStripeReady/);
+  assert.match(gate,/ledgerAppDeployStripeReady/);
+  assert.match(gate,/liveAppDeployStripeReady\|\|ledgerAppDeployStripeReady/);
   assert.match(gate,/appdeploy-stripe-provider-verified/);
   assert.match(gate,/APPDEPLOY_STRIPE_APP_ID/);
   assert.match(gate,/custody===['"]appdeploy['"]/);
