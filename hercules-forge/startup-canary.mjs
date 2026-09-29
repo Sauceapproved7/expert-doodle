@@ -105,6 +105,7 @@ export async function runForgeStartupPromptCanary({
   projectId,
   fetchImpl = globalThis.fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
+  collisionFallback = true,
 } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("fetch implementation is required");
   validateInputs({controlToken, projectId, timeoutMs});
@@ -129,6 +130,7 @@ export async function runForgeStartupPromptCanary({
       };
     } catch (error) {
       if (!/collides with non-canary project/i.test(String(error?.message ?? ""))) throw error;
+      if (!collisionFallback) throw error;
       const fallbackId=reservedCanaryProjectId(projectId);
       const fallback=await runForgeStartupPromptCanary({
         origin:base,
@@ -136,6 +138,7 @@ export async function runForgeStartupPromptCanary({
         projectId:fallbackId,
         fetchImpl,
         timeoutMs,
+        collisionFallback:false,
       });
       return {
         ...fallback,
