@@ -157,7 +157,7 @@ This v1 certification defines update eligibility and rollback identity; it does 
 
 ## Device activation
 
-Cleaner device activation is privacy-preserving and separate from filesystem authority.
+Cleaner device activation is privacy-preserving and separate from filesystem authority. In production it is routed through the existing `hercules-private-bridge` Edge Function so the activation path does not consume an additional Supabase Edge Function slot.
 
 An installed Cleaner creates:
 - a random opaque device UUID;
@@ -183,7 +183,7 @@ CLI:
 
 ```sh
 node hercules-cleaner/cli.mjs device-init --version 1.0.0
-node hercules-cleaner/cli.mjs device-activate --code HC-XXXX-XXXX --endpoint https://<project>.supabase.co/functions/v1/hercules-cleaner-device
+node hercules-cleaner/cli.mjs device-activate --code HC-XXXX-XXXX --endpoint https://<project>.supabase.co/functions/v1/hercules-private-bridge
 node hercules-cleaner/cli.mjs device-status
 ```
 

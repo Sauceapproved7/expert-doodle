@@ -3,7 +3,8 @@ import {readFile} from "node:fs/promises";
 import test from "node:test";
 
 const sql=await readFile(new URL("../supabase/migrations/20260929122000_hercules_cleaner_device_activation_v1.sql",import.meta.url),"utf8");
-const edge=await readFile(new URL("../supabase/functions/hercules-cleaner-device/index.ts",import.meta.url),"utf8");
+const edge=await readFile(new URL("../supabase/functions/hercules-private-bridge/cleaner-device.ts",import.meta.url),"utf8");
+const bridge=await readFile(new URL("../supabase/functions/hercules-private-bridge/index.ts",import.meta.url),"utf8");
 
 test("Cleaner device registry stores hashes/public identity only and has no filesystem inventory columns",()=>{
   assert.match(sql,/create table if not exists public\.hercules_cleaner_activation_codes/i);
@@ -74,4 +75,12 @@ test("Cleaner privacy candidate discloses device activation fields and local-dat
 test("Cleaner activation SQL wrapper uses a valid dollar-quoted body",()=>{
   assert.match(sql,/create or replace function public\.hercules_activate_cleaner_device[\s\S]*?as \$\$[\s\S]*?\$\$;/i);
   assert.doesNotMatch(sql,/\nas \$\n/);
+});
+
+
+test("Cleaner activation is routed through the existing private bridge to avoid a new Edge Function slot",()=>{
+  assert.match(bridge,/cleaner-device\.ts/);
+  assert.match(bridge,/isCleanerDeviceAction/);
+  assert.match(bridge,/handleCleanerDeviceRequest/);
+  assert.match(bridge,/cleaner_device_activation/);
 });
