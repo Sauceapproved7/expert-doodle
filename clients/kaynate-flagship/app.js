@@ -46,3 +46,32 @@ if(buildCatering){
 }
 
 
+
+function filterMenu() {
+  const query=(document.getElementById("menuSearch")?.value||"").trim().toLowerCase();
+  const availability=document.getElementById("availabilityFilter")?.value||"all";
+  const rows=[...document.querySelectorAll(".menu-row")];
+  let visible=0;
+
+  for (const row of rows) {
+    const name=(row.dataset.menuName||"").toLowerCase();
+    const status=row.dataset.menuStatus||"";
+    const matchName=!query||name.includes(query);
+    const matchStatus=availability==="all"||status===availability;
+    const show=matchName&&matchStatus;
+    row.hidden=!show;
+    if(show) visible++;
+  }
+
+  for (const category of document.querySelectorAll(".menu-category")) {
+    category.hidden=!category.querySelector(".menu-row:not([hidden])");
+  }
+
+  const count=document.getElementById("menuCount");
+  if(count) count.textContent=visible+" menu item"+(visible===1?"":"s");
+}
+
+const menuSearch=document.getElementById("menuSearch");
+const availabilityFilter=document.getElementById("availabilityFilter");
+if(menuSearch) menuSearch.addEventListener("input",filterMenu);
+if(availabilityFilter) availabilityFilter.addEventListener("change",filterMenu);
