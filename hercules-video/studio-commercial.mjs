@@ -106,7 +106,8 @@ export function createStudioOnboardingManifest(){
       "/kids",
       "/movie-machine",
       "/holostage",
-      "/legacy-vault"
+      "/legacy-vault",
+      "/studio-director"
     ],
     firstRun:[
       {step:1,id:"choose-workflow",label:"Choose a Studio workflow",path:"/"},
@@ -223,7 +224,8 @@ export function renderStudioLandingShell(){
     ["Kids Studio","/kids","Create child-focused stories and media with clear safety and review boundaries."],
     ["Movie Machine","/movie-machine","Turn one story idea into a full cinematic blueprint with emotional camera logic and proof."],
     ["HoloStage","/holostage","Pre-plan blocking, cameras and lighting on a virtual production floor with feasibility guards."],
-    ["Legacy Vault","/legacy-vault","Build documentary-style legacy stories while keeping consent and source provenance attached."]
+    ["Legacy Vault","/legacy-vault","Build documentary-style legacy stories while keeping consent and source provenance attached."],
+    ["Studio Director","/studio-director","Route one project across the right Hercules Studio systems with proof gates, blast-radius rehearsal, and creative-intent drift protection."]
   ];
   const productCards=products.map((item,i)=>'<article class="plan"><span class="count">'+String(i+1).padStart(2,"0")+'</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[2])+'</p><a class="cta" href="'+esc(item[1])+'">Open</a></article>').join("");
   return wrap("SauceApproved Studio",
