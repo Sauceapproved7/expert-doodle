@@ -11,6 +11,7 @@ import {
   planWindowsUninstall,
   verifyWindowsInstallIdentity,
   verifyWindowsPackageFiles,
+  verifyWindowsReleaseTrust,
 } from "../hercules-cleaner/windows-installer.mjs";
 
 const commitSha="a".repeat(40);
@@ -140,4 +141,13 @@ test("package verifier rejects manifest path traversal outside the extracted pac
   } finally {
     await rm(root,{recursive:true,force:true});
   }
+});
+
+
+test("Windows installer rejects a self-consistent package that does not match an independent release trust anchor", () => {
+  const recomputed={...candidate("1.1.0"),commitSha:"c".repeat(40),aggregateSha256:"d".repeat(64)};
+  const trust={version:"1.1.0",commitSha,aggregateSha256:digest};
+  const result=verifyWindowsReleaseTrust({candidate:recomputed,trust});
+  assert.equal(result.allowed,false);
+  assert.equal(result.reason,"release-trust-mismatch");
 });
