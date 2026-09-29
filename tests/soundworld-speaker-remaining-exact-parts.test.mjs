@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {speakerRemainingExactParts} from '../hardware/soundworld/eda/remaining-exact-parts-v1.mjs';
+test('selects current nRF5340 aQFN EVT option',()=>{assert.equal(speakerRemainingExactParts.wireless.orderCode,'nRF5340-QKAA-R7');assert.equal(speakerRemainingExactParts.wireless.package,'aQFN94 7x7mm');});
+test('freezes verified package families without inventing suffixes',()=>{assert.equal(speakerRemainingExactParts.typeCProtection.family,'TPD4S201');assert.equal(speakerRemainingExactParts.typeCProtection.package,'WQFN RUK-20 3x3mm');assert.equal(speakerRemainingExactParts.tmp117.family,'TMP117');});
+test('unresolved exact suffixes block ERC readiness',()=>{assert.equal(speakerRemainingExactParts.allExactOrderCodesFrozen,false);assert.equal(speakerRemainingExactParts.ercReady,false);assert.equal(speakerRemainingExactParts.fabricationReady,false);});
