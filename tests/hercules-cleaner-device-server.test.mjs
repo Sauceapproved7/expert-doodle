@@ -69,3 +69,9 @@ test("Cleaner privacy candidate discloses device activation fields and local-dat
   assert.match(privacy,/filenames/i);
   assert.match(privacy,/Recovery Capsule/i);
 });
+
+
+test("Cleaner activation SQL wrapper uses a valid dollar-quoted body",()=>{
+  assert.match(sql,/create or replace function public\.hercules_activate_cleaner_device[\s\S]*?as \$\$[\s\S]*?\$\$;/i);
+  assert.doesNotMatch(sql,/\nas \$\n/);
+});
