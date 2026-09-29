@@ -184,12 +184,19 @@ export async function activateInstalledVersion({
     throw new Error(error);
   }
 
+  const previousIdentity=previous?.version?{
+    version:String(previous.version),
+    versionRoot:String(previous.versionRoot||join(root,"versions",String(previous.version))),
+    sourceCommit:/^[a-f0-9]{40}$/i.test(String(previous.sourceCommit||""))?String(previous.sourceCommit).toLowerCase():null,
+    artifactSha256:/^[a-f0-9]{64}$/i.test(String(previous.artifactSha256||""))?String(previous.artifactSha256).toLowerCase():null,
+  }:null;
   const next={
     schema:"sauceapproved.hercules-cleaner.active-install",
     version,
     versionRoot:target,
     sourceCommit:/^[a-f0-9]{40}$/i.test(String(sourceCommit||""))?String(sourceCommit).toLowerCase():null,
     artifactSha256:/^[a-f0-9]{64}$/i.test(String(artifactSha256||""))?String(artifactSha256).toLowerCase():null,
+    rollback:previousIdentity,
     activatedAt:date.toISOString(),
   };
   await atomicJson(activePath,next);
@@ -205,6 +212,60 @@ export async function activateInstalledVersion({
   };
   await atomicJson(receiptPath,receipt);
   return {...receipt,active:next};
+}
+
+export async function rollbackInstalledVersion({
+  installRoot,
+  expectedRollback,
+  healthCheck,
+  now=()=>new Date(),
+}={}){
+  const root=resolve(installRoot);
+  const activePath=join(root,"active.json");
+  const active=await readJson(activePath);
+  const retained=active?.rollback;
+  if(!retained?.version||!expectedRollback)throw new Error("rollback identity unavailable");
+  const sameVersion=String(retained.version)===String(expectedRollback.version);
+  const sameCommit=String(retained.sourceCommit||"").toLowerCase()===String(expectedRollback.sourceCommit||"").toLowerCase();
+  const sameArtifact=String(retained.artifactSha256||"").toLowerCase()===String(expectedRollback.artifactSha256||"").toLowerCase();
+  if(!sameVersion||!sameCommit||!sameArtifact)throw new Error("rollback identity mismatch");
+  const expectedRoot=join(root,"versions",String(retained.version));
+  if(resolve(String(retained.versionRoot||""))!==resolve(expectedRoot))throw new Error("rollback identity mismatch");
+  const targetStat=await stat(expectedRoot).catch(()=>null);
+  if(!targetStat?.isDirectory())throw new Error("retained rollback version is missing");
+  if(typeof healthCheck!=="function")throw new Error("health check is required before rollback activation");
+  const health=await healthCheck({versionRoot:expectedRoot,version:String(retained.version)});
+  if(health?.ok!==true)throw new Error(String(health?.error||"rollback health check failed"));
+  const date=now();
+  const next={
+    schema:"sauceapproved.hercules-cleaner.active-install",
+    version:String(retained.version),
+    versionRoot:expectedRoot,
+    sourceCommit:retained.sourceCommit||null,
+    artifactSha256:retained.artifactSha256||null,
+    rollback:{
+      version:String(active.version),
+      versionRoot:String(active.versionRoot),
+      sourceCommit:active.sourceCommit||null,
+      artifactSha256:active.artifactSha256||null,
+    },
+    activatedAt:date.toISOString(),
+  };
+  await atomicJson(activePath,next);
+  const receipt={
+    schema:"sauceapproved.hercules-cleaner.update-receipt",
+    status:"rollback_activated",
+    previousVersion:active.version,
+    attemptedVersion:retained.version,
+    sourceCommit:next.sourceCommit,
+    artifactSha256:next.artifactSha256,
+    health,
+    recordedAt:date.toISOString(),
+    active:next,
+  };
+  await mkdir(join(root,"update-receipts"),{recursive:true});
+  await atomicJson(join(root,"update-receipts",receiptName(date)),receipt);
+  return receipt;
 }
 
 async function cliHealthCheck({versionRoot,nodePath=process.execPath,stateRoot}){

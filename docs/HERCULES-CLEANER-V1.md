@@ -131,8 +131,9 @@ v1 does not claim:
 - registry optimization;
 - secure forensic erasure;
 - autonomous deletion of arbitrary personal folders;
-- standalone native binaries that require no Node.js runtime;
-- installation on a customer device until that device has been explicitly connected/authorized.
+- a bundled third-party Node.js runtime or standalone native executable;
+- silent permission/elevation bypass;
+- installation on a customer device without that device user's explicit action and operating-system permissions.
 
 The design favors recoverability and explicit policy over aggressive deletion.
 
@@ -152,7 +153,11 @@ Cleaner updates are fail-closed against immutable release identity. An update ca
 
 The update policy cannot enable checkout or change the release out of Early Access. A verified update retains the currently installed version as the explicit rollback version. Recovery Capsule data and local Cleaner state are not update payloads and must not be deleted or migrated implicitly by update eligibility checks.
 
-This v1 certification defines update eligibility and rollback identity; it does not claim a silent auto-updater or native installer. Installation or replacement on a customer device remains subject to that device's explicit authorization and operating-system permissions.
+The Windows Early Access distribution uses a customer-invoked, per-user setup path under `%LOCALAPPDATA%\\SauceApproved\\Hercules Cleaner`. It requires Node.js 22+, verifies the exact bundle manifest and file SHA-256 values, keeps `~/.hercules-cleaner/` outside the application tree, and does not bypass UAC or execution-policy controls.
+
+A successful version activation retains the previous exact version/commit/artifact identity as the rollback identity. Rollback activation must match that retained identity and pass a health check before the active pointer changes. Windows uninstall removes scheduled-task integration before deleting application files; if task cleanup fails unexpectedly, uninstall fails closed and leaves the app/state intact rather than reporting a false clean removal. Recovery Capsules and local Cleaner state remain preserved unless the user separately and explicitly requests user-data removal.
+
+This remains Early Access installer support, not a claim of a bundled native runtime or silent auto-update. Installation or replacement on a customer device remains subject to that device user's explicit action and operating-system permissions.
 
 
 ## Device activation

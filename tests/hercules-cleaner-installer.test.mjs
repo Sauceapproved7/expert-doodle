@@ -8,6 +8,7 @@ import {
   buildUpdateDecision,
   compareVersions,
   createInstallLayout,
+  rollbackInstalledVersion,
   validateArchiveEntries,
   validateUpdateChannel,
 } from "../hercules-cleaner/installer.mjs";
@@ -100,6 +101,49 @@ test("activation commits only after health success and records immutable identit
   }finally{await rm(root,{recursive:true,force:true})}
 });
 
+test("activation retains exact rollback identity and rollback refuses tampered retained identity",async()=>{
+  const root=await mkdtemp(join(tmpdir(),"hercules-cleaner-rollback-"));
+  try{
+    const oldRoot=join(root,"versions","1.0.0");
+    const newRoot=join(root,"versions","1.1.0");
+    await mkdir(oldRoot,{recursive:true});
+    await mkdir(newRoot,{recursive:true});
+    await writeFile(join(root,"active.json"),JSON.stringify({
+      schema:"sauceapproved.hercules-cleaner.active-install",
+      version:"1.0.0",
+      versionRoot:oldRoot,
+      sourceCommit:"a".repeat(40),
+      artifactSha256:"b".repeat(64),
+      activatedAt:"2026-09-28T12:00:00.000Z"
+    }));
+    await activateInstalledVersion({
+      installRoot:root,version:"1.1.0",sourceCommit:"c".repeat(40),artifactSha256:"d".repeat(64),
+      healthCheck:async()=>({ok:true}),
+      now:()=>new Date("2026-09-28T13:01:00Z"),
+    });
+    let active=JSON.parse(await readFile(join(root,"active.json"),"utf8"));
+    assert.equal(active.rollback.version,"1.0.0");
+    assert.equal(active.rollback.sourceCommit,"a".repeat(40));
+    assert.equal(active.rollback.artifactSha256,"b".repeat(64));
+    const rolled=await rollbackInstalledVersion({
+      installRoot:root,
+      expectedRollback:{version:"1.0.0",sourceCommit:"a".repeat(40),artifactSha256:"b".repeat(64)},
+      healthCheck:async()=>({ok:true}),
+      now:()=>new Date("2026-09-28T13:02:00Z"),
+    });
+    assert.equal(rolled.active.version,"1.0.0");
+
+    active=JSON.parse(await readFile(join(root,"active.json"),"utf8"));
+    active.rollback.sourceCommit="e".repeat(40);
+    await writeFile(join(root,"active.json"),JSON.stringify(active));
+    await assert.rejects(()=>rollbackInstalledVersion({
+      installRoot:root,
+      expectedRollback:{version:"1.1.0",sourceCommit:"c".repeat(40),artifactSha256:"d".repeat(64)},
+      healthCheck:async()=>({ok:true}),
+    }),/rollback identity mismatch/i);
+  }finally{await rm(root,{recursive:true,force:true})}
+});
+
 test("Windows scripts are per-user and never bypass execution policy",async()=>{
   const base=new URL("../hercules-cleaner/windows/",import.meta.url);
   const install=await readFile(new URL("Install-HerculesCleaner.ps1",base),"utf8");
@@ -117,6 +161,9 @@ test("Windows scripts are per-user and never bypass execution policy",async()=>{
   assert.match(update,/installer\.mjs/);
   assert.match(uninstall,/RemoveUserData/);
   assert.match(uninstall,/\.hercules-cleaner/);
+  assert.match(uninstall,/schtasks\.exe \/Query/i);
+  assert.match(uninstall,/scheduled task cleanup failed/i);
+  assert.doesNotMatch(uninstall,/catch\{\}/);
   assert.match(launcher,/active\.json/);
   assert.doesNotMatch(cmd,/ExecutionPolicy\s+Bypass/i);
   assert.doesNotMatch(install,/RunAs|requireAdministrator/i);
