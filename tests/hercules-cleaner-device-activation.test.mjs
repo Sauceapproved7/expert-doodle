@@ -10,6 +10,7 @@ import {
   loadDeviceCredential,
   signDeviceChallenge,
   verifyDeviceChallenge,
+  activateCleanerDevice,
 } from "../hercules-cleaner/device-identity.mjs";
 
 test("device identity uses a random opaque id and Ed25519 keys without hardware identifiers",()=>{
@@ -67,4 +68,29 @@ test("activation code format is strict and secrets are not accepted in metadata 
   const identity=createDeviceIdentity({platform:"win32",version:"1.0.0"});
   assert.throws(()=>buildActivationRequest({identity,activationCode:"bad"}),/activation code/i);
   assert.throws(()=>buildActivationRequest({identity:{...identity,platform:"windows\nfile=C:\\secret"},activationCode:"HC-ABCD-1234"}),/platform/i);
+});
+
+
+test("activation client performs challenge-sign-finish without sending private key or filesystem data",async()=>{
+  const identity=createDeviceIdentity({platform:"win32",version:"1.0.0"});
+  const calls=[];
+  const fakeFetch=async(_url,init)=>{
+    const body=JSON.parse(init.body);calls.push(body);
+    if(body.action==="registration_challenge")return new Response(JSON.stringify({ok:true,challengeId:"11111111-1111-4111-8111-111111111111",challenge:"server-challenge",expiresAt:"2026-09-29T12:05:00Z"}),{status:200,headers:{"content-type":"application/json"}});
+    if(body.action==="activate_device")return new Response(JSON.stringify({ok:true,deviceId:identity.deviceId,deviceCredential:"opaque-device-credential-123456",activatedAt:"2026-09-29T12:01:00Z"}),{status:200,headers:{"content-type":"application/json"}});
+    throw new Error("unexpected action");
+  };
+  const result=await activateCleanerDevice({
+    endpoint:"https://example.invalid/functions/v1/hercules-cleaner-device",
+    identity,
+    activationCode:"HC-ABCD-1234",
+    fetchImpl:fakeFetch,
+  });
+  assert.equal(result.deviceCredential,"opaque-device-credential-123456");
+  assert.equal(calls.length,2);
+  assert.equal(calls[0].action,"registration_challenge");
+  assert.equal(calls[1].action,"activate_device");
+  const wire=JSON.stringify(calls);
+  assert.doesNotMatch(wire,/PRIVATE KEY|recovery-vault|filename|filepath|cleanup/i);
+  assert.match(calls[1].signature,/^[A-Za-z0-9+/=]+$/);
 });
