@@ -3,6 +3,7 @@
 **Release class:** Early Access  
 **Runtime:** local-first Node.js agent  
 **Supported operating systems:** Windows, macOS, Linux  
+**Windows installer:** current-user packaged Early Access path  
 **Checkout:** disabled pending owner-approved commercial gates
 
 Hercules Cleaner is a recoverable computer-maintenance agent. It cleans only policy-approved temporary/cache targets and keeps destructive behavior fail-closed.
@@ -44,3 +45,10 @@ node scripts/verify-hercules-execution-contract.mjs
 ```
 
 See `INSTALL.md`, `SECURITY.md`, and `RELEASE-NOTES.md`.
+
+
+## Windows distribution status
+
+The v1.0.0 Windows bundle provides a user-scoped installer with exact release identity and file-integrity verification, health-checked activation, retained rollback identity, and state-preserving uninstall behavior. Node.js 22+ remains external infrastructure and is not bundled.
+
+This is installer support only. It is not approval for public paid launch, pricing, Terms, Privacy, payment activation, antivirus claims, or registry-cleaning claims.
