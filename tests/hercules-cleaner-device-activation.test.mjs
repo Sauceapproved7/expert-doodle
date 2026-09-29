@@ -94,3 +94,12 @@ test("activation client performs challenge-sign-finish without sending private k
   assert.doesNotMatch(wire,/PRIVATE KEY|recovery-vault|filename|filepath|cleanup/i);
   assert.match(calls[1].signature,/^[A-Za-z0-9+/=]+$/);
 });
+
+
+test("Cleaner CLI exposes device init, activation, and status commands",async()=>{
+  const cli=await readFile(new URL("../hercules-cleaner/cli.mjs",import.meta.url),"utf8");
+  assert.match(cli,/device-init/);
+  assert.match(cli,/device-activate/);
+  assert.match(cli,/device-status/);
+  assert.match(cli,/HERCULES_CLEANER_DEVICE_ENDPOINT/);
+});
