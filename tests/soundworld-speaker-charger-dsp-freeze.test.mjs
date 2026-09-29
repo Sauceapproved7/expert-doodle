@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {speakerChargerDspFreeze} from '../hardware/soundworld/eda/charger-dsp-freeze-v1.mjs';
+test('freezes production ADAU1467 package',()=>{assert.equal(speakerChargerDspFreeze.dsp.mpn,'ADAU1467WBCPZ300');assert.equal(speakerChargerDspFreeze.dsp.package,'88-LFCSP 12x12mm EP');});
+test('keeps BQ25792 as EVT reference but blocks production freeze',()=>{assert.equal(speakerChargerDspFreeze.charger.evtMpn,'BQ25792RQMR');assert.equal(speakerChargerDspFreeze.charger.productionFrozen,false);assert.equal(speakerChargerDspFreeze.charger.migrationReview,'BQ25798');});
+test('lifecycle hold blocks ERC release',()=>{assert.equal(speakerChargerDspFreeze.lifecycleHold,true);assert.equal(speakerChargerDspFreeze.ercReleaseReady,false);assert.equal(speakerChargerDspFreeze.fabricationReady,false);});
