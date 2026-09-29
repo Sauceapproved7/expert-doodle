@@ -68,11 +68,28 @@ function statePath(stateRoot){
   return join(resolve(stateRoot),"device.json");
 }
 
+function pendingIdentityPath(stateRoot){
+  return join(resolve(stateRoot),"device-pending.json");
+}
+
 async function atomicJson(path,value){
   await mkdir(dirname(path),{recursive:true,mode:0o700});
   const temp=path+"."+randomUUID()+".tmp";
   await writeFile(temp,JSON.stringify(value,null,2)+"\n",{mode:0o600});
   await rename(temp,path);
+}
+
+export async function saveDeviceIdentity({stateRoot,identity}={}){
+  if(!stateRoot)throw new Error("state root required");
+  if(identity?.schema!=="sauceapproved.hercules-cleaner.device-identity")throw new Error("valid Cleaner device identity required");
+  await atomicJson(pendingIdentityPath(stateRoot),identity);
+  return identity;
+}
+
+export async function loadDeviceIdentity({stateRoot}={}){
+  const parsed=JSON.parse(await readFile(pendingIdentityPath(stateRoot),"utf8"));
+  if(parsed?.schema!=="sauceapproved.hercules-cleaner.device-identity")throw new Error("invalid pending Cleaner device identity");
+  return parsed;
 }
 
 export async function saveDeviceCredential({stateRoot,identity,credential}={}){
