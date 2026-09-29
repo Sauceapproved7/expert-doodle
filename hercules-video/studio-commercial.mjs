@@ -62,27 +62,3 @@ export function renderStudioLegalShell(kind){
   const body='<article class="doc"><div class="eyebrow">'+(privacy?'SAUCEAPPROVED STUDIO / PRIVACY':'SAUCEAPPROVED STUDIO / COMMERCIAL TERMS')+'</div><h1>'+title+'</h1><p class="meta">Prepared for founding-customer launch · September 29, 2026</p><div class="notice"><b>Owner approval pending.</b> Paid checkout remains locked; this public draft is provided for launch review and transparency.</div>'+sections.map(s=>'<h2>'+esc(s[0])+'</h2><p>'+esc(s[1])+'</p>').join('')+'<p><a href="/pricing">Pricing</a> · <a href="'+(privacy?'/terms':'/privacy')+'">'+(privacy?'Terms':'Privacy')+'</a></p></article>';
   return wrap("SauceApproved Studio "+title,body);
 }
-+esc(p.monthlyUsd)+'<small>/month</small></div><p>'+esc(p.tag)+'</p><ul>'+p.features.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul><a class="cta" href="/market">Request founding access</a></article>').join('');
-  return wrap("SauceApproved Studio Pricing",'<section class="hero"><div class="eyebrow">Founding Customer Release</div><h1>Studio plans built to grow with the work.</h1><p class="lead">Choose the Studio level that matches your creative workflow. Paid checkout remains intentionally locked until SauceApproved verifies its business payout, billing identity, checkout and refund path.</p><div class="notice">Pricing is public for evaluation. No charge is created from this page. Founding-access requests remain controlled until paid launch verification is complete.</div></section><section class="grid">'+cards+'</section><p class="foot"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p>');
-}
-
-export function renderStudioLegalShell(kind){
-  const privacy=kind==="privacy";
-  const title=privacy?"Privacy Policy":"Terms of Service";
-  const sections=privacy?[
-    ["Information handled","Studio may process account and workspace information, creative briefs, project inputs, generated outputs, technical logs, run evidence, subscription status and support information required to provide and secure the service."],
-    ["AI and rendering providers","When a requested workflow uses an external model or rendering backend, authorized inputs may be sent to that provider for generation or analysis. Hercules keeps provider routing behind an adapter boundary and does not represent an unavailable provider as connected."],
-    ["Security and provenance","Studio uses fail-closed controls, evidence tracking, run fingerprints and authorization boundaries. No system can guarantee absolute security."],
-    ["Payments","Payment-card data is intended to be handled by the connected payment processor rather than stored directly in the Studio application. Subscription identifiers and entitlement state may be retained to control access."],
-    ["Choices and retention","Customers choose what creative inputs to submit and whether to connect supported providers. Information may be retained as reasonably required for service delivery, security, billing, audit, dispute resolution and legal obligations."]
-  ]:[
-    ["Subscription access","A paid Studio plan grants limited access to the subscribed software service during an active billing period. SauceApproved software, source code, orchestration logic, branding and intellectual property are not sold or transferred to the customer."],
-    ["Creative and AI outputs","Generated material can contain errors and must be reviewed before commercial publication. SauceApproved does not guarantee that an output will meet every platform, legal, brand or business requirement."],
-    ["Third-party providers","External AI, rendering, storage or other providers may be used as replaceable backends. Their separate terms, availability and restrictions can apply."],
-    ["Acceptable use","The service may not be used for unlawful conduct, rights infringement, malicious software, deceptive impersonation, unauthorized access, or bypassing third-party security and permission controls."],
-    ["Billing and launch state","Pricing may be displayed before paid checkout is enabled. A subscription is not created unless an authorized checkout successfully completes. SauceApproved may keep checkout disabled until billing, payout and refund controls are verified."],
-    ["Availability","Features may change as the product develops. Provider-dependent functions may remain disabled when a trusted execution bridge or provider authorization is unavailable."]
-  ];
-  const body='<article class="doc"><div class="eyebrow">'+(privacy?'SAUCEAPPROVED STUDIO / PRIVACY':'SAUCEAPPROVED STUDIO / COMMERCIAL TERMS')+'</div><h1>'+title+'</h1><p class="meta">Prepared for founding-customer launch · September 29, 2026</p><div class="notice"><b>Owner approval pending.</b> Paid checkout remains locked; this public draft is provided for launch review and transparency.</div>'+sections.map(s=>'<h2>'+esc(s[0])+'</h2><p>'+esc(s[1])+'</p>').join('')+'<p><a href="/pricing">Pricing</a> · <a href="'+(privacy?'/terms':'/privacy')+'">'+(privacy?'Terms':'Privacy')+'</a></p></article>';
-  return wrap("SauceApproved Studio "+title,body);
-}
