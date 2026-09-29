@@ -2,7 +2,7 @@
 
 **Status:** FINAL CANDIDATE — OWNER/QUALIFIED REVIEW REQUIRED BEFORE EFFECTIVE DATE  
 **Contracting entity:** SauceApproved enterprise LLC  
-**Products:** SauceApproved Studio (AI Video Maker) and SauceApproved Ads (AI Ad Maker)
+**Products:** SauceApproved Studio (AI Video Maker) and SauceApproved Ads Engine (AI Ad Maker)
 
 These terms are launch-preparation material. They are **not effective** and do not authorize billing until SauceApproved enterprise LLC affirmatively approves and publishes them.
 
@@ -10,7 +10,7 @@ These terms are launch-preparation material. They are **not effective** and do n
 
 SauceApproved Studio provides software-assisted video planning, storyboard, shot, render-routing, assembly, quality-gate, provenance, caption, and export workflows.
 
-SauceApproved Ads provides software-assisted campaign planning, messaging-angle, creative, UTM/tracking, export, budget-planning, and performance-record workflows.
+SauceApproved Ads Engine provides software-assisted campaign planning, messaging-angle, creative, UTM/tracking, export, budget-planning, and performance-record workflows.
 
 Features may change as the products evolve. A feature shown in roadmap, demo, documentation, or an inactive plan is not part of the paid service until it is actually enabled for the customer.
 
@@ -63,7 +63,7 @@ The candidate monthly launch pricing for each product is:
 
 - **Starter — $29/month**
 - **Pro — $79/month**
-- **Agency — $199/month**
+- **Business — $199/month**
 
 These prices are not active until the product-specific pricing approval is recorded and checkout is activated through the Hercules commercial gate.
 
