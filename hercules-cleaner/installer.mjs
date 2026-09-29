@@ -65,6 +65,23 @@ function httpsUrl(value){
   return url.toString();
 }
 
+export function validateInstallIdentity({bundle,expected}={}){
+  if(!bundle||!expected)throw new Error("expected install identity required");
+  strictSemver(bundle.version);
+  strictSemver(expected.version);
+  if(!/^[a-f0-9]{40}$/i.test(String(bundle.sourceCommit||"")))throw new Error("bundle source commit is invalid");
+  if(!/^[a-f0-9]{64}$/i.test(String(bundle.aggregateSha256||"")))throw new Error("bundle aggregate SHA-256 is invalid");
+  if(!/^[a-f0-9]{40}$/i.test(String(expected.commitSha||""))||!/^[a-f0-9]{64}$/i.test(String(expected.aggregateSha256||""))){
+    throw new Error("expected install identity is invalid");
+  }
+  if(String(bundle.version)!==String(expected.version)||
+     String(bundle.sourceCommit).toLowerCase()!==String(expected.commitSha).toLowerCase()||
+     String(bundle.aggregateSha256).toLowerCase()!==String(expected.aggregateSha256).toLowerCase()){
+    throw new Error("install identity mismatch");
+  }
+  return {version:String(expected.version),commitSha:String(expected.commitSha).toLowerCase(),aggregateSha256:String(expected.aggregateSha256).toLowerCase()};
+}
+
 export function validateUpdateChannel(channel){
   if(channel?.schema!=="sauceapproved.hercules-cleaner.update-channel")throw new Error("invalid Hercules Cleaner update-channel schema");
   if(channel?.channel!=="early_access"&&channel?.channel!=="stable")throw new Error("invalid update channel");
@@ -190,6 +207,12 @@ export async function activateInstalledVersion({
     versionRoot:target,
     sourceCommit:/^[a-f0-9]{40}$/i.test(String(sourceCommit||""))?String(sourceCommit).toLowerCase():null,
     artifactSha256:/^[a-f0-9]{64}$/i.test(String(artifactSha256||""))?String(artifactSha256).toLowerCase():null,
+    rollback:previous?.version&&previous?.versionRoot?{
+      version:String(previous.version),
+      versionRoot:String(previous.versionRoot),
+      sourceCommit:/^[a-f0-9]{40}$/i.test(String(previous.sourceCommit||""))?String(previous.sourceCommit).toLowerCase():null,
+      artifactSha256:/^[a-f0-9]{64}$/i.test(String(previous.artifactSha256||""))?String(previous.artifactSha256).toLowerCase():null,
+    }:null,
     activatedAt:date.toISOString(),
   };
   await atomicJson(activePath,next);
@@ -240,6 +263,12 @@ async function main(){
     const list=String(parsed.values["list-file"]||"");
     const entries=(await readFile(list,"utf8")).split(/\r?\n/).filter(Boolean);
     process.stdout.write(JSON.stringify({ok:true,entries:validateArchiveEntries(entries).length})+"\n");
+    return;
+  }
+  if(parsed.command==="install-identity"){
+    const manifest=JSON.parse(await readFile(String(parsed.values.manifest||""),"utf8"));
+    const expected=JSON.parse(await readFile(String(parsed.values.expected||""),"utf8"));
+    process.stdout.write(JSON.stringify({ok:true,...validateInstallIdentity({bundle:manifest,expected})})+"\n");
     return;
   }
   if(parsed.command==="decision"){
