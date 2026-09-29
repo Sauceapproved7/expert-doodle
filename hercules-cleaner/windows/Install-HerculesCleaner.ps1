@@ -14,7 +14,12 @@ $ManifestPath=Join-Path $BundleRoot "bundle-manifest.json"
 if(-not (Test-Path -LiteralPath $ManifestPath)){throw "Hercules Cleaner bundle manifest is missing."}
 $Manifest=Get-Content -LiteralPath $ManifestPath -Raw | ConvertFrom-Json
 if([string]$Manifest.schema -ne "sauceapproved.hercules-cleaner.windows-bundle"){throw "Invalid Hercules Cleaner Windows bundle schema."}
-if([string]$Manifest.version -notmatch '^\d+\.\d+\.\d+
+if([string]$Manifest.version -notmatch '^\d+\.\d+\.\d+$'){throw "Invalid Hercules Cleaner bundle version."}
+if(-not $ExpectedIdentityPath){$ExpectedIdentityPath=Join-Path $BundleRoot "expected-install-identity.json"}
+if(-not (Test-Path -LiteralPath $ExpectedIdentityPath -PathType Leaf)){throw "Expected Hercules Cleaner install identity is missing."}
+$ExpectedIdentityPath=(Resolve-Path -LiteralPath $ExpectedIdentityPath).Path
+
+$Node=Get-Command node.exe -ErrorAction SilentlyContinue
 if(-not $Node){throw "Node.js 22 or newer is required before installing Hercules Cleaner."}
 $NodeVersion=(& $Node.Source --version).Trim()
 if($NodeVersion -notmatch '^v(\d+)\.'){throw "Unable to verify Node.js 22 runtime."}
