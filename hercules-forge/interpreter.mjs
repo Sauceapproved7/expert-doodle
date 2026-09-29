@@ -64,6 +64,23 @@ function cleanModelJson(value) {
   return (fenced ? fenced[1] : raw).trim();
 }
 
+function normalizeSafeForgeMetadata(spec) {
+  const next=structuredClone(spec);
+  if (next.version === undefined || next.version === null || next.version === "") {
+    next.version="0.1";
+  }
+  if (!String(next.name ?? "").trim()) {
+    const firstEntity=Array.isArray(next.entities) ? String(next.entities[0]?.name ?? "").trim() : "";
+    next.name=/^[A-Za-z][A-Za-z0-9_-]{0,59}$/.test(firstEntity)
+      ? (firstEntity+"App").slice(0,64)
+      : "GeneratedApp";
+  }
+  if (!String(next.description ?? "").trim()) {
+    next.description="Generated from the approved Forge prompt.";
+  }
+  return next;
+}
+
 const HERCULES_FORGE_SPEC_SYSTEM = [
   "You are the Hercules Forge specification interpreter.",
   "Translate the user's product request into exactly one JSON object matching the canonical Forge spec.",
@@ -210,7 +227,8 @@ export class HerculesAiForgeInterpreter extends ForgeInterpreter {
     };
 
     const firstSpec = await requestModelSpec(originalPrompt);
-    const firstValidation = validateForgeSpec(firstSpec);
+    const normalizedFirstSpec = normalizeSafeForgeMetadata(firstSpec);
+    const firstValidation = validateForgeSpec(normalizedFirstSpec);
     if (firstValidation.ok) return firstValidation.spec;
 
     const repairPrompt = [
