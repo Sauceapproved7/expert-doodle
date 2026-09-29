@@ -427,7 +427,19 @@ export function createStudioHttpHandler({
       return {status:200,headers:HTML_HEADERS,body:renderStudiosMarketShell(createStudiosMarketManifest())};
     }
 
-    if (normalizedMethod==="GET" && normalizedPath==="/pricing") {\n      return {status:200,headers:HTML_HEADERS,body:renderStudioPricingShell()};\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/terms") {\n      return {status:200,headers:HTML_HEADERS,body:renderStudioLegalShell("terms")};\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/privacy") {\n      return {status:200,headers:HTML_HEADERS,body:renderStudioLegalShell("privacy")};\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/vintage-camera") {
+    if (normalizedMethod==="GET" && normalizedPath==="/pricing") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioPricingShell()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/terms") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioLegalShell("terms")};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/privacy") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioLegalShell("privacy")};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/vintage-camera") {
       return {status:200,headers:CAMERA_HTML_HEADERS,body:renderVintageCamera()};
     }
 
