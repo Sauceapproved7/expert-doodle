@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {createStudioHttpHandler} from "../hercules-video/studio-server.mjs";
+import "./sauceapproved-vintage-camera-quality.test.mjs";
+import "./sauceapproved-vintage-camera-receipt.test.mjs";
+import "./sauceapproved-vintage-camera-frame-scheduler.test.mjs";
+import "./sauceapproved-vintage-camera-device-proof.test.mjs";
 
 test("Vintage Camera serves an owned local-first capture surface and client",async()=>{
   const handle=createStudioHttpHandler();
