@@ -27,9 +27,9 @@ Apply-mode cleanup moves approved files into a SHA-256-verified Recovery Capsule
 
 ## Windows distribution
 
-v1.1.0 adds `HerculesCleaner-Setup.cmd`. It verifies the exact packaged release identity and per-file hashes before installing a versioned copy under the current user's `%LOCALAPPDATA%`. It does not request administrator elevation.
+v1.1.0 adds `HerculesCleaner-Setup.cmd`. It requires the separate `cleaner-release-trust.json` exact-commit lock, verifies that lock against the package identity, then verifies per-file hashes before installing a versioned copy under the current user's `%LOCALAPPDATA%`. It does not request administrator elevation.
 
-Updates retain the prior installed version as an explicit rollback target. Uninstall removes the installed app integration but leaves `~/.hercules-cleaner/`, including Recovery Capsules, untouched.
+Updates retain the prior installed version as an explicit rollback target. Rollback re-verifies the retained package identity and files before activation. Uninstall removes startup integration first and aborts app deletion if that cleanup cannot be confirmed; `~/.hercules-cleaner/`, including Recovery Capsules, remains untouched.
 
 The setup requires Node.js 22+. Node.js is external infrastructure and is not bundled or represented as SauceApproved-owned code.
 
