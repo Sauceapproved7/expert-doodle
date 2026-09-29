@@ -1,3 +1,4 @@
+import {createHash} from "node:crypto";
 const PROJECT_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const DEFAULT_TIMEOUT_MS = 90_000;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -65,6 +66,11 @@ async function requestJson(fetchImpl, url, {controlToken = null, method = "GET",
   return {response, payload:await readBoundedJson(response)};
 }
 
+function reservedCanaryProjectId(projectId) {
+  const suffix=createHash("sha256").update(CANARY_MARKER+":"+String(projectId)).digest("hex").slice(0,20);
+  return "ForgeCanary_"+suffix;
+}
+
 function assertCertifiedProject(project, projectId) {
   if (
     project?.projectId !== projectId ||
@@ -111,15 +117,32 @@ export async function runForgeStartupPromptCanary({
   });
 
   if (existing.response.status === 200) {
-    assertCertifiedProject(existing.payload?.project, projectId);
-    const ready = await requestJson(fetchImpl, base + "/ready", {timeoutMs});
-    if (!ready.response.ok) throw new Error("startup canary readiness request failed");
-    return {
-      ok:true,
-      status:"already_verified",
-      projectId,
-      durableObjectCount:assertDurableReady(ready.payload),
-    };
+    try {
+      assertCertifiedProject(existing.payload?.project, projectId);
+      const ready = await requestJson(fetchImpl, base + "/ready", {timeoutMs});
+      if (!ready.response.ok) throw new Error("startup canary readiness request failed");
+      return {
+        ok:true,
+        status:"already_verified",
+        projectId,
+        durableObjectCount:assertDurableReady(ready.payload),
+      };
+    } catch (error) {
+      if (!/collides with non-canary project/i.test(String(error?.message ?? ""))) throw error;
+      const fallbackId=reservedCanaryProjectId(projectId);
+      const fallback=await runForgeStartupPromptCanary({
+        origin:base,
+        controlToken,
+        projectId:fallbackId,
+        fetchImpl,
+        timeoutMs,
+      });
+      return {
+        ...fallback,
+        collisionAvoided:true,
+        configuredProjectId:projectId,
+      };
+    }
   }
   if (existing.response.status !== 404) {
     throw new Error("startup canary project lookup failed with status " + existing.response.status);
