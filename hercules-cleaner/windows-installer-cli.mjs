@@ -8,6 +8,7 @@ import {
   uninstallWindowsCleaner,
   verifyWindowsInstallIdentity,
   verifyWindowsPackageFiles,
+  verifyWindowsReleaseTrust,
 } from "./windows-installer.mjs";
 
 function option(args,flag,fallback){
@@ -31,10 +32,16 @@ async function readPackageManifest(sourceRoot){
     checkoutEnabled:manifest.checkoutEnabled,
     files:manifest.files,
   };
-  const expected={
-    commitSha:manifest.sourceCommit,
-    aggregateSha256:manifest.aggregateSha256,
+  const trustPath=resolve(sourceRoot,"cleaner-release-trust.json");
+  const trustDocument=JSON.parse(await readFile(trustPath,"utf8"));
+  const trust={
+    version:trustDocument.version,
+    commitSha:trustDocument.sourceCommit,
+    aggregateSha256:trustDocument.aggregateSha256,
   };
+  const trustResult=verifyWindowsReleaseTrust({candidate,trust});
+  if(!trustResult.allowed)throw new Error(trustResult.reason);
+  const expected={commitSha:trust.commitSha,aggregateSha256:trust.aggregateSha256};
   const identity=verifyWindowsInstallIdentity({candidate,expected});
   if(!identity.allowed)throw new Error(identity.reason);
   const files=await verifyWindowsPackageFiles({sourceRoot,manifest});
