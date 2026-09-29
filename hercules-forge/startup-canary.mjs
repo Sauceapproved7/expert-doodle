@@ -66,8 +66,11 @@ async function requestJson(fetchImpl, url, {controlToken = null, method = "GET",
   return {response, payload:await readBoundedJson(response)};
 }
 
-function reservedCanaryProjectId(projectId) {
-  const suffix=createHash("sha256").update(CANARY_MARKER+":"+String(projectId)).digest("hex").slice(0,20);
+function reservedCanaryProjectId(projectId, attempt = 0) {
+  const suffix=createHash("sha256")
+    .update(CANARY_MARKER+":"+String(projectId)+":"+String(attempt))
+    .digest("hex")
+    .slice(0,20);
   return "ForgeCanary_"+suffix;
 }
 
@@ -106,6 +109,7 @@ export async function runForgeStartupPromptCanary({
   fetchImpl = globalThis.fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
   collisionFallback = true,
+  collisionAttempt = 0,
 } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("fetch implementation is required");
   validateInputs({controlToken, projectId, timeoutMs});
@@ -130,15 +134,16 @@ export async function runForgeStartupPromptCanary({
       };
     } catch (error) {
       if (!/collides with non-canary project/i.test(String(error?.message ?? ""))) throw error;
-      if (!collisionFallback) throw error;
-      const fallbackId=reservedCanaryProjectId(projectId);
+      if (!collisionFallback || collisionAttempt >= 8) throw error;
+      const fallbackId=reservedCanaryProjectId(projectId, collisionAttempt);
       const fallback=await runForgeStartupPromptCanary({
         origin:base,
         controlToken,
         projectId:fallbackId,
         fetchImpl,
         timeoutMs,
-        collisionFallback:false,
+        collisionFallback:true,
+        collisionAttempt:collisionAttempt + 1,
       });
       return {
         ...fallback,
