@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {evaluateWearableComponents} from '../hardware/soundworld/wearables/component-freeze-v1.mjs';
+const base={audioPlatform:'QCC7226',hybridAnc:true,leAudio:true,signedFirmware:true,driverMeasured:false,micsMeasured:false,batteryQualified:false,chargeQualified:false};
+test('premium silicon candidate freezes without pretending transducers are qualified',()=>{const r=evaluateWearableComponents(base);assert.equal(r.siliconFrozen,true);assert.equal(r.evtBuildReady,false);});
+test('EVT build waits for driver microphones battery and charging',()=>assert.equal(evaluateWearableComponents({...base,driverMeasured:true,micsMeasured:true,batteryQualified:true,chargeQualified:true}).evtBuildReady,true));
+test('never grants production or superiority claims',()=>{const r=evaluateWearableComponents({...base,driverMeasured:true,micsMeasured:true,batteryQualified:true,chargeQualified:true});assert.equal(r.productionReady,false);assert.equal(r.superiorityClaimReady,false);});
