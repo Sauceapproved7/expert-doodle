@@ -14,6 +14,7 @@ test("Movie Machine exposes a premium cinematic planning surface with Hercules d
   assert.ok(manifest.differentiators.includes("Continuity Spine"));
   assert.ok(manifest.differentiators.includes("Emotion-to-Camera Graph"));
   assert.ok(manifest.differentiators.includes("Director's Proof Map"));
+  assert.deepEqual(manifest.competitionGapFeatures,["Director's Proof Map","Emotion-to-Camera Graph"]);
 });
 
 test("Movie Machine turns one story brief into a traceable multi-act cinematic blueprint",()=>{
@@ -48,6 +49,7 @@ test("HoloStage exposes a virtual production floor with two-plus Hercules differ
   assert.ok(manifest.differentiators.includes("One-Take Stress Test"));
   assert.ok(manifest.differentiators.includes("Spatial Continuity Lock"));
   assert.ok(manifest.differentiators.includes("Camera-Light Collision Guard"));
+  assert.deepEqual(manifest.competitionGapFeatures,["One-Take Stress Test","Camera-Light Collision Guard"]);
 });
 
 test("HoloStage builds blocking, camera and lighting choreography without claiming live execution",()=>{
@@ -95,6 +97,7 @@ test("Legacy Vault exposes privacy-first documentary storytelling with provenanc
   assert.ok(manifest.differentiators.includes("Memory Provenance Chain"));
   assert.ok(manifest.differentiators.includes("Consent Horizon"));
   assert.ok(manifest.differentiators.includes("Generational Story Weave"));
+  assert.deepEqual(manifest.competitionGapFeatures,["Consent Horizon","Memory Provenance Chain"]);
 });
 
 test("Legacy Vault builds a documentary plan from approved memories while preserving source lineage",()=>{
