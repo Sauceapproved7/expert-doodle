@@ -178,6 +178,25 @@ export async function runForgeStartupPromptCanary({
     },
   });
   if (created.response.status !== 201) {
+    const creationError=String(created.payload?.error ?? "");
+    const isSafeExistCollision=created.response.status === 409 && /\\bEEXIST\\b/i.test(creationError);
+    if (isSafeExistCollision && collisionFallback && collisionAttempt < 8) {
+      const fallbackId=reservedCanaryProjectId(projectId, collisionAttempt);
+      const fallback=await runForgeStartupPromptCanary({
+        origin:base,
+        controlToken,
+        projectId:fallbackId,
+        fetchImpl,
+        timeoutMs,
+        collisionFallback:true,
+        collisionAttempt:collisionAttempt + 1,
+      });
+      return {
+        ...fallback,
+        collisionAvoided:true,
+        configuredProjectId:projectId,
+      };
+    }
     const safeCode = typeof created.payload?.code === "string" &&
       /^forge_[a-z0-9_]{1,80}$/.test(created.payload.code)
       ? created.payload.code
@@ -185,7 +204,7 @@ export async function runForgeStartupPromptCanary({
     throw new Error(
       "startup canary project creation failed with status " +
       created.response.status +
-      (created.payload?.error ? ": " + created.payload.error : "") +
+      (creationError ? ": " + creationError : "") +
       (safeCode ? " [" + safeCode + "]" : ""),
     );
   }
