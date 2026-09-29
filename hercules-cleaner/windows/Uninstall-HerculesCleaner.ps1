@@ -6,17 +6,27 @@ $InstallRoot=Join-Path $env:LOCALAPPDATA "SauceApproved\Hercules Cleaner"
 $ActivePath=Join-Path $InstallRoot "active.json"
 
 if(Test-Path -LiteralPath $ActivePath){
-  try{
-    $Active=Get-Content -LiteralPath $ActivePath -Raw | ConvertFrom-Json
-    $Node=Get-Command node.exe -ErrorAction SilentlyContinue
-    $Cli=Join-Path ([string]$Active.versionRoot) "hercules-cleaner\cli.mjs"
-    if($Node -and (Test-Path -LiteralPath $Cli)){& $Node.Source $Cli "uninstall-autostart" | Out-Null}
-  }catch{}
+  $Active=Get-Content -LiteralPath $ActivePath -Raw | ConvertFrom-Json
+  $Node=Get-Command node.exe -ErrorAction SilentlyContinue
+  $Cli=Join-Path ([string]$Active.versionRoot) "hercules-cleaner\cli.mjs"
+  if(-not $Node){throw "Node.js is required to remove Hercules Cleaner startup integration safely."}
+  if(-not (Test-Path -LiteralPath $Cli -PathType Leaf)){throw "Active Hercules Cleaner CLI is missing; startup integration cleanup cannot be verified."}
+  & $Node.Source $Cli "uninstall-autostart" | Out-Null
+  if($LASTEXITCODE -ne 0){throw "Hercules Cleaner startup integration removal failed."}
 }
-& schtasks.exe /Delete /F /TN "SauceApproved Hercules Cleaner Update" 2>$null | Out-Null
+
+& schtasks.exe /Query /TN "SauceApproved Hercules Cleaner Update" 2>$null | Out-Null
+if($LASTEXITCODE -eq 0){
+  & schtasks.exe /Delete /F /TN "SauceApproved Hercules Cleaner Update" | Out-Null
+  if($LASTEXITCODE -ne 0){throw "Hercules Cleaner update task removal failed."}
+}
+
 $Shortcut=Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\Hercules Cleaner.lnk"
 Remove-Item -LiteralPath $Shortcut -Force -ErrorAction SilentlyContinue
-Remove-Item -LiteralPath $InstallRoot -Recurse -Force -ErrorAction SilentlyContinue
+if(Test-Path -LiteralPath $InstallRoot){
+  Remove-Item -LiteralPath $InstallRoot -Recurse -Force
+  if(Test-Path -LiteralPath $InstallRoot){throw "Hercules Cleaner application files could not be fully removed."}
+}
 
 $StateRoot=Join-Path $HOME ".hercules-cleaner"
 if($RemoveUserData){
