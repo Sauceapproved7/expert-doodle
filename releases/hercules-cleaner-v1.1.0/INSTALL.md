@@ -20,7 +20,7 @@ HerculesCleaner-Setup.cmd install
 
 The setup is **user-scoped**. It installs a versioned app copy below `%LOCALAPPDATA%\SauceApproved\Hercules Cleaner\`, creates a user launcher, and does not bypass UAC or operating-system permissions.
 
-Before activation, setup verifies the immutable package identity, the exact source commit recorded by the package build, the aggregate SHA-256, every packaged file hash, and the Early Access / checkout-disabled commercial posture.
+Before activation, setup requires `cleaner-release-trust.json`, a separate exact-commit release lock emitted by the package build. The lock must match the package version, source commit, and aggregate SHA-256. Setup then verifies every manifest-listed file hash and the Early Access / checkout-disabled release posture before activation.
 
 Existing local state is preserved at:
 
@@ -48,7 +48,7 @@ The previous installed version is retained as the rollback target.
 HerculesCleaner-Setup.cmd rollback
 ```
 
-Rollback switches the launcher to the retained prior version without deleting Cleaner state or Recovery Capsules.
+Rollback first re-verifies the retained version's recorded package identity and manifest-listed file hashes against the stored rollback commit and aggregate SHA-256. Only then does it switch the launcher. Cleaner state and Recovery Capsules are not deleted.
 
 ## Uninstall
 
@@ -56,7 +56,7 @@ Rollback switches the launcher to the retained prior version without deleting Cl
 HerculesCleaner-Setup.cmd uninstall
 ```
 
-Uninstall removes the user-scoped installed app and startup integration. It deliberately **does not delete** `~/.hercules-cleaner/`. State removal, if ever desired, is a separate explicit user action.
+Uninstall first removes the user-level startup integration. If that integration cannot be removed, uninstall fails safely and leaves the installed app in place instead of reporting success with a stale startup task. After confirmed integration removal it deletes the user-scoped app. It deliberately **does not delete** `~/.hercules-cleaner/`. State removal, if ever desired, is a separate explicit user action.
 
 ## macOS and Linux
 
