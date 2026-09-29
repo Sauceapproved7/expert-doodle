@@ -49,7 +49,7 @@ test("bundle approval is atomic in the database and cannot touch payment gates",
   assert.match(migration,/hercules_software_owner_approve_bundle/);
   assert.match(migration,/auth\.uid\(\)/);
   assert.match(migration,/role='owner'/);
-  assert.match(migration,/software-commercial-v1/);
+  assert.match(migration,/software-commercial-v2/);
   assert.match(migration,/cd8f2488748f0aed1e85726816ace5c86288de3f873de7719d136ed9e4275b72/);
   assert.match(migration,/approval_type in \('pricing','terms','privacy'\)/);
   assert.match(migration,/product_code in \('sauceapproved-studio','sauceapproved-ads'\)/);
