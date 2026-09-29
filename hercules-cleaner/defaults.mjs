@@ -1,11 +1,15 @@
 import {homedir, platform as currentPlatform, tmpdir} from "node:os";
-import {join, resolve} from "node:path";
+import path from "node:path";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const EXTENSIONS = Object.freeze([".tmp", ".temp", ".cache", ".dmp", ".crash", ".bak", ".old", ".part"]);
 
-function uniq(values) {
-  return [...new Set(values.filter(Boolean).map((value) => resolve(value)))];
+function pathApiFor(platform) {
+  return platform === "win32" ? path.win32 : path.posix;
+}
+
+function uniq(values, pathApi) {
+  return [...new Set(values.filter(Boolean).map((value) => pathApi.resolve(value)))];
 }
 
 export function createDefaultProfiles({
@@ -14,6 +18,8 @@ export function createDefaultProfiles({
   temp = tmpdir(),
   env = process.env,
 } = {}) {
+  const pathApi = pathApiFor(platform);
+  const {join} = pathApi;
   const protectedPaths = uniq([
     join(home, "Documents"),
     join(home, "Desktop"),
@@ -22,7 +28,7 @@ export function createDefaultProfiles({
     join(home, "Music"),
     join(home, ".ssh"),
     join(home, ".gnupg"),
-  ]);
+  ], pathApi);
 
   const browserCaches = [];
   const appCaches = [];
@@ -53,8 +59,8 @@ export function createDefaultProfiles({
     );
   }
 
-  const safeRoots = uniq([temp, ...appCaches, ...browserCaches]);
-  const cleanAllInRoots = uniq([...appCaches, ...browserCaches]);
+  const safeRoots = uniq([temp, ...appCaches, ...browserCaches], pathApi);
+  const cleanAllInRoots = uniq([...appCaches, ...browserCaches], pathApi);
 
   return [
     {
