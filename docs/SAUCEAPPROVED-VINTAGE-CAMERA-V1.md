@@ -14,6 +14,7 @@ Four original looks are Golden Hour, Street Tape, Silver Noir and Clean Archive.
 - Secure browser context and camera permission are required for live capture. Browsers without MediaRecorder/WebM or canvas capture cannot export processed footage. The controls report unsupported states.
 - The browser may release object URLs when the tab closes; users must download wanted outputs before leaving. No draft or media is retained by a server.
 - Recording settings do not guarantee a fixed output frame rate or resolution on every Android browser. Test a short export on the target device before claiming support for that browser.
+- A local render-cadence check marks captures below 12 rendered frames per second as a low-frame-rate preview instead of a completed-quality clip. This is a conservative browser-side signal, not a decoder-level certification of the encoded file. Keep the tab active while recording.
 - Studio's operator start/resume endpoints retain their separate default-deny behavior. Vintage Camera has no server mutation or upload endpoint.
 
 ## Market entry
