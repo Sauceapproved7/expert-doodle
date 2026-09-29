@@ -31,9 +31,13 @@ export function buildLegacyFilmPlan(input={}){
     provenanceStatus:"source-identified",
     consentHorizon:Object.freeze({
       status:"review-required",
-      allowedUses:Object.freeze(["private-edit","family-review"]),
-      publicUse:false,
-      expiration:null
+      allowedUses:Object.freeze(
+        Array.isArray(source?.consent?.allowedUses) && source.consent.allowedUses.length
+          ? source.consent.allowedUses.map(clean).filter(Boolean)
+          : ["private-edit","family-review"]
+      ),
+      publicUse:source?.consent?.publicUse===true,
+      expiration:source?.consent?.expiresAt ? clean(source.consent.expiresAt) : null
     })
   })));
   const chapters=Object.freeze(chaptersInput.map((name,index)=>{
@@ -55,7 +59,18 @@ export function buildLegacyFilmPlan(input={}){
     title,subject,
     sourceLedger,
     chapters,
-    memoryProvenanceChain:Object.freeze(chapters.flatMap(chapter=>chapter.sourceIds.map(sourceId=>Object.freeze({sourceId,chapterId:chapter.chapterId,transform:"editorial-plan-only"})))),
+    memoryProvenanceChain:Object.freeze(chapters.flatMap(chapter=>chapter.sourceIds.map(sourceId=>{
+      const source=sourceLedger.find(item=>item.sourceId===sourceId);
+      return Object.freeze({
+        sourceId,
+        sourceType:source?.type || "unknown",
+        sourceLabel:source?.label || sourceId,
+        chapterId:chapter.chapterId,
+        transform:"editorial-plan-only",
+        provenanceStatus:source?.provenanceStatus || "unknown",
+        publicUse:source?.consentHorizon?.publicUse===true
+      });
+    }))),
     reviewGates:Object.freeze(["consent","privacy","provenance","editorial-review"]),
     publishReady:false,
     autoPublish:false
