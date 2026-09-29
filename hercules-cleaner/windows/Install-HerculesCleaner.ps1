@@ -21,6 +21,11 @@ $NodeVersion=(& $Node.Source --version).Trim()
 if($NodeVersion -notmatch '^v(\d+)\.'){throw "Unable to verify Node.js 22 runtime."}
 if([int]$Matches[1] -lt 22){throw "Node.js 22 or newer is required before installing Hercules Cleaner."}
 
+$BundleInstaller=Join-Path $BundleRoot "app\hercules-cleaner\installer.mjs"
+if(-not (Test-Path -LiteralPath $BundleInstaller -PathType Leaf)){throw "Cleaner installer core is missing from bundle."}
+& $Node.Source $BundleInstaller "bundle-identity" "--manifest" $ManifestPath | Out-Null
+if($LASTEXITCODE -ne 0){throw "Hercules Cleaner immutable bundle identity verification failed."}
+
 foreach($File in @($Manifest.files)){
   $Relative=[string]$File.path
   if(-not $Relative -or $Relative.Contains("..") -or [IO.Path]::IsPathRooted($Relative)){throw "Unsafe bundle manifest path."}

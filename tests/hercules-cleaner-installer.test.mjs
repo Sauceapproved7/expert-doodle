@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {mkdtemp, mkdir, readFile, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
@@ -10,6 +11,7 @@ import {
   createInstallLayout,
   rollbackInstalledVersion,
   validateArchiveEntries,
+  validateBundleIdentity,
   validateUpdateChannel,
 } from "../hercules-cleaner/installer.mjs";
 
@@ -168,3 +170,28 @@ test("Windows scripts are per-user and never bypass execution policy",async()=>{
   assert.doesNotMatch(cmd,/ExecutionPolicy\s+Bypass/i);
   assert.doesNotMatch(install,/RunAs|requireAdministrator/i);
 });
+
+
+test("Windows bundle activation requires immutable exact-commit aggregate identity",()=>{
+  const files=[
+    {path:"app/hercules-cleaner/cli.mjs",bytes:10,sha256:"1".repeat(64)},
+    {path:"Install-HerculesCleaner.ps1",bytes:20,sha256:"2".repeat(64)},
+  ];
+  const aggregate=awaitableAggregateForTest(files);
+  const bundle={
+    schema:"sauceapproved.hercules-cleaner.windows-bundle",
+    version:"1.0.0",
+    releaseClass:"early_access",
+    sourceCommit:"a".repeat(40),
+    aggregateSha256:aggregate,
+    files,
+  };
+  assert.equal(validateBundleIdentity(bundle).sourceCommit,"a".repeat(40));
+  assert.throws(()=>validateBundleIdentity({...bundle,sourceCommit:"main"}),/source commit/i);
+  assert.throws(()=>validateBundleIdentity({...bundle,aggregateSha256:"b".repeat(64)}),/aggregate/i);
+  assert.throws(()=>validateBundleIdentity({...bundle,releaseClass:"public"}),/release class/i);
+});
+
+function awaitableAggregateForTest(files){
+  return createHash("sha256").update(Buffer.from(files.map(item=>item.path+":"+item.sha256).join("\n"),"utf8")).digest("hex");
+}
