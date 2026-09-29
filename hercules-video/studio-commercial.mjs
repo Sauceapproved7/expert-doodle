@@ -94,6 +94,7 @@ export function createStudioOnboardingManifest(){
     release:"founding-customer",
     publicRoutes:[
       "/",
+      "/operator",
       "/pricing",
       "/market",
       "/getting-started",
@@ -159,5 +160,27 @@ export function renderStudioSupportShell(){
     '<section class="hero"><div class="eyebrow">SAUCEAPPROVED STUDIO / SUPPORT</div><h1>Know what is live, locked, and verified.</h1><p class="lead">This support surface separates real Studio capabilities from anything that still depends on provider authorization or commercial launch approval.</p></section>'+
     '<section class="grid">'+cards+'</section>'+
     '<article class="doc"><h2>Current commercial state</h2><p>Checkout policy: <strong>'+esc(commercial.checkoutPolicy)+'</strong>. Paid checkout enabled: <strong>'+esc(commercial.paidCheckoutEnabled)+'</strong>.</p><div class="notice">If a workflow says it is unavailable, do not work around the lock. The Studio is intentionally designed to fail closed until the required trust boundary is satisfied.</div><p class="foot"><a href="/getting-started">Getting started</a> · <a href="/pricing">Pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">Ads Engine</a></p></article>');
+}
+
+export function renderStudioLandingShell(){
+  const commercial=createStudioCommercialManifest();
+  const planCards=commercial.plans.map((plan,index)=>
+    '<article class="plan '+(index===1?'featured':'')+'"><span class="count">0'+(index+1)+'</span><h2>'+esc(plan.name)+'</h2><div class="price">$'+esc(plan.monthlyUsd)+'<small>/month</small></div><p>'+esc(plan.features.slice(0,2).join(" · "))+'</p><a class="cta" href="/pricing">See plan</a></article>'
+  ).join("");
+  const products=[
+    ["Hercules Video","/operator","Brief → storyboard → shot plan → routing → quality → assembly → evidence."],
+    ["Content Multiplier","/content-multiplier","Turn one approved source into governed platform-ready content branches."],
+    ["Brand Brain","/brand-brain","Keep brand rules versioned, reviewable and consistent across channels."],
+    ["AI Sales Agent","/ai-sales-agent","Ground sales conversations in approved product facts and controlled handoffs."],
+    ["Vintage Camera","/vintage-camera","Local-first capture with quality checks, QA receipts and device proof."],
+    ["Kids Studio","/kids","Child-focused creative surfaces with explicit safety and review boundaries."]
+  ];
+  const productCards=products.map((item,i)=>'<article class="plan"><span class="count">'+String(i+1).padStart(2,"0")+'</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[2])+'</p><a class="cta" href="'+esc(item[1])+'">Open</a></article>').join("");
+  return wrap("SauceApproved Studio",
+    '<section class="hero"><div class="eyebrow">SAUCEAPPROVED / HERCULES-POWERED CREATIVE SYSTEM</div><h1>One Studio. A controlled creative production chain.</h1><p class="lead">SauceApproved Studio turns creative work into a visible system instead of a black box: brief, planning, generation routing, quality checks, assembly, recovery and evidence all stay connected.</p><div class="notice">Founding Customer release. Paid checkout remains locked until SauceApproved finishes owner approvals and live payment verification.</div><p class="foot"><a href="/getting-started">Getting started</a> · <a href="/operator">Open operator workspace</a> · <a href="/market">Studios Market</a> · <a href="/support">Support</a></p></section>'+
+    '<section class="grid">'+productCards+'</section>'+
+    '<article class="doc"><div class="eyebrow">TWO HERCULES DIFFERENTIATORS</div><h2>Evidence-first production</h2><p>Run identity, shot state, quality gates, recovery and final-output proof stay visible so teams can see what was actually verified.</p><h2>Provider-transparent routing</h2><p>External models stay replaceable rendering backends. Hercules keeps the workflow brain, routing, provenance and fail-closed controls in the owned SauceApproved layer.</p></article>'+
+    '<section class="grid">'+planCards+'</section>'+
+    '<article class="doc"><h2>Commercial state</h2><p>Plans are public for evaluation. Checkout policy: <strong>'+esc(commercial.checkoutPolicy)+'</strong>. Paid checkout enabled: <strong>'+esc(commercial.paidCheckoutEnabled)+'</strong>.</p><p class="foot"><a href="/pricing">Pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p></article>');
 }
 

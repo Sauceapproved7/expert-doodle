@@ -9,7 +9,7 @@ import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
 import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
-import {createStudioCommercialManifest,createStudioOnboardingManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell} from "./studio-commercial.mjs";
+import {createStudioCommercialManifest,createStudioOnboardingManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell} from "./studio-commercial.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -512,9 +512,13 @@ export function createStudioHttpHandler({
       return json(model);
     }
 
-    if (normalizedMethod==="GET" && normalizedPath==="/") {
+    if (normalizedMethod==="GET" && normalizedPath==="/operator") {
       const {bridge,model}=await readContext();
       return {status:200,headers:HTML_HEADERS,body:renderStudioShell({manifest,model,bridge})};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioLandingShell()};
     }
 
     if (normalizedMethod==="POST" && (normalizedPath==="/api/studio/start" || normalizedPath==="/api/studio/resume")) {
