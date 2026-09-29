@@ -1,6 +1,7 @@
 import {assessCapture} from './capture-quality.mjs';
 import {createCaptureReceipt} from './capture-receipt.mjs';
 import {scheduleVideoFrame,cancelScheduledVideoFrame} from './frame-scheduler.mjs';
+import {createDeviceProofReceipt} from './device-proof.mjs';
 
 const $=id=>document.getElementById(id);
 const source=$('source'),view=$('view'),preview=view.getContext('2d',{alpha:false});
@@ -17,6 +18,7 @@ const grainTextures=Array.from({length:16},()=>{
 });
 let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
 let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,scheduledFrame=null,mode='idle',captureMode='idle',captureLook=null,captureReceipt=null,chunks=[],rawChunks=[];
+const deviceProof={cameraOpened:false,looksUsed:new Set(),cameraReceipt:null,clipReceipt:null};
 const setStatus=message=>{$('status').textContent=message;};
 const setButtonState=()=>{
   const ready=mode==='camera'||mode==='clip';
@@ -92,7 +94,7 @@ $('camera').addEventListener('click',async()=>{
   try{
     const wantAudio=$('microphone').checked;
     cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:wantAudio});
-    source.srcObject=cameraStream;source.muted=true;await source.play();mode='camera';setButtonState();
+    source.srcObject=cameraStream;source.muted=true;await source.play();mode='camera';deviceProof.cameraOpened=true;deviceProof.looksUsed.add($('stock').value);setButtonState();
     $('finder-label').textContent='LIVE / SOURCE ↔ LOOK';
     setStatus(`Camera live. ${wantAudio?'Microphone enabled by your choice.':'Microphone off.'} Recording has not started.`);
   }catch(error){releaseSource();setStatus(error?.name==='NotAllowedError'?'Camera permission was denied. No capture started.':'Camera unavailable. Try Load a clip.');}
@@ -123,6 +125,8 @@ $('record').addEventListener('click',async()=>{
         const processedBlob=new Blob(chunks,{type:mime});
         captureReceipt=createCaptureReceipt({mode:captureMode,frames:renderedFrames,elapsedMs:(recordingEnded||Date.now())-recordingStarted,
           interrupted:captureInterrupted,blobSize:processedBlob.size,mimeType:mime,width:output.width,height:output.height,look:captureLook});
+        if(captureMode==='camera')deviceProof.cameraReceipt=captureReceipt;
+        if(captureMode==='clip')deviceProof.clipReceipt=captureReceipt;
         processedUrl=URL.createObjectURL(processedBlob);$('download').href=processedUrl;
         $('download').download='sauceapproved-vintage-look.webm';$('download').hidden=false;
         $('download').textContent=quality.ok?'Download processed clip':'Download low-frame-rate preview';
@@ -162,6 +166,20 @@ document.addEventListener('visibilitychange',()=>{
 $('recipe').addEventListener('click',()=>saveBlob(new Blob([JSON.stringify(recipe(),null,2)],{type:'application/json'}),'sauceapproved-look-recipe.json'));
 $('receipt').addEventListener('click',()=>{if(captureReceipt)saveBlob(new Blob([JSON.stringify(captureReceipt,null,2)],{type:'application/json'}),'sauceapproved-capture-qa.json');});
 $('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||'sauceapproved-original.webm';link.click();});
+$('stock').addEventListener('change',()=>deviceProof.looksUsed.add($('stock').value));
 for(const id of ['strength','grain'])$(id).addEventListener('input',()=>{$(id+'-value').value=$(id).value+'%';});
+$('device-proof').addEventListener('click',()=>{
+  const proof=createDeviceProofReceipt({
+    cameraOpened:deviceProof.cameraOpened,
+    looksUsed:[...deviceProof.looksUsed],
+    cameraReceipt:deviceProof.cameraReceipt,
+    clipReceipt:deviceProof.clipReceipt,
+    cameraPlaybackConfirmed:$('camera-playback').checked,
+    clipPlaybackConfirmed:$('clip-playback').checked,
+    originalAvailable:!!originalUrl
+  });
+  saveBlob(new Blob([JSON.stringify(proof,null,2)],{type:'application/json'}),'sauceapproved-device-proof.json');
+  setStatus(proof.ok?'Device proof passed. Save this receipt with your launch evidence.':'Device proof incomplete. Finish the missing checks before launch.');
+});
 window.addEventListener('pagehide',()=>{cancelScheduledVideoFrame(source,scheduledFrame);releaseSource();releaseDownloads();});
 setButtonState();draw();
