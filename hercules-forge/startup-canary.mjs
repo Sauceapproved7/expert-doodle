@@ -71,6 +71,7 @@ function reservedCanaryProjectId(projectId) {
   return "ForgeCanary_"+suffix;
 }
 
+// The control API returns GET /v1/projects/:id as a raw project object.
 function projectFromPayload(payload) {
   if (!payload || typeof payload !== "object") return null;
   return payload.project && typeof payload.project === "object"
