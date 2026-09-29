@@ -200,3 +200,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Origin: original SauceApproved/Hercules implementation created with AI assistance for parent-operated family storytelling.
 - Runtime dependencies: browser-standard JavaScript and Node.js built-ins; no copied third-party templates, artwork, binaries, or vendor source.
 - Scope: local browser-memory planning and explicit text download. No child account, server upload, public posting, AI media generation, or automatic video linkage. The six planning additions are Hercules differentiators, with no exclusivity claim about competitors.
+
+
+## Hercules Cleaner v1.1.0 Windows distribution provenance — 2026-09-29
+
+- Component paths: `HerculesCleaner-Setup.cmd`, `hercules-cleaner/windows-installer.mjs`, `hercules-cleaner/windows-installer-cli.mjs`, `tests/hercules-cleaner-windows-installer.test.mjs`, `releases/hercules-cleaner-v1.1.0/`, and the updated exact-commit release packager/workflow.
+- Origin: original SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution, owner-code, and provenance controls.
+- Runtime dependencies: Node.js built-ins only for owned installer logic. Windows command shell, Node.js, Windows Task Scheduler, and operating-system file APIs remain external infrastructure governed by their own terms and are not claimed as SauceApproved-owned code.
+- Distribution safety: current-user installation under `%LOCALAPPDATA%`, exact source-commit/package SHA-256 binding, per-file integrity verification, versioned install roots, explicit rollback identity, state-preserving uninstall, and no UAC/elevation bypass.
+- State boundary: `~/.hercules-cleaner/`, sessions, configuration, and Recovery Capsules are customer-device state and are excluded from install/update payload deletion.
+- Commercial boundary: installer availability does not approve pricing, Terms, Privacy, provider readiness, checkout, or public paid launch.
