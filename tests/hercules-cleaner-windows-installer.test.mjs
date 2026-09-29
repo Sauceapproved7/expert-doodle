@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
-import {mkdtemp, rm, writeFile} from "node:fs/promises";
+import {mkdir, mkdtemp, rm, writeFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {
@@ -117,6 +117,26 @@ test("package verifier rejects a tampered Cleaner release file", async () => {
     const bad=await verifyWindowsPackageFiles({sourceRoot:root,manifest});
     assert.equal(bad.allowed,false);
     assert.equal(bad.reason,"file-integrity-mismatch");
+  } finally {
+    await rm(root,{recursive:true,force:true});
+  }
+});
+
+
+test("package verifier rejects manifest path traversal outside the extracted package", async () => {
+  const root=await mkdtemp(join(tmpdir(),"cleaner-installer-path-"));
+  const source=join(root,"package");
+  await mkdir(source,{recursive:true});
+  try {
+    const outside=Buffer.from("outside package","utf8");
+    await writeFile(join(root,"outside.txt"),outside);
+    const fileDigest=createHash("sha256").update(outside).digest("hex");
+    const relativePath="../outside.txt";
+    const aggregateSha256=createHash("sha256").update(Buffer.from(relativePath+":"+fileDigest,"utf8")).digest("hex");
+    const manifest={files:[{path:relativePath,bytes:outside.length,sha256:fileDigest}],aggregateSha256};
+    const result=await verifyWindowsPackageFiles({sourceRoot:source,manifest});
+    assert.equal(result.allowed,false);
+    assert.equal(result.reason,"invalid-package-path");
   } finally {
     await rm(root,{recursive:true,force:true});
   }
