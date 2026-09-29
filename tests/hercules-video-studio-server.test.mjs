@@ -306,9 +306,10 @@ test("Studios Market manifest keeps public discovery open and paid checkout clos
   assert.equal(body.pilotApplicationsOpen,true);
   assert.equal(body.paidCheckoutEnabled,false);
   assert.equal(body.pricingApprovalRequired,true);
-  assert.equal(body.products.length,4);
+  assert.equal(body.products.length,5);
   assert.ok(body.products.some(item=>item.id==="content-multiplier"));
   assert.ok(body.products.some(item=>item.id==="ai-sales-agent"));
   assert.ok(body.products.some(item=>item.id==="brand-brain"));
+  assert.ok(body.products.some(item=>item.id==="vintage-camera"&&item.availability==="free-preview"&&item.ctaUrl==="/vintage-camera"));
   assert.ok(body.products.some(item=>item.id==="studios-bundle"));
 });
