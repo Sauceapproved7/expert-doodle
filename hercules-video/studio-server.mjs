@@ -438,6 +438,11 @@ export function createStudioHttpHandler({
       return {status:200,headers:CAMERA_JS_HEADERS,body};
     }
 
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/capture-receipt.mjs") {
+      const body=await readFile(new URL("../sauceapproved-studio/vintage-camera/capture-receipt.mjs",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/vintage-camera/manifest") {
       return json(createVintageCameraManifest());
     }

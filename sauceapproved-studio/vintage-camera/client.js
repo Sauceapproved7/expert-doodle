@@ -1,4 +1,5 @@
 import {assessCapture} from './capture-quality.mjs';
+import {createCaptureReceipt} from './capture-receipt.mjs';
 
 const $=id=>document.getElementById(id);
 const source=$('source'),view=$('view'),preview=view.getContext('2d',{alpha:false});
@@ -14,13 +15,15 @@ const grainTextures=Array.from({length:16},()=>{
   context.putImageData(pixels,0,0);return texture;
 });
 let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
-let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,animation=0,mode='idle',chunks=[],rawChunks=[];
+let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,animation=0,mode='idle',captureMode='idle',captureLook=null,captureReceipt=null,chunks=[],rawChunks=[];
 const setStatus=message=>{$('status').textContent=message;};
 const setButtonState=()=>{
   const ready=mode==='camera'||mode==='clip';
   $('camera').disabled=mode==='recording'||recordingFinalizing;$('load').disabled=mode==='recording'||recordingFinalizing;
   $('record').disabled=!ready||recordingFinalizing||typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream;
   $('stop').disabled=mode==='idle'||recordingFinalizing;$('original').disabled=!originalUrl;
+  $('receipt').disabled=!captureReceipt;
+  for(const id of ['stock','strength','grain'])$(id).disabled=mode==='recording'||recordingFinalizing;
   $('record').textContent=mode==='clip'?'Process clip':'Record look';
 };
 const recipe=()=>({schema:'sauceapproved.vintage-camera.recipe',version:1,stock:$('stock').value,strength:Number($('strength').value),grain:Number($('grain').value),export:'webm',sourceMediaIncluded:false});
@@ -78,7 +81,7 @@ function releaseSource(){
 function releaseDownloads(){
   if(processedUrl)URL.revokeObjectURL(processedUrl);
   if(originalUrl)URL.revokeObjectURL(originalUrl);
-  processedUrl=originalUrl=null;$('download').hidden=true;setButtonState();
+  processedUrl=originalUrl=null;captureReceipt=null;$('download').hidden=true;setButtonState();
 }
 function saveBlob(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
 function supportedMime(){return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(type=>MediaRecorder.isTypeSupported(type));}
@@ -116,7 +119,10 @@ $('record').addEventListener('click',async()=>{
     recorder.onstop=()=>{
       const quality=assessCapture({frames:renderedFrames,elapsedMs:(recordingEnded||Date.now())-recordingStarted,interrupted:captureInterrupted});
       if(chunks.length){
-        processedUrl=URL.createObjectURL(new Blob(chunks,{type:mime}));$('download').href=processedUrl;
+        const processedBlob=new Blob(chunks,{type:mime});
+        captureReceipt=createCaptureReceipt({mode:captureMode,frames:renderedFrames,elapsedMs:(recordingEnded||Date.now())-recordingStarted,
+          interrupted:captureInterrupted,blobSize:processedBlob.size,mimeType:mime,width:output.width,height:output.height,look:captureLook});
+        processedUrl=URL.createObjectURL(processedBlob);$('download').href=processedUrl;
         $('download').download='sauceapproved-vintage-look.webm';$('download').hidden=false;
         $('download').textContent=quality.ok?'Download processed clip':'Download low-frame-rate preview';
         setStatus(quality.ok?'Processed clip ready to download. The source stayed local.':quality.reason==='capture_interrupted'?'Capture interrupted when the tab was hidden. This is only a preview; keep the tab active and record again before using the clip.':`Capture quality warning: ${quality.fps} rendered frames per second. Keep this tab active and try again before using the clip. This preview is not a verified full-quality export.`);
@@ -130,6 +136,7 @@ $('record').addEventListener('click',async()=>{
       rawRecorder.onstop=()=>{if(rawChunks.length){originalUrl=URL.createObjectURL(new Blob(rawChunks,{type:mime}));setButtonState();}};
       rawRecorder.start(1000);
     }
+    captureMode=mode;captureLook=recipe();captureReceipt=null;
     recorder.start(1000);mode='recording';recordingStarted=Date.now();recordingEnded=0;renderedFrames=0;captureInterrupted=false;setButtonState();
     setStatus('Recording locally. Stop to finish and download.');
   }catch{if(rawRecorder?.state==='recording')rawRecorder.stop();setStatus('Recording could not start on this browser.');}
@@ -152,6 +159,7 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 $('recipe').addEventListener('click',()=>saveBlob(new Blob([JSON.stringify(recipe(),null,2)],{type:'application/json'}),'sauceapproved-look-recipe.json'));
+$('receipt').addEventListener('click',()=>{if(captureReceipt)saveBlob(new Blob([JSON.stringify(captureReceipt,null,2)],{type:'application/json'}),'sauceapproved-capture-qa.json');});
 $('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||'sauceapproved-original.webm';link.click();});
 for(const id of ['strength','grain'])$(id).addEventListener('input',()=>{$(id+'-value').value=$(id).value+'%';});
 window.addEventListener('pagehide',()=>{cancelAnimationFrame(animation);releaseSource();releaseDownloads();});
