@@ -52,12 +52,12 @@ function statusFixture() {
   };
 }
 
-test("Studio root serves the owned SauceApproved operator shell",async()=>{
+test("Studio operator route serves the owned SauceApproved operator shell",async()=>{
   const handle=createStudioHttpHandler({
     statusReader:async()=>statusFixture(),
     executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
   });
-  const response=await handle({method:"GET",pathname:"/"});
+  const response=await handle({method:"GET",pathname:"/operator"});
   assert.equal(response.status,200);
   assert.match(response.headers["content-type"],/text\/html/);
   assert.match(response.body,/SauceApproved Studio/);
@@ -406,4 +406,28 @@ test("Studio root links customers to onboarding and support",async()=>{
   assert.equal(root.status,200);
   assert.match(root.body,/href="\/getting-started"/);
   assert.match(root.body,/href="\/support"/);
+});
+
+
+test("Studio public root is the commercial founding-customer front door",async()=>{
+  const handle=createStudioHttpHandler();
+  const response=await handle({method:"GET",pathname:"/"});
+  assert.equal(response.status,200);
+  assert.match(response.body,/SAUCEAPPROVED \/ HERCULES-POWERED CREATIVE SYSTEM/);
+  assert.match(response.body,/Evidence-first production/);
+  assert.match(response.body,/Provider-transparent routing/);
+  assert.match(response.body,/href="\/operator"/);
+  assert.match(response.body,/href="\/getting-started"/);
+  assert.match(response.body,/href="\/pricing"/);
+  assert.match(response.body,/Paid checkout remains locked/);
+  assert.match(response.body,/Content Multiplier/);
+  assert.match(response.body,/href="\/content-multiplier"/);
+  assert.match(response.body,/href="\/vintage-camera"/);
+});
+
+test("Studio onboarding manifest includes the operator workspace",async()=>{
+  const handle=createStudioHttpHandler();
+  const response=await handle({method:"GET",pathname:"/api/studio/onboarding/manifest"});
+  const body=JSON.parse(response.body);
+  assert.ok(body.publicRoutes.includes("/operator"));
 });
