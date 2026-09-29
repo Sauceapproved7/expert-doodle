@@ -466,3 +466,17 @@ test("Studio public root links to the guided demo",async()=>{
   const onboarding=JSON.parse((await handle({method:"GET",pathname:"/api/studio/onboarding/manifest"})).body);
   assert.ok(onboarding.publicRoutes.includes("/demo"));
 });
+
+
+test("Campaign Forge serves owned showcase surface and manifest",async()=>{
+  const handle=createStudioHttpHandler();
+  const page=await handle({method:"GET",pathname:"/campaign-forge"});
+  assert.equal(page.status,200);
+  assert.match(page.body,/Campaign/);
+  assert.match(page.body,/Proof Strip/);
+  const manifest=await handle({method:"GET",pathname:"/api/studio/campaign-forge/manifest"});
+  assert.equal(manifest.status,200);
+  const body=JSON.parse(manifest.body);
+  assert.equal(body.product,"Hercules Campaign Forge");
+  assert.equal(body.serverUpload,false);
+});

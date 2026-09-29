@@ -10,6 +10,7 @@ const SURFACES=Object.freeze([
   Object.freeze({id:"content-multiplier",label:"Content Multiplier"}),
   Object.freeze({id:"ai-sales-agent",label:"AI Sales Agent"}),
   Object.freeze({id:"brand-brain",label:"Brand Brain"}),
+  Object.freeze({id:"campaign-forge",label:"Campaign Forge"}),
   Object.freeze({id:"market",label:"Studios Market"}),
   Object.freeze({id:"vintage-camera",label:"Vintage Camera"}),
   Object.freeze({id:"kids",label:"Kids Studio"}),
