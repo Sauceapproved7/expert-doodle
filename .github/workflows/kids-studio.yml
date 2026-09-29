@@ -22,6 +22,8 @@ jobs:
           node-version: "22"
       - name: Enforce owner-code policy
         run: node scripts/verify-owner-code-only.mjs
+      - name: Check Kids Studio syntax
+        run: node --check sauceapproved-studio/kids/core.mjs && node --check sauceapproved-studio/kids/client.js
       - name: Run Kids Studio tests
         run: node --test tests/sauceapproved-kids-studio.test.mjs tests/hercules-video-studio-server.test.mjs tests/hercules-video-studio-contract.test.mjs
       - name: Enforce Hercules execution contract
