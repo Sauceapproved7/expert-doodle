@@ -433,10 +433,10 @@ async function activeStripeConnection(admin:any,organizationId:string){
     .eq('status','active')
     .not('access_secret_ref','is',null)
     .order('updated_at',{ascending:false})
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
   if(error)throw error;
-  return data;
+  const rows=data||[];
+  return rows.find((row:any)=>row?.metadata?.livemode===true) || rows[0] || null;
 }
 
 const SOFTWARE_PRODUCTS=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner','hercules-titan-founding-access'] as const;
@@ -1542,6 +1542,9 @@ Deno.serve(async req=>{
           receiver:STRIPE_RECEIVER,
           webhook_endpoint_id:endpoint.id,
           livemode:key.startsWith('sk_live_'),
+          charges_enabled:Boolean(account.charges_enabled),
+          payouts_enabled:Boolean(account.payouts_enabled),
+          details_submitted:Boolean(account.details_submitted),
           catalog_ready:true,
           catalog
         }
