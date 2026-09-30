@@ -639,6 +639,7 @@ export function createStudioHttpHandler({
       return json(createKidsStudioManifest());
     }
 
+    // Monitoring remains available even when execution has no verified run state.
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/status") {
       const {model,bridge}=await readContext();
       if (!model) {
