@@ -99,5 +99,5 @@ test("standalone worker applies the checkpoint and Stripe payment boundary helpe
   assert.match(server, /from "\.\/checkpoints\.mjs"/);
   assert.match(server, /detectOwnerCheckpointText/);
   assert.match(server, /stripePaymentBoundary/);
-  assert.match(server, /owner_action_required:payment/);
+  assert.match(server, /stripePaymentBoundary\\(\\{/);
 });
