@@ -48,3 +48,12 @@ test("commercial launch requires checkout refund and payout evidence bound to th
 test("commercialOk fails closed unless payment provider and paid flow are both verified",()=>{
   assert.match(gate,/paymentProviderReady&&paymentPathVerified/);
 });
+
+
+test("launch gate reconciles its system-owned provider readiness approval from live provider evidence",()=>{
+  assert.match(gate,/hercules_software_record_payment_gate/);
+  assert.match(gate,/p_product_code:TITAN_PRODUCT_CODE/);
+  assert.match(gate,/p_gate:'payment_provider_ready'/);
+  assert.match(gate,/p_verified:paymentProviderReady/);
+  assert.match(gate,/owner_approval_required:false/);
+});
