@@ -31,3 +31,10 @@ test("Studio Pilot is a separate Shopify-first-sale launch lane",()=>{
   assert.match(gate,/postLaunchObservationRequired/);
   assert.match(gate,/studioPilotStorefrontPublished/);
 });
+
+test("Studio launch evidence explicitly separates Shopify from direct Stripe",()=>{
+  assert.match(gate,/paymentProvider:'shopify'/);
+  assert.match(gate,/directStripeRequired:false/);
+  assert.match(gate,/readyForFirstSale:studioPilotPaidLaunchReady/);
+  assert.match(gate,/paymentPathStage:postLaunchObservationRequired\?'post_launch_observation':'verified'/);
+});
