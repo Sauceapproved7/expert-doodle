@@ -5,6 +5,7 @@ import {resolve} from "node:path";
 
 const root=resolve(import.meta.dirname,"..");
 const migration=readFileSync(resolve(root,"supabase/migrations/20260930015000_hercules_soundworld_gift_ledger_v1.sql"),"utf8");
+const studioPilotLaunchWindowPatch=readFileSync(resolve(root,"supabase/migrations/20260930195500_soundworld_studio_pilot_launch_window_v1.sql"),"utf8");
 const fn=readFileSync(resolve(root,"supabase/functions/hercules-launch-gift/index.ts"),"utf8");
 const stripeWebhook=readFileSync(resolve(root,"supabase/functions/hercules-stripe-webhook/index.ts"),"utf8");
 const shopifyWebhook=readFileSync(resolve(root,"supabase/functions/hercules-private-bridge/studio-commerce-webhook.ts"),"utf8");
@@ -57,6 +58,16 @@ test("Stripe and Shopify trusted purchase paths feed the same gift eligibility l
 test("workspace membership alone cannot claim another buyer's gift",()=>{
   assert.doesNotMatch(migration,/from public\.hercules_memberships m[\s\S]*v_identity_ok/);
   assert.doesNotMatch(fn,/hercules_memberships/);
+});
+
+test("SoundWorld window can open from the independently approved Studio Founding Pilot launch",()=>{
+  assert.match(studioPilotLaunchWindowPatch,/sauceapproved-studio-founding-pilot/);
+  assert.match(studioPilotLaunchWindowPatch,/hercules_studio_pilot_checkout_readiness/);
+  assert.match(studioPilotLaunchWindowPatch,/checkout_enabled/);
+  assert.match(studioPilotLaunchWindowPatch,/payment_launch_capability/);
+  assert.match(studioPilotLaunchWindowPatch,/legacy_launch_gate/);
+  assert.match(studioPilotLaunchWindowPatch,/studio_pilot_launch_gate/);
+  assert.match(studioPilotLaunchWindowPatch,/paid_launch_gate_not_ready_or_stale/);
 });
 
 test("launch window requires a fresh launch-ready check",()=>{
