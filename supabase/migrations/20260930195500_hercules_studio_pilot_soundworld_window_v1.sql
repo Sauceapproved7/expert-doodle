@@ -64,10 +64,11 @@ begin
   end if;
 
   insert into public.hercules_continuity_ledger(
-    key,status,value,provenance,verified_at,updated_at
+    key,category,status,value,provenance,verified_at,updated_at
   )
   values(
     'hercules-soundworld-launch-gift-window',
+    'commercial_launch',
     'active',
     jsonb_build_object(
       'openedAt',p_opened_at,
