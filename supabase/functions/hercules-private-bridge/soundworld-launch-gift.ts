@@ -7,6 +7,7 @@ const MAX_BODY_BYTES=8*1024;
 const CHOICES=new Set(['soundworld-pods','soundworld-max','soundworld-portable-speaker']);
 const ORIGINS=new Set([
   'https://sauceapproved-studio.onrender.com',
+  'https://xbwuablxhhwsaoomsoco.supabase.co',
   'https://sauceapproved.com',
   'https://www.sauceapproved.com'
 ]);
