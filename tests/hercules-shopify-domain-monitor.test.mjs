@@ -10,6 +10,10 @@ const sql=await readFile(
   new URL("../supabase/migrations/20260927061500_hercules_shopify_domain_monitor_v1.sql",import.meta.url),
   "utf8"
 );
+const liveDomainPatch=await readFile(
+  new URL("../supabase/migrations/20260930172000_hercules_shopify_live_store_domain_v1.sql",import.meta.url),
+  "utf8"
+);
 
 test("provider monitor is locked to the verified production shop",()=>{
   assert.match(edge,/gid:\/\/shopify\/Shop\/100002726208/);
