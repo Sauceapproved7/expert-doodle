@@ -4,7 +4,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=Deno.env.get('SUPABASE_ANON_KEY')!;
 const S=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const STORE='azymhc-x0.myshopify.com';
+const STORE='sauceapproved-2.myshopify.com';
 const SHOP_GID='gid://shopify/Shop/100002726208';
 const RECEIVER=`${U}/functions/v1/hercules-shopify-webhook`;
 const STRIPE_RECEIVER=`${U}/functions/v1/hercules-stripe-webhook`;

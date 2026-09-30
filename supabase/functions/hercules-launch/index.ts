@@ -513,7 +513,7 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
               <option value="google_drive">Google Drive</option>
             </select>
             <label class="tag" style="display:block;margin-top:12px">Account key</label>
-            <input class="input" id="domainAgentAccountKey" maxlength="512" value="azymhc-x0.myshopify.com">
+            <input class="input" id="domainAgentAccountKey" maxlength="512" value="sauceapproved-2.myshopify.com">
             <button class="btn" id="domainAgentCheckGrant" style="margin-top:12px">Check authorization</button>
             <div class="notice hidden" id="domainAgentProviders"></div>
           </div>
