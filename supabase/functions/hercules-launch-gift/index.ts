@@ -91,13 +91,6 @@ function publicEligibility(row:any){
 }
 
 async function eligibleForUser(userId:string,emailHash:string|null){
-  const {data:memberships,error:membershipError}=await admin.from('hercules_memberships')
-    .select('organization_id')
-    .eq('user_id',userId)
-    .eq('status','active');
-  if(membershipError)throw membershipError;
-
-  const orgs=[...new Set((memberships||[]).map((row:any)=>String(row.organization_id)).filter(Boolean))];
   const select='purchase_key,provider,product_code,organization_id,user_id,buyer_email_sha256,purchased_at,amount_cents,currency,promotion_opened_at,promotion_closes_at,status,claimed_at';
 
   const tasks:any[]=[
@@ -106,11 +99,6 @@ async function eligibleForUser(userId:string,emailHash:string|null){
   if(emailHash){
     tasks.push(
       admin.from('hercules_soundworld_gift_eligibility').select(select).eq('buyer_email_sha256',emailHash)
-    );
-  }
-  for(const orgId of orgs){
-    tasks.push(
-      admin.from('hercules_soundworld_gift_eligibility').select(select).eq('organization_id',orgId)
     );
   }
 
