@@ -9,6 +9,7 @@ export const SOUNDWORLD_GIFT_CHOICES=Object.freeze([
 const CHOICE_CODES=new Set(SOUNDWORLD_GIFT_CHOICES.map(item=>item.code));
 
 function timestamp(value){
+  if(value===null || value===undefined || value==="") return null;
   const ms=new Date(value).getTime();
   return Number.isFinite(ms)?ms:null;
 }
