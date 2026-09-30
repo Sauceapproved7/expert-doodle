@@ -4,9 +4,12 @@ on:
     paths:
       - "supabase/functions/hercules-private-bridge/studio-commerce.mjs"
       - "tests/hercules-studio-commerce.test.mjs"
+      - "tests/hercules-studio-commerce-webhook.test.mjs"
+      - "tests/hercules-titan-shopify-entitlement.test.mjs"
       - "supabase/functions/hercules-private-bridge/**"
       - "supabase/functions/hercules-launch/**"
       - "supabase/migrations/*studio*.sql"
+      - "supabase/migrations/*titan*.sql"
       - ".github/workflows/hercules-studio-commerce.yml"
 permissions:
   contents: read
@@ -21,4 +24,5 @@ jobs:
       - run: node --check supabase/functions/hercules-private-bridge/studio-commerce.mjs
       - run: node --test tests/hercules-studio-commerce.test.mjs
       - run: node --test tests/hercules-studio-commerce-webhook.test.mjs
+      - run: node --test tests/hercules-titan-shopify-entitlement.test.mjs
       - run: node --test tests/hercules-customer-foundation.test.mjs
