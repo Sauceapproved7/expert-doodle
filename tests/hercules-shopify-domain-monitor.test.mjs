@@ -17,7 +17,9 @@ const liveDomainPatch=await readFile(
 
 test("provider monitor is locked to the verified production shop",()=>{
   assert.match(edge,/gid:\/\/shopify\/Shop\/100002726208/);
-  assert.match(edge,/azymhc-x0\.myshopify\.com/);
+  assert.match(edge,/sauceapproved-2\.myshopify\.com/);
+  assert.doesNotMatch(edge,/azymhc-x0\.myshopify\.com/);
+  assert.match(liveDomainPatch,/account_key='sauceapproved-2\.myshopify\.com'/);
   assert.match(edge,/shopify_production_shop_mismatch/);
 });
 
