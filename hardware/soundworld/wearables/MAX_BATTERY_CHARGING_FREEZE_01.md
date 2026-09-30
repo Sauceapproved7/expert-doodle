@@ -1,6 +1,6 @@
 # SoundWorld Max — Battery / Charging Architecture Freeze 01
 
-Status: EVT architecture freeze. This is an engineering control, not a customer-facing battery-life or charge-time claim.
+Status: EVT architecture freeze. This is an engineering control, not a runtime claim and not a customer-facing battery-life or charge-time claim.
 Date: 2026-09-29
 Owner-code scope: SauceApproved/Hercules SoundWorld.
 
