@@ -384,7 +384,8 @@ test("Studio onboarding and support surfaces are public, mobile-safe and commerc
   assert.match(onboarding.headers["content-type"],/text\/html/);
   assert.match(onboarding.body,/FOUNDING CUSTOMER ONBOARDING/);
   assert.match(onboarding.body,/Start strong\. Keep the evidence\./);
-  assert.match(onboarding.body,/Paid checkout is still locked/);
+  assert.match(onboarding.body,/\$99 one-time Founding Pilot is live through Shopify/);
+  assert.match(onboarding.body,/separate monthly subscription checkout remains locked/);
   assert.match(onboarding.body,/href="\/support"/);
 
   const support=await handle({method:"GET",pathname:"/support"});
@@ -403,7 +404,7 @@ test("Studio onboarding and support surfaces are public, mobile-safe and commerc
   assert.ok(body.publicRoutes.includes("/getting-started"));
   assert.ok(body.publicRoutes.includes("/support"));
   assert.equal(body.firstRun.length,5);
-  assert.ok(body.trustRules.some(rule=>/Paid checkout stays disabled/.test(rule)));
+  assert.ok(body.trustRules.some(rule=>/Monthly subscription checkout stays disabled/.test(rule)));
 });
 
 test("Studio root links customers to onboarding and support",async()=>{
@@ -428,7 +429,9 @@ test("Studio public root is the commercial founding-customer front door",async()
   assert.match(response.body,/href="\/operator"/);
   assert.match(response.body,/href="\/getting-started"/);
   assert.match(response.body,/href="\/pricing"/);
-  assert.match(response.body,/Paid checkout remains locked/);
+  assert.match(response.body,/Founding Pilot access is live now for \$99 one time through Shopify/);
+  assert.match(response.body,/monthly Starter, Pro, and Business subscription plans remain locked/);
+  assert.match(response.body,/sauceapproved-studio-founding-pilot-access/);
   assert.match(response.body,/Content Multiplier/);
   assert.match(response.body,/href="\/content-multiplier"/);
   assert.match(response.body,/href="\/vintage-camera"/);
