@@ -409,6 +409,7 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
   <div class="appgrid">
     <aside class="panel sidebar">
       <button class="btn sidebtn active" data-view="recoveryView">Recovery Desk</button>
+      <button class="btn sidebtn" data-view="giftView">SoundWorld Gift</button>
       <button class="btn sidebtn" data-view="homeView">Hercules AI</button>
       <div class="tag" style="margin:18px 10px 6px">Advanced tools</div>
       <button class="btn sidebtn" data-view="knowledgeView">Knowledge</button>
@@ -524,6 +525,24 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
             <div class="notice hidden code" id="domainAgentApiKey"></div>
           </div>
         </div>
+      </section>
+
+      <section class="view" id="giftView">
+        <div class="viewhead">
+          <div>
+            <div class="tag">Hercules launch promotion</div>
+            <h1>Your SoundWorld gift.</h1>
+            <div class="muted">Each qualifying Hercules purchase made during the first 14 days of public paid launch gets one $0 gift reservation. The choice locks to that purchase after you claim it.</div>
+          </div>
+          <button class="btn" id="soundworldGiftRefresh">Refresh</button>
+        </div>
+        <div class="panel">
+          <div class="tag">Buyer protection</div>
+          <p class="muted">Only purchases bound to your authenticated Hercules account or the verified checkout email appear here. Verification/test payments never qualify.</p>
+          <div class="notice warn">SoundWorld hardware is pre-production. A successful claim reserves your choice; physical fulfillment begins after that hardware clears production availability.</div>
+          <div class="notice hidden" id="soundworldGiftMsg"></div>
+        </div>
+        <div class="results" id="soundworldGiftPurchases" style="margin-top:14px"></div>
       </section>
 
       <section class="view" id="statusView">
@@ -716,7 +735,117 @@ $("recoveryLeads").onclick=async e=>{
 };
 recoveryGuidance();
 
-document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",async()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===b.dataset.view));if(b.dataset.view==="recoveryView")await loadRecovery();if(b.dataset.view==="knowledgeView")await loadKnowledgeStats();if(b.dataset.view==="adStudioView")ensureAdStudioLoaded();if(b.dataset.view==="forgeView")await loadDeployments();if(b.dataset.view==="domainAgentView")await loadDomainAgent();if(b.dataset.view==="statusView")await loadStatus()}));
+const SOUNDWORLD_GIFT_CHOICES=[
+  {code:"soundworld-pods",label:"SoundWorld Pods"},
+  {code:"soundworld-max",label:"SoundWorld Max"},
+  {code:"soundworld-portable-speaker",label:"SoundWorld Portable Speaker"}
+];
+
+function soundworldGiftChoiceLabel(code){
+  return SOUNDWORLD_GIFT_CHOICES.find(x=>x.code===code)?.label||String(code||"Reserved gift");
+}
+
+async function claimSoundWorldGift(purchaseKey,giftCode){
+  setNotice("soundworldGiftMsg","");
+  try{
+    await fetchFn("hercules-private-bridge?soundworld_launch_gift=1",{
+      method:"POST",
+      body:JSON.stringify({purchaseKey,giftCode})
+    });
+    setNotice("soundworldGiftMsg","Gift reserved. Your choice is now locked to this purchase.","good");
+    await soundworldGiftStatus();
+  }catch(error){
+    const message=error instanceof Error?error.message:"Gift claim failed";
+    setNotice(
+      "soundworldGiftMsg",
+      message==="gift_already_reserved_for_purchase"
+        ?"This purchase already has a SoundWorld gift reservation."
+        :message,
+      message==="gift_already_reserved_for_purchase"?"warn":"bad"
+    );
+  }
+}
+
+async function soundworldGiftStatus(){
+  const list=$("soundworldGiftPurchases");
+  if(!list)return;
+  list.textContent="";
+  try{
+    const data=await fetchFn("hercules-private-bridge?soundworld_launch_gift=1",{method:"GET"});
+    const eligibility=Array.isArray(data.eligibility)?data.eligibility:[];
+    const reservations=Array.isArray(data.reservations)?data.reservations:[];
+    const byPurchase=new Map(reservations.map(r=>[String(r.purchase_key||""),r]));
+
+    if(!eligibility.length){
+      const empty=document.createElement("div");
+      empty.className="notice";
+      empty.textContent="No qualifying SoundWorld gift is attached to this account yet. The 14-day promotion starts only when public paid launch opens.";
+      list.appendChild(empty);
+      return;
+    }
+
+    for(const purchase of eligibility){
+      const key=String(purchase.purchaseKey||"");
+      const reservation=byPurchase.get(key);
+      const card=document.createElement("div");
+      card.className="panel";
+
+      const tag=document.createElement("div");
+      tag.className="tag";
+      tag.textContent=(purchase.provider||"Hercules")+" purchase";
+      card.appendChild(tag);
+
+      const title=document.createElement("h3");
+      title.textContent=String(purchase.productCode||"Hercules purchase");
+      card.appendChild(title);
+
+      const meta=document.createElement("p");
+      meta.className="muted";
+      meta.textContent="Purchased "+new Date(purchase.purchasedAt).toLocaleString()+" · Promotion closes "+new Date(purchase.promotionClosesAt).toLocaleString();
+      card.appendChild(meta);
+
+      if(reservation||purchase.status==="claimed"){
+        const locked=document.createElement("div");
+        locked.className="notice good";
+        locked.textContent="Reserved: "+soundworldGiftChoiceLabel(reservation?.gift_code)+" · $0 · choice locked";
+        card.appendChild(locked);
+      }else{
+        const row=document.createElement("div");
+        row.className="row";
+        const select=document.createElement("select");
+        select.className="input";
+        select.style.maxWidth="360px";
+        for(const choice of SOUNDWORLD_GIFT_CHOICES){
+          const option=document.createElement("option");
+          option.value=choice.code;
+          option.textContent=choice.label;
+          select.appendChild(option);
+        }
+        const button=document.createElement("button");
+        button.className="btn primary";
+        button.type="button";
+        button.textContent="Reserve free gift";
+        button.onclick=async()=>{
+          button.disabled=true;
+          try{await claimSoundWorldGift(key,select.value)}
+          finally{button.disabled=false}
+        };
+        row.append(select,button);
+        card.appendChild(row);
+      }
+      list.appendChild(card);
+    }
+  }catch(error){
+    const box=document.createElement("div");
+    box.className="notice bad";
+    box.textContent="SoundWorld gift status unavailable: "+(error instanceof Error?error.message:"unknown error");
+    list.appendChild(box);
+  }
+}
+
+$("soundworldGiftRefresh").onclick=soundworldGiftStatus;
+
+document.querySelectorAll("[data-view]").forEach(b=>b.addEventListener("click",async()=>{document.querySelectorAll("[data-view]").forEach(x=>x.classList.toggle("active",x===b));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===b.dataset.view));if(b.dataset.view==="recoveryView")await loadRecovery();if(b.dataset.view==="knowledgeView")await loadKnowledgeStats();if(b.dataset.view==="adStudioView")ensureAdStudioLoaded();if(b.dataset.view==="forgeView")await loadDeployments();if(b.dataset.view==="domainAgentView")await loadDomainAgent();if(b.dataset.view==="giftView")await soundworldGiftStatus();if(b.dataset.view==="statusView")await loadStatus()}));
 
 async function ensureProject(){
   const q=await sb.from("hercules_projects").select("id,name,goal,created_at").order("created_at",{ascending:true}).limit(1).maybeSingle();
@@ -808,7 +937,7 @@ function statusRow(label,value,tone){const x=document.createElement("div");x.cla
 async function loadStatus(){const cards=$("statusCards"),ctrl=$("controlStatus"),reg=$("registryStatus");cards.textContent="";ctrl.textContent="";reg.textContent="";const results=await Promise.allSettled([fetchFn("hercules-control-plane",{method:"GET"}),fetchFn("hercules-deployment-broker",{method:"GET"}),fetchFn("hercules-knowledge-registry",{method:"POST",body:JSON.stringify({action:"stats",org_slug:orgSlug})}),fetchFn("hercules-forge-builder",{method:"GET"})]);const c=results[0].status==="fulfilled"?results[0].value:null,b=results[1].status==="fulfilled"?results[1].value:null,k=results[2].status==="fulfilled"?results[2].value:null,f=results[3].status==="fulfilled"?results[3].value:null;cards.append(kpi("Control plane",c?.ok?"Operational":"Unavailable"),kpi("Forge Builder",f?.ok?"Operational":"Unavailable"),kpi("Knowledge entries",k?.total??"Unavailable"));ctrl.append(statusRow("Service",c?.service||"unreachable",c?.ok?"good":"bad"),statusRow("Mode",c?.mode||"—",c?.ok?"good":"warn"),statusRow("Queued commands",c?.commandQueue?.queued??"—",c?.ok?"good":"warn"),statusRow("Running commands",c?.commandQueue?.running??"—",c?.ok?"good":"warn"),statusRow("Deployment broker",b?.ok?"reachable":"unreachable",b?.ok?"good":"bad"));reg.append(statusRow("Registry",k?.ok?"reachable":"unreachable",k?.ok?"good":"bad"),statusRow("Entries",k?.total??"—",k?.ok?"good":"warn"),statusRow("Forge service",f?.service||"unreachable",f?.ok?"good":"bad"));const healthy=Boolean(c?.ok&&k?.ok&&f?.ok);$("livePill").innerHTML="<span class='dot "+(healthy?"good":"warn")+"'></span>"+(healthy?"Core services live":"Partial status");}
 $("refreshStatus").onclick=loadStatus;
 
-async function bootApp(){const s=(await sb.auth.getSession()).data.session;if(!s){switchRoot("auth");return}user=s.user;switchRoot("app");try{await ensureOrg();await ensureProject();$("projectLabel").textContent=project.name;const pending=sessionStorage.getItem("hercules_pending_prompt");if(pending){$("chatPrompt").value=pending;sessionStorage.removeItem("hercules_pending_prompt")}await Promise.allSettled([loadRecovery(),loadMessages(),loadKnowledgeStats(),loadDomainAgent(),loadStatus()]);$("aiStatus").innerHTML="<span class='dot good'></span>AI workspace ready"}catch(e){$("aiStatus").innerHTML="<span class='dot bad'></span>Setup issue";addMessage("meta","Workspace setup issue: "+e.message);const list=$("recoveryLeads");if(list){list.textContent="";const x=document.createElement("div");x.className="notice bad";x.textContent="Recovery Desk unavailable: "+e.message;list.appendChild(x)}}}
+async function bootApp(){const s=(await sb.auth.getSession()).data.session;if(!s){switchRoot("auth");return}user=s.user;switchRoot("app");try{await ensureOrg();await ensureProject();$("projectLabel").textContent=project.name;const pending=sessionStorage.getItem("hercules_pending_prompt");if(pending){$("chatPrompt").value=pending;sessionStorage.removeItem("hercules_pending_prompt")}await Promise.allSettled([loadRecovery(),loadMessages(),loadKnowledgeStats(),loadDomainAgent(),soundworldGiftStatus(),loadStatus()]);$("aiStatus").innerHTML="<span class='dot good'></span>AI workspace ready"}catch(e){$("aiStatus").innerHTML="<span class='dot bad'></span>Setup issue";addMessage("meta","Workspace setup issue: "+e.message);const list=$("recoveryLeads");if(list){list.textContent="";const x=document.createElement("div");x.className="notice bad";x.textContent="Recovery Desk unavailable: "+e.message;list.appendChild(x)}}}
 sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")===false)switchRoot("landing")});
 (async()=>{const s=(await sb.auth.getSession()).data.session;if(s){user=s.user;$("openHercules").textContent="Open Hercules"}switchRoot("landing")})();
 </script>
