@@ -23,6 +23,13 @@ test("launch gift manifest exposes exactly three $0 SoundWorld choices",()=>{
   assert.equal(manifest.choices.length,3);
 });
 
+test("inactive launch gift manifest uses null timestamps before paid launch opens",()=>{
+  const manifest=createSoundWorldLaunchGiftManifest({publicPaidLaunchOpenedAt:null,now:"2026-09-30T01:00:00.000Z"});
+  assert.equal(manifest.active,false);
+  assert.equal(manifest.startsAt,null);
+  assert.equal(manifest.endsAt,null);
+});
+
 test("Launch Window Clock is active only inside the first 14 days",()=>{
   const inside=evaluateSoundWorldGiftEligibility({
     purchaseId:"p_1",
