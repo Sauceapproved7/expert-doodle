@@ -346,3 +346,4 @@ grant execute on function public.hercules_activate_studio_pilot_checkout()
   to service_role;
 
 -- payment_launch_capability approved is required before checkout_enabled=true.
+-- No owner self-purchase is required; live observation begins with the first real customer order.
