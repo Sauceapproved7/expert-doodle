@@ -147,6 +147,34 @@ async function run(){
   );
   const appDeployStripeReady=Boolean(liveAppDeployStripeReady||ledgerAppDeployStripeReady);
   const paymentProviderReady=Boolean(vaultStripeReady||appDeployStripeReady);
+
+  const {error:providerGateSyncError}=await db.rpc('hercules_software_record_payment_gate',{
+    p_product_code:TITAN_PRODUCT_CODE,
+    p_gate:'payment_provider_ready',
+    p_verified:paymentProviderReady,
+    p_evidence:{
+      provider:'stripe',
+      owner_approval_required:false,
+      custody:vaultStripeReady?'supabase-vault':appDeployStripeReady?'appdeploy':null,
+      accountKey:vaultStripeReady?String(stripe?.account_key||''):null,
+      appId:appDeployStripeReady?APPDEPLOY_STRIPE_APP_ID:null,
+      livemode:paymentProviderReady,
+      webhookConfigured:Boolean(
+        vaultStripeReady?stripe?.metadata?.webhook_endpoint_id:
+        appDeployStripeReady?(
+          liveAppDeployStripeReady
+            ? liveAppDeployProviderValue?.webhookConfigured===true
+            : appDeployProviderValue?.webhookConfigured===true
+        ):false
+      ),
+      verifiedAt:new Date().toISOString(),
+      evidenceSource:vaultStripeReady?'supabase-vault':
+        liveAppDeployStripeReady?'live-appdeploy-attestation':
+        ledgerAppDeployStripeReady?'appdeploy-ledger-attestation':'none'
+    }
+  });
+  if(providerGateSyncError)throw providerGateSyncError;
+
   const paymentEvidenceValue=paymentEvidence?.value||{};
   const paymentEvidenceBound=Boolean(
     vaultStripeReady
