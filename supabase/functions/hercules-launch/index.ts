@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {pilotAdmissionGet,pilotAdmissionPost} from "./pilot-admission.ts";
 import {isStudioAccessPage,studioAccessPage,studioAccessRequest,studioAccessClaim} from "./studio-access.ts";
+import {isTitanAccessPage,titanAccessPage,titanAccessRequest,titanAccessClaim} from "./titan-access.ts";
 import {isSoundWorldGiftAccessPage,soundWorldGiftAccessPage,soundWorldGiftAccessRequest} from "./soundworld-gift-access.ts";
 
 const U = Deno.env.get("SUPABASE_URL") || "https://xbwuablxhhwsaoomsoco.supabase.co";
@@ -828,6 +829,17 @@ Deno.serve(async(req:Request)=>{
     }
     return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
   }
+  if(isTitanAccessPage(url)){
+    if(req.method==="GET")return titanAccessPage({U,K});
+    if(req.method==="POST"){
+      const body=await req.clone().json().catch(()=>({}));
+      const action=String(body?.action||"");
+      if(action==="titan_access_request")return titanAccessRequest(body,{U,K,S});
+      if(action==="titan_purchase_claim")return titanAccessClaim(req,{U,K,S});
+      return Response.json({ok:false,error:"unknown_titan_access_action"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
+  }
   if(isSoundWorldGiftAccessPage(url)){
     if(req.method==="GET")return soundWorldGiftAccessPage({U,K});
     if(req.method==="POST"){
@@ -854,7 +866,7 @@ Deno.serve(async(req:Request)=>{
     },{status:200,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
   }
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.8.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",controlled_pilot_open:true,paid_billing_active:false,public_account_registration_open:false,owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true,domain_agent:true});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.8.1",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",controlled_pilot_open:true,paid_billing_active:false,public_account_registration_open:false,owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true,domain_agent:true});
   }
   if(req.method==="POST"){
     const len=Number(req.headers.get("content-length")||"0");
