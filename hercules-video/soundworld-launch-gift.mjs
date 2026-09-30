@@ -123,3 +123,65 @@ export function reserveSoundWorldLaunchGift({
 
   return {ok:true,reservation,eligibility};
 }
+
+
+function escapeGiftHtml(value){
+  return String(value??"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#39;");
+}
+
+export function renderSoundWorldLaunchGiftPage(manifest){
+  const state=manifest?.active===true
+    ? `Promotion active through ${manifest.endsAt}.`
+    : manifest?.startsAt
+      ? "The promotion window has closed."
+      : "The promotion has not started yet.";
+  const cards=(manifest?.choices||[]).map((choice,index)=>`
+    <article class="gift">
+      <span>0${index+1}</span>
+      <h2>${escapeGiftHtml(choice.displayName)}</h2>
+      <p>$0 promotional gift with a qualifying Hercules purchase during the first 14 days of public paid launch.</p>
+      <div class="lock">Gift Choice Lock · one verified purchase, one gift</div>
+    </article>`).join("");
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Hercules Launch Gift</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f7f7f7}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0,#2b2118 0,#0d0b09 34%,#040404 75%)}
+main{width:min(1120px,100%);margin:auto;padding:clamp(18px,4vw,42px)}a{color:#dcb9a1;text-decoration:none}
+.hero{padding:clamp(26px,5vw,58px);border:1px solid #3b3027;border-radius:30px;background:linear-gradient(145deg,#19130f,#090909)}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#c99572}
+h1{font-size:clamp(44px,9vw,88px);line-height:.92;letter-spacing:-.055em;margin:12px 0 18px}
+.lead{max-width:800px;color:#b7b7b7;font-size:clamp(16px,2vw,20px);line-height:1.6}
+.state,.disclosure{margin-top:20px;padding:16px 18px;border:1px solid #5a4325;border-radius:16px;background:#1d150d;color:#efca8c;font-weight:750;line-height:1.5}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
+.gift{min-height:260px;padding:24px;border:1px solid #2d2925;border-radius:22px;background:#0c0b0a;display:flex;flex-direction:column}
+.gift>span{font-size:11px;letter-spacing:.18em;color:#967a62}.gift h2{font-size:28px;margin:42px 0 12px}.gift p{color:#aaa;line-height:1.55}.lock{margin-top:auto;color:#d4b28d;font-size:12px}
+.foot{margin-top:18px;color:#777;font-size:13px;line-height:1.6}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.hero{border-radius:22px}.gift{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">Hercules launch promotion</div>
+<h1>Pick your free SoundWorld gift.</h1>
+<p class="lead">For the first 14 days after public Hercules paid launch opens, each qualifying settled Hercules purchase gets one $0 SoundWorld gift reservation: Pods, Max, or the portable speaker.</p>
+<div class="state">${escapeGiftHtml(state)}</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="disclosure">SoundWorld hardware is currently pre-production. Qualifying buyers reserve their choice first; physical fulfillment begins only after the selected hardware clears production availability. Verification or test purchases do not qualify.</div>
+<p class="foot">Choice claiming stays fail-closed until Hercules verifies the purchase and customer authorization. <a href="/pricing">View Hercules Studio pricing</a>.</p>
+</main>
+</body>
+</html>`;
+}
