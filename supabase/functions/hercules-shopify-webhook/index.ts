@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-const URL=Deno.env.get('SUPABASE_URL')!;const KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default;const db=createClient(URL,KEY,{auth:{persistSession:false}});const STORE='azymhc-x0.myshopify.com';
+const URL=Deno.env.get('SUPABASE_URL')!;const KEY=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')||JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default;const db=createClient(URL,KEY,{auth:{persistSession:false}});const STORE='sauceapproved-2.myshopify.com';
 const json=(d:unknown,s=200)=>new Response(JSON.stringify(d),{status:s,headers:{'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff'}});
 function safe(a:string,b:string){if(a.length!==b.length)return false;let x=0;for(let i=0;i<a.length;i++)x|=a.charCodeAt(i)^b.charCodeAt(i);return x===0}
 async function hmacBase64(raw:string,secret:string){const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);const s=await crypto.subtle.sign('HMAC',k,new TextEncoder().encode(raw));let bin='';for(const b of new Uint8Array(s))bin+=String.fromCharCode(b);return btoa(bin)}
