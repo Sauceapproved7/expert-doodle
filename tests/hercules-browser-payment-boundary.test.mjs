@@ -1,10 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   detectOwnerCheckpointText,
   isStripeSandboxCheckoutUrl,
   stripePaymentBoundary
 } from "../render/hercules-browser-standalone/checkpoints.mjs";
+
+const server = await readFile(
+  new URL("../render/hercules-browser-standalone/server.mjs", import.meta.url),
+  "utf8"
+);
 
 test("passive Stripe legal copy is not treated as owner Terms acceptance", () => {
   assert.equal(
@@ -87,4 +93,11 @@ test("sandbox payment submission requires Stripe's standard test card", () => {
     }),
     "payment"
   );
+});
+
+test("standalone worker applies the checkpoint and Stripe payment boundary helpers", () => {
+  assert.match(server, /from "\.\/checkpoints\.mjs"/);
+  assert.match(server, /detectOwnerCheckpointText/);
+  assert.match(server, /stripePaymentBoundary/);
+  assert.match(server, /owner_action_required:payment/);
 });
