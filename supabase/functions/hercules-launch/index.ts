@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {pilotAdmissionGet,pilotAdmissionPost} from "./pilot-admission.ts";
 import {isStudioAccessPage,studioAccessPage,studioAccessRequest,studioAccessClaim} from "./studio-access.ts";
+import {isTitanAccessPage,titanAccessPage,titanAccessRequest,titanAccessClaim} from "./titan-access.ts";
 import {isSoundWorldGiftAccessPage,soundWorldGiftAccessPage,soundWorldGiftAccessRequest} from "./soundworld-gift-access.ts";
 
 const U = Deno.env.get("SUPABASE_URL") || "https://xbwuablxhhwsaoomsoco.supabase.co";
@@ -825,6 +826,17 @@ Deno.serve(async(req:Request)=>{
       if(action==="studio_access_request")return studioAccessRequest(body,{U,K,S});
       if(action==="studio_purchase_claim")return studioAccessClaim(req,{U,K,S});
       return Response.json({ok:false,error:"unknown_studio_access_action"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
+  }
+  if(isTitanAccessPage(url)){
+    if(req.method==="GET")return titanAccessPage({U,K});
+    if(req.method==="POST"){
+      const body=await req.clone().json().catch(()=>({}));
+      const action=String(body?.action||"");
+      if(action==="titan_access_request")return titanAccessRequest(body,{U,K,S});
+      if(action==="titan_purchase_claim")return titanAccessClaim(req,{U,K,S});
+      return Response.json({ok:false,error:"unknown_titan_access_action"},{status:400,headers:{"cache-control":"no-store"}});
     }
     return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
   }
