@@ -120,7 +120,7 @@ export function createStudioOnboardingManifest(){
       "No provider is represented as connected unless Hercules verifies it.",
       "Mutation and execution stay fail-closed without trusted authorization.",
       "AI and rendered outputs require human review before commercial publication.",
-      "Paid checkout stays disabled until owner approvals and the payment path are verified."
+      "Monthly subscription checkout stays disabled until its commercial approvals and payment path are verified."
     ],
     commercial:{
       plans:commercial.plans,
