@@ -45,3 +45,15 @@ test("runner contract points to the bounded reconciliation policy",()=>{
   assert.equal(policy.allowPriceChanges,false);
   assert.equal(policy.allowCheckoutPublication,false);
 });
+
+
+test("Studio first real customer order automatically records post-launch observation evidence",()=>{
+  assert.match(sql,/sauceapproved-studio-founding-pilot/);
+  assert.match(sql,/payment_path_verified/);
+  assert.match(sql,/first_real_customer_order_observed/);
+  assert.match(sql,/studio_entitlement_reconciliation/);
+  assert.match(sql,/payment_transaction_state/);
+  assert.match(sql,/payout_state_pending/);
+  assert.match(sql,/status='pending'/);
+  assert.match(sql,/SA-STUDIO-PILOT-001/);
+});
