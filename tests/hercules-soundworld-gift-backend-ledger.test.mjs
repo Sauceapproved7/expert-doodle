@@ -10,6 +10,8 @@ const stripeWebhook=readFileSync(resolve(root,"supabase/functions/hercules-strip
 const shopifyWebhook=readFileSync(resolve(root,"supabase/functions/hercules-private-bridge/studio-commerce-webhook.ts"),"utf8");
 const privateBridge=readFileSync(resolve(root,"supabase/functions/hercules-private-bridge/index.ts"),"utf8");
 const bridgeGift=readFileSync(resolve(root,"supabase/functions/hercules-private-bridge/soundworld-launch-gift.ts"),"utf8");
+const launchGiftAccess=readFileSync(resolve(root,"supabase/functions/hercules-launch/soundworld-gift-access.ts"),"utf8");
+const launchIndex=readFileSync(resolve(root,"supabase/functions/hercules-launch/index.ts"),"utf8");
 
 test("SoundWorld gift ledger is durable, RLS protected, and duplicate-safe",()=>{
   assert.match(migration,/hercules_soundworld_gift_eligibility/);
@@ -76,4 +78,17 @@ test("private bridge multiplexes authenticated gift claims without a new Edge Fu
   assert.match(bridgeGift,/auth\.getUser/);
   assert.match(bridgeGift,/hercules_soundworld_claim_gift/);
   assert.match(bridgeGift,/hercules_soundworld_gift_eligibility/);
+});
+
+
+test("buyer claim page uses secure magic-link auth and live private-bridge ledger",()=>{
+  assert.match(launchIndex,/soundworld-gift-access\.ts/);
+  assert.match(launchIndex,/isSoundWorldGiftAccessPage/);
+  assert.match(launchGiftAccess,/signInWithOtp/);
+  assert.match(launchGiftAccess,/soundworld_launch_gift=1/);
+  assert.match(launchGiftAccess,/session\.access_token/);
+  assert.match(launchGiftAccess,/soundworld-pods/);
+  assert.match(launchGiftAccess,/soundworld-max/);
+  assert.match(launchGiftAccess,/soundworld-portable-speaker/);
+  assert.match(bridgeGift,/https:\/\/xbwuablxhhwsaoomsoco\.supabase\.co/);
 });
