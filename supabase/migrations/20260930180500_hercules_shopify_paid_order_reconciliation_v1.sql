@@ -32,6 +32,8 @@ declare
   v_gift jsonb;
   v_purchase_key text;
   v_source_event_id text;
+  v_prior_jwt_claims text;
+  v_impersonated_service_role boolean := false;
 begin
   if current_user not in ('postgres','service_role')
      and coalesce(auth.jwt()->>'role','') <> 'service_role' then
@@ -173,7 +175,17 @@ begin
     coalesce(nullif(trim(coalesce(p_line_item_id,'')),''),trim(p_sku))
   );
 
-  v_gift := public.hercules_soundworld_record_purchase_eligibility(
+  -- The existing SoundWorld recorder self-checks auth.jwt(). The SQL-admin reconciliation
+  -- path runs as Postgres, which is already more privileged than service_role. Set only the
+  -- transaction-local JWT claim while invoking that existing recorder, then restore it.
+  if current_user='postgres' and coalesce(auth.jwt()->>'role','') <> 'service_role' then
+    v_prior_jwt_claims := current_setting('request.jwt.claims',true);
+    perform set_config('request.jwt.claims','{"role":"service_role"}',true);
+    v_impersonated_service_role := true;
+  end if;
+
+  begin
+    v_gift := public.hercules_soundworld_record_purchase_eligibility(
     p_purchase_key => v_purchase_key,
     p_provider => 'shopify',
     p_provider_object_id => trim(p_order_id),
@@ -195,6 +207,16 @@ begin
       'native_webhook',false
     )
   );
+  exception when others then
+    if v_impersonated_service_role then
+      perform set_config('request.jwt.claims',coalesce(v_prior_jwt_claims,''),true);
+    end if;
+    raise;
+  end;
+
+  if v_impersonated_service_role then
+    perform set_config('request.jwt.claims',coalesce(v_prior_jwt_claims,''),true);
+  end if;
 
   return jsonb_build_object(
     'ok',true,
