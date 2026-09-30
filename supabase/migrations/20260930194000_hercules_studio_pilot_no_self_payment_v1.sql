@@ -2,6 +2,20 @@
 -- Prelaunch capability is sufficient to open the approved Shopify offer.
 -- payment_path_verified remains a separate post-launch observation gate.
 
+alter table public.hercules_software_commercial_approvals
+  drop constraint if exists hercules_software_commercial_approvals_approval_type_check;
+
+alter table public.hercules_software_commercial_approvals
+  add constraint hercules_software_commercial_approvals_approval_type_check
+  check (approval_type = any(array[
+    'pricing'::text,
+    'terms'::text,
+    'privacy'::text,
+    'payment_provider_ready'::text,
+    'payment_launch_capability'::text,
+    'payment_path_verified'::text
+  ]));
+
 insert into public.hercules_software_commercial_approvals(
   product_code,approval_type,status,document_ref,evidence
 )
