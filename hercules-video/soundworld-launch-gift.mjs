@@ -165,8 +165,9 @@ h1{font-size:clamp(44px,9vw,88px);line-height:.92;letter-spacing:-.055em;margin:
 .grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}
 .gift{min-height:260px;padding:24px;border:1px solid #2d2925;border-radius:22px;background:#0c0b0a;display:flex;flex-direction:column}
 .gift>span{font-size:11px;letter-spacing:.18em;color:#967a62}.gift h2{font-size:28px;margin:42px 0 12px}.gift p{color:#aaa;line-height:1.55}.lock{margin-top:auto;color:#d4b28d;font-size:12px}
+.cta{display:inline-flex;align-items:center;justify-content:center;margin-top:20px;padding:14px 18px;border-radius:14px;background:#f4f4f4;color:#111;font-weight:850}
 .foot{margin-top:18px;color:#777;font-size:13px;line-height:1.6}
-@media(max-width:760px){.grid{grid-template-columns:1fr}.hero{border-radius:22px}.gift{min-height:auto}}
+@media(max-width:760px){.grid{grid-template-columns:1fr}.hero{border-radius:22px}.gift{min-height:auto}.cta{width:100%}}
 </style>
 </head>
 <body>
@@ -180,6 +181,7 @@ h1{font-size:clamp(44px,9vw,88px);line-height:.92;letter-spacing:-.055em;margin:
 </section>
 <section class="grid">${cards}</section>
 <div class="disclosure">SoundWorld hardware is currently pre-production. Qualifying buyers reserve their choice first; physical fulfillment begins only after the selected hardware clears production availability. Verification or test purchases do not qualify.</div>
+<a class="cta" href="https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-launch?soundworld_gift=1">Claim Your Free Gift</a>
 <p class="foot">Choice claiming stays fail-closed until Hercules verifies the purchase and customer authorization. <a href="/pricing">View Hercules Studio pricing</a>.</p>
 </main>
 </body>
