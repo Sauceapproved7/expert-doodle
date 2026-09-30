@@ -21,7 +21,7 @@ values(
     )
   ),
   'governance/hercules-soundworld-launch-gift-v1.json',
-  null,
+  now(),
   now()
 )
 on conflict (key) do nothing;
