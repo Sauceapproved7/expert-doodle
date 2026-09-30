@@ -14,7 +14,8 @@ import {createMovieMachineManifest,renderMovieMachine} from "../sauceapproved-st
 import {createHoloStageManifest,renderHoloStage} from "../sauceapproved-studio/holostage/core.mjs";
 import {createLegacyVaultManifest,renderLegacyVault} from "../sauceapproved-studio/legacy-vault/core.mjs";
 import {createStudioDirectorManifest,renderStudioDirector} from "../sauceapproved-studio/studio-director/core.mjs";
-import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";\nimport {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift} from "./soundworld-launch-gift.mjs";
+import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
+import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift} from "./soundworld-launch-gift.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
