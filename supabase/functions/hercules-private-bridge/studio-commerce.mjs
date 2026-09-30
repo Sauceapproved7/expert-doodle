@@ -1,5 +1,11 @@
 export const STUDIO_SHOPIFY_PRODUCT=Object.freeze({
   shopDomain:"sauceapproved-2.myshopify.com",
+  shopDomains:Object.freeze([
+    "sauceapproved-2.myshopify.com",
+    "azymhc-x0.myshopify.com",
+    "sauceapproved-3.myshopify.com"
+  ]),
+  shopGid:"gid://shopify/Shop/100002726208",
   productId:"15397259477312",
   variantId:"67601341153600",
   sku:"SA-STUDIO-PILOT-001",
@@ -43,10 +49,16 @@ function exactStudioLineItem(item){
   });
 }
 
+export function isStudioShopDomainAllowed(value){
+  const domain=String(value??"").trim().toLowerCase();
+  return STUDIO_SHOPIFY_PRODUCT.shopDomains.includes(domain);
+}
+
 export function validateStudioShopifyPaidOrder(payload={},context={}){
-  const shopDomain=String(context.shopDomain??"").trim().toLowerCase();
+  const sourceShopDomain=String(context.shopDomain??"").trim().toLowerCase();
   const topic=String(context.topic??"").trim().toLowerCase();
-  if(shopDomain!==STUDIO_SHOPIFY_PRODUCT.shopDomain)throw new Error("shop_domain_mismatch");
+  if(!isStudioShopDomainAllowed(sourceShopDomain))throw new Error("shop_domain_mismatch");
+  const shopDomain=STUDIO_SHOPIFY_PRODUCT.shopDomain;
   if(topic!=="orders/paid")throw new Error("webhook_topic_mismatch");
   if(String(payload.financial_status??"").trim().toLowerCase()!=="paid")throw new Error("order_not_paid");
   if(payload.test===true)throw new Error("test_order_not_eligible");
@@ -61,6 +73,7 @@ export function validateStudioShopifyPaidOrder(payload={},context={}){
     schema:"sauceapproved.hercules.studio-shopify-paid-order.v1",
     match:lineItems.length>0,
     shopDomain,
+    sourceShopDomain,
     topic,
     orderId,
     email,
