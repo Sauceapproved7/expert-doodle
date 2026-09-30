@@ -48,3 +48,14 @@ test("Stripe and Shopify trusted purchase paths feed the same gift eligibility l
   assert.match(stripeWebhook,/verificationRunId/);
   assert.match(shopifyWebhook,/buyer_email_sha256/);
 });
+
+
+test("workspace membership alone cannot claim another buyer's gift",()=>{
+  assert.doesNotMatch(migration,/from public\.hercules_memberships m[\s\S]*v_identity_ok/);
+  assert.doesNotMatch(fn,/hercules_memberships/);
+});
+
+test("launch window requires a fresh launch-ready check",()=>{
+  assert.match(migration,/checked_at >= now\(\) - interval '15 minutes'/i);
+  assert.match(migration,/paid_launch_gate_not_ready_or_stale/);
+});
