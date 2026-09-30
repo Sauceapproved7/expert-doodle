@@ -1,6 +1,7 @@
 -- Studio Pilot first-sale observation v1
 -- Replaces the bounded reconciler with the same fail-closed behavior plus automatic
 -- post-launch observation evidence for legitimate Studio Pilot customer orders.
+-- Payout-state verification remains a later provider observation and is never inferred here.
 
 -- Bounded reconciliation for verified Shopify paid orders when native webhook delivery is unavailable.
 -- The caller must obtain order facts from the connected Shopify Admin API. No customer-supplied payment claim is accepted.
