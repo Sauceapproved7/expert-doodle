@@ -18,7 +18,16 @@ test("paid launch requires Shopify Founding Access disposition evidence",()=>{
   assert.match(gate,/storefront_offer_reconciled/);
 });
 
-test("commercialOk fails closed until Shopify offer reconciliation is verified",()=>{
+test("legacy Titan commercial lane still fails closed until Shopify offer reconciliation is verified",()=>{
   assert.match(gate,/shopifyOfferReconciled/);
+  assert.match(gate,/legacyTitanPaidLaunchReady/);
   assert.match(gate,/paymentProviderReady&&paymentPathVerified&&shopifyOfferReconciled/);
+});
+
+test("Studio Pilot is a separate Shopify-first-sale launch lane",()=>{
+  assert.match(gate,/sauceapproved-studio-founding-pilot/);
+  assert.match(gate,/payment_launch_capability/);
+  assert.match(gate,/payment_path_verified/);
+  assert.match(gate,/postLaunchObservationRequired/);
+  assert.match(gate,/studioPilotStorefrontPublished/);
 });
