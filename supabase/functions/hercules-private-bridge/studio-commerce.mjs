@@ -64,6 +64,8 @@ export function validateStudioShopifyPaidOrder(payload={},context={}){
     topic,
     orderId,
     email,
+    createdAt:String(payload.created_at??"").trim()||null,
+    processedAt:String(payload.processed_at??"").trim()||String(payload.created_at??"").trim()||null,
     currency:String(payload.currency??"").trim().toUpperCase()||null,
     totalPrice:String(payload.total_price??"").trim()||null,
     lineItems

@@ -93,6 +93,51 @@ async function verify(payload:string,header:string,secretValue:string){
   return signatures.some(signature=>safeEqual(signature,expected));
 }
 
+async function recordSoundWorldGiftEligibility({
+  event,
+  session,
+  productCode,
+  organizationId,
+  verificationPurchase
+}:{
+  event:any,
+  session:any,
+  productCode:string,
+  organizationId:string,
+  verificationPurchase:boolean
+}){
+  const purchaseKey='stripe:checkout:'+String(session?.id||'');
+  if(!session?.id||!productCode)return null;
+  const rawEmail=String(session?.customer_details?.email||session?.customer_email||'').trim().toLowerCase();
+  const buyerEmailSha256=rawEmail?await sha256(rawEmail):null;
+  const createdSeconds=Number(session?.created||event?.created||0);
+  const purchasedAt=Number.isFinite(createdSeconds)&&createdSeconds>0
+    ?new Date(createdSeconds*1000).toISOString()
+    :new Date().toISOString();
+  const {data,error}=await admin.rpc('hercules_soundworld_record_purchase_eligibility',{
+    p_purchase_key:purchaseKey,
+    p_provider:'stripe',
+    p_provider_object_id:String(session.id),
+    p_product_code:productCode,
+    p_organization_id:organizationId||null,
+    p_user_id:null,
+    p_buyer_email_sha256:buyerEmailSha256,
+    p_purchased_at:purchasedAt,
+    p_amount_cents:Number(session?.amount_total||0),
+    p_currency:String(session?.currency||'usd').toUpperCase(),
+    p_payment_settled:String(session?.payment_status||'').toLowerCase()==='paid',
+    p_verification_purchase:verificationPurchase,
+    p_source_event_id:String(event?.id||'')||null,
+    p_metadata:{
+      source:'stripe_checkout_session_completed',
+      raw_email_stored:false,
+      verification_purchase:verificationPurchase
+    }
+  });
+  if(error)throw error;
+  return data;
+}
+
 function normStatus(value:any){
   const status=String(value||'incomplete');
   return ['trialing','active','past_due','canceled','paused','incomplete','incomplete_expired','unpaid'].includes(status)
@@ -471,7 +516,17 @@ Deno.serve(async req=>{
       titanVerificationRunId=titan.titanVerificationRunId;
       verificationRunId=meta.verificationRunId;
 
-      if(titanVerificationRunId&&titan.titanProductCode==='hercules-titan-founding-access'){
+      if(titan.titanProductCode==='hercules-titan-founding-access'){
+        await recordSoundWorldGiftEligibility({
+          event,
+          session:obj,
+          productCode:titan.titanProductCode,
+          organizationId,
+          verificationPurchase:Boolean(titanVerificationRunId)
+        });
+        if(!titanVerificationRunId){
+          // Real Titan purchases are eligible for the launch gift but are not payment-verification runs.
+        }else{
         const paymentIntentId=stripeId(obj.payment_intent);
         await updateTitanVerificationRun(titanVerificationRunId,{
           checkout_session_id:String(obj.id||''),
@@ -487,7 +542,15 @@ Deno.serve(async req=>{
         if(paymentIntentId){
           await autoRefundTitanVerification(titanVerificationRunId,paymentIntentId);
         }
+        }
       }else if(meta.softwareProductCode&&meta.softwarePlanCode){
+        await recordSoundWorldGiftEligibility({
+          event,
+          session:obj,
+          productCode:meta.softwareProductCode,
+          organizationId,
+          verificationPurchase:Boolean(verificationRunId)
+        });
         const subscriptionId=stripeId(obj.subscription);
         if(organizationId&&subscriptionId){
           const subscription=await stripe('subscriptions/'+encodeURIComponent(subscriptionId));

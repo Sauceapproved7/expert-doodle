@@ -7,6 +7,11 @@ import {
 
 const enc=new TextEncoder();
 const MAX_BODY_BYTES=512*1024;
+const TITAN_SHOPIFY_PRODUCT=Object.freeze({
+  productId:'10261114782016',
+  sku:'HERCULES-TITAN-FOUNDING',
+  productCode:'hercules-titan-founding-access'
+});
 
 function out(body:unknown,status=200){
   return new Response(JSON.stringify(body),{
@@ -40,6 +45,73 @@ async function callbackAuthorized(admin:any,supplied:string){
     .maybeSingle();
   return !error&&Boolean(data?.enabled&&data?.key_sha256)&&safeEqual(String(data.key_sha256),digest);
 }
+function exactTitanLineItem(item:any){
+  const productId=String(item?.product_id??'').trim();
+  const sku=String(item?.sku??'').trim();
+  const quantity=Number(item?.quantity||0);
+  if(productId!==TITAN_SHOPIFY_PRODUCT.productId||sku!==TITAN_SHOPIFY_PRODUCT.sku||!Number.isSafeInteger(quantity)||quantity<1){
+    return null;
+  }
+  return {
+    lineItemId:String(item?.id??'').trim()||null,
+    productId,
+    variantId:String(item?.variant_id??'').trim()||null,
+    sku,
+    quantity
+  };
+}
+
+function moneyToCents(value:any){
+  const amount=Number(String(value??'0'));
+  return Number.isFinite(amount)&&amount>=0?Math.round(amount*100):0;
+}
+
+async function recordSoundWorldGiftEligibility(admin:any,{
+  webhookId,
+  order,
+  productCode,
+  lineItem
+}:{
+  webhookId:string,
+  order:any,
+  productCode:string,
+  lineItem:any
+}){
+  const purchaseKey=[
+    'shopify',
+    String(order.shopDomain),
+    String(order.orderId),
+    String(productCode),
+    String(lineItem?.lineItemId||lineItem?.sku||'purchase')
+  ].join(':');
+  const purchasedAt=String(order.processedAt||order.createdAt||new Date().toISOString());
+  const buyerEmailSha256=await sha256Hex(normalizeStudioBuyerEmail(order.email));
+  const {data,error}=await admin.rpc('hercules_soundworld_record_purchase_eligibility',{
+    p_purchase_key:purchaseKey,
+    p_provider:'shopify',
+    p_provider_object_id:String(order.orderId),
+    p_product_code:productCode,
+    p_organization_id:null,
+    p_user_id:null,
+    p_buyer_email_sha256:buyerEmailSha256,
+    p_purchased_at:purchasedAt,
+    p_amount_cents:moneyToCents(order.totalPrice),
+    p_currency:String(order.currency||'USD'),
+    p_payment_settled:true,
+    p_verification_purchase:false,
+    p_source_event_id:webhookId,
+    p_metadata:{
+      source:'shopify_orders_paid',
+      shop_domain:String(order.shopDomain),
+      line_item_id:lineItem?.lineItemId||null,
+      sku:lineItem?.sku||null,
+      raw_email_stored:false
+    }
+  });
+  if(error)throw error;
+  return data;
+}
+
 async function eventRecord(admin:any,webhookId:string){
   const {data}=await admin.from('hercules_studio_shopify_webhook_events')
     .select('webhook_id,payload_sha256,state,entitlement_count')
@@ -104,17 +176,39 @@ export async function handleStudioShopifyPaidWebhook(req:Request,url:URL,admin:a
     return out({ok:true,rejected:true,reason});
   }
 
-  if(!order.match){
+  const titanGiftLines=(Array.isArray(payload.line_items)?payload.line_items:[])
+    .map(exactTitanLineItem)
+    .filter(Boolean);
+
+  if(!order.match&&!titanGiftLines.length){
     await writeEvent(admin,{
       webhook_id:webhookId,event_id:eventId,topic,shop_domain:shopDomain,payload_sha256:payloadSha256,
-      state:'ignored',entitlement_count:0,reason_code:'studio_product_not_present',
+      state:'ignored',entitlement_count:0,reason_code:'hercules_product_not_present',
       metadata:{callback_credential_verified:true,order_id:order.orderId}
     });
-    return out({ok:true,ignored:true,reason:'studio_product_not_present'});
+    return out({ok:true,ignored:true,reason:'hercules_product_not_present'});
   }
 
   const normalizedEmail=normalizeStudioBuyerEmail(order.email);
   const buyerEmailSha256=await sha256Hex(normalizedEmail);
+  const giftEligibility=[];
+  for(const line of order.lineItems){
+    giftEligibility.push(await recordSoundWorldGiftEligibility(admin,{
+      webhookId,
+      order,
+      productCode:STUDIO_SHOPIFY_PRODUCT.productCode,
+      lineItem:line
+    }));
+  }
+  for(const line of titanGiftLines){
+    giftEligibility.push(await recordSoundWorldGiftEligibility(admin,{
+      webhookId,
+      order,
+      productCode:TITAN_SHOPIFY_PRODUCT.productCode,
+      lineItem:line
+    }));
+  }
+
   const rows=[];
   for(const line of order.lineItems){
     rows.push({
@@ -146,9 +240,11 @@ export async function handleStudioShopifyPaidWebhook(req:Request,url:URL,admin:a
     });
   }
 
-  const {error:entitlementError}=await admin.from('hercules_studio_purchase_entitlements')
-    .upsert(rows,{onConflict:'entitlement_key',ignoreDuplicates:true});
-  if(entitlementError)return out({error:'entitlement_persist_failed'},500);
+  if(rows.length){
+    const {error:entitlementError}=await admin.from('hercules_studio_purchase_entitlements')
+      .upsert(rows,{onConflict:'entitlement_key',ignoreDuplicates:true});
+    if(entitlementError)return out({error:'entitlement_persist_failed'},500);
+  }
 
   await writeEvent(admin,{
     webhook_id:webhookId,event_id:eventId,topic,shop_domain:shopDomain,payload_sha256:payloadSha256,
@@ -157,8 +253,15 @@ export async function handleStudioShopifyPaidWebhook(req:Request,url:URL,admin:a
       order_id:order.orderId,
       entitlement_version:STUDIO_SHOPIFY_PRODUCT.entitlementVersion,
       callback_credential_verified:true,
+      soundworld_gift_eligibility:giftEligibility,
+      titan_gift_line_count:titanGiftLines.length,
       raw_email_stored:false
     }
   });
-  return out({ok:true,entitled:true,entitlementCount:rows.length});
+  return out({
+    ok:true,
+    entitled:rows.length>0,
+    entitlementCount:rows.length,
+    soundworldGiftEligibility:giftEligibility
+  });
 }
