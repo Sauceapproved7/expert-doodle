@@ -8,6 +8,8 @@ const migration=readFileSync(resolve(root,"supabase/migrations/20260930015000_he
 const fn=readFileSync(resolve(root,"supabase/functions/hercules-launch-gift/index.ts"),"utf8");
 const stripeWebhook=readFileSync(resolve(root,"supabase/functions/hercules-stripe-webhook/index.ts"),"utf8");
 const shopifyWebhook=readFileSync(resolve(root,"supabase/functions/hercules-private-bridge/studio-commerce-webhook.ts"),"utf8");
+const privateBridge=readFileSync(resolve(root,"supabase/functions/hercules-private-bridge/index.ts"),"utf8");
+const bridgeGift=readFileSync(resolve(root,"supabase/functions/hercules-private-bridge/soundworld-launch-gift.ts"),"utf8");
 
 test("SoundWorld gift ledger is durable, RLS protected, and duplicate-safe",()=>{
   assert.match(migration,/hercules_soundworld_gift_eligibility/);
@@ -64,4 +66,14 @@ test("launch window requires a fresh launch-ready check",()=>{
 test("pending launch-window ledger row satisfies non-null verification timestamp",()=>{
   assert.match(migration,/governance\/hercules-soundworld-launch-gift-v1\.json',\s*now\(\),\s*now\(\)/s);
   assert.doesNotMatch(migration,/governance\/hercules-soundworld-launch-gift-v1\.json',\s*null,/s);
+});
+
+
+test("private bridge multiplexes authenticated gift claims without a new Edge Function",()=>{
+  assert.match(privateBridge,/soundworld-launch-gift\.ts/);
+  assert.match(privateBridge,/isSoundWorldLaunchGiftRequest/);
+  assert.match(privateBridge,/handleSoundWorldLaunchGiftRequest/);
+  assert.match(bridgeGift,/auth\.getUser/);
+  assert.match(bridgeGift,/hercules_soundworld_claim_gift/);
+  assert.match(bridgeGift,/hercules_soundworld_gift_eligibility/);
 });
