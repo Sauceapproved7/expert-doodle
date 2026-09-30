@@ -22,7 +22,7 @@ It also stops once the cutover state is `complete`.
 The provider connector is pinned to:
 
 - Shop GID: `gid://shopify/Shop/100002726208`
-- original myshopify domain: `azymhc-x0.myshopify.com`
+- canonical provider account key: `sauceapproved-2.myshopify.com`\n- historical original myshopify alias: `azymhc-x0.myshopify.com`
 
 An accidentally authorized second shop cannot advance the SauceApproved launch.
 
