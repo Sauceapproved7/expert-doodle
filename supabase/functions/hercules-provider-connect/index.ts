@@ -6,6 +6,14 @@ const A=Deno.env.get('SUPABASE_ANON_KEY')!;
 const S=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const STORE='sauceapproved-2.myshopify.com';
 const SHOP_GID='gid://shopify/Shop/100002726208';
+const SHOP_ALIASES=new Set([
+  STORE,
+  'azymhc-x0.myshopify.com',
+  'sauceapproved-3.myshopify.com'
+]);
+function shopDomainAllowed(value:unknown){
+  return SHOP_ALIASES.has(String(value??'').trim().toLowerCase());
+}
 const RECEIVER=`${U}/functions/v1/hercules-shopify-webhook`;
 const STRIPE_RECEIVER=`${U}/functions/v1/hercules-stripe-webhook`;
 const INTEGRATIONS_RETURN=`${U}/functions/v1/hercules-integrations`;
@@ -793,7 +801,7 @@ async function observeShopifyDomains(admin:any,organizationId?:string){
   const shop=data?.shop;
   if(!shop
     || String(shop.id)!==SHOP_GID
-    || String(shop.myshopifyDomain).toLowerCase()!==STORE){
+    || !shopDomainAllowed(shop.myshopifyDomain)){
     throw new Error('shopify_production_shop_mismatch');
   }
 
@@ -903,7 +911,7 @@ async function observeShopifyLaunch(admin:any,organizationId?:string){
 
   if(!data?.shop
     || String(data.shop.id)!==SHOP_GID
-    || String(data.shop.myshopifyDomain).toLowerCase()!==STORE){
+    || !shopDomainAllowed(data.shop.myshopifyDomain)){
     throw new Error('shopify_launch_production_shop_mismatch');
   }
 
@@ -1127,7 +1135,7 @@ Deno.serve(async req=>{
       );
 
       if(String(app.shop.id)!==SHOP_GID
-        || String(app.shop.myshopifyDomain).toLowerCase()!==STORE){
+        || !shopDomainAllowed(app.shop.myshopifyDomain)){
         throw new Error('shop_mismatch');
       }
 

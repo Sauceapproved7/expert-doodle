@@ -1,5 +1,6 @@
 import {
   STUDIO_SHOPIFY_PRODUCT,
+  isStudioShopDomainAllowed,
   normalizeStudioBuyerEmail,
   studioEntitlementKey,
   validateStudioShopifyPaidOrder
@@ -164,7 +165,7 @@ export async function handleStudioShopifyPaidWebhook(req:Request,url:URL,admin:a
   const webhookId=String(req.headers.get('x-shopify-webhook-id')||'').trim();
   const eventId=String(req.headers.get('x-shopify-event-id')||'').trim()||null;
   if(!webhookId||webhookId.length>160)return out({error:'shopify_webhook_id_required'},400);
-  if(shopDomain!==STUDIO_SHOPIFY_PRODUCT.shopDomain)return out({error:'shop_domain_mismatch'},403);
+  if(!isStudioShopDomainAllowed(shopDomain))return out({error:'shop_domain_mismatch'},403);
   if(topic!=='orders/paid')return out({error:'webhook_topic_mismatch'},400);
 
   const len=Number(req.headers.get('content-length')||'0');

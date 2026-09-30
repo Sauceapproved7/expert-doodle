@@ -15,10 +15,11 @@ const liveDomainPatch=await readFile(
   "utf8"
 );
 
-test("provider monitor is locked to the verified production shop",()=>{
+test("provider monitor is locked to immutable Shop GID while allowing verified store aliases",()=>{
   assert.match(edge,/gid:\/\/shopify\/Shop\/100002726208/);
-  assert.ok(edge.includes("const STORE='sauceapproved-2.myshopify.com';"));
-  assert.equal(edge.includes("const STORE='azymhc-x0.myshopify.com';"),false);
+  assert.match(edge,/sauceapproved-2\.myshopify\.com/);
+  assert.match(edge,/azymhc-x0\.myshopify\.com/);
+  assert.match(edge,/SHOP_ALIASES|shopDomainAllowed/);
   assert.ok(liveDomainPatch.includes("account_key='sauceapproved-2.myshopify.com'"));
   assert.match(edge,/shopify_production_shop_mismatch/);
 });

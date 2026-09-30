@@ -45,6 +45,17 @@ test("accepts only the exact paid Studio founding-pilot line item",()=>{
   assert.equal(result.lineItems[0].quantity,1);
 });
 
+test("accepts Shopify native myshopify alias and normalizes it to the canonical store identity",()=>{
+  const result=validateStudioShopifyPaidOrder(paidOrder(),{
+    shopDomain:"azymhc-x0.myshopify.com",
+    topic:"orders/paid"
+  });
+  assert.equal(result.match,true);
+  assert.equal(result.shopDomain,"sauceapproved-2.myshopify.com");
+  assert.ok(STUDIO_SHOPIFY_PRODUCT.shopDomains.includes("azymhc-x0.myshopify.com"));
+  assert.ok(STUDIO_SHOPIFY_PRODUCT.shopDomains.includes("sauceapproved-2.myshopify.com"));
+});
+
 test("rejects non-paid payloads fail closed",()=>{
   assert.throws(()=>validateStudioShopifyPaidOrder(
     paidOrder({financial_status:"pending"}),
