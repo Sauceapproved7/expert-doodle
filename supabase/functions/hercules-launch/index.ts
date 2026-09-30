@@ -866,7 +866,7 @@ Deno.serve(async(req:Request)=>{
     },{status:200,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
   }
   if(url.searchParams.get("health")==="1"){
-    return Response.json({ok:true,service:"hercules-launch",version:"1.8.1",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",controlled_pilot_open:true,paid_billing_active:false,public_account_registration_open:false,owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true,domain_agent:true});
+    return Response.json({ok:true,service:"hercules-launch",version:"1.8.0",product:"Hercules Revenue Recovery",presentation:"customer-recovery-workspace",registration:"manual-release-gated",controlled_pilot_open:true,paid_billing_active:false,public_account_registration_open:false,owned_runtime:true,marketing_tracking:true,pilot_intake:true,ad_studio:true,domain_agent:true});
   }
   if(req.method==="POST"){
     const len=Number(req.headers.get("content-length")||"0");
