@@ -6,6 +6,10 @@ const sql=await readFile(
   new URL("../supabase/migrations/20260930180500_hercules_shopify_paid_order_reconciliation_v1.sql",import.meta.url),
   "utf8"
 );
+const observationSql=await readFile(
+  new URL("../supabase/migrations/20260930195500_hercules_studio_first_sale_observation_v1.sql",import.meta.url),
+  "utf8"
+);
 const agents=await readFile(new URL("../AGENTS.md",import.meta.url),"utf8");
 const policy=JSON.parse(await readFile(
   new URL("../governance/hercules-shopify-paid-order-reconciliation-v1.json",import.meta.url),
@@ -48,12 +52,13 @@ test("runner contract points to the bounded reconciliation policy",()=>{
 
 
 test("Studio first real customer order automatically records post-launch observation evidence",()=>{
-  assert.match(sql,/sauceapproved-studio-founding-pilot/);
-  assert.match(sql,/payment_path_verified/);
-  assert.match(sql,/first_real_customer_order_observed/);
-  assert.match(sql,/studio_entitlement_reconciliation/);
-  assert.match(sql,/payment_transaction_state/);
-  assert.match(sql,/payout_state_pending/);
-  assert.match(sql,/status='pending'/);
-  assert.match(sql,/SA-STUDIO-PILOT-001/);
+  assert.match(observationSql,/sauceapproved-studio-founding-pilot/);
+  assert.match(observationSql,/payment_path_verified/);
+  assert.match(observationSql,/first_real_customer_order_observed/);
+  assert.match(observationSql,/studio_entitlement_reconciliation/);
+  assert.match(observationSql,/payment_transaction_state/);
+  assert.match(observationSql,/payout_state_pending/);
+  assert.match(observationSql,/status='pending'/);
+  assert.match(observationSql,/SA-STUDIO-PILOT-001/);
+  assert.match(observationSql,/payout_state_verified',false/);
 });
