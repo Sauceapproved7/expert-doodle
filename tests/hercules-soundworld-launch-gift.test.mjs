@@ -216,3 +216,12 @@ test("real HTTP server forwards JSON body and gift adapters into the reservation
     await new Promise(resolve=>server.close(resolve));
   }
 });
+
+
+test("buyer-facing launch gift page links to secure claim flow",async()=>{
+  const handle=createStudioHttpHandler({launchGiftClockProvider:async()=>null});
+  const response=await handle({method:"GET",pathname:"/launch-gift"});
+  assert.equal(response.status,200);
+  assert.match(response.body,/Claim Your Free Gift/);
+  assert.match(response.body,/hercules-launch\?soundworld_gift=1/);
+});
