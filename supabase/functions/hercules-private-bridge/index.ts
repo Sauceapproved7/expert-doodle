@@ -8,6 +8,7 @@ import {issuePilotAdmission,pilotAdmissionControlStatus,pilotAdmissionInternalAu
 import {handleForgeStateRequest,isForgeStateAction} from './forge-state.ts';
 import {handleStudioShopifyPaidWebhook,isStudioShopifyPaidWebhook} from './studio-commerce-webhook.ts';
 import {handleCleanerDeviceRequest,isCleanerDeviceAction} from './cleaner-device.ts';
+import {handleSoundWorldLaunchGiftRequest,isSoundWorldLaunchGiftRequest} from './soundworld-launch-gift.ts';
 
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}').default||Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -514,6 +515,7 @@ async function handleSpaceshipCredentialDrop(req:Request,requestUrl:URL){
 
 Deno.serve(async(req:Request)=>{
   const requestUrl=new URL(req.url);
+  if(isSoundWorldLaunchGiftRequest(requestUrl))return handleSoundWorldLaunchGiftRequest(req,requestUrl,admin);
   if(isStudioShopifyPaidWebhook(requestUrl))return handleStudioShopifyPaidWebhook(req,requestUrl,admin);
   if(isDomainAgentGet(req,requestUrl))return handleDomainAgentRequest(req);
   if(requestUrl.searchParams.get('spaceship_credentials')==='1'){
