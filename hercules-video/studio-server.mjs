@@ -639,9 +639,19 @@ export function createStudioHttpHandler({
       return json(createKidsStudioManifest());
     }
 
+    // Monitoring remains available even when execution has no verified run state.
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/status") {
-      const {model}=await readContext();
-      if (!model) return json({ok:false,error:"studio_run_state_unavailable"},404);
+      const {model,bridge}=await readContext();
+      if (!model) {
+        return json({
+          ok:true,
+          product:"SauceApproved Studio",
+          executionPolicy:"fail-closed",
+          runStateAvailable:false,
+          executionBridgeConnected:Boolean(bridge?.connected),
+          reason:"studio_run_state_unavailable"
+        });
+      }
       return json(model);
     }
 

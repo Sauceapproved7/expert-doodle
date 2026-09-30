@@ -103,14 +103,20 @@ test("Studio execution endpoints stay locked when trusted bridge is unavailable"
   }
 });
 
-test("Studio status fails closed when no verified run state exists",async()=>{
+test("Studio status stays monitorable and fail-closed when no verified run state exists",async()=>{
   const handle=createStudioHttpHandler({
     statusReader:async()=>null,
     executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
   });
   const response=await handle({method:"GET",pathname:"/api/studio/status"});
-  assert.equal(response.status,404);
-  assert.equal(JSON.parse(response.body).error,"studio_run_state_unavailable");
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.ok,true);
+  assert.equal(body.product,"SauceApproved Studio");
+  assert.equal(body.executionPolicy,"fail-closed");
+  assert.equal(body.runStateAvailable,false);
+  assert.equal(body.executionBridgeConnected,false);
+  assert.equal(body.reason,"studio_run_state_unavailable");
 });
 
 test("Studio health does not expose run paths or credentials",async()=>{
