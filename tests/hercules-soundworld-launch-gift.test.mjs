@@ -7,7 +7,7 @@ import {
   evaluateSoundWorldGiftEligibility,
   reserveSoundWorldLaunchGift
 } from "../hercules-video/soundworld-launch-gift.mjs";
-import {createStudioHttpHandler} from "../hercules-video/studio-server.mjs";
+import {createStudioHttpHandler,startStudioServer} from "../hercules-video/studio-server.mjs";
 
 const launchAt="2026-10-01T00:00:00.000Z";
 
@@ -160,4 +160,59 @@ test("verified customer claim creates one reservation through the Studio backend
   });
   assert.equal(second.status,409);
   assert.equal(JSON.parse(second.body).error,"gift_already_reserved_for_purchase");
+});
+
+
+test("buyer-facing launch gift page shows all three choices and truthful pre-launch state",async()=>{
+  const handle=createStudioHttpHandler({
+    launchGiftClockProvider:async()=>null
+  });
+  const response=await handle({method:"GET",pathname:"/launch-gift"});
+  assert.equal(response.status,200);
+  assert.match(response.headers["content-type"],/text\/html/);
+  assert.match(response.body,/SoundWorld Pods/);
+  assert.match(response.body,/SoundWorld Max/);
+  assert.match(response.body,/SoundWorld Portable Speaker/i);
+  assert.match(response.body,/promotion has not started/i);
+  assert.match(response.body,/pre-production/i);
+});
+
+test("real HTTP server forwards JSON body and gift adapters into the reservation engine",async()=>{
+  const reservations=[];
+  const {server}=await startStudioServer({
+    host:"127.0.0.1",
+    port:0,
+    authorizeGiftClaim:async request=>request?.headers?.authorization==="Bearer customer-proof",
+    launchGiftClockProvider:async()=>launchAt,
+    verifyGiftPurchase:async purchaseId=>({
+      purchaseId,
+      customerId:"c_http",
+      productCode:"hercules-titan-founding-access",
+      paymentSettled:true,
+      verificationPurchase:false,
+      purchasedAt:"2026-10-02T00:00:00.000Z"
+    }),
+    giftReservationStore:{
+      list:async()=>reservations,
+      create:async reservation=>{reservations.push(reservation);return reservation;}
+    }
+  });
+  try{
+    const address=server.address();
+    assert.ok(address && typeof address==="object");
+    const response=await fetch(`http://127.0.0.1:${address.port}/api/studio/launch-gift/reserve`,{
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        authorization:"Bearer customer-proof"
+      },
+      body:JSON.stringify({purchaseId:"p_http",giftCode:"soundworld-pods"})
+    });
+    assert.equal(response.status,201);
+    const body=await response.json();
+    assert.equal(body.ok,true);
+    assert.equal(body.reservation.giftCode,"soundworld-pods");
+  } finally {
+    await new Promise(resolve=>server.close(resolve));
+  }
 });

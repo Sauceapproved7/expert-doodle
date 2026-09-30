@@ -15,7 +15,7 @@ import {createHoloStageManifest,renderHoloStage} from "../sauceapproved-studio/h
 import {createLegacyVaultManifest,renderLegacyVault} from "../sauceapproved-studio/legacy-vault/core.mjs";
 import {createStudioDirectorManifest,renderStudioDirector} from "../sauceapproved-studio/studio-director/core.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
-import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift} from "./soundworld-launch-gift.mjs";
+import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -39,6 +39,21 @@ const CAMERA_JS_HEADERS=Object.freeze({
 
 function json(body,status=200) {
   return {status,headers:JSON_HEADERS,body:JSON.stringify(body)};
+}
+
+async function readHttpRequestBody(request,{maxBytes=16384}={}){
+  const chunks=[];
+  let total=0;
+  for await (const chunk of request){
+    total+=chunk.length;
+    if(total>maxBytes){
+      const error=new Error("studio_request_body_too_large");
+      error.code="STUDIO_REQUEST_BODY_TOO_LARGE";
+      throw error;
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 function humanize(value) {
@@ -489,6 +504,12 @@ export function createStudioHttpHandler({
       return json(createSoundWorldLaunchGiftManifest({publicPaidLaunchOpenedAt}));
     }
 
+    if (normalizedMethod==="GET" && normalizedPath==="/launch-gift") {
+      const publicPaidLaunchOpenedAt=await launchGiftClockProvider();
+      const giftManifest=createSoundWorldLaunchGiftManifest({publicPaidLaunchOpenedAt});
+      return {status:200,headers:HTML_HEADERS,body:renderSoundWorldLaunchGiftPage(giftManifest)};
+    }
+
     if (normalizedMethod==="POST" && normalizedPath==="/api/studio/launch-gift/reserve") {
       const authorized=await authorizeGiftClaim(request);
       if(!authorized) return json({ok:false,error:"launch_gift_claim_authorization_required"},401);
@@ -663,6 +684,10 @@ export async function startStudioServer({
   statePath=null,
   executionBridgeProvider,
   authorizeOperator,
+  authorizeGiftClaim,
+  launchGiftClockProvider,
+  verifyGiftPurchase,
+  giftReservationStore,
   actions
 }={}) {
   const statusReader=statePath
@@ -671,15 +696,28 @@ export async function startStudioServer({
         throw error;
       })
     : async()=>null;
-  const handle=createStudioHttpHandler({statusReader,executionBridgeProvider,authorizeOperator,actions});
+  const handle=createStudioHttpHandler({
+    statusReader,
+    executionBridgeProvider,
+    authorizeOperator,
+    authorizeGiftClaim,
+    launchGiftClockProvider,
+    verifyGiftPurchase,
+    giftReservationStore,
+    actions
+  });
   const server=createServer(async(req,res)=>{
     try {
       const pathname=new URL(req.url || "/","http://studio.local").pathname;
-      const response=await handle({method:req.method || "GET",pathname,headers:req.headers});
+      const method=req.method || "GET";
+      const body=(method==="GET" || method==="HEAD") ? null : await readHttpRequestBody(req);
+      const response=await handle({method,pathname,headers:req.headers,body});
       res.writeHead(response.status,response.headers);
       res.end(response.body);
     } catch (error) {
-      const response=json({ok:false,error:"studio_internal_error"},500);
+      const response=error?.code==="STUDIO_REQUEST_BODY_TOO_LARGE"
+        ? json({ok:false,error:"studio_request_body_too_large"},413)
+        : json({ok:false,error:"studio_internal_error"},500);
       res.writeHead(response.status,response.headers);
       res.end(response.body);
     }
@@ -695,7 +733,9 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   const port=Number(process.env.PORT || 8787);
   const host=String(process.env.HOST || "0.0.0.0");
   const statePath=process.env.HERCULES_VIDEO_STATE_PATH || null;
-  const {server}=await startStudioServer({host,port,statePath});
+  const publicPaidLaunchOpenedAt=process.env.HERCULES_PUBLIC_PAID_LAUNCH_OPENED_AT || null;
+  const launchGiftClockProvider=async()=>publicPaidLaunchOpenedAt;
+  const {server}=await startStudioServer({host,port,statePath,launchGiftClockProvider});
   const shutdown=()=>server.close(()=>process.exit(0));
   process.once("SIGINT",shutdown);
   process.once("SIGTERM",shutdown);
