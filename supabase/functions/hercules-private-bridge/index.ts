@@ -62,6 +62,14 @@ const TITAN_TERMS_PATH='docs/legal/HERCULES-TITAN-TERMS-CANDIDATE-V1.md';
 const TITAN_PRIVACY_PATH='docs/legal/HERCULES-TITAN-PRIVACY-CANDIDATE-V1.md';
 const TITAN_TERMS_SHA='5d4daec3fa321db5c13366f05cc66814348182f6';
 const TITAN_PRIVACY_SHA='0ba9e0587ae38b3667a6397a70939f8f2c03b727';
+const STUDIO_PILOT_PRODUCT_CODE='sauceapproved-studio-founding-pilot';
+const STUDIO_PILOT_COMMERCIAL_PACKET_VERSION='sauceapproved-studio-founding-pilot-commercial-v1';
+const STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST='edb61c9817f34f6445172a2d88f71def13be873870f401ff4bf17f008d2734ab';
+const STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION='APPROVE SAUCEAPPROVED STUDIO FOUNDING PILOT '+STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST.slice(0,12).toUpperCase();
+const STUDIO_PILOT_TERMS_PATH='docs/legal/SAUCEAPPROVED-STUDIO-FOUNDING-PILOT-TERMS-CANDIDATE-V1.md';
+const STUDIO_PILOT_PRIVACY_PATH='docs/legal/SAUCEAPPROVED-STUDIO-FOUNDING-PILOT-PRIVACY-CANDIDATE-V1.md';
+const STUDIO_PILOT_TERMS_SHA='7a524ec1240a08c88ac85e88eeb02fe8e8781814';
+const STUDIO_PILOT_PRIVACY_SHA='c8b676fef1e8ab2a4b2052d0e9befd447819c9f7';
 
 async function actor(req:Request){
   const h=req.headers.get('authorization')||'', token=h.startsWith('Bearer ')?h.slice(7):'';
@@ -332,6 +340,84 @@ async function titanCommercialBundleStatus(){
   };
 }
 
+
+async function studioPilotCommercialBundleStatus(){
+  const [{data:product,error:productError},{data:approvals,error:approvalError}]=await Promise.all([
+    admin.from('hercules_software_products')
+      .select('code,name,descriptor,status,checkout_enabled,metadata,updated_at')
+      .eq('code',STUDIO_PILOT_PRODUCT_CODE)
+      .maybeSingle(),
+    admin.from('hercules_software_commercial_approvals')
+      .select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at')
+      .eq('product_code',STUDIO_PILOT_PRODUCT_CODE)
+      .order('approval_type')
+  ]);
+  if(productError||approvalError)throw (productError||approvalError);
+  if(!product)throw new Error('studio_pilot_product_missing');
+
+  const byType=Object.fromEntries((approvals||[]).map((row:any)=>[row.approval_type,row]));
+  const pricingMatches=Boolean(
+    product?.metadata?.commercial_mode==='founding_pilot_one_time' &&
+    product?.metadata?.billing_model==='one_time' &&
+    product?.metadata?.payment_provider==='shopify' &&
+    Number(product?.metadata?.candidate_price_cents)===9900 &&
+    String(product?.metadata?.currency||'').toUpperCase()==='USD' &&
+    String(product?.metadata?.shop_domain||'').toLowerCase()==='sauceapproved-2.myshopify.com' &&
+    product?.metadata?.shopify_product_id==='gid://shopify/Product/15397259477312' &&
+    product?.metadata?.shopify_variant_id==='gid://shopify/ProductVariant/67601341153600' &&
+    product?.metadata?.shopify_sku==='SA-STUDIO-PILOT-001' &&
+    product?.metadata?.commercial_packet_version===STUDIO_PILOT_COMMERCIAL_PACKET_VERSION &&
+    product?.metadata?.commercial_packet_digest===STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST
+  );
+  const termsRefMatches=byType?.terms?.document_ref===STUDIO_PILOT_TERMS_PATH &&
+    byType?.terms?.evidence?.terms_sha===STUDIO_PILOT_TERMS_SHA;
+  const privacyRefMatches=byType?.privacy?.document_ref===STUDIO_PILOT_PRIVACY_PATH &&
+    byType?.privacy?.evidence?.privacy_sha===STUDIO_PILOT_PRIVACY_SHA;
+  const checkoutHeldClosed=product.checkout_enabled===false;
+  const ownerApprovalTypes=['pricing','terms','privacy'];
+  const ownerApprovalsComplete=ownerApprovalTypes.every(type=>byType?.[type]?.status==='approved');
+
+  return {
+    ok:true,
+    packet:{
+      version:STUDIO_PILOT_COMMERCIAL_PACKET_VERSION,
+      digest:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST,
+      fingerprint:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST.slice(0,12).toUpperCase(),
+      confirmation:STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION,
+      product_code:STUDIO_PILOT_PRODUCT_CODE,
+      price:{currency:'USD',amount_cents:9900,billing_model:'one_time',payment_provider:'shopify'},
+      shopify:{
+        shop_domain:'sauceapproved-2.myshopify.com',
+        product_id:'gid://shopify/Product/15397259477312',
+        variant_id:'gid://shopify/ProductVariant/67601341153600',
+        sku:'SA-STUDIO-PILOT-001'
+      },
+      documents:{
+        terms:{path:STUDIO_PILOT_TERMS_PATH,sha:STUDIO_PILOT_TERMS_SHA},
+        privacy:{path:STUDIO_PILOT_PRIVACY_PATH,sha:STUDIO_PILOT_PRIVACY_SHA}
+      },
+      separate_from_monthly_catalog:true
+    },
+    readiness:{
+      pricingMatches,
+      termsRefMatches,
+      privacyRefMatches,
+      checkoutHeldClosed,
+      ownerApprovalsComplete,
+      paymentProviderReady:byType?.payment_provider_ready?.status==='approved',
+      paymentPathVerified:byType?.payment_path_verified?.status==='approved',
+      canApprove:pricingMatches&&termsRefMatches&&privacyRefMatches&&checkoutHeldClosed&&!ownerApprovalsComplete
+    },
+    approvals:(approvals||[]).map((row:any)=>({
+      approval_type:row.approval_type,
+      status:row.status,
+      approved_at:row.approved_at||null,
+      document_ref:row.document_ref||null,
+      updated_at:row.updated_at||null
+    }))
+  };
+}
+
 async function refreshLaunchGate(){
   try{
     const {data:keyRow}=await admin.from('hercules_internal_service_keys')
@@ -547,7 +633,7 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
     return out({ok:true,service:'hercules-private-bridge',version:'1.7.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','software_commercial_bundle_status','software_commercial_bundle_approve','titan_commercial_bundle_status','titan_commercial_bundle_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state','cleaner_device_activation','cleaner_activation_requests'],
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','software_commercial_bundle_status','software_commercial_bundle_approve','studio_pilot_commercial_bundle_status','studio_pilot_commercial_bundle_approve','titan_commercial_bundle_status','titan_commercial_bundle_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state','cleaner_device_activation','cleaner_activation_requests'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -579,6 +665,73 @@ Deno.serve(async(req:Request)=>{
       const result=await issuePilotAdmission(admin,b,{principal:'owner',actorUserId:uid,launchBaseUrl:U+'/functions/v1/hercules-launch'});
       return out(result.body,result.status);
     }catch{return out({error:'pilot_admission_issue_failed'},500)}
+  }
+
+  if(action==='studio_pilot_commercial_bundle_status'){
+    try{return out(await studioPilotCommercialBundleStatus())}
+    catch(error){return out({error:'studio_pilot_commercial_bundle_status_failed',detail:error instanceof Error?error.message:String(error)},500)}
+  }
+
+  if(action==='studio_pilot_commercial_bundle_approve'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const packetVersion=String(b.packet_version||'').trim();
+    const packetDigest=String(b.packet_digest||'').trim().toLowerCase();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+
+    if(packetVersion!==STUDIO_PILOT_COMMERCIAL_PACKET_VERSION)return out({
+      error:'studio_pilot_commercial_packet_version_mismatch',
+      expected:STUDIO_PILOT_COMMERCIAL_PACKET_VERSION
+    },409);
+    if(packetDigest!==STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST)return out({
+      error:'studio_pilot_commercial_packet_digest_mismatch',
+      expected:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST
+    },409);
+    if(confirmation!==STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION)return out({
+      error:'explicit_confirmation_required',
+      expected:STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION
+    },400);
+
+    const envelope=await studioPilotCommercialBundleStatus();
+    if(!envelope.readiness.pricingMatches)return out({error:'studio_pilot_pricing_catalog_mismatch'},409);
+    if(!envelope.readiness.termsRefMatches)return out({error:'studio_pilot_terms_document_mismatch'},409);
+    if(!envelope.readiness.privacyRefMatches)return out({error:'studio_pilot_privacy_document_mismatch'},409);
+    if(!envelope.readiness.checkoutHeldClosed)return out({error:'studio_pilot_checkout_must_remain_locked_during_owner_approval'},409);
+
+    const {data,error}=await admin.rpc('hercules_studio_pilot_owner_approve_bundle',{
+      p_user_id:uid,
+      p_packet_version:STUDIO_PILOT_COMMERCIAL_PACKET_VERSION,
+      p_packet_digest:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST,
+      p_confirmation:STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION
+    });
+    if(error)return out({error:'studio_pilot_commercial_bundle_approval_failed',detail:error.message},500);
+
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'studio.pilot.commercial.bundle.approved',
+      resource_type:'sauceapproved_studio_founding_pilot_commercial_bundle',
+      resource_id:STUDIO_PILOT_COMMERCIAL_PACKET_VERSION,
+      details:{
+        packet_digest:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST,
+        product_code:STUDIO_PILOT_PRODUCT_CODE,
+        price_cents:9900,
+        billing_model:'one_time',
+        payment_provider:'shopify',
+        approvals:['pricing','terms','privacy'],
+        terms_sha:STUDIO_PILOT_TERMS_SHA,
+        privacy_sha:STUDIO_PILOT_PRIVACY_SHA,
+        monthly_catalog_unchanged:true,
+        payment_gates_unchanged:true,
+        shopify_product_status_unchanged:true
+      }
+    });
+
+    return out({
+      ok:true,
+      approval:data,
+      envelope:await studioPilotCommercialBundleStatus(),
+      launch_gate:await refreshLaunchGate()
+    });
   }
 
   if(action==='titan_commercial_bundle_status'){
