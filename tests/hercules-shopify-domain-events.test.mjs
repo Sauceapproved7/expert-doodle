@@ -43,3 +43,10 @@ test("webhook keeps existing replay and signature protections",()=>{
   assert.match(webhook,/safe\(supplied,expected\)/);
   assert.match(webhook,/unique_receipt_first/);
 });
+
+test("Shopify control plane and webhook receiver use the live SauceApproved store domain",()=>{
+  assert.match(provider,/const STORE='sauceapproved-2\.myshopify\.com'/);
+  assert.match(webhook,/const STORE='sauceapproved-2\.myshopify\.com'/);
+  assert.doesNotMatch(provider,/azymhc-x0\.myshopify\.com/);
+  assert.doesNotMatch(webhook,/azymhc-x0\.myshopify\.com/);
+});
