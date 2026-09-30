@@ -59,3 +59,9 @@ test("launch window requires a fresh launch-ready check",()=>{
   assert.match(migration,/checked_at >= now\(\) - interval '15 minutes'/i);
   assert.match(migration,/paid_launch_gate_not_ready_or_stale/);
 });
+
+
+test("pending launch-window ledger row satisfies non-null verification timestamp",()=>{
+  assert.match(migration,/governance\/hercules-soundworld-launch-gift-v1\.json',\s*now\(\),\s*now\(\)/s);
+  assert.doesNotMatch(migration,/governance\/hercules-soundworld-launch-gift-v1\.json',\s*null,/s);
+});
