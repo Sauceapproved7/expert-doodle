@@ -15,6 +15,7 @@ import {createHoloStageManifest,renderHoloStage} from "../sauceapproved-studio/h
 import {createLegacyVaultManifest,renderLegacyVault} from "../sauceapproved-studio/legacy-vault/core.mjs";
 import {createStudioDirectorManifest,renderStudioDirector} from "../sauceapproved-studio/studio-director/core.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
+import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift} from "./soundworld-launch-gift.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -371,6 +372,13 @@ export function createStudioHttpHandler({
   statusReader=async()=>null,
   executionBridgeProvider=async()=>({connected:false,reason:"execution_bridge_unavailable"}),
   authorizeOperator=async()=>false,
+  authorizeGiftClaim=async()=>false,
+  launchGiftClockProvider=async()=>null,
+  verifyGiftPurchase=async()=>null,
+  giftReservationStore=Object.freeze({
+    list:async()=>[],
+    create:async()=>null
+  }),
   actions={}
 }={}) {
   const manifest=createStudioManifest();
@@ -474,6 +482,52 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/commercial/manifest") {
       return json(createStudioCommercialManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/launch-gift/manifest") {
+      const publicPaidLaunchOpenedAt=await launchGiftClockProvider();
+      return json(createSoundWorldLaunchGiftManifest({publicPaidLaunchOpenedAt}));
+    }
+
+    if (normalizedMethod==="POST" && normalizedPath==="/api/studio/launch-gift/reserve") {
+      const authorized=await authorizeGiftClaim(request);
+      if(!authorized) return json({ok:false,error:"launch_gift_claim_authorization_required"},401);
+
+      let payload={};
+      try{
+        payload=typeof request.body==="string" ? JSON.parse(request.body||"{}") : (request.body||{});
+      }catch{
+        return json({ok:false,error:"invalid_json_body"},400);
+      }
+
+      const purchaseId=String(payload.purchaseId||"").trim();
+      const giftCode=String(payload.giftCode||"").trim();
+      if(!purchaseId||!giftCode) return json({ok:false,error:"purchase_id_and_gift_code_required"},400);
+
+      const publicPaidLaunchOpenedAt=await launchGiftClockProvider();
+      if(!publicPaidLaunchOpenedAt) return json({ok:false,error:"public_paid_launch_not_open"},423);
+
+      const purchase=await verifyGiftPurchase(purchaseId,request);
+      if(!purchase) return json({ok:false,error:"purchase_not_verified"},422);
+
+      const existingReservations=await giftReservationStore.list({purchaseId,customerId:purchase.customerId});
+      const result=reserveSoundWorldLaunchGift({
+        purchase,
+        giftCode,
+        publicPaidLaunchOpenedAt,
+        existingReservations
+      });
+
+      if(!result.ok){
+        const status=result.error==="gift_already_reserved_for_purchase" ? 409
+          : result.error==="invalid_soundworld_gift_choice" ? 400
+          : 422;
+        return json(result,status);
+      }
+
+      const stored=await giftReservationStore.create(result.reservation);
+      if(!stored) return json({ok:false,error:"gift_reservation_store_unavailable"},503);
+      return json({ok:true,reservation:stored},201);
     }
 
     if (normalizedMethod==="POST" && normalizedPath==="/api/studio/checkout") {
