@@ -10,7 +10,7 @@ test("authenticated Hercules app exposes SoundWorld launch-gift status",()=>{
   assert.match(launch,/soundworldGiftStatus/);
   assert.match(launch,/soundworld_launch_gift=1/);
   assert.match(launch,/hercules-private-bridge/);
-  assert.match(launch,/Authorization:\s*"Bearer "\+token/);
+  assert.match(launch,/o\.headers\.Authorization="Bearer "\+t/);
 });
 
 test("customer claim UI renders all three SoundWorld choices per eligible purchase",()=>{
