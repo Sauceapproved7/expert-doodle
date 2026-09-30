@@ -327,6 +327,10 @@ async function run(){
         studioPilotPaidLaunchReady,
         studioPilot:{
           productCode:STUDIO_PILOT_PRODUCT_CODE,
+          paymentProvider:'shopify',
+          directStripeRequired:false,
+          readyForFirstSale:studioPilotPaidLaunchReady,
+          paymentPathStage:postLaunchObservationRequired?'post_launch_observation':'verified',
           ownerApprovalsComplete:studioPilotOwnerApprovalsComplete,
           providerReady:studioPilotProviderReady,
           launchCapabilityReady:studioPilotLaunchCapabilityReady,
