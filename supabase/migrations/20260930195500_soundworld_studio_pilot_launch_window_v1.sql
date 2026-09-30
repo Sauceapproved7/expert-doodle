@@ -86,7 +86,8 @@ begin
         ),
         'openedByGate',v_gate,
         'legacyLaunchGate',coalesce(legacy_launch_gate,false),
-        'studioPilotLaunchGate',coalesce(studio_pilot_launch_gate,false)
+        'studioPilotLaunchGate',coalesce(studio_pilot_launch_gate,false),
+        'studioPilotProductCode','sauceapproved-studio-founding-pilot'
       ),
       provenance='hercules_soundworld_open_launch_window',
       verified_at=p_opened_at,
@@ -99,6 +100,7 @@ begin
     'openedByGate',v_gate,
     'legacy_launch_gate',coalesce(legacy_launch_gate,false),
     'studio_pilot_launch_gate',coalesce(studio_pilot_launch_gate,false),
+    'studio_pilot_product_code','sauceapproved-studio-founding-pilot',
     'openedAt',p_opened_at,
     'closesAt',p_opened_at + interval '14 days'
   );
