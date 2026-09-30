@@ -8,6 +8,7 @@ const here=dirname(fileURLToPath(import.meta.url));
 const repo=resolve(here,"..");
 const migrations=resolve(repo,"supabase/migrations");
 const migrationName=readdirSync(migrations).find(x=>x.includes("studio_founding_pilot_commercial_v1"));
+const identityMigrationName=readdirSync(migrations).find(x=>x.includes("shopify_shop_identity_v2"));
 const termsPath=resolve(repo,"docs/legal/SAUCEAPPROVED-STUDIO-FOUNDING-PILOT-TERMS-CANDIDATE-V1.md");
 const privacyPath=resolve(repo,"docs/legal/SAUCEAPPROVED-STUDIO-FOUNDING-PILOT-PRIVACY-CANDIDATE-V1.md");
 const bridge=readFileSync(resolve(repo,"supabase/functions/hercules-private-bridge/index.ts"),"utf8");
@@ -60,6 +61,18 @@ test("Studio Founding Pilot owner approval is separate from monthly Studio appro
   assert.match(ui,/studio_pilot_commercial_bundle_status/);
   assert.match(ui,/studio_pilot_commercial_bundle_approve/);
   assert.match(ui,/window\.prompt\('Type exactly: '/);
+});
+
+test("Studio Founding Pilot Shopify provider readiness is pinned to Shop GID and verified aliases",()=>{
+  assert.ok(identityMigrationName,"Shopify identity v2 migration missing");
+  const sql=readFileSync(resolve(migrations,identityMigrationName),"utf8");
+  assert.match(sql,/gid:\/\/shopify\/Shop\/100002726208/);
+  assert.match(sql,/sauceapproved-2\.myshopify\.com/);
+  assert.match(sql,/azymhc-x0\.myshopify\.com/);
+  assert.match(sql,/hercules_studio_pilot_record_shopify_provider_ready/);
+  assert.match(sql,/p_shop_gid/);
+  assert.match(sql,/shop_gid_mismatch/);
+  assert.match(sql,/shop_domain_mismatch/);
 });
 
 test("Studio Founding Pilot payment lane is Shopify-native and does not authorize Stripe monthly checkout",()=>{
