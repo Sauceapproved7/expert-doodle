@@ -237,16 +237,6 @@ begin
       v_elig.buyer_email_sha256 is not null
       and p_buyer_email_sha256 is not null
       and v_elig.buyer_email_sha256=p_buyer_email_sha256
-    )
-    or (
-      v_elig.organization_id is not null
-      and exists(
-        select 1
-        from public.hercules_memberships m
-        where m.organization_id=v_elig.organization_id
-          and m.user_id=p_user_id
-          and m.status='active'
-      )
     );
 
   if not v_identity_ok then raise exception 'purchase_identity_mismatch'; end if;
@@ -308,14 +298,14 @@ begin
     raise exception 'service_role_required';
   end if;
 
-  select launch_ready
+  select coalesce(launch_ready,false) and checked_at >= now() - interval '15 minutes'
   into v_launch_ready
   from public.hercules_launch_gate_checks
   order by checked_at desc
   limit 1;
 
   if coalesce(v_launch_ready,false) is not true then
-    raise exception 'paid_launch_gate_not_ready';
+    raise exception 'paid_launch_gate_not_ready_or_stale';
   end if;
 
   select status,value into v_existing
