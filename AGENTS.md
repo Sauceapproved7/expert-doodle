@@ -28,6 +28,7 @@ Before changing anything, read and obey:
 13. Keep Hercules output high quality, secure, fast, reliable, scalable, professional, visually polished, commercially usable, documented, and provenance-controlled.
 14. Report status in this order: What changed → What was verified → What remains → Next highest-value action.
 15. Before completion, run `node scripts/verify-hercules-execution-contract.mjs`. A failure is a blocker, not an advisory warning.
+16. **Shopify paid-order continuity:** when native `ORDERS_PAID` delivery is unavailable but the connected Shopify Admin API is authorized, follow `governance/hercules-shopify-paid-order-reconciliation-v1.json`. Reconcile only exact allowlisted Studio/Titan paid line items through `hercules_reconcile_verified_shopify_paid_order_v1`; never accept customer-supplied payment claims, never store raw buyer email, and never use reconciliation to change pricing, legal approvals, checkout/publication state, or other orders.
 
 The full human-readable operating model is `governance/sauceapproved-master-gpt-operating-instructions-v1.md`.
 The machine-readable source for enforceable execution controls is `governance/hercules-execution-contract-v1.json`.
