@@ -58,6 +58,6 @@ test("monitor cadence is bounded to fifteen minutes and idle without first-party
 
 test("scheduled readiness submitter targets the live SauceApproved Shopify account key",()=>{
   assert.match(liveDomainPatch,/hercules_shopify_launch_readiness_submit/);
-  assert.match(liveDomainPatch,/account_key='sauceapproved-2\.myshopify\.com'/);
-  assert.doesNotMatch(liveDomainPatch,/account_key='azymhc-x0\.myshopify\.com'/);
+  assert.ok(liveDomainPatch.includes("account_key='sauceapproved-2.myshopify.com'"));
+  assert.equal(liveDomainPatch.includes("account_key='azymhc-x0.myshopify.com'"),false);
 });
