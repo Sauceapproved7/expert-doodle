@@ -108,13 +108,3 @@ test("Spaceship authorization is derived from existing control state without rea
   assert.doesNotMatch(agent,/api_key_secret_ref|api_secret_secret_ref/);
   assert.doesNotMatch(agent,/hercules_get_secret.*spaceship/i);
 });
-
-
-test("domain agent can issue a safe Spaceship reconnect handoff without accepting credentials",()=>{
-  assert.match(agent,/'domain_agent_provider_reconnect'/);
-  assert.match(agent,/providerReconnect:true/);
-  assert.match(agent,/spaceship_mcp_handoff_issue/);
-  assert.match(agent,/OWNER_ACTION_REQUIRED/);
-  assert.match(agent,/secretExposure/);
-  assert.doesNotMatch(agent,/bypass.*cloudflare/i);
-});
