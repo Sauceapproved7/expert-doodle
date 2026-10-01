@@ -6,6 +6,7 @@ on:
     paths:
       - "sauceapproved-studio/global-closure/**"
       - "tests/studio-global-closure.test.mjs"
+      - "tests/studio-global-closure-operations.test.mjs"
       - "docs/HERCULES-STUDIO-GLOBAL-DEEP-DIVE-CLOSURE.md"
       - ".github/workflows/hercules-studio-global-closure.yml"
 
@@ -22,4 +23,4 @@ jobs:
         with:
           node-version: "22"
       - name: Run global Studio closure contracts
-        run: node --test tests/studio-global-closure.test.mjs
+        run: node --test tests/studio-global-closure.test.mjs tests/studio-global-closure-operations.test.mjs
