@@ -39,3 +39,24 @@ test("repair catalog is allow-listed and rejects unknown repair codes",async()=>
   assert.equal(getRepairModule("repair-windows-image").requiresElevation,true);
   assert.throws(()=>getRepairModule("run-arbitrary-command"),/not allow-listed/i);
 });
+
+
+test("collector maps read-only Windows probe output without exposing raw command output",async()=>{
+  const {collectWindowsDiagnostics}=await import("../hercules-service-agent/windows-collector.mjs");
+  const report=await collectWindowsDiagnostics({probe:async()=>({
+    platform:"win32",freeDiskPercent:18,memoryPressurePercent:40,pendingReboot:false,failedUpdates:0,startupImpact:"medium",
+    raw:"must-not-escape"
+  })});
+  assert.equal(report.signals.disk.status,"warning");
+  assert.equal("raw" in report,false);
+});
+
+test("repair binding requires an allow-listed module and a sealed Cleaner recovery capsule",async()=>{
+  const {bindRepairExecution}=await import("../hercules-service-agent/repair-binding.mjs");
+  const session=authorizeServiceSession(createServiceSession({customerConsent:true,deviceId:"device-1"}),{repairApproval:true});
+  assert.throws(()=>bindRepairExecution({session,repairCode:"clear-user-temp",capsule:{id:"cap-1",state:"preparing"}}),/sealed recovery capsule/i);
+  const bound=bindRepairExecution({session,repairCode:"clear-user-temp",capsule:{id:"cap-1",state:"sealed",schema:"sauceapproved.hercules-cleaner.recovery-capsule"}});
+  assert.equal(bound.repair.code,"clear-user-temp");
+  assert.equal(bound.execute,false);
+  assert.equal(bound.requiresPostRepairVerification,true);
+});
