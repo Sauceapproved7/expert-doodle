@@ -52,7 +52,7 @@ function cloneShot(shot) {
 export function createStudioManifest() {
   return Object.freeze({
     schema:"sauceapproved.hercules.video-studio-manifest",
-    version:2,
+    version:1,
     product:"SauceApproved Studio",
     implementationOwner:"SauceApproved enterprise LLC",
     buildMode:"hercules-owned",
