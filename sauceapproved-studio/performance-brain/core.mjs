@@ -107,3 +107,23 @@ export function reviewPerformanceRecommendation(result={},review={}){
   }
   return Object.freeze({...base,status:'recommendation_approved',approved:true});
 }
+
+
+export function createPerformanceReviewReceipt(review={},meta={}){
+  const base={
+    schema:'sauceapproved.studio.performance-brain.review-receipt',
+    version:1,
+    recommendation:String(review?.recommendation||''),
+    reviewer:String(review?.reviewer||''),
+    reviewedAt:String(meta?.reviewedAt||''),
+    executionAuthorized:false,
+    publishReady:false,
+    autoPublish:false,
+    autoSpend:false,
+    automaticMutation:false
+  };
+  if(review?.schema!=='sauceapproved.studio.performance-brain.review'||!['recommendation_approved','recommendation_rejected'].includes(review?.status)){
+    return Object.freeze({...base,status:'completed_review_required',decision:null});
+  }
+  return Object.freeze({...base,status:'review_recorded',decision:review.status==='recommendation_approved'?'approved':'rejected'});
+}
