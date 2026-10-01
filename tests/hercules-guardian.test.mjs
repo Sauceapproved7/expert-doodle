@@ -64,3 +64,21 @@ test("collector fails closed when a required runtime evidence source is absent",
     workload:{identity:"svc-studio"}
   }),/policy evidence is required/);
 });
+
+
+test("Guardian verdict can be bound into the canonical Hercules Proof Object", async () => {
+  const {createGuardianProofObject}=await import("../hercules-guardian/proof-adapter.mjs");
+  const result=evaluateGuardianState({
+    expected:{artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    observed:{artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    target:{id:"studio-api",scope:"service"}
+  });
+  const proof=createGuardianProofObject({
+    guardianResult:result,
+    authorizationEvidenceSha256:"c".repeat(64)
+  });
+  assert.equal(proof.schema,"hercules.proof.object.v1");
+  assert.equal(proof.executionAuthority,false);
+  assert.equal(proof.verification.status,"VERIFIED_HEALTHY");
+  assert.match(proof.proofSha256,/^[a-f0-9]{64}$/);
+});
