@@ -97,7 +97,8 @@ function releaseDownloads(){
   processedUrl=originalUrl=null;captureReceipt=null;$('download').hidden=true;setButtonState();
 }
 function saveBlob(blob,name){const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);}
-function supportedMime(){return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(type=>MediaRecorder.isTypeSupported(type));}
+function supportedMime(){return ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4;codecs=h264,aac','video/mp4'].find(type=>MediaRecorder.isTypeSupported(type));}
+function extensionForMime(type=''){return /^video\/mp4/i.test(type)?'mp4':'webm';}
 $('camera').addEventListener('click',async()=>{
   releaseSource();releaseDownloads();
   if(!navigator.mediaDevices?.getUserMedia){setStatus('This browser cannot open a camera here. Use Load a clip instead.');return;}
@@ -140,7 +141,7 @@ $('record').addEventListener('click',async()=>{
         if(captureMode==='clip')deviceProof.clipReceipt=captureReceipt;
         persistDeviceProof();
         processedUrl=URL.createObjectURL(processedBlob);$('download').href=processedUrl;
-        $('download').download='sauceapproved-vintage-look.webm';$('download').hidden=false;
+        $('download').download=`sauceapproved-vintage-look.${extensionForMime(mime)}`;$('download').hidden=false;
         $('download').textContent=quality.ok?'Download processed clip':'Download low-frame-rate preview';
         setStatus(quality.ok?'Processed clip ready to download. The source stayed local.':quality.reason==='capture_interrupted'?'Capture interrupted when the tab was hidden. This is only a preview; keep the tab active and record again before using the clip.':`Capture quality warning: ${quality.fps} rendered frames per second. Keep this tab active and try again before using the clip. This preview is not a verified full-quality export.`);
       }else setStatus('No video data was recorded. No processed clip is available.');
@@ -177,7 +178,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 $('recipe').addEventListener('click',()=>saveBlob(new Blob([JSON.stringify(recipe(),null,2)],{type:'application/json'}),'sauceapproved-look-recipe.json'));
 $('receipt').addEventListener('click',()=>{if(captureReceipt)saveBlob(new Blob([JSON.stringify(captureReceipt,null,2)],{type:'application/json'}),'sauceapproved-capture-qa.json');});
-$('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||'sauceapproved-original.webm';link.click();deviceProof.originalPreserved=true;persistDeviceProof();});
+$('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||`sauceapproved-original.${extensionForMime(rawRecorder?.mimeType||'')}`;link.click();deviceProof.originalPreserved=true;persistDeviceProof();});
 $('stock').addEventListener('change',()=>{deviceProof.looksUsed.add($('stock').value);persistDeviceProof();});
 for(const id of ['strength','grain'])$(id).addEventListener('input',()=>{$(id+'-value').value=$(id).value+'%';});
 $('device-proof').addEventListener('click',()=>{
