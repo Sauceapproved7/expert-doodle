@@ -537,3 +537,32 @@ test("Studio exposes complete Hercules system registry and fail-closed status",a
   assert.equal(status.failClosed,true);
   assert.ok(status.blockedSystemIds.includes("hardware-engineering-program"));
 });
+
+
+test("Studio exposes Guardian Watchtower as read-only evidence only",async()=>{
+  const handle=createStudioHttpHandler({
+    guardianWatchtowerReader:async()=>({
+      status:"HEALTHY",
+      results:[{id:"studio",status:"HEALTHY",executionAuthority:false}],
+      executionAuthority:false
+    })
+  });
+  const response=await handle({method:"GET",pathname:"/api/studio/guardian/status"});
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.mode,"read-only");
+  assert.equal(body.executionAuthority,false);
+  assert.equal(body.watchtower.status,"HEALTHY");
+});
+
+test("Studio Guardian status fails closed when Watchtower evidence is unavailable",async()=>{
+  const handle=createStudioHttpHandler({
+    guardianWatchtowerReader:async()=>{throw new Error("watchtower unavailable")}
+  });
+  const response=await handle({method:"GET",pathname:"/api/studio/guardian/status"});
+  assert.equal(response.status,503);
+  const body=JSON.parse(response.body);
+  assert.equal(body.ok,false);
+  assert.equal(body.error,"guardian_watchtower_unavailable");
+  assert.equal(body.executionAuthority,false);
+});
