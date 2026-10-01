@@ -210,3 +210,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Privacy boundary: activation transmits opaque device identity, platform family, Cleaner version, public key, one-time activation code, and signed challenge proof only. Hostname, hardware identifiers, usernames, filenames, paths, cleanup inventory, Recovery Capsule contents, and the private key are excluded.
 - Secret-storage boundary: activation codes and returned device credentials are stored server-side only as SHA-256 hashes; the private key and plaintext device credential remain local to the activated device.
 - Commercial boundary: device activation does not approve or enable pricing, checkout, Terms, Privacy, payment-provider readiness, or paid-path verification.
+
+
+## SauceApproved Studio completion pass v1 provenance — 2026-09-30
+
+- Component paths: `hercules-video/studio-server.mjs`, `hercules-video/studio-commercial.mjs`, `sauceapproved-studio/{scene-forge,sound-world,actor-lab,integrations,completion}/`, `tests/hercules-video-studio-completion.test.mjs`, and `docs/SAUCEAPPROVED-STUDIO-COMPLETION-PASS-V1.md`.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance from the founder-directed Studio completeness audit.
+- Runtime dependencies: repository-owned runtime modules and Node.js platform facilities only; no vendored third-party runtime source, model weights, binaries, fonts, copied UI assets, or credentials were added.
+- External services remain external: deployment, commerce, identity, model, and publishing providers are represented as authorization-sensitive integration classes and are not claimed as SauceApproved-owned technology.
+- Trust scope: hidden owned modules are promoted to customer-facing routes without weakening consent, likeness, execution, provider, physical-device, payment, or publication gates.
+- Evidence scope: Vintage Camera physical-device/full-quality export proof and post-first-real-order payment observation remain explicitly unverified until real evidence exists.
