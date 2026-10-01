@@ -23,7 +23,8 @@ const SURFACES=Object.freeze([
   Object.freeze({id:"market",label:"Studios Market"}),
   Object.freeze({id:"vintage-camera",label:"Vintage Camera"}),
   Object.freeze({id:"kids",label:"Kids Studio"}),
-  Object.freeze({id:"integrations",label:"Integrations"})
+  Object.freeze({id:"integrations",label:"Integrations"}),
+  Object.freeze({id:"creation-floor",label:"Creation Floor"})
 ]);
 
 function disabled(reason) {
