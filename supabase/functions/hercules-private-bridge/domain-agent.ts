@@ -14,7 +14,8 @@ const ACTIONS=new Set([
   'domain_agent_usage_status',
   'domain_agent_identity_status',
   'domain_agent_api_key_issue',
-  'domain_agent_api_key_revoke'
+  'domain_agent_api_key_revoke',
+  'domain_agent_provider_reconnect'
 ]);
 const SAFE_WORKLOADS=new Set([
   'benchmark.echo',
@@ -365,7 +366,9 @@ function discovery(){
       commercialMetering:true,
       grantFingerprintPinning:true,
       taskValidityWindows:true,
-      spaceshipDnsInspection:true
+      spaceshipDnsInspection:true,
+      providerReconnect:true,
+      ownerDeviceHandoff:true
     },
     refresh:{
       strategy:'provider-native-only',
@@ -427,8 +430,8 @@ async function resolveSpaceshipGrant(organizationId:string,requiredCapabilities:
     capabilities,
     required_capabilities:requiredCapabilities,
     missing_capabilities:missing,
-    refreshable:false,
-    refresh_mode:'none',
+    refreshable:mode==='mcp_oauth',
+    refresh_mode:mode==='mcp_oauth'?'provider_native':'none',
     execution_eligible:authorized&&missing.length===0,
     owner_action_required:!authorized||missing.length>0,
     carries_credentials:false,
@@ -460,6 +463,61 @@ async function resolveGrant(organizationId:string,body:any){
   });
   if(error)throw new Error('grant_resolution_failed:'+error.message);
   return data;
+}
+
+async function reconnectProvider(principal:Principal,body:any){
+  const provider=String(body.provider||'spaceship').trim().toLowerCase();
+  if(provider!=='spaceship'){
+    throw Object.assign(new Error('provider_reconnect_unsupported'),{status:422});
+  }
+  if(principal.principalType==='api-key'){
+    throw Object.assign(new Error('owner_or_internal_required_for_provider_reconnect'),{status:403});
+  }
+
+  const grant=await resolveSpaceshipGrant(principal.organizationId,['spaceship.dns.inspect']);
+  if(grant.execution_eligible){
+    return {
+      schema:'hercules.domain-agent.provider-reconnect.v1',
+      ok:true,
+      provider:'spaceship',
+      account_key:'sauceapproved.com',
+      status:'ready',
+      disposition:'READY',
+      owner_action_required:false,
+      auto_resume:true,
+      refreshable:Boolean(grant.refreshable),
+      refresh_mode:grant.refresh_mode,
+      secretExposure:false,
+      grant
+    };
+  }
+
+  const handoff=await invokeInternal(
+    'hercules-private-bridge',
+    'spaceship-dns',
+    {action:'spaceship_mcp_handoff_issue'}
+  );
+
+  return {
+    schema:'hercules.domain-agent.provider-reconnect.v1',
+    ok:false,
+    provider:'spaceship',
+    account_key:'sauceapproved.com',
+    status:'owner_action_required',
+    disposition:'OWNER_ACTION_REQUIRED',
+    owner_action_required:true,
+    handoff_url:handoff?.handoffUrl??null,
+    expires_at:handoff?.expiresAt??null,
+    auto_resume:true,
+    resume_contract:'domain_launch_autopilot_after_provider_authorization',
+    secretExposure:false,
+    security:{
+      provider_controls_preserved:true,
+      human_verification_may_be_required:true,
+      credential_export:false
+    },
+    grant
+  };
 }
 
 async function entitlement(organizationId:string){
@@ -848,6 +906,17 @@ export async function handleDomainAgentRequest(req:Request){
         request_id:requestId,
         identities
       });
+    }
+
+    if(action==='domain_agent_provider_reconnect'){
+      const reconnect=await reconnectProvider(principal,body);
+      return out({
+        ok:reconnect.ok,
+        service:'hercules-domain-agent',
+        organization_id:principal.organizationId,
+        request_id:requestId,
+        ...reconnect
+      },reconnect.owner_action_required?409:200);
     }
 
     if(action==='domain_agent_execution_status'){
