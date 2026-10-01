@@ -24,19 +24,6 @@
     "verified": false
   },
   "display_name": "Source Approved Hercules Titan Founding Access",
-  "launch_promotion": {
-    "packet_version": "hercules-soundworld-launch-gift-v1",
-    "packet_path": "governance/hercules-soundworld-launch-gift-v1.json",
-    "applies_during_first_14_days_of_public_paid_launch": true,
-    "gift_customer_price_cents": 0,
-    "one_choice_per_qualifying_purchase": true,
-    "choices": [
-      "soundworld-pods",
-      "soundworld-max",
-      "soundworld-portable-speaker"
-    ],
-    "fulfillment_mode": "reservation_then_fulfillment_after_production_availability"
-  },
   "legal": {
     "cancellation_behavior_approved": false,
     "privacy_approved": false,
@@ -65,5 +52,12 @@
     "shop_domain": "sauceapproved-2.myshopify.com",
     "sku": "HERCULES-TITAN-FOUNDING"
   },
-  "status": "owner_approval_required"
+  "status": "owner_approval_required",
+  "withdrawn_promotions": [
+    {
+      "packet_version": "hercules-soundworld-launch-gift-v1",
+      "withdrawn_at": "2026-10-01",
+      "active": false
+    }
+  ]
 }
