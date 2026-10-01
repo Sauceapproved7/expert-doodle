@@ -521,3 +521,19 @@ test("Studio public surfaces advertise Studio Director",async()=>{
   assert.equal(onboarding.status,200);
   assert.ok(JSON.parse(onboarding.body).publicRoutes.includes("/studio-director"));
 });
+
+test("Studio exposes complete Hercules system registry and fail-closed status",async()=>{
+  const handle=createStudioHttpHandler();
+  const manifestResponse=await handle({method:"GET",pathname:"/api/studio/systems/manifest"});
+  assert.equal(manifestResponse.status,200);
+  const manifest=JSON.parse(manifestResponse.body);
+  assert.equal(manifest.implementationOwner,"SauceApproved enterprise LLC");
+  assert.ok(manifest.systems.some(system=>system.id==="studio-global-closure"));
+  assert.ok(manifest.systems.some(system=>system.id==="studio-memory-grid"));
+  const statusResponse=await handle({method:"GET",pathname:"/api/studio/systems/status"});
+  assert.equal(statusResponse.status,200);
+  const status=JSON.parse(statusResponse.body);
+  assert.equal(status.ready,false);
+  assert.equal(status.failClosed,true);
+  assert.ok(status.blockedSystemIds.includes("hardware-engineering-program"));
+});

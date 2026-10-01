@@ -1,0 +1,18 @@
+name: Hercules Studio System Registry
+on:
+  pull_request:
+    paths:
+      - "sauceapproved-studio/system-registry/**"
+      - "hercules-video/studio-server.mjs"
+      - "tests/studio-system-registry.test.mjs"
+      - "tests/hercules-video-studio-server.test.mjs"
+      - ".github/workflows/hercules-studio-system-registry.yml"
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+      - run: node --test tests/studio-system-registry.test.mjs tests/hercules-video-studio-server.test.mjs
