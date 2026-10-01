@@ -9,11 +9,14 @@ const SYSTEMS=Object.freeze([
 ["review-room","Hercules Review Room","Timestamped review, approvals and sign-off"],
 ["publishing-command-center","Publishing Command Center","Authorized previews, scheduling and final approval"],
 ["performance-feedback-loop","Performance Feedback Loop","Evidence feedback without silent Brand Brain mutation"]
-].map(([id,label,purpose])=>Object.freeze({id,label,purpose,status:"foundation-ready"})));
+].map(([id,label,purpose])=>Object.freeze({id,label,purpose,status:"foundation-ready",herculesOwned:true,outsidePlatformAllowed:false})));
 
 export function createCreationFloorManifest(){
  return Object.freeze({
-  id:"hercules-creation-floor",version:"0.1.0",mode:"inventory-plan-authorize-fail-closed",
+  id:"hercules-creation-floor",version:"0.2.0",mode:"inventory-plan-authorize-fail-closed",
+  implementationOwner:"SauceApproved enterprise LLC",buildMode:"hercules-owned",
+  externalPlatforms:Object.freeze([]),thirdPartyHostedRuntimeAllowed:false,thirdPartyProductSubstitutionAllowed:false,
+  standardsPolicy:"interoperate-with-open-or-device-standards-without-outsourcing-the-product",
   systems:SYSTEMS,
   differentiators:[
    "Proof Spine: every asset, edit, review, export and publish handoff can carry provenance evidence",
