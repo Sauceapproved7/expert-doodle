@@ -48,15 +48,9 @@ The current Hercules benchmark renderer is a benchmark path, not a representatio
 
 Provider-dependent features remain unavailable when the required provider is not connected or authorized. SauceApproved does not represent a blocked provider action as completed.
 
-## 5. SoundWorld launch gift
+## 5. SoundWorld hardware promotion
 
-If this purchase occurs during the separately defined first-14-calendar-day Hercules paid-launch gift window and otherwise qualifies under the SoundWorld launch-gift rules, the customer may reserve **one $0 SoundWorld gift** from the available choices: SoundWorld Pods, SoundWorld Max, or a SoundWorld Portable Speaker.
-
-SoundWorld hardware is **pre-production**. A qualifying purchase creates a gift reservation, not an immediate shipment guarantee. Physical fulfillment occurs only after production and fulfillment availability.
-
-Internal verification purchases, test charges, refunded verification transactions, fraudulent transactions, and non-qualifying purchases do not create gift eligibility.
-
-The promotional gift has no separate cash redemption right unless required by applicable law. Any shipping information later needed for physical fulfillment must be collected through an approved fulfillment flow.
+No SoundWorld earbuds, headphones, or speaker is included as a free gift with this Founding Pilot offer. Any future SoundWorld hardware offer will be separate and subject to its own published terms and availability.
 
 ## 6. Refunds and cancellation
 
@@ -151,7 +145,6 @@ Approving the SauceApproved Studio Founding Pilot commercial packet approves thi
 - the Founding Pilot entitlement and pre-production limitations described above;
 - the delivery commitment described above;
 - the 7-day candidate refund/cancellation rule;
-- the SoundWorld promotional-gift disclosure;
 - the matching Studio Founding Pilot Privacy candidate.
 
 It does **not** approve the separate $29/$79/$199 monthly Studio subscription catalog, Stripe Direct, a public product-status change, payment-path verification, or any unrelated SauceApproved offer.
