@@ -328,3 +328,22 @@ test("Watchtower scheduler prevents overlapping cycles", async () => {
   release();
   assert.equal((await first).status,"HEALTHY");
 });
+
+
+test("Hercules service catalog registers owned services with explicit evidence readers", async () => {
+  const {createHerculesGuardianCatalog}=await import("../hercules-guardian/hercules-service-catalog.mjs");
+  const baseline={artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc",policy:"policy-v1"};
+  const catalog=createHerculesGuardianCatalog({
+    baselines:{studio:baseline,forge:{...baseline,identity:"forge"},deploy:{...baseline,identity:"deploy"},cleaner:{...baseline,identity:"cleaner"},runtime:{...baseline,identity:"runtime"}},
+    observers:{
+      studio:async()=>baseline,forge:async()=>({...baseline,identity:"forge"}),deploy:async()=>({...baseline,identity:"deploy"}),
+      cleaner:async()=>({...baseline,identity:"cleaner"}),runtime:async()=>({...baseline,identity:"runtime"})
+    }
+  });
+  assert.deepEqual(catalog.map(x=>x.id),["studio","forge","deploy","cleaner","runtime"]);
+});
+
+test("Hercules service catalog fails closed when an observer is missing", async () => {
+  const {createHerculesGuardianCatalog}=await import("../hercules-guardian/hercules-service-catalog.mjs");
+  assert.throws(()=>createHerculesGuardianCatalog({baselines:{},observers:{}}),/baseline is required|observer is required/);
+});
