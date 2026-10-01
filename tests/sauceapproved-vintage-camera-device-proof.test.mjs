@@ -60,3 +60,10 @@ test('accepts browser-supported MP4 receipts for iPhone capture proof',()=>{
   const receipt=createCaptureReceipt({mode:'camera',frames:60,elapsedMs:3000,blobSize:1024,mimeType:'video/mp4',width:1280,height:720,look:{stock:'golden-hour',strength:55,grain:28}});
   assert.equal(receipt.output.mimeType,'video/mp4');
 });
+
+import {createCaptureReceipt} from '../sauceapproved-studio/vintage-camera/capture-receipt.mjs';
+
+test('accepts browser-supported MP4 receipts for iPhone capture proof',()=>{
+ const receipt=createCaptureReceipt({mode:'camera',frames:60,elapsedMs:3000,blobSize:1024,mimeType:'video/mp4',width:1280,height:720,look:{stock:'golden-hour',strength:55,grain:28}});
+ assert.equal(receipt.output.mimeType,'video/mp4');
+});
