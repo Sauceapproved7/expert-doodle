@@ -29,6 +29,30 @@ function metric(variant,objective){
   return clicks>0?conversions/clicks:0;
 }
 
+
+export function buildCampaignPerformanceInput(pack={},input={}){
+  if(pack?.schema!=='sauceapproved.studio.campaign-forge.pack') throw new Error('campaign_forge_pack_required');
+  const metrics=input.metrics&&typeof input.metrics==='object'?input.metrics:{};
+  const variants=(Array.isArray(pack.outputs)?pack.outputs:[]).map(output=>{
+    const observed=metrics[output.format]&&typeof metrics[output.format]==='object'?metrics[output.format]:{};
+    return Object.freeze({
+      id:String(output.format||''),
+      impressions:n(observed.impressions),clicks:n(observed.clicks),conversions:n(observed.conversions),spend:n(observed.spend),
+      evidence:Object.freeze({
+        impressions:observed.evidence?.impressions===true,
+        clicks:observed.evidence?.clicks===true,
+        conversions:observed.evidence?.conversions===true,
+        spend:observed.evidence?.spend===true
+      })
+    });
+  });
+  return Object.freeze({
+    objective:OBJECTIVES.has(input.objective)?input.objective:'conversion_rate',
+    campaignDna:Object.freeze({...((pack.outputs?.[0]?.dna)||{})}),
+    variants:Object.freeze(variants)
+  });
+}
+
 export function evaluateCampaignPerformance(input={}){
   const objective=OBJECTIVES.has(input.objective)?input.objective:'conversion_rate';
   const variants=Array.isArray(input.variants)?input.variants:[];
