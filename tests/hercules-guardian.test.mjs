@@ -314,3 +314,17 @@ test("Watchtower cycle carries incident fingerprints forward for deduplication",
   assert.equal(first.results[0].status,"INCIDENT_OPENED");
   assert.equal(second.results[0].status,"INCIDENT_ALREADY_OPEN");
 });
+
+
+test("Watchtower scheduler prevents overlapping cycles", async () => {
+  const {createWatchtowerScheduler}=await import("../hercules-guardian/watchtower-scheduler.mjs");
+  let release;
+  const scheduler=createWatchtowerScheduler({
+    runCycle:()=>new Promise(resolve=>{release=()=>resolve({status:"HEALTHY"})})
+  });
+  const first=scheduler.tick();
+  const second=await scheduler.tick();
+  assert.equal(second.status,"SKIPPED_OVERLAP");
+  release();
+  assert.equal((await first).status,"HEALTHY");
+});
