@@ -244,3 +244,39 @@ test("incident ledger rejects unknown event types and invalid evidence digests",
   assert.throws(()=>appendGuardianIncidentEvent(ledger,{type:"SILENT_MUTATION",evidenceSha256:"a".repeat(64)}),/unsupported Guardian incident event/);
   assert.throws(()=>appendGuardianIncidentEvent(ledger,{type:"DRIFT_DETECTED",evidenceSha256:"nope"}),/valid evidence digest is required/);
 });
+
+
+test("Watchtower opens an incident on verified-state drift without executing containment", async () => {
+  const {observeGuardianRuntime}=await import("../hercules-guardian/watchtower.mjs");
+  const result=observeGuardianRuntime({
+    expected:{artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    observed:{artifact:"sha256:"+"f".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    target:{id:"studio-api",scope:"service"}
+  });
+  assert.equal(result.status,"INCIDENT_OPENED");
+  assert.equal(result.executionAuthority,false);
+  assert.equal(result.incident.events[0].type,"DRIFT_DETECTED");
+  assert.equal(result.guardian.verdict,"deny");
+});
+
+test("Watchtower returns healthy without opening an incident when state matches", async () => {
+  const {observeGuardianRuntime}=await import("../hercules-guardian/watchtower.mjs");
+  const state={artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"};
+  const result=observeGuardianRuntime({expected:state,observed:state,target:{id:"studio-api",scope:"service"}});
+  assert.equal(result.status,"HEALTHY");
+  assert.equal(result.incident,null);
+});
+
+test("Watchtower deduplicates the same drift fingerprint", async () => {
+  const {observeGuardianRuntime}=await import("../hercules-guardian/watchtower.mjs");
+  const args={
+    expected:{artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    observed:{artifact:"sha256:"+"f".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    target:{id:"studio-api",scope:"service"}
+  };
+  const first=observeGuardianRuntime(args);
+  const second=observeGuardianRuntime({...args,knownIncidentFingerprints:[first.fingerprint]});
+  assert.equal(second.status,"INCIDENT_ALREADY_OPEN");
+  assert.equal(second.incident,null);
+  assert.equal(second.fingerprint,first.fingerprint);
+});
