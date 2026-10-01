@@ -1,0 +1,30 @@
+name: Hercules Service Agent
+
+on:
+  pull_request:
+    paths:
+      - "hercules-service-agent/**"
+      - "tests/hercules-service-agent.test.mjs"
+      - ".github/workflows/hercules-service-agent.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-service-agent/**"
+      - "tests/hercules-service-agent.test.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  service-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node --test tests/hercules-service-agent.test.mjs
+      - run: node --test tests/hercules-implementation-enforcement.test.mjs
+      - run: node scripts/verify-hercules-execution-contract.mjs
+      - run: node scripts/verify-owner-code-only.mjs
+      - run: node scripts/security-baseline.mjs
