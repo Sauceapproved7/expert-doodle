@@ -1,4 +1,5 @@
 const OWNED_DOMAIN = "sauceapproved.com";
+const SPACESHIP_DNS_PATH = "/api/v1/dns/records/";
 
 export function validateStudioDnsPlan({ domain, changes }) {
   if (domain !== OWNED_DOMAIN) {
@@ -8,6 +9,9 @@ export function validateStudioDnsPlan({ domain, changes }) {
   for (const change of changes ?? []) {
     if (change.name === "@" || change.type === "NS") {
       throw new Error("Destructive apex or nameserver changes are blocked");
+    }
+    if (change.type !== "CNAME" || change.name !== "studio") {
+      throw new Error("DNS bridge only permits the Studio CNAME");
     }
   }
 
@@ -22,6 +26,9 @@ export function buildStudioDnsPlan({
 }) {
   if (domain !== OWNED_DOMAIN) {
     throw new Error("DNS bridge is restricted to sauceapproved.com");
+  }
+  if (studioHost !== "studio") {
+    throw new Error("DNS bridge only permits the Studio hostname");
   }
   if (!target) throw new Error("Studio target is required");
 
@@ -42,11 +49,35 @@ export function buildStudioDnsPlan({
     current?.address === desired.address &&
     current?.ttl === desired.ttl;
 
-  return {
+  const plan = {
     action: unchanged ? "noop" : "upsert",
     domain,
     destructive: false,
     changes: unchanged ? [] : [desired]
+  };
+
+  validateStudioDnsPlan(plan);
+  return plan;
+}
+
+export function buildSpaceshipUpsertRequest({
+  domain,
+  changes,
+  force = false
+}) {
+  if (force) {
+    throw new Error("Forced DNS writes are disabled");
+  }
+
+  validateStudioDnsPlan({ domain, changes });
+
+  return {
+    method: "PUT",
+    path: `${SPACESHIP_DNS_PATH}${domain}`,
+    body: {
+      force: false,
+      items: changes
+    }
   };
 }
 
