@@ -1,7 +1,7 @@
 import {assessCapture} from './capture-quality.mjs';
 import {createCaptureReceipt} from './capture-receipt.mjs';
 import {scheduleVideoFrame,cancelScheduledVideoFrame} from './frame-scheduler.mjs';
-import {createDeviceProofReceipt} from './device-proof.mjs';
+import {createDeviceProofReceipt,describeMissingDeviceProof} from './device-proof.mjs';
 import {planExportDimensions} from './export-dimensions.mjs';
 
 const $=id=>document.getElementById(id);
@@ -187,7 +187,7 @@ $('device-proof').addEventListener('click',()=>{
     originalAvailable:!!originalUrl
   });
   saveBlob(new Blob([JSON.stringify(proof,null,2)],{type:'application/json'}),'sauceapproved-device-proof.json');
-  setStatus(proof.ok?'Device proof passed. Save this receipt with your launch evidence.':'Device proof incomplete. Finish the missing checks before launch.');
+  const missing=describeMissingDeviceProof(proof);\n  setStatus(proof.ok?'Device proof passed. Save this receipt with your launch evidence.':`Device proof incomplete: ${missing.join('; ')}.`);
 });
 window.addEventListener('pagehide',()=>{cancelScheduledVideoFrame(source,scheduledFrame);releaseSource();releaseDownloads();});
 setButtonState();draw();
