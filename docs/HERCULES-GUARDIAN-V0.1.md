@@ -37,3 +37,11 @@ node scripts/verify-owner-code-only.mjs
 node scripts/security-baseline.mjs
 node scripts/verify-hercules-execution-contract.mjs
 ```
+
+## Containment executor
+
+The executor is dry-run-first. A containment proposal remains non-executing even when its evidence and planning authorization are valid.
+
+Live containment requires independently: a Guardian deny verdict with scoped drift evidence; an AUTHORIZED_PLAN from the containment gate; a second explicit execution authorization bound to the exact target and scope; a containment adapter implementing both isolation and rollback; and post-isolation evidence confirming the target was isolated.
+
+DRY_RUN is the default mode and never calls the adapter mutation method. Guardian proof objects and containment plans remain evidence/planning objects rather than execution credentials.
