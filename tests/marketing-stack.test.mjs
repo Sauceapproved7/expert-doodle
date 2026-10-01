@@ -23,3 +23,17 @@ test("run plan is fail-closed and preserves canonical order",()=>{
   assert.equal(p.steps[0].moduleId,"the-machine");
   assert.equal(p.steps[15].moduleId,"the-lab");
 });
+
+test("contracts are non-mutating by default",async()=>{
+ const {moduleContract}=await import("../lib/hercules/marketing-stack.js");
+ assert.equal(moduleContract("creative-lab").mutates,false);
+ assert.throws(()=>moduleContract("nope"),/unknown_module/);
+});
+test("kill switch overrides execution approval",async()=>{
+ const {authorizeMarketingRun}=await import("../lib/hercules/marketing-stack.js");
+ const p=buildMarketingRun({goal:"launch"});
+ assert.equal(authorizeMarketingRun(p,{approved:true}).executionAuthorized,true);
+ const blocked=authorizeMarketingRun(p,{approved:true,killSwitch:true});
+ assert.equal(blocked.executionAuthorized,false);
+ assert.equal(blocked.state,"blocked");
+});
