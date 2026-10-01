@@ -536,7 +536,15 @@ export function createStudioHttpHandler({
       return {status:200,headers:HTML_HEADERS,body:renderActorLab()};
     }
 
-    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/creation-floor/manifest") {\n      return json(createCreationFloorManifest());\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/creation-floor") {\n      return {status:200,headers:HTML_HEADERS,body:renderCreationFloor()};\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/integrations/manifest") {
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/creation-floor/manifest") {
+      return json(createCreationFloorManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/creation-floor") {
+      return {status:200,headers:HTML_HEADERS,body:renderCreationFloor()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/integrations/manifest") {
       return json(createIntegrationsManifest());
     }
 
