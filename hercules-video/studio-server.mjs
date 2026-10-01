@@ -7,6 +7,7 @@ import {createContentMultiplierManifest} from "../sauceapproved-studio/content-m
 import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/core.mjs";
 import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core.mjs";
 import {createCampaignForgeManifest,renderCampaignForge} from "../sauceapproved-studio/campaign-forge/core.mjs";
+import {createPerformanceBrainManifest} from "../sauceapproved-studio/performance-brain/core.mjs";
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
 import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
@@ -478,6 +479,10 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/campaign-forge/manifest") {
       return json(createCampaignForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/performance-brain/manifest") {
+      return json(createPerformanceBrainManifest());
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/campaign-forge") {
