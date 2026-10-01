@@ -37,3 +37,20 @@ test("kill switch overrides execution approval",async()=>{
  assert.equal(blocked.executionAuthorized,false);
  assert.equal(blocked.state,"blocked");
 });
+
+test("promotion requires authorization and complete 16-module evidence",async()=>{
+ const {authorizeMarketingRun,createMarketingEvidence,evaluateMarketingPromotion,MARKETING_MODULES}=await import("../lib/hercules/marketing-stack.js");
+ const prepared=buildMarketingRun({goal:"qualified growth"});
+ assert.equal(evaluateMarketingPromotion(prepared,[]).reason,"not_authorized");
+ const authorized=authorizeMarketingRun(prepared,{approved:true});
+ const partial=[createMarketingEvidence(authorized,"the-machine",{summary:"plan ready"})];
+ const gap=evaluateMarketingPromotion(authorized,partial);
+ assert.equal(gap.promotable,false); assert.equal(gap.missing.length,15);
+ const all=MARKETING_MODULES.map(m=>createMarketingEvidence(authorized,m.id,{summary:m.name+" complete"}));
+ assert.deepEqual(evaluateMarketingPromotion(authorized,all),{promotable:true,reason:"ready",modules:16});
+});
+test("evidence rejects empty summaries",async()=>{
+ const {createMarketingEvidence}=await import("../lib/hercules/marketing-stack.js");
+ const p=buildMarketingRun({goal:"test"});
+ assert.throws(()=>createMarketingEvidence(p,"the-lab",{summary:"  "}),/summary_required/);
+});
