@@ -582,6 +582,12 @@ export function createStudioHttpHandler({
       return json(createReleaseTruthEvidenceStore().status());
     }
 
+    if (normalizedMethod==="GET" && normalizedPath==="/release-truth") {
+      const truth=createReleaseTruthEvidenceStore().status();
+      const blocked=truth.blockedSystemIds.map(id=>`<li><code>${id}</code></li>`).join("");
+      return {status:200,headers:HTML_HEADERS,body:`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Release Truth Room · SauceApproved Studio</title></head><body><main><h1>Release Truth Room</h1><p><strong>Release blocked</strong> until every required Studio system has genuine, current, verified evidence.</p><p>Synthetic evidence is not allowed. Software presence alone is not physical proof.</p><p>Final authority: <strong>owner-controlled release</strong>.</p><h2>Blocked systems</h2><ul>${blocked}</ul></main></body></html>`};
+    }
+
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/launch-gift/manifest") {
       const publicPaidLaunchOpenedAt=await launchGiftClockProvider();
       return json(createSoundWorldLaunchGiftManifest({publicPaidLaunchOpenedAt}));
