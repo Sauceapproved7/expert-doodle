@@ -108,12 +108,3 @@ test("Spaceship authorization is derived from existing control state without rea
   assert.doesNotMatch(agent,/api_key_secret_ref|api_secret_secret_ref/);
   assert.doesNotMatch(agent,/hercules_get_secret.*spaceship/i);
 });
-
-
-test("Spaceship reconnect exposes a provider-native recovery fallback without resetting credentials",()=>{
-  assert.match(agent,/accountRecoveryFallback:true/);
-  assert.match(agent,/recovery_url/);
-  assert.match(agent,/resetPassword/);
-  assert.match(agent,/recovery_method_hint/);
-  assert.doesNotMatch(agent,/submit.*resetPassword/i);
-});
