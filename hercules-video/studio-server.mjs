@@ -20,6 +20,8 @@ import {createSceneForgeManifest,renderSceneForge} from "../sauceapproved-studio
 import {createSoundWorldManifest,renderSoundWorld} from "../sauceapproved-studio/sound-world/core.mjs";
 import {createActorLabManifest,renderActorLab} from "../sauceapproved-studio/actor-lab/core.mjs";
 import {createIntegrationsManifest,renderIntegrationsHub} from "../sauceapproved-studio/integrations/core.mjs";
+import {createCreationFloorManifest} from "../sauceapproved-studio/creation-floor/core.mjs";
+import {renderCreationFloor} from "../sauceapproved-studio/creation-floor/render.mjs";
 import {createStudioCompletionManifest} from "../sauceapproved-studio/completion/core.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
@@ -534,7 +536,7 @@ export function createStudioHttpHandler({
       return {status:200,headers:HTML_HEADERS,body:renderActorLab()};
     }
 
-    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/integrations/manifest") {
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/creation-floor/manifest") {\n      return json(createCreationFloorManifest());\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/creation-floor") {\n      return {status:200,headers:HTML_HEADERS,body:renderCreationFloor()};\n    }\n\n    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/integrations/manifest") {
       return json(createIntegrationsManifest());
     }
 
