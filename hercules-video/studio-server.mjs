@@ -24,6 +24,7 @@ import {createCreationFloorManifest} from "../sauceapproved-studio/creation-floo
 import {renderCreationFloor} from "../sauceapproved-studio/creation-floor/render.mjs";
 import {createStudioCompletionManifest} from "../sauceapproved-studio/completion/core.mjs";
 import {createStudioSystemRegistry,evaluateStudioSystemRegistry} from "../sauceapproved-studio/system-registry/core.mjs";
+import {createReleaseTruthEvidenceStore} from "../sauceapproved-studio/release-truth/evidence-store.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
 
@@ -575,6 +576,10 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/systems/status") {
       return json(evaluateStudioSystemRegistry(createStudioSystemRegistry(),{}));
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/release-truth/status") {
+      return json(createReleaseTruthEvidenceStore().status());
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/launch-gift/manifest") {
