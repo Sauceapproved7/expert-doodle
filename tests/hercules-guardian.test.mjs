@@ -109,3 +109,17 @@ test("containment gate refuses healthy state", async () => {
   });
   assert.throws(()=>createGuardianContainmentProposal({guardianResult:result,authorizationEvidenceSha256:"d".repeat(64)}),/verified drift required/);
 });
+
+
+test("Render adapter binds deployment metadata without secrets", async () => {
+  const {collectRenderServiceEvidence}=await import("../hercules-guardian/render-adapter.mjs");
+  const e=collectRenderServiceEvidence({
+    id:"srv-studio",name:"sauceapproved-studio",branch:"main",repo:"https://github.com/Sauceapproved7/expert-doodle",
+    suspended:"not_suspended",serviceDetails:{runtime:"node",url:"https://sauceapproved-studio.onrender.com"}
+  },{artifactSha256:"a".repeat(64),configSha256:"b".repeat(64),policyId:"guardian-studio-v1"});
+  assert.equal(e.identity,"render:srv-studio:sauceapproved-studio");
+  assert.equal(e.artifact,"sha256:"+"a".repeat(64));
+  assert.equal(e.config,"sha256:"+"b".repeat(64));
+  assert.equal(e.policy,"guardian-studio-v1");
+  assert.equal("sshAddress" in e,false);
+});
