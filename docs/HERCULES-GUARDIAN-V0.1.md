@@ -57,3 +57,9 @@ A failed or negative observation produces CONTAINMENT_UNVERIFIED plus a rollback
 Guardian incidents can be recorded as an append-only logical event chain. Each event contains a validated evidence SHA-256 digest and the digest of the immediately preceding event. The event's own digest binds sequence, event type, evidence, previous event, and target.
 
 Verification recomputes the chain from the beginning. Altered evidence, reordered events, broken predecessor links, unsupported lifecycle events, or invalid digests invalidate the ledger. The ledger is evidence only: it grants no execution authority and stores no credentials.
+
+## Guardian Watchtower
+
+Watchtower is the continuous read-only observation boundary. It evaluates fresh runtime evidence against the approved Guardian baseline. Matching state returns HEALTHY and creates no incident. Drift returns INCIDENT_OPENED, creates a deterministic drift fingerprint, and starts a tamper-evident incident ledger with DRIFT_DETECTED evidence.
+
+If the same fingerprint is already known, Watchtower returns INCIDENT_ALREADY_OPEN instead of creating duplicate incident noise. Watchtower always returns executionAuthority=false; observation can open evidence and propose review, but cannot isolate, restart, deploy, or recover a target.
