@@ -566,3 +566,14 @@ test("Studio Guardian status fails closed when Watchtower evidence is unavailabl
   assert.equal(body.error,"guardian_watchtower_unavailable");
   assert.equal(body.executionAuthority,false);
 });
+
+
+test("Studio default runtime Guardian reader emits real read-only Watchtower evidence",async()=>{
+  const {createStudioGuardianWatchtowerReader}=await import("../hercules-video/studio-guardian-watchtower.mjs");
+  const reader=createStudioGuardianWatchtowerReader();
+  const result=await reader();
+  assert.equal(result.executionAuthority,false);
+  assert.equal(result.results[0].id,"studio");
+  assert.equal(result.results[0].status,"HEALTHY");
+  assert.match(result.results[0].guardian.proof.proofId,/^[a-f0-9]{64}$/);
+});
