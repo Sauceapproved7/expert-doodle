@@ -13,6 +13,8 @@ on:
       - "tests/studio-release-truth-durable-adapter.test.mjs"
       - "tests/studio-release-truth-durable-ledger.test.mjs"
       - "tests/studio-release-truth-storage-config.test.mjs"
+      - "tests/studio-release-truth-hydration-hardening.test.mjs"
+      - "tests/studio-release-truth-chain-integrity.test.mjs"
       - "tests/studio-release-truth-authorization.test.mjs"
       - "tests/hercules-video-release-truth-persistence-server.test.mjs"
       - "tests/hercules-video-release-truth-server.test.mjs"
@@ -26,4 +28,4 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22
-      - run: node --test tests/studio-system-registry.test.mjs tests/studio-system-registry-bindings.test.mjs tests/studio-system-registry-runtime-manifests.test.mjs tests/studio-release-truth-evidence.test.mjs tests/studio-release-truth-persistence.test.mjs tests/studio-release-truth-durable-adapter.test.mjs tests/studio-release-truth-durable-ledger.test.mjs tests/studio-release-truth-storage-config.test.mjs tests/studio-release-truth-authorization.test.mjs tests/hercules-video-release-truth-persistence-server.test.mjs tests/hercules-video-release-truth-server.test.mjs tests/hercules-video-studio-server.test.mjs
+      - run: node --test tests/studio-system-registry.test.mjs tests/studio-system-registry-bindings.test.mjs tests/studio-system-registry-runtime-manifests.test.mjs tests/studio-release-truth-evidence.test.mjs tests/studio-release-truth-persistence.test.mjs tests/studio-release-truth-durable-adapter.test.mjs tests/studio-release-truth-durable-ledger.test.mjs tests/studio-release-truth-storage-config.test.mjs tests/studio-release-truth-hydration-hardening.test.mjs tests/studio-release-truth-chain-integrity.test.mjs tests/studio-release-truth-authorization.test.mjs tests/hercules-video-release-truth-persistence-server.test.mjs tests/hercules-video-release-truth-server.test.mjs tests/hercules-video-studio-server.test.mjs
