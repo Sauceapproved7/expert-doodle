@@ -53,13 +53,3 @@ test('missing checks are translated into operator-readable next actions',()=>{
     'preserve an original clip'
   ]);
 });
-
-import {serializeDeviceProofState,parseDeviceProofState} from '../sauceapproved-studio/vintage-camera/device-proof.mjs';
-
-test('device proof progress survives a local page reload without footage or device identity',()=>{
-  const encoded=serializeDeviceProofState({cameraOpened:true,looksUsed:['golden-hour','street-tape'],cameraReceipt:{mode:'camera',quality:{ok:true}},cameraPlaybackConfirmed:true,originalPreserved:true});
-  assert.equal(encoded.includes('footage'),false);
-  assert.deepEqual(parseDeviceProofState(encoded),{cameraOpened:true,looksUsed:['golden-hour','street-tape'],cameraReceipt:{mode:'camera',quality:{ok:true}},clipReceipt:null,cameraPlaybackConfirmed:true,clipPlaybackConfirmed:false,originalPreserved:true});
-});
-
-test('invalid persisted proof state fails closed',()=>{assert.equal(parseDeviceProofState('{bad'),null);});

@@ -45,15 +45,3 @@ export function createDeviceProofReceipt({
     note:'Playback confirmations are explicit operator attestations; no footage or device identifier is included.'
   };
 }
-
-export function serializeDeviceProofState({cameraOpened=false,looksUsed=[],cameraReceipt=null,clipReceipt=null,cameraPlaybackConfirmed=false,clipPlaybackConfirmed=false,originalPreserved=false}={}){
-  return JSON.stringify({version:1,cameraOpened:cameraOpened===true,looksUsed:[...new Set(Array.isArray(looksUsed)?looksUsed:[])],cameraReceipt:cameraReceipt||null,clipReceipt:clipReceipt||null,cameraPlaybackConfirmed:cameraPlaybackConfirmed===true,clipPlaybackConfirmed:clipPlaybackConfirmed===true,originalPreserved:originalPreserved===true});
-}
-
-export function parseDeviceProofState(value){
-  try{
-    const state=JSON.parse(String(value||''));
-    if(state?.version!==1)return null;
-    return {cameraOpened:state.cameraOpened===true,looksUsed:Array.isArray(state.looksUsed)?state.looksUsed:[],cameraReceipt:state.cameraReceipt||null,clipReceipt:state.clipReceipt||null,cameraPlaybackConfirmed:state.cameraPlaybackConfirmed===true,clipPlaybackConfirmed:state.clipPlaybackConfirmed===true,originalPreserved:state.originalPreserved===true};
-  }catch{return null;}
-}
