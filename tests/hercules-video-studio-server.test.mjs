@@ -575,5 +575,5 @@ test("Studio default runtime Guardian reader emits real read-only Watchtower evi
   assert.equal(result.executionAuthority,false);
   assert.equal(result.results[0].id,"studio");
   assert.equal(result.results[0].status,"HEALTHY");
-  assert.match(result.results[0].guardian.proof.proofId,/^[a-f0-9]{64}$/);
+  assert.match(result.results[0].guardian.proof.id,/^guardian-proof-[a-f0-9]{24}$/);
 });
