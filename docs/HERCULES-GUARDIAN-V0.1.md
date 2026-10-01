@@ -63,3 +63,9 @@ Verification recomputes the chain from the beginning. Altered evidence, reordere
 Watchtower is the continuous read-only observation boundary. It evaluates fresh runtime evidence against the approved Guardian baseline. Matching state returns HEALTHY and creates no incident. Drift returns INCIDENT_OPENED, creates a deterministic drift fingerprint, and starts a tamper-evident incident ledger with DRIFT_DETECTED evidence.
 
 If the same fingerprint is already known, Watchtower returns INCIDENT_ALREADY_OPEN instead of creating duplicate incident noise. Watchtower always returns executionAuthority=false; observation can open evidence and propose review, but cannot isolate, restart, deploy, or recover a target.
+
+## Owned Hercules service catalog
+
+The initial Watchtower catalog covers Studio, Forge, Deploy Plane, Cleaner, and the core runtime. Every catalog entry requires both an explicit approved baseline and an evidence observer. Missing wiring fails catalog construction rather than silently treating the service as healthy.
+
+The repository already exposes service-specific evidence surfaces, including Studio status/manifest routes, Forge health/readiness, Deploy Plane verification evidence, Cleaner local state, and the core execution lifecycle. Guardian adapters must reduce those surfaces to the normalized artifact/config/identity/policy dimensions before Watchtower evaluation; raw secrets or execution credentials are never Watchtower inputs.
