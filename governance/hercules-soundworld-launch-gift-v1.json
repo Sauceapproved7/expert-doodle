@@ -1,19 +1,46 @@
 {
   "schema_version": 1,
   "packet_version": "hercules-soundworld-launch-gift-v1",
-  "status": "withdrawn_by_owner",
+  "status": "owner_directive_recorded",
   "promotion": {
     "name": "Hercules First 14 Days SoundWorld Gift",
-    "active": false,
-    "withdrawn_at": "2026-10-01",
-    "withdrawal_reason": "physical_hardware_manufacturing_and_fulfillment_not_ready",
-    "choices": [],
-    "customer_price_cents": null
+    "window": {
+      "start": "public_paid_launch_opened_at",
+      "duration_days": 14
+    },
+    "eligibility": {
+      "qualifying_scope": "successfully_settled_customer_purchase_of_a_publicly_enabled_hercules_paid_offer",
+      "exclude_internal_verification_or_test_charges": true,
+      "one_gift_per_qualifying_purchase": true
+    },
+    "customer_price_cents": 0,
+    "choice_required": true,
+    "choices": [
+      {
+        "code": "soundworld-pods",
+        "display_name": "SoundWorld Pods"
+      },
+      {
+        "code": "soundworld-max",
+        "display_name": "SoundWorld Max"
+      },
+      {
+        "code": "soundworld-portable-speaker",
+        "display_name": "SoundWorld portable speaker"
+      }
+    ],
+    "fulfillment": {
+      "mode": "reservation_then_fulfillment",
+      "reservation_created_after_verified_purchase": true,
+      "physical_fulfillment_after_evt_and_production_availability": true,
+      "must_disclose_deferred_hardware_fulfillment_before_purchase": true
+    }
   },
   "controls": {
-    "claims_enabled": false,
-    "new_reservations_enabled": false,
     "does_not_change_hercules_base_price": true,
-    "soundworld_product_development_continues_separately": true
+    "does_not_enable_checkout": true,
+    "does_not_override_pricing_terms_privacy_or_payment_gates": true,
+    "must_be_bound_to_order_and_customer_identity": true,
+    "must_prevent_duplicate_gift_claim_for_same_purchase": true
   }
 }
