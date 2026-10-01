@@ -51,3 +51,9 @@ DRY_RUN is the default mode and never calls the adapter mutation method. Guardia
 A successful adapter response is not sufficient to declare containment complete. Guardian requires a separate observation bound to the same target and scope. Only an observation confirming isolation produces VERIFIED_CONTAINED.
 
 A failed or negative observation produces CONTAINMENT_UNVERIFIED plus a rollback proposal. The rollback proposal carries executionAuthority=false and requires separate approval; verification failure never silently triggers recovery or expands containment scope.
+
+## Tamper-evident incident ledger
+
+Guardian incidents can be recorded as an append-only logical event chain. Each event contains a validated evidence SHA-256 digest and the digest of the immediately preceding event. The event's own digest binds sequence, event type, evidence, previous event, and target.
+
+Verification recomputes the chain from the beginning. Altered evidence, reordered events, broken predecessor links, unsupported lifecycle events, or invalid digests invalidate the ledger. The ledger is evidence only: it grants no execution authority and stores no credentials.
