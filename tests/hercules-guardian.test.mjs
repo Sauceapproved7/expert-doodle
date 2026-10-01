@@ -38,3 +38,29 @@ test("missing evidence is drift rather than implicit trust", () => {
   assert.equal(result.drift[0].field,"policy");
   assert.equal(result.drift[0].reason,"missing_observation");
 });
+
+
+test("collector converts runtime evidence into the canonical Guardian dimensions", async () => {
+  const {collectGuardianEvidence}=await import("../hercules-guardian/collector.mjs");
+  const evidence=collectGuardianEvidence({
+    artifact:{sha256:"a".repeat(64)},
+    config:{sha256:"b".repeat(64)},
+    workload:{identity:"svc-studio"},
+    policy:{id:"policy-v1"}
+  });
+  assert.deepEqual(evidence,{
+    artifact:"sha256:"+"a".repeat(64),
+    config:"sha256:"+"b".repeat(64),
+    identity:"svc-studio",
+    policy:"policy-v1"
+  });
+});
+
+test("collector fails closed when a required runtime evidence source is absent", async () => {
+  const {collectGuardianEvidence}=await import("../hercules-guardian/collector.mjs");
+  assert.throws(()=>collectGuardianEvidence({
+    artifact:{sha256:"a".repeat(64)},
+    config:{sha256:"b".repeat(64)},
+    workload:{identity:"svc-studio"}
+  }),/policy evidence is required/);
+});
