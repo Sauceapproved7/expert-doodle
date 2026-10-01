@@ -177,6 +177,22 @@ function safeMarketingProperties(value:unknown){
   };
 }
 
+async function softwareAccessRequest(req:Request,body:any){
+  if(!S)throw new Error("service_role_unavailable");
+  const product=cleanText(body?.p_product_code,80),plan=cleanText(body?.p_plan_code,80),email=cleanText(body?.p_email,254).toLowerCase();
+  if(!product||!plan||!validEmail(email))return {status:400,body:{ok:false,error:"invalid_access_request"}};
+  const forwarded=cleanText(req.headers.get("x-forwarded-for")||"",256).split(",")[0].trim();
+  if(forwarded){
+    const since=new Date(Date.now()-10*60*1000).toISOString(),headers={apikey:S,authorization:"Bearer "+S};
+    const q=new URL(U+"/rest/v1/hercules_software_access_rate_limits");q.searchParams.set("ip","eq."+forwarded);q.searchParams.set("requested_at","gte."+since);q.searchParams.set("select","ip");q.searchParams.set("limit","11");
+    const check=await fetch(q,{headers,signal:AbortSignal.timeout(10000)});if(!check.ok)throw new Error("access_rate_check_failed");
+    const rows=await check.json().catch(()=>[]);if(Array.isArray(rows)&&rows.length>=10)return {status:429,body:{ok:false,error:"request_rate_limited"}};
+    const ins=await fetch(U+"/rest/v1/hercules_software_access_rate_limits",{method:"POST",headers:{...headers,"content-type":"application/json","prefer":"return=minimal"},body:JSON.stringify({ip:forwarded}),signal:AbortSignal.timeout(10000)});if(!ins.ok)throw new Error("access_rate_record_failed");
+  }
+  const result=await serviceRpc("hercules_request_software_access",{p_product_code:product,p_plan_code:plan,p_email:email,p_full_name:cleanText(body?.p_full_name,100)||null,p_company:cleanText(body?.p_company,160)||null,p_role:cleanText(body?.p_role,100)||null,p_message:cleanText(body?.p_message,1200)||null,p_website:cleanText(body?.p_website,120)||null,p_attribution:body?.p_attribution&&typeof body.p_attribution==="object"?body.p_attribution:{}});
+  return {status:200,body:result};
+}
+
 const html = String.raw`<!doctype html>
 <html lang="en">
 <head>
@@ -875,6 +891,10 @@ Deno.serve(async(req:Request)=>{
     if(!body||typeof body!=="object")return Response.json({ok:false,error:"invalid_json"},{status:400,headers:{"cache-control":"no-store"}});
     const action=cleanText((body as any).action,64);
     try{
+      if(action==="software_access_request"){
+        try{const result=await softwareAccessRequest(req,body);return Response.json(result.body,{status:result.status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+        catch(error){const detail=error instanceof Error?error.message:"software_access_request_failed";const status=detail==="request_rate_limited"?429:detail==="invalid_email"||detail==="product_unavailable"||detail==="plan_unavailable"?400:503;return Response.json({ok:false,error:detail},{status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+      }
       if(action==="password_breach_check"){
         const password=typeof (body as any).password==="string"?(body as any).password:"";
         if(password.length<12||password.length>256)return Response.json({ok:false,error:"weak_password_length"},{status:400,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
