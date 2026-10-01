@@ -54,3 +54,15 @@ test("evidence rejects empty summaries",async()=>{
  const p=buildMarketingRun({goal:"test"});
  assert.throws(()=>createMarketingEvidence(p,"the-lab",{summary:"  "}),/summary_required/);
 });
+
+test("release candidate requires all seven Hercules checks and never deploys directly",async()=>{
+ const {MARKETING_MODULES,authorizeMarketingRun,createMarketingEvidence,createMarketingReleaseCandidate,HERCULES_REQUIRED_CHECKS}=await import("../lib/hercules/marketing-stack.js");
+ const plan=authorizeMarketingRun(buildMarketingRun({goal:"release"}),{approved:true});
+ const evidence=MARKETING_MODULES.map(m=>createMarketingEvidence(plan,m.id,{summary:"verified"}));
+ const partial=Object.fromEntries(HERCULES_REQUIRED_CHECKS.slice(0,6).map(x=>[x,"success"]));
+ const blocked=createMarketingReleaseCandidate(plan,evidence,partial);
+ assert.equal(blocked.ready,false); assert.equal(blocked.reason,"required_checks_incomplete");
+ const checks=Object.fromEntries(HERCULES_REQUIRED_CHECKS.map(x=>[x,"success"]));
+ const ready=createMarketingReleaseCandidate(plan,evidence,checks);
+ assert.equal(ready.ready,true); assert.equal(ready.deploy,false); assert.equal(ready.requiredChecks,7);
+});
