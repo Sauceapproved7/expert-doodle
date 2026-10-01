@@ -45,7 +45,9 @@ test("Studio and Ads offer pages expose planned tiers and live-product links", (
     assert.match(page, /Agency/);
     assert.match(page, /\$199/);
     assert.match(page, /Request founding access/);
-    assert.match(page, /\/functions\/v1\/hercules-launch/);\n    assert.match(page, /software_access_request/);\n    assert.doesNotMatch(page, /\/rest\/v1\/rpc\/hercules_request_software_access/);
+    assert.match(page, /\/functions\/v1\/hercules-launch/);
+    assert.match(page, /software_access_request/);
+    assert.doesNotMatch(page, /\/rest\/v1\/rpc\/hercules_request_software_access/);
     assert.match(page, /No payment is collected/);
   }
   assert.match(studio, /sauceapproved-studio\//);
