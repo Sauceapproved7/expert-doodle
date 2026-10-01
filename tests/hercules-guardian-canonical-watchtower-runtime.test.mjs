@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createCanonicalWatchtowerRuntime} from "../hercules-guardian/canonical-watchtower-runtime.mjs";
+import {createStudioHttpHandler} from "../hercules-video/studio-server.mjs";
 
 function catalogFactory(){
  const healthy={artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc",policy:"policy-v1"};
@@ -32,10 +33,9 @@ test("manual Watchtower tick publishes read-only five-domain status",async()=>{
 });
 
 test("runtime retains incident fingerprints between cycles",async()=>{
- let drift=true;
  const baseline={artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc",policy:"policy-v1"};
  const factory=async()=>Object.freeze([
-  Object.freeze({id:"studio",scope:"service",baseline,observe:async()=>drift?{...baseline,artifact:"sha256:"+"f".repeat(64)}:baseline})
+  Object.freeze({id:"studio",scope:"service",baseline,observe:async()=>({...baseline,artifact:"sha256:"+"f".repeat(64)})})
  ]);
  const runtime=await createCanonicalWatchtowerRuntime({catalogFactory:factory,intervalMs:1000});
  const first=await runtime.tick();
@@ -44,6 +44,19 @@ test("runtime retains incident fingerprints between cycles",async()=>{
  assert.equal(second.results[0].status,"INCIDENT_ALREADY_OPEN");
  assert.deepEqual(second.incidentFingerprints,first.incidentFingerprints);
  assert.equal(second.executionAuthority,false);
+ runtime.stop();
+});
+
+test("Studio Guardian status reads the operational runtime after a real cycle",async()=>{
+ const runtime=await createCanonicalWatchtowerRuntime({catalogFactory,intervalMs:1000});
+ await runtime.tick();
+ const handle=createStudioHttpHandler({guardianWatchtowerReader:runtime.readStatus});
+ const response=await handle({method:"GET",pathname:"/api/studio/guardian/status"});
+ assert.equal(response.status,200);
+ const body=JSON.parse(response.body);
+ assert.equal(body.mode,"read-only");
+ assert.equal(body.executionAuthority,false);
+ assert.deepEqual(body.watchtower.results.map(x=>x.id),["studio","forge","deploy","cleaner","runtime"]);
  runtime.stop();
 });
 
