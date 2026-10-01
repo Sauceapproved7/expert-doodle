@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 13,
+  "version": 14,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -31,6 +31,10 @@
     {
       "path": "hercules-video",
       "role": "video-runtime"
+    },
+    {
+      "path": "hercules-guardian",
+      "role": "defensive-observability-runtime"
     },
     {
       "path": "hercules-hurc",

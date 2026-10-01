@@ -29,6 +29,7 @@ import {createReleaseTruthEvidenceLedger} from "../sauceapproved-studio/release-
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
 import {createStudioGuardianWatchtowerReader} from "./studio-guardian-watchtower.mjs";
+import {createProductionGuardianRuntime} from "../hercules-guardian/production-watchtower-runtime.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -853,8 +854,17 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   const statePath=process.env.HERCULES_VIDEO_STATE_PATH || null;
   const publicPaidLaunchOpenedAt=process.env.HERCULES_PUBLIC_PAID_LAUNCH_OPENED_AT || null;
   const launchGiftClockProvider=async()=>publicPaidLaunchOpenedAt;
-  const {server}=await startStudioServer({host,port,statePath,launchGiftClockProvider});
-  const shutdown=()=>server.close(()=>process.exit(0));
+  const guardianRuntime=await createProductionGuardianRuntime();
+  await guardianRuntime.tick();
+  guardianRuntime.start();
+  const {server}=await startStudioServer({
+    host,port,statePath,launchGiftClockProvider,
+    guardianWatchtowerReader:guardianRuntime.readStatus
+  });
+  const shutdown=()=>{
+    guardianRuntime.stop();
+    server.close(()=>process.exit(0));
+  };
   process.once("SIGINT",shutdown);
   process.once("SIGTERM",shutdown);
 }
