@@ -185,3 +185,34 @@ test("live containment is target-bound and requires rollback capability", async 
     adapter:{isolate:async()=>({isolated:true}),rollback:async()=>({restored:true})}
   }),/execution authorization does not match containment target/);
 });
+
+
+test("post-containment verification returns verified only for matching isolated target", async () => {
+  const {verifyGuardianContainment}=await import("../hercules-guardian/post-containment.mjs");
+  const result=verifyGuardianContainment({
+    execution:{executed:true,action:{target:"studio-api",scope:"service"},evidence:{isolated:true,target:"studio-api",scope:"service"}},
+    observation:{isolated:true,target:"studio-api",scope:"service"}
+  });
+  assert.equal(result.status,"VERIFIED_CONTAINED");
+  assert.equal(result.rollbackProposal,null);
+});
+
+test("failed post-containment verification emits non-executing rollback proposal", async () => {
+  const {verifyGuardianContainment}=await import("../hercules-guardian/post-containment.mjs");
+  const result=verifyGuardianContainment({
+    execution:{executed:true,action:{target:"studio-api",scope:"service"},evidence:{isolated:true,target:"studio-api",scope:"service"},executionAuthorizationEvidenceSha256:"e".repeat(64)},
+    observation:{isolated:false,target:"studio-api",scope:"service"}
+  });
+  assert.equal(result.status,"CONTAINMENT_UNVERIFIED");
+  assert.equal(result.rollbackProposal.required,true);
+  assert.equal(result.rollbackProposal.executionAuthority,false);
+  assert.equal(result.rollbackProposal.target,"studio-api");
+});
+
+test("post-containment verification rejects cross-target evidence", async () => {
+  const {verifyGuardianContainment}=await import("../hercules-guardian/post-containment.mjs");
+  assert.throws(()=>verifyGuardianContainment({
+    execution:{executed:true,action:{target:"studio-api",scope:"service"},evidence:{isolated:true}},
+    observation:{isolated:true,target:"other-api",scope:"service"}
+  }),/observation does not match containment target/);
+});
