@@ -28,6 +28,7 @@ import {createReleaseTruthEvidenceStore} from "../sauceapproved-studio/release-t
 import {createReleaseTruthEvidenceLedger} from "../sauceapproved-studio/release-truth/evidence-ledger.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
+import {createStudioGuardianWatchtowerReader} from "./studio-guardian-watchtower.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -803,7 +804,8 @@ export async function startStudioServer({
   launchGiftClockProvider,
   verifyGiftPurchase,
   giftReservationStore,
-  actions
+  actions,
+  guardianWatchtowerReader=createStudioGuardianWatchtowerReader()
 }={}) {
   const statusReader=statePath
     ? async()=>inspectLaunchRunStateFile(statePath).catch(error=>{
@@ -819,7 +821,8 @@ export async function startStudioServer({
     launchGiftClockProvider,
     verifyGiftPurchase,
     giftReservationStore,
-    actions
+    actions,
+    guardianWatchtowerReader
   });
   const server=createServer(async(req,res)=>{
     try {
