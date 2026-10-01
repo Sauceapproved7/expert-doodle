@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {createStudioServer} from "../hercules-video/studio-server.mjs";
+import {createStudioHttpHandler} from "../hercules-video/studio-server.mjs";
 
 test("Studio release truth status is public-readable and fails closed without evidence",async()=>{
  const studio=createStudioServer();
