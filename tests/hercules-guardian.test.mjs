@@ -123,3 +123,32 @@ test("Render adapter binds deployment metadata without secrets", async () => {
   assert.equal(e.policy,"guardian-studio-v1");
   assert.equal("sshAddress" in e,false);
 });
+
+
+test("deployment adapter extracts only verified secret-free evidence", async () => {
+  const {collectDeployPlaneEvidence}=await import("../hercules-guardian/deploy-plane-adapter.mjs");
+  const evidence=collectDeployPlaneEvidence({
+    deploymentId:"deploy-1",
+    request:{artifact:{sha256:"a".repeat(64)},target:{identity:"svc-studio"},policy:{id:"policy-v1"},config:{sha256:"b".repeat(64)}},
+    state:{status:"verified",verificationEvidence:{verified:true}}
+  });
+  assert.equal(evidence.artifact.sha256,"a".repeat(64));
+  assert.equal(evidence.workload.identity,"svc-studio");
+});
+
+test("deployment adapter rejects unverified deployments", async () => {
+  const {collectDeployPlaneEvidence}=await import("../hercules-guardian/deploy-plane-adapter.mjs");
+  assert.throws(()=>collectDeployPlaneEvidence({
+    deploymentId:"deploy-1",request:{},state:{status:"verifying",verificationEvidence:null}
+  }),/verified deployment evidence is required/);
+});
+
+test("containment authorization gate never treats Guardian proof as authority", async () => {
+  const {planGuardianContainment}=await import("../hercules-guardian/containment-gate.mjs");
+  const plan=planGuardianContainment({
+    guardianResult:{verdict:"deny",containment:{required:true,target:"studio-api",scope:"service",action:"isolate_target_only"},proof:{id:"guardian-proof-x"}},
+    authorization:null
+  });
+  assert.equal(plan.executionAuthority,false);
+  assert.equal(plan.status,"AWAITING_AUTHORIZATION");
+});
