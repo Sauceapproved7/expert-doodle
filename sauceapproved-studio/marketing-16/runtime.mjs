@@ -1,5 +1,6 @@
 import {createMarketing16Manifest, planMarketing16Run} from "./core.mjs";
 import {authorizeControlledMarketingExecution} from "./controlled-execution.mjs";
+import {dryRunProviderCampaign} from "./provider-dry-run.mjs";
 
 const RELEASE_OPERATIONS = Object.freeze(new Set(["shopify_catalog_read"]));
 
@@ -57,12 +58,16 @@ export function createMarketing16Runtime() {
       const gate=authorizeControlledMarketingExecution(input.receipt,input.authorization);
       return Object.freeze({...gate,status:"campaign_prepared"});
     },
+    providerDryRun(input={}) {
+      return dryRunProviderCampaign(input.prepared,input.provider);
+    },
     execute(operation,input) {
       if (operation==="health") return this.health();
       if (operation==="manifest") return this.manifest();
       if (operation==="plan") return this.plan(input);
       if (operation==="release") return authorizeRelease(input);
       if (operation==="prepare_campaign") return this.prepareCampaign(input);
+      if (operation==="provider_dry_run") return this.providerDryRun(input);
       throw new Error("marketing_operation_not_allowed");
     }
   });
