@@ -45,9 +45,16 @@ test("Studio and Ads offer pages expose planned tiers and live-product links", (
     assert.match(page, /Agency/);
     assert.match(page, /\$199/);
     assert.match(page, /Request founding access/);
-    assert.match(page, /hercules_request_software_access/);
+    assert.match(page, /\/functions\/v1\/hercules-launch/);\n    assert.match(page, /software_access_request/);\n    assert.doesNotMatch(page, /\/rest\/v1\/rpc\/hercules_request_software_access/);
     assert.match(page, /No payment is collected/);
   }
   assert.match(studio, /sauceapproved-studio\//);
   assert.match(ads, /sauceapproved-ads\//);
+});
+
+
+test("software access RPC is retired from browser roles behind the Edge boundary", () => {
+  const sql = fs.readFileSync(new URL("../supabase/migrations/20261001150000_software_access_edge_boundary.sql", import.meta.url), "utf8");
+  assert.match(sql, /revoke execute on function public\.hercules_request_software_access[\s\S]*from anon, authenticated/i);
+  assert.match(sql, /grant execute on function public\.hercules_request_software_access[\s\S]*to service_role/i);
 });
