@@ -407,7 +407,8 @@ export function createStudioHttpHandler({
     create:async()=>null
   }),
   actions={},
-  releaseTruthBacking=[]
+  releaseTruthBacking=[],
+  guardianWatchtowerReader=async()=>null
 }={}) {
   const manifest=createStudioManifest();
   const releaseTruthLedger=createReleaseTruthEvidenceLedger({backing:releaseTruthBacking});
@@ -431,6 +432,18 @@ export function createStudioHttpHandler({
         version:"1.0.0",
         executionPolicy:"fail-closed"
       });
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/guardian/status") {
+      try {
+        const watchtower=await guardianWatchtowerReader();
+        if (!watchtower || watchtower.executionAuthority!==false) {
+          return json({ok:false,error:"guardian_watchtower_unavailable",mode:"read-only",executionAuthority:false},503);
+        }
+        return json({ok:true,mode:"read-only",executionAuthority:false,watchtower});
+      } catch {
+        return json({ok:false,error:"guardian_watchtower_unavailable",mode:"read-only",executionAuthority:false},503);
+      }
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/manifest") {
