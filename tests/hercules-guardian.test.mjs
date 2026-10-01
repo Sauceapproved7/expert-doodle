@@ -152,3 +152,36 @@ test("containment authorization gate never treats Guardian proof as authority", 
   assert.equal(plan.executionAuthority,false);
   assert.equal(plan.status,"AWAITING_AUTHORIZATION");
 });
+
+
+test("containment executor defaults to dry-run and performs no mutation", async () => {
+  const {executeGuardianContainment}=await import("../hercules-guardian/containment-executor.mjs");
+  let calls=0;
+  const result=await executeGuardianContainment({
+    plan:{status:"AUTHORIZED_PLAN",executionAuthority:false,action:{type:"guardian.containment.isolate",target:"studio-api",scope:"service"},authorizationEvidenceSha256:"d".repeat(64),requiresSeparateExecutor:true},
+    adapter:{isolate:async()=>{calls++; return {isolated:true}},rollback:async()=>({restored:true})}
+  });
+  assert.equal(result.mode,"DRY_RUN");
+  assert.equal(result.executed,false);
+  assert.equal(calls,0);
+});
+
+test("live containment rejects absent explicit execution authority", async () => {
+  const {executeGuardianContainment}=await import("../hercules-guardian/containment-executor.mjs");
+  await assert.rejects(()=>executeGuardianContainment({
+    mode:"LIVE",
+    plan:{status:"AUTHORIZED_PLAN",executionAuthority:false,action:{type:"guardian.containment.isolate",target:"studio-api",scope:"service"},authorizationEvidenceSha256:"d".repeat(64),requiresSeparateExecutor:true},
+    executionAuthorization:null,
+    adapter:{isolate:async()=>({isolated:true}),rollback:async()=>({restored:true})}
+  }),/explicit execution authorization is required/);
+});
+
+test("live containment is target-bound and requires rollback capability", async () => {
+  const {executeGuardianContainment}=await import("../hercules-guardian/containment-executor.mjs");
+  await assert.rejects(()=>executeGuardianContainment({
+    mode:"LIVE",
+    plan:{status:"AUTHORIZED_PLAN",executionAuthority:false,action:{type:"guardian.containment.isolate",target:"studio-api",scope:"service"},authorizationEvidenceSha256:"d".repeat(64),requiresSeparateExecutor:true},
+    executionAuthorization:{approved:true,target:"other-api",scope:"service",evidenceSha256:"e".repeat(64)},
+    adapter:{isolate:async()=>({isolated:true}),rollback:async()=>({restored:true})}
+  }),/execution authorization does not match containment target/);
+});
