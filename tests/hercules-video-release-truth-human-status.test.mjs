@@ -11,8 +11,8 @@ test("human Release Truth page renders from the same injected ledger-backed evid
  const handler=createStudioHttpHandler({releaseTruthBacking:backing});
  const api=await request(handler,"/api/studio/release-truth/status");
  const page=await request(handler,"/release-truth");
- assert.equal(api.statusCode,200);
- assert.equal(page.statusCode,200);
+ assert.equal(api.status,200);
+ assert.equal(page.status,200);
  const status=JSON.parse(api.body);
  assert.equal(status.releaseReady,false);
  for(const id of status.blockedSystemIds) assert.ok(page.body.includes(id));
