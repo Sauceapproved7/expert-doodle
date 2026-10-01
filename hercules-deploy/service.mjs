@@ -1,6 +1,7 @@
 import {resolve} from "node:path";
 import {listenHerculesDeployService} from "./control-api.mjs";
 import {createSupabaseEdgeFunctionAdapterFromEnv} from "./supabase-management.mjs";
+import {createMarketing16DeployBridge} from "./marketing-16-bridge.mjs";
 
 function required(env, name) {
   const value = env[name];
@@ -47,11 +48,76 @@ export function safeHerculesDeployConfig(config) {
   };
 }
 
+export function createMarketing16TargetAdapter() {
+  const bridge = createMarketing16DeployBridge();
+  let active = null;
+
+  return Object.freeze({
+    async deploy({deploymentId, request}) {
+      const health = bridge.health();
+      const plan = bridge.plan({
+        brandId: "sauceapproved",
+        objective: "operate Marketing 16 through Hercules Deploy",
+        evidenceIds: [request.sourceCommit, request.artifactFingerprint],
+      });
+      if (!health.ok || health.modules !== 16 || plan.releaseReady !== false) {
+        throw Object.assign(new Error("marketing runtime safety gate failed"), {
+          code: "marketing_runtime_safety_gate_failed",
+        });
+      }
+      active = Object.freeze({
+        deploymentId,
+        releaseId: request.releaseId,
+        sourceCommit: request.sourceCommit,
+        artifactFingerprint: request.artifactFingerprint,
+      });
+      return {
+        targetKind: request.target.kind,
+        targetReference: request.target.reference,
+        releaseId: request.releaseId,
+        modules: health.modules,
+        releaseReady: plan.releaseReady,
+        autoPublish: health.autoPublish,
+        autoSpend: health.autoSpend,
+        storefrontMutation: health.storefrontMutation,
+      };
+    },
+
+    async verify({deploymentId, request}) {
+      if (!active || active.deploymentId !== deploymentId) {
+        throw Object.assign(new Error("deployment_not_active"), {code: "deployment_not_active"});
+      }
+      const health = bridge.health();
+      if (!health.ok || health.modules !== 16 || health.autoPublish || health.autoSpend || health.storefrontMutation) {
+        throw Object.assign(new Error("marketing runtime verification failed"), {
+          code: "marketing_runtime_verification_failed",
+        });
+      }
+      return {
+        verified: true,
+        modules: health.modules,
+        releaseId: request.releaseId,
+        sourceCommit: request.sourceCommit,
+        artifactFingerprint: request.artifactFingerprint,
+        publicOrigin: request.publicOrigin,
+      };
+    },
+
+    async rollback({deploymentId, request}) {
+      const matched = active?.deploymentId === deploymentId;
+      if (matched) active = null;
+      return {rolledBack: matched, releaseId: request.releaseId};
+    },
+  });
+}
+
 export function createHerculesDeployAdaptersFromEnv(
   env = process.env,
   {fetchImpl = globalThis.fetch} = {},
 ) {
-  const adapters = new Map();
+  const adapters = new Map([
+    ["hercules_marketing_16", createMarketing16TargetAdapter()],
+  ]);
   const supabase = createSupabaseEdgeFunctionAdapterFromEnv(env, {fetchImpl});
   if (supabase) adapters.set("supabase_edge_function", supabase);
   return adapters;
