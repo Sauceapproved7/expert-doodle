@@ -2,6 +2,7 @@ import {createMarketing16Manifest, planMarketing16Run} from "./core.mjs";
 import {authorizeControlledMarketingExecution} from "./controlled-execution.mjs";
 import {dryRunProviderCampaign} from "./provider-dry-run.mjs";
 import {simulateProviderPublish} from "./provider-adapter.mjs";
+import {createProviderConnector, executeAuthorizedPublish, createMarketingKillSwitch} from "./provider-live-boundary.mjs";
 
 const RELEASE_OPERATIONS = Object.freeze(new Set(["shopify_catalog_read"]));
 
@@ -34,8 +35,19 @@ function authorizeRelease(input={}) {
   });
 }
 
-export function createMarketing16Runtime() {
+export function createMarketing16Runtime(config={}) {
   const manifest=createMarketing16Manifest();
+  const providerConnectors=config.providerConnectors||{};
+  const killSwitch=config.killSwitch||createMarketingKillSwitch();
+
+  async function providerPublishExecute(input={}) {
+    const provider=String(input?.authorization?.provider||"").trim();
+    const publish=providerConnectors[provider];
+    if(typeof publish!=="function") throw new Error("provider_connector_not_configured");
+    const connector=createProviderConnector({provider,publish});
+    return executeAuthorizedPublish(input.authorization,connector,killSwitch);
+  }
+
   return Object.freeze({
     health() {
       return {
@@ -65,6 +77,7 @@ export function createMarketing16Runtime() {
     providerPublishSimulation(input={}) {
       return simulateProviderPublish(input.authorization);
     },
+    providerPublishExecute,
     execute(operation,input) {
       if (operation==="health") return this.health();
       if (operation==="manifest") return this.manifest();
@@ -73,6 +86,7 @@ export function createMarketing16Runtime() {
       if (operation==="prepare_campaign") return this.prepareCampaign(input);
       if (operation==="provider_dry_run") return this.providerDryRun(input);
       if (operation==="provider_publish_simulation") return this.providerPublishSimulation(input);
+      if (operation==="provider_publish_execute") return this.providerPublishExecute(input);
       throw new Error("marketing_operation_not_allowed");
     }
   });
