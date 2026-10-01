@@ -1,0 +1,26 @@
+name: Hercules Studio Ownership
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "hercules-video/studio-contract.mjs"
+      - "sauceapproved-studio/creation-floor/**"
+      - "soundworld/**"
+      - "tests/hercules-video-studio-ownership.test.mjs"
+      - ".github/workflows/hercules-studio-ownership.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  studio-ownership:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Verify Hercules-owned Studio boundaries
+        run: node --test sauceapproved-studio/creation-floor/ownership.test.mjs soundworld/ownership.test.mjs tests/hercules-video-studio-ownership.test.mjs
