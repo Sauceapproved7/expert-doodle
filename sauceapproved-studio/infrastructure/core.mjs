@@ -13,7 +13,7 @@ export function createStudioInfrastructureManifest(){
   layer("equipment-kit","Studio Equipment Kit","physical",["owned-cable-specs","usb-c-data-cables","usb-c-charging-cables","3.5mm-audio-cables","owned-powered-hub-design","owned-adapter-specs","cable-management","spares-inventory"]),
   layer("power-station","Studio Power Station","physical",["owned-power-architecture","surge-protection","charging-dock","ups-option","power-budget","safe-shutdown-plan","electrical-safety-validation"]),
   layer("camera-io","Camera I/O Kit","hybrid",["owned-capture-interface","usb-camera-input","hdmi-capture","external-monitor-output","device-enumeration","capture-health-proof"]),
-  layer("teleprompter","Hercules Teleprompter","software",["owned-script-engine","script-import","speed-control","mirrored-mode","remote-control-contract","director-integration"]),
+  layer("teleprompter","Hercules Teleprompter","software",["owned-script-engine","script-ingest","speed-control","mirrored-mode","remote-control-contract","director-integration"]),
   layer("lighting-control","Lighting Control","hybrid",["owned-lighting-control-layer","key-fill-back-presets","scene-profiles","manual-fallback","device-protocol-bridge","device-proof"]),
   layer("color-suite","Color Suite","software",["owned-color-engine","waveform-scope","vectorscope","white-balance","exposure-controls","lut-management","shot-match","before-after"]),
   layer("monitor-mode","Studio Monitor Mode","software",["owned-monitor-engine","clean-output","second-screen-preview","safe-area-guides","aspect-ratio-guides","client-preview"]),
