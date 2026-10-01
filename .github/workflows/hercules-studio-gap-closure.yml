@@ -10,6 +10,8 @@ on:
       - "tests/studio-creation-floor-expansion.test.mjs"
       - "tests/soundworld-field-system.test.mjs"
       - "tests/studio-infrastructure-expansion.test.mjs"
+      - "tests/studio-gap-closure-hardware.test.mjs"
+      - "hardware/studio-gap-closure/**"
       - "docs/HERCULES-STUDIO-GAP-CLOSURE-22.md"
       - ".github/workflows/hercules-studio-gap-closure.yml"
 
@@ -30,3 +32,4 @@ jobs:
           node --test tests/studio-creation-floor-expansion.test.mjs
           node --test tests/soundworld-field-system.test.mjs
           node --test tests/studio-infrastructure-expansion.test.mjs
+          node --test tests/studio-gap-closure-hardware.test.mjs
