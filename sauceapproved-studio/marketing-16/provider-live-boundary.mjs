@@ -31,6 +31,7 @@ export async function executeAuthorizedPublish(authorization={},connector,killSw
   if(!connector||connector.provider!==clean(authorization.provider)||typeof connector.publish!=='function') throw new Error('provider_connector_invalid');
   if(!killSwitch||typeof killSwitch.state!=='function') throw new Error('marketing_kill_switch_required');
   if(killSwitch.state().active) throw new Error('marketing_kill_switch_active');
+
   const result=await connector.publish(Object.freeze({
     authorizationId:authorization.authorizationId,
     brandId:authorization.brandId,
@@ -38,13 +39,16 @@ export async function executeAuthorizedPublish(authorization={},connector,killSw
     creativeId:authorization.creativeId,
     destinationUrl:authorization.destinationUrl
   }));
-  if(killSwitch.state().active) throw new Error('marketing_kill_switch_active');
+
   const externalId=clean(result?.externalId);
   if(!externalId) throw new Error('provider_publish_receipt_invalid');
+
+  const killSwitchState=killSwitch.state();
+
   return Object.freeze({
     schema:'sauceapproved.marketing-16.provider-live-receipt',
     version:1,
-    status:'provider_publish_executed',
+    status:killSwitchState.active ? 'provider_publish_executed_kill_switch_active' : 'provider_publish_executed',
     provider:connector.provider,
     externalId,
     authorizationId:authorization.authorizationId,
@@ -53,6 +57,8 @@ export async function executeAuthorizedPublish(authorization={},connector,killSw
     providerMutationPerformed:true,
     publishPerformed:true,
     spendAllowed:false,
-    automaticMutation:false
+    automaticMutation:false,
+    killSwitchActive:killSwitchState.active,
+    killSwitchReason:killSwitchState.reason
   });
 }
