@@ -216,3 +216,31 @@ test("post-containment verification rejects cross-target evidence", async () => 
     observation:{isolated:true,target:"other-api",scope:"service"}
   }),/observation does not match containment target/);
 });
+
+
+test("incident ledger creates a verifiable hash-linked event chain", async () => {
+  const {createGuardianIncidentLedger,appendGuardianIncidentEvent,verifyGuardianIncidentLedger}=await import("../hercules-guardian/incident-ledger.mjs");
+  let ledger=createGuardianIncidentLedger({incidentId:"inc-1",target:"studio-api"});
+  ledger=appendGuardianIncidentEvent(ledger,{type:"DRIFT_DETECTED",evidenceSha256:"a".repeat(64)});
+  ledger=appendGuardianIncidentEvent(ledger,{type:"CONTAINMENT_PROPOSED",evidenceSha256:"b".repeat(64)});
+  const verification=verifyGuardianIncidentLedger(ledger);
+  assert.equal(verification.valid,true);
+  assert.equal(ledger.events.length,2);
+  assert.equal(ledger.events[1].previousEventSha256,ledger.events[0].eventSha256);
+});
+
+test("incident ledger detects altered evidence", async () => {
+  const {createGuardianIncidentLedger,appendGuardianIncidentEvent,verifyGuardianIncidentLedger}=await import("../hercules-guardian/incident-ledger.mjs");
+  let ledger=createGuardianIncidentLedger({incidentId:"inc-1",target:"studio-api"});
+  ledger=appendGuardianIncidentEvent(ledger,{type:"DRIFT_DETECTED",evidenceSha256:"a".repeat(64)});
+  const tampered=structuredClone(ledger);
+  tampered.events[0].evidenceSha256="b".repeat(64);
+  assert.equal(verifyGuardianIncidentLedger(tampered).valid,false);
+});
+
+test("incident ledger rejects unknown event types and invalid evidence digests", async () => {
+  const {createGuardianIncidentLedger,appendGuardianIncidentEvent}=await import("../hercules-guardian/incident-ledger.mjs");
+  const ledger=createGuardianIncidentLedger({incidentId:"inc-1",target:"studio-api"});
+  assert.throws(()=>appendGuardianIncidentEvent(ledger,{type:"SILENT_MUTATION",evidenceSha256:"a".repeat(64)}),/unsupported Guardian incident event/);
+  assert.throws(()=>appendGuardianIncidentEvent(ledger,{type:"DRIFT_DETECTED",evidenceSha256:"nope"}),/valid evidence digest is required/);
+});
