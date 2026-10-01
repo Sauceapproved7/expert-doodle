@@ -1,7 +1,7 @@
 import {assessCapture} from './capture-quality.mjs';
 import {createCaptureReceipt} from './capture-receipt.mjs';
 import {scheduleVideoFrame,cancelScheduledVideoFrame} from './frame-scheduler.mjs';
-import {createDeviceProofReceipt,describeMissingDeviceProof} from './device-proof.mjs';
+import {createDeviceProofReceipt,describeMissingDeviceProof,serializeDeviceProofState,parseDeviceProofState} from './device-proof.mjs';
 import {planExportDimensions} from './export-dimensions.mjs';
 
 const $=id=>document.getElementById(id);
@@ -25,7 +25,10 @@ const grainTextures=Array.from({length:16},()=>{
 });
 let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
 let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,scheduledFrame=null,mode='idle',captureMode='idle',captureLook=null,captureReceipt=null,chunks=[],rawChunks=[];
-const deviceProof={cameraOpened:false,looksUsed:new Set(),cameraReceipt:null,clipReceipt:null};
+const PROOF_STATE_KEY='sauceapproved.vintage-camera.device-proof.progress.v1';
+const restoredProof=parseDeviceProofState(localStorage.getItem(PROOF_STATE_KEY));
+const deviceProof={cameraOpened:restoredProof?.cameraOpened||false,looksUsed:new Set(restoredProof?.looksUsed||[]),cameraReceipt:restoredProof?.cameraReceipt||null,clipReceipt:restoredProof?.clipReceipt||null,originalPreserved:restoredProof?.originalPreserved||false};
+const persistDeviceProof=()=>localStorage.setItem(PROOF_STATE_KEY,serializeDeviceProofState({...deviceProof,looksUsed:[...deviceProof.looksUsed],cameraPlaybackConfirmed:$('camera-playback')?.checked||restoredProof?.cameraPlaybackConfirmed||false,clipPlaybackConfirmed:$('clip-playback')?.checked||restoredProof?.clipPlaybackConfirmed||false}));
 const setStatus=message=>{$('status').textContent=message;};
 const setButtonState=()=>{
   const ready=mode==='camera'||mode==='clip';
@@ -101,7 +104,7 @@ $('camera').addEventListener('click',async()=>{
   try{
     const wantAudio=$('microphone').checked;
     cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}},audio:wantAudio});
-    source.srcObject=cameraStream;source.muted=true;await source.play();configureOutputForSource();mode='camera';deviceProof.cameraOpened=true;deviceProof.looksUsed.add($('stock').value);setButtonState();
+    source.srcObject=cameraStream;source.muted=true;await source.play();configureOutputForSource();mode='camera';deviceProof.cameraOpened=true;deviceProof.looksUsed.add($('stock').value);persistDeviceProof();setButtonState();
     $('finder-label').textContent='LIVE / SOURCE ↔ LOOK';
     setStatus(`Camera live. ${wantAudio?'Microphone enabled by your choice.':'Microphone off.'} Recording has not started.`);
   }catch(error){releaseSource();setStatus(error?.name==='NotAllowedError'?'Camera permission was denied. No capture started.':'Camera unavailable. Try Load a clip.');}
@@ -135,6 +138,7 @@ $('record').addEventListener('click',async()=>{
           interrupted:captureInterrupted,blobSize:processedBlob.size,mimeType:mime,width:output.width,height:output.height,look:captureLook});
         if(captureMode==='camera')deviceProof.cameraReceipt=captureReceipt;
         if(captureMode==='clip')deviceProof.clipReceipt=captureReceipt;
+        persistDeviceProof();
         processedUrl=URL.createObjectURL(processedBlob);$('download').href=processedUrl;
         $('download').download='sauceapproved-vintage-look.webm';$('download').hidden=false;
         $('download').textContent=quality.ok?'Download processed clip':'Download low-frame-rate preview';
@@ -173,8 +177,8 @@ document.addEventListener('visibilitychange',()=>{
 });
 $('recipe').addEventListener('click',()=>saveBlob(new Blob([JSON.stringify(recipe(),null,2)],{type:'application/json'}),'sauceapproved-look-recipe.json'));
 $('receipt').addEventListener('click',()=>{if(captureReceipt)saveBlob(new Blob([JSON.stringify(captureReceipt,null,2)],{type:'application/json'}),'sauceapproved-capture-qa.json');});
-$('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||'sauceapproved-original.webm';link.click();});
-$('stock').addEventListener('change',()=>deviceProof.looksUsed.add($('stock').value));
+$('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||'sauceapproved-original.webm';link.click();deviceProof.originalPreserved=true;persistDeviceProof();});
+$('stock').addEventListener('change',()=>{deviceProof.looksUsed.add($('stock').value);persistDeviceProof();});
 for(const id of ['strength','grain'])$(id).addEventListener('input',()=>{$(id+'-value').value=$(id).value+'%';});
 $('device-proof').addEventListener('click',()=>{
   const proof=createDeviceProofReceipt({
@@ -184,11 +188,14 @@ $('device-proof').addEventListener('click',()=>{
     clipReceipt:deviceProof.clipReceipt,
     cameraPlaybackConfirmed:$('camera-playback').checked,
     clipPlaybackConfirmed:$('clip-playback').checked,
-    originalAvailable:!!originalUrl
+    originalAvailable:deviceProof.originalPreserved===true
   });
   saveBlob(new Blob([JSON.stringify(proof,null,2)],{type:'application/json'}),'sauceapproved-device-proof.json');
   const missing=describeMissingDeviceProof(proof);
   setStatus(proof.ok?'Device proof passed. Save this receipt with your launch evidence.':`Device proof incomplete: ${missing.join('; ')}.`);
 });
+$('camera-playback').checked=restoredProof?.cameraPlaybackConfirmed||false;
+$('clip-playback').checked=restoredProof?.clipPlaybackConfirmed||false;
+for(const id of ['camera-playback','clip-playback'])$(id).addEventListener('change',persistDeviceProof);
 window.addEventListener('pagehide',()=>{cancelScheduledVideoFrame(source,scheduledFrame);releaseSource();releaseDownloads();});
 setButtonState();draw();
