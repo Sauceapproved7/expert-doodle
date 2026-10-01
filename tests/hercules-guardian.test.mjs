@@ -280,3 +280,37 @@ test("Watchtower deduplicates the same drift fingerprint", async () => {
   assert.equal(second.incident,null);
   assert.equal(second.fingerprint,first.fingerprint);
 });
+
+
+test("Watchtower registry rejects duplicate service identities", async () => {
+  const {createWatchtowerRegistry}=await import("../hercules-guardian/watchtower-registry.mjs");
+  const baseline={artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"};
+  assert.throws(()=>createWatchtowerRegistry([
+    {id:"studio",scope:"service",baseline,observe:async()=>baseline},
+    {id:"studio",scope:"service",baseline,observe:async()=>baseline}
+  ]),/duplicate Watchtower service id/);
+});
+
+test("Watchtower cycle isolates observation failures per service", async () => {
+  const {createWatchtowerRegistry,runWatchtowerCycle}=await import("../hercules-guardian/watchtower-registry.mjs");
+  const healthy={artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"};
+  const registry=createWatchtowerRegistry([
+    {id:"studio",scope:"service",baseline:healthy,observe:async()=>healthy},
+    {id:"forge",scope:"service",baseline:{...healthy,identity:"svc-forge"},observe:async()=>{throw new Error("provider unavailable")}}
+  ]);
+  const cycle=await runWatchtowerCycle(registry);
+  assert.equal(cycle.results.find(x=>x.id==="studio").status,"HEALTHY");
+  assert.equal(cycle.results.find(x=>x.id==="forge").status,"OBSERVATION_FAILED");
+  assert.equal(cycle.executionAuthority,false);
+});
+
+test("Watchtower cycle carries incident fingerprints forward for deduplication", async () => {
+  const {createWatchtowerRegistry,runWatchtowerCycle}=await import("../hercules-guardian/watchtower-registry.mjs");
+  const baseline={artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"};
+  const drift={...baseline,artifact:"sha256:"+"f".repeat(64)};
+  const registry=createWatchtowerRegistry([{id:"studio",scope:"service",baseline,observe:async()=>drift}]);
+  const first=await runWatchtowerCycle(registry);
+  const second=await runWatchtowerCycle(registry,{knownIncidentFingerprints:first.incidentFingerprints});
+  assert.equal(first.results[0].status,"INCIDENT_OPENED");
+  assert.equal(second.results[0].status,"INCIDENT_ALREADY_OPEN");
+});
