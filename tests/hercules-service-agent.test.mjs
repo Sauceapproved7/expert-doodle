@@ -60,3 +60,19 @@ test("repair binding requires an allow-listed module and a sealed Cleaner recove
   assert.equal(bound.execute,false);
   assert.equal(bound.requiresPostRepairVerification,true);
 });
+
+
+test("Windows probe parses bounded PowerShell health payload and rejects non-Windows hosts",async()=>{
+  const {createWindowsProbe}=await import("../hercules-service-agent/windows-probe.mjs");
+  const probe=createWindowsProbe({platform:"win32",execFileImpl:async(file,args,options)=>({
+    stdout:JSON.stringify({freeDiskPercent:32,memoryPressurePercent:61,pendingReboot:true,failedUpdates:1,startupImpact:"low"}),
+    stderr:""
+  })});
+  const raw=await probe();
+  assert.equal(raw.platform,"win32");
+  assert.equal(raw.freeDiskPercent,32);
+  assert.equal(raw.pendingReboot,true);
+  assert.deepEqual(Object.keys(raw).sort(),["failedUpdates","freeDiskPercent","memoryPressurePercent","pendingReboot","platform","startupImpact"].sort());
+  const bad=createWindowsProbe({platform:"linux",execFileImpl:async()=>({stdout:"{}",stderr:""})});
+  await assert.rejects(()=>bad(),/Windows host required/i);
+});
