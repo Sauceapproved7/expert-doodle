@@ -45,3 +45,9 @@ The executor is dry-run-first. A containment proposal remains non-executing even
 Live containment requires independently: a Guardian deny verdict with scoped drift evidence; an AUTHORIZED_PLAN from the containment gate; a second explicit execution authorization bound to the exact target and scope; a containment adapter implementing both isolation and rollback; and post-isolation evidence confirming the target was isolated.
 
 DRY_RUN is the default mode and never calls the adapter mutation method. Guardian proof objects and containment plans remain evidence/planning objects rather than execution credentials.
+
+## Post-containment verification
+
+A successful adapter response is not sufficient to declare containment complete. Guardian requires a separate observation bound to the same target and scope. Only an observation confirming isolation produces VERIFIED_CONTAINED.
+
+A failed or negative observation produces CONTAINMENT_UNVERIFIED plus a rollback proposal. The rollback proposal carries executionAuthority=false and requires separate approval; verification failure never silently triggers recovery or expands containment scope.
