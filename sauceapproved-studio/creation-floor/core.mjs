@@ -13,7 +13,7 @@ const SYSTEMS=Object.freeze([
 
 export function createCreationFloorManifest(){
  return Object.freeze({
-  id:"hercules-creation-floor",version:"0.2.0",mode:"inventory-plan-authorize-fail-closed",
+  id:"hercules-creation-floor",version:"0.1.0",mode:"inventory-plan-authorize-fail-closed",
   implementationOwner:"SauceApproved enterprise LLC",buildMode:"hercules-owned",
   externalPlatforms:Object.freeze([]),thirdPartyHostedRuntimeAllowed:false,thirdPartyProductSubstitutionAllowed:false,
   standardsPolicy:"interoperate-with-open-or-device-standards-without-outsourcing-the-product",
