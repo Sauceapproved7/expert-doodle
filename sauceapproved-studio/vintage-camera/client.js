@@ -187,7 +187,8 @@ $('device-proof').addEventListener('click',()=>{
     originalAvailable:!!originalUrl
   });
   saveBlob(new Blob([JSON.stringify(proof,null,2)],{type:'application/json'}),'sauceapproved-device-proof.json');
-  const missing=describeMissingDeviceProof(proof);\n  setStatus(proof.ok?'Device proof passed. Save this receipt with your launch evidence.':`Device proof incomplete: ${missing.join('; ')}.`);
+  const missing=describeMissingDeviceProof(proof);
+  setStatus(proof.ok?'Device proof passed. Save this receipt with your launch evidence.':`Device proof incomplete: ${missing.join('; ')}.`);
 });
 window.addEventListener('pagehide',()=>{cancelScheduledVideoFrame(source,scheduledFrame);releaseSource();releaseDownloads();});
 setButtonState();draw();
