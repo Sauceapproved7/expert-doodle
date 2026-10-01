@@ -34,3 +34,17 @@ test("program is not production complete until all twelve layers have verified e
  assert.equal(r.productionReady,false);
  assert.equal(r.blocked.length,12);
 });
+
+test("all twelve layers are Hercules-owned with no outside platform substitution",()=>{
+ const m=createStudioInfrastructureManifest();
+ assert.equal(m.implementationOwner,"SauceApproved enterprise LLC");
+ assert.equal(m.buildMode,"hercules-owned");
+ assert.deepEqual(m.externalPlatforms,[]);
+ assert.equal(m.thirdPartyHostedRuntimeAllowed,false);
+ assert.equal(m.thirdPartyProductSubstitutionAllowed,false);
+ for(const x of m.layers){
+  assert.equal(x.implementationOwner,"SauceApproved enterprise LLC");
+  assert.equal(x.herculesOwned,true);
+  assert.equal(x.outsidePlatformAllowed,false);
+ }
+});
