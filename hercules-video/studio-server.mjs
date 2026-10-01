@@ -14,6 +14,13 @@ import {createMovieMachineManifest,renderMovieMachine} from "../sauceapproved-st
 import {createHoloStageManifest,renderHoloStage} from "../sauceapproved-studio/holostage/core.mjs";
 import {createLegacyVaultManifest,renderLegacyVault} from "../sauceapproved-studio/legacy-vault/core.mjs";
 import {createStudioDirectorManifest,renderStudioDirector} from "../sauceapproved-studio/studio-director/core.mjs";
+import {createRealityForgeManifest,renderRealityForge} from "../sauceapproved-studio/reality-forge/core.mjs";
+import {createPerformanceLabManifest,renderPerformanceLab} from "../sauceapproved-studio/performance-lab/core.mjs";
+import {createSceneForgeManifest,renderSceneForge} from "../sauceapproved-studio/scene-forge/core.mjs";
+import {createSoundWorldManifest,renderSoundWorld} from "../sauceapproved-studio/sound-world/core.mjs";
+import {createActorLabManifest,renderActorLab} from "../sauceapproved-studio/actor-lab/core.mjs";
+import {createIntegrationsManifest,renderIntegrationsHub} from "../sauceapproved-studio/integrations/core.mjs";
+import {createStudioCompletionManifest} from "../sauceapproved-studio/completion/core.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
 
@@ -487,6 +494,54 @@ export function createStudioHttpHandler({
       return {status:200,headers:HTML_HEADERS,body:renderStudioDirector()};
     }
 
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/reality-forge/manifest") {
+      return json(createRealityForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/reality-forge") {
+      return {status:200,headers:HTML_HEADERS,body:renderRealityForge()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/performance-lab/manifest") {
+      return json(createPerformanceLabManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/performance-lab") {
+      return {status:200,headers:HTML_HEADERS,body:renderPerformanceLab()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/scene-forge/manifest") {
+      return json(createSceneForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/scene-forge") {
+      return {status:200,headers:HTML_HEADERS,body:renderSceneForge()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/sound-world/manifest") {
+      return json(createSoundWorldManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/sound-world") {
+      return {status:200,headers:HTML_HEADERS,body:renderSoundWorld()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/actor-lab/manifest") {
+      return json(createActorLabManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/actor-lab") {
+      return {status:200,headers:HTML_HEADERS,body:renderActorLab()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/integrations/manifest") {
+      return json(createIntegrationsManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/integrations") {
+      return {status:200,headers:HTML_HEADERS,body:renderIntegrationsHub()};
+    }
+
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/market/manifest") {
       return json(createStudiosMarketManifest());
     }
@@ -497,6 +552,10 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/commercial/manifest") {
       return json(createStudioCommercialManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/completion/manifest") {
+      return json(createStudioCompletionManifest({commercial:createStudioCommercialManifest()}));
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/launch-gift/manifest") {
