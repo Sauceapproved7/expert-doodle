@@ -1,3 +1,25 @@
+import {createCreationFloorManifest} from "../creation-floor/core.mjs";
+import {createCreationFloorExpansionManifest} from "../creation-floor/production-ops.mjs";
+import {createSoundWorldFamily} from "../../soundworld/product-family.mjs";
+import {createSoundWorldExpansionManifest} from "../../soundworld/field-system.mjs";
+import {createStudioInfrastructureManifest} from "../infrastructure/core.mjs";
+import {createInfrastructureExpansionManifest} from "../infrastructure/production-systems.mjs";
+import {createStudioMemoryGridManifest} from "../memory-grid/core.mjs";
+import {createGlobalStudioClosureManifest} from "../global-closure/core.mjs";
+import {createStudioHardwareEngineeringProgram} from "../../hardware/studio-gap-closure/program.mjs";
+
+const MANIFEST_FACTORIES=Object.freeze({
+ "creation-floor":createCreationFloorManifest,
+ "creation-floor-production-ops":createCreationFloorExpansionManifest,
+ "soundworld":createSoundWorldFamily,
+ "soundworld-field-system":createSoundWorldExpansionManifest,
+ "studio-infrastructure":createStudioInfrastructureManifest,
+ "studio-infrastructure-production":createInfrastructureExpansionManifest,
+ "studio-memory-grid":createStudioMemoryGridManifest,
+ "studio-global-closure":createGlobalStudioClosureManifest,
+ "hardware-engineering-program":createStudioHardwareEngineeringProgram
+});
+
 const OWNER="SauceApproved enterprise LLC";
 const sha=v=>/^[a-f0-9]{64}$/i.test(String(v||""));
 const system=(id,label,source,kind,manifestExport)=>Object.freeze({id,label,source,kind,manifestExport,implementationOwner:OWNER,herculesOwned:true,externalRuntimeRequired:false});
@@ -30,4 +52,23 @@ export function evaluateStudioSystemRegistry(registry,evidence={}){
   else receipts.push(Object.freeze({systemId:s.id,artifactSha256:String(e.artifactSha256).toLowerCase()}));
  }
  return Object.freeze({schema:"sauceapproved.studio.system-registry-status/v1",ready:blocked.length===0,blockedSystemIds:Object.freeze(blocked),proofReceipts:Object.freeze(receipts),finalAuthority:"owner-controlled-release",failClosed:true});
+}
+
+export async function loadStudioSubsystemManifests(registry=createStudioSystemRegistry()){
+ const loaded=[];
+ for(const system of registry.systems){
+  const factory=MANIFEST_FACTORIES[system.id];
+  if(typeof factory!=="function") throw new Error("studio_subsystem_manifest_factory_missing:"+system.id);
+  const manifest=await factory();
+  if(!manifest||typeof manifest!=="object") throw new Error("studio_subsystem_manifest_invalid:"+system.id);
+  loaded.push(Object.freeze({
+   systemId:system.id,
+   manifestExport:system.manifestExport,
+   loaded:true,
+   verified:false,
+   currentEvidence:false,
+   manifest
+  }));
+ }
+ return Object.freeze(loaded);
 }
