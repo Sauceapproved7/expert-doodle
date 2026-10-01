@@ -177,6 +177,39 @@ function safeMarketingProperties(value:unknown){
   };
 }
 
+async function softwareAccessRequest(req:Request,body:any){
+  if(!S)throw new Error("service_role_unavailable");
+  const product=cleanText(body?.p_product_code,80),plan=cleanText(body?.p_plan_code,80),email=cleanText(body?.p_email,254).toLowerCase();
+  if(!product||!plan||!validEmail(email))return {status:400,body:{ok:false,error:"invalid_access_request"}};
+  const forwarded=cleanText(req.headers.get("x-forwarded-for")||"",256).split(",")[0].trim();
+  const headers:Record<string,string>={apikey:S,authorization:"Bearer "+S,"content-type":"application/json"};
+  if(forwarded)headers["x-forwarded-for"]=forwarded;
+  const response=await fetch(U+"/rest/v1/rpc/hercules_request_software_access",{
+    method:"POST",
+    headers,
+    body:JSON.stringify({
+      p_product_code:product,
+      p_plan_code:plan,
+      p_email:email,
+      p_full_name:cleanText(body?.p_full_name,100)||null,
+      p_company:cleanText(body?.p_company,160)||null,
+      p_role:cleanText(body?.p_role,100)||null,
+      p_message:cleanText(body?.p_message,1200)||null,
+      p_website:cleanText(body?.p_website,120)||null,
+      p_attribution:body?.p_attribution&&typeof body.p_attribution==="object"?body.p_attribution:{}
+    }),
+    signal:AbortSignal.timeout(15000)
+  });
+  const text=await response.text();
+  let payload:any=null;
+  try{payload=text?JSON.parse(text):null}catch{payload=text}
+  if(!response.ok){
+    const detail=String(payload?.message||payload?.error||payload||"software_access_request_failed").slice(0,200);
+    throw new Error(detail);
+  }
+  return {status:200,body:payload};
+}
+
 const html = String.raw`<!doctype html>
 <html lang="en">
 <head>
@@ -875,6 +908,10 @@ Deno.serve(async(req:Request)=>{
     if(!body||typeof body!=="object")return Response.json({ok:false,error:"invalid_json"},{status:400,headers:{"cache-control":"no-store"}});
     const action=cleanText((body as any).action,64);
     try{
+      if(action==="software_access_request"){
+        try{const result=await softwareAccessRequest(req,body);return Response.json(result.body,{status:result.status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+        catch(error){const detail=error instanceof Error?error.message:"software_access_request_failed";const status=detail==="request_rate_limited"?429:detail==="invalid_email"||detail==="product_unavailable"||detail==="plan_unavailable"?400:503;return Response.json({ok:false,error:detail},{status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+      }
       if(action==="password_breach_check"){
         const password=typeof (body as any).password==="string"?(body as any).password:"";
         if(password.length<12||password.length>256)return Response.json({ok:false,error:"weak_password_length"},{status:400,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
