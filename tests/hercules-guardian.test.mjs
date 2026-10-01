@@ -82,3 +82,30 @@ test("Guardian verdict can be bound into the canonical Hercules Proof Object", a
   assert.equal(proof.verification.status,"VERIFIED_HEALTHY");
   assert.match(proof.proofSha256,/^[a-f0-9]{64}$/);
 });
+
+
+test("containment gate produces approval-gated lifecycle only for verified drift", async () => {
+  const {createGuardianContainmentProposal}=await import("../hercules-guardian/containment-gate.mjs");
+  const auth="d".repeat(64);
+  const result=evaluateGuardianState({
+    expected:{artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    observed:{artifact:"sha256:"+"f".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    target:{id:"studio-api",scope:"service"}
+  });
+  const proposal=createGuardianContainmentProposal({guardianResult:result,authorizationEvidenceSha256:auth});
+  assert.equal(proposal.lifecycle.state,"READY_FOR_AUTHORIZED_EXECUTION");
+  assert.equal(proposal.lifecycle.requiresApproval,true);
+  assert.equal(proposal.lifecycle.executionAuthority,false);
+  assert.equal(proposal.consequence.action.target,"studio-api");
+  assert.equal(proposal.recovery.executionAuthority,false);
+});
+
+test("containment gate refuses healthy state", async () => {
+  const {createGuardianContainmentProposal}=await import("../hercules-guardian/containment-gate.mjs");
+  const result=evaluateGuardianState({
+    expected:{artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    observed:{artifact:"sha256:"+"a".repeat(64),config:"sha256:"+"b".repeat(64),identity:"svc-studio",policy:"policy-v1"},
+    target:{id:"studio-api",scope:"service"}
+  });
+  assert.throws(()=>createGuardianContainmentProposal({guardianResult:result,authorizationEvidenceSha256:"d".repeat(64)}),/verified drift required/);
+});
