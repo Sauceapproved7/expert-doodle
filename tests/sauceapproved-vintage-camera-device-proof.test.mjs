@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {createDeviceProofReceipt} from '../sauceapproved-studio/vintage-camera/device-proof.mjs';
+import {createDeviceProofReceipt,describeMissingDeviceProof} from '../sauceapproved-studio/vintage-camera/device-proof.mjs';
 
 test('passes only when camera, clip, looks and playback checks all pass',()=>{
   const receipt=createDeviceProofReceipt({
@@ -24,6 +24,7 @@ test('passes only when camera, clip, looks and playback checks all pass',()=>{
     originalAvailable:true
   });
   assert.equal(receipt.schema,'sauceapproved.vintage-camera.device-proof');
+  assert.deepEqual(receipt.missing,[]);
 });
 
 test('fails closed when any required proof is missing',()=>{
@@ -40,4 +41,15 @@ test('fails closed when any required proof is missing',()=>{
   assert.equal(receipt.reason,'device_proof_incomplete');
   assert.equal(receipt.checks.allLooksUsed,false);
   assert.equal(receipt.checks.clipCapturePassed,false);
+  assert.deepEqual(receipt.missing,[
+    'allLooksUsed','clipCapturePassed','cameraPlaybackConfirmed','clipPlaybackConfirmed','originalAvailable'
+  ]);
+});
+
+test('missing checks are translated into operator-readable next actions',()=>{
+  assert.deepEqual(describeMissingDeviceProof({missing:['allLooksUsed','cameraCapturePassed','originalAvailable']}),[
+    'use all four looks',
+    'pass camera capture QA',
+    'preserve an original clip'
+  ]);
 });
