@@ -20,4 +20,4 @@ jobs:
         with:
           node-version: "22"
       - name: Run owned Studio infrastructure contracts
-        run: node --test sauceapproved-studio/infrastructure/*.test.mjs
+        run: node --test sauceapproved-studio/infrastructure/*.test.mjs tests/studio-global-ownership.test.mjs
