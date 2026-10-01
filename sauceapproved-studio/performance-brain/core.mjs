@@ -82,3 +82,28 @@ export function evaluateCampaignPerformance(input={}){
 export function renderPerformanceBrain(){
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hercules Performance Brain</title><style>:root{font-family:Inter,system-ui,sans-serif;background:#060708;color:#f5f7f8}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 15% 0,#24313a,#0a0d0f 42%,#050607 78%)}main{width:min(1160px,100%);margin:auto;padding:clamp(20px,5vw,58px)}a{color:#a9d7ea;text-decoration:none}.hero{padding:clamp(30px,6vw,70px);border:1px solid #30434d;border-radius:34px;background:linear-gradient(150deg,#162229,#080a0c 72%)}.eyebrow{font-size:11px;letter-spacing:.22em;color:#8bc7df}.hero h1{font-size:clamp(54px,10vw,108px);line-height:.84;letter-spacing:-.065em;margin:14px 0 22px}.hero p{max-width:800px;color:#b8c4c9;font-size:clamp(17px,2vw,21px);line-height:1.6}.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}.card{padding:28px;min-height:260px;border:1px solid #2b3c44;border-radius:25px;background:#0b1013}.card span{font-size:11px;letter-spacing:.17em;color:#7dbbd4}.card h2{font-size:31px;margin:48px 0 12px}.card p{color:#9fadb3;line-height:1.6}.guard{margin-top:16px;padding:20px;border:1px solid #5a4728;border-radius:18px;background:#18130c;color:#e7c58a;font-weight:750}.guard b{display:block;margin-bottom:6px;color:#fff}.guard code{color:#f1d7a8}@media(max-width:760px){.grid{grid-template-columns:1fr}.hero{border-radius:24px}}</style></head><body><main><a href="/">Back to SauceApproved Studio</a><section class="hero"><div class="eyebrow">SAUCEAPPROVED / VERIFIED PERFORMANCE INTELLIGENCE</div><h1>Performance<br>Brain</h1><p>Compare campaign outcomes only when the evidence is verified. The Brain grades proof quality, identifies what the verified numbers support, and sends the recommendation back for human review.</p></section><section class="grid"><article class="card"><span>01 / PROOF</span><h2>Evidence Grade</h2><p>Scores whether impressions, clicks, conversions, and spend are actually verified before a comparison can produce a winner.</p></article><article class="card"><span>02 / LEARNING</span><h2>Outcome Loop</h2><p>Turns verified campaign results into a reviewable next action without silently changing creative, budgets, publishing, or providers.</p></article></section><section class="card" style="margin-top:16px;min-height:0"><span>03 / CAMPAIGN FORGE LOOP</span><h2>Campaign Forge evidence</h2><p>Send a Campaign Forge pack plus observed metrics to <code>/api/studio/performance-brain/evaluate</code>. Evaluate verified evidence only; missing proof stays unverified.</p><p><b>Evaluate verified evidence → Review required.</b> Results can recommend a next action, but cannot publish, spend, or mutate a campaign.</p></section><div class="guard"><b>Evidence-analysis only.</b>No auto-publish. No auto-spend. Recommendations require review; automatic mutation remains disabled.</div></main></body></html>`;
 }
+
+
+export function reviewPerformanceRecommendation(result={},review={}){
+  const base=Object.freeze({
+    schema:'sauceapproved.studio.performance-brain.review',
+    version:1,
+    recommendation:String(result?.winner||''),
+    reviewer:String(review?.reviewer||''),
+    approved:false,
+    publishReady:false,
+    autoPublish:false,
+    autoSpend:false,
+    automaticMutation:false
+  });
+  if(result?.schema!=='sauceapproved.studio.performance-brain.result'||result?.status!=='verified_comparison'||!result?.winner){
+    return Object.freeze({...base,status:'verified_recommendation_required'});
+  }
+  if(review?.decision!=='approve'&&review?.decision!=='reject'){
+    return Object.freeze({...base,status:'review_required'});
+  }
+  if(review.decision==='reject'){
+    return Object.freeze({...base,status:'recommendation_rejected'});
+  }
+  return Object.freeze({...base,status:'recommendation_approved',approved:true});
+}
