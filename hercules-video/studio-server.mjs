@@ -23,6 +23,7 @@ import {createIntegrationsManifest,renderIntegrationsHub} from "../sauceapproved
 import {createCreationFloorManifest} from "../sauceapproved-studio/creation-floor/core.mjs";
 import {renderCreationFloor} from "../sauceapproved-studio/creation-floor/render.mjs";
 import {createStudioCompletionManifest} from "../sauceapproved-studio/completion/core.mjs";
+import {createStudioSystemRegistry,evaluateStudioSystemRegistry} from "../sauceapproved-studio/system-registry/core.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
 
@@ -566,6 +567,14 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/completion/manifest") {
       return json(createStudioCompletionManifest({commercial:createStudioCommercialManifest()}));
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/systems/manifest") {
+      return json(createStudioSystemRegistry());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/systems/status") {
+      return json(evaluateStudioSystemRegistry(createStudioSystemRegistry(),{}));
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/launch-gift/manifest") {
