@@ -25,6 +25,7 @@ import {renderCreationFloor} from "../sauceapproved-studio/creation-floor/render
 import {createStudioCompletionManifest} from "../sauceapproved-studio/completion/core.mjs";
 import {createStudioSystemRegistry,evaluateStudioSystemRegistry} from "../sauceapproved-studio/system-registry/core.mjs";
 import {createReleaseTruthEvidenceStore} from "../sauceapproved-studio/release-truth/evidence-store.mjs";
+import {createReleaseTruthEvidenceLedger} from "../sauceapproved-studio/release-truth/evidence-ledger.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
 
@@ -405,9 +406,11 @@ export function createStudioHttpHandler({
     list:async()=>[],
     create:async()=>null
   }),
-  actions={}
+  actions={},
+  releaseTruthBacking=[]
 }={}) {
   const manifest=createStudioManifest();
+  const releaseTruthLedger=createReleaseTruthEvidenceLedger({backing:releaseTruthBacking});
 
   async function readContext() {
     const [runStatus,bridge]=await Promise.all([statusReader(),executionBridgeProvider()]);
@@ -579,7 +582,7 @@ export function createStudioHttpHandler({
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/release-truth/status") {
-      return json(createReleaseTruthEvidenceStore().status());
+      return json(createReleaseTruthEvidenceStore({initialEvidence:releaseTruthLedger.currentEvidence()}).status());
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/release-truth") {
