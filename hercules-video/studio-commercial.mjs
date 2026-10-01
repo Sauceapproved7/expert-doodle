@@ -107,7 +107,13 @@ export function createStudioOnboardingManifest(){
       "/movie-machine",
       "/holostage",
       "/legacy-vault",
-      "/studio-director"
+      "/reality-forge",
+      "/performance-lab",
+      "/scene-forge",
+      "/sound-world",
+      "/actor-lab",
+      "/studio-director",
+      "/integrations"
     ],
     firstRun:[
       {step:1,id:"choose-workflow",label:"Choose a Studio workflow",path:"/"},
@@ -136,7 +142,7 @@ export function renderStudioGettingStartedShell(){
   const manifest=createStudioOnboardingManifest();
   const steps=manifest.firstRun.map(step=>
     '<article class="plan"><span class="count">0'+esc(step.step)+'</span><h2>'+esc(step.label)+'</h2><p>'+esc(
-      step.id==="choose-workflow" ? "Start with the workflow that matches the job: video production, Content Multiplier, Brand Brain, AI Sales Agent, Vintage Camera, or Kids Studio." :
+      step.id==="choose-workflow" ? "Start with the workflow that matches the job: video production, Campaign Forge, Reality Forge, Performance Lab, SceneForge, SoundWorld, Actor Lab, Content Multiplier, Brand Brain, AI Sales Agent, Vintage Camera, Kids Studio, or Studio Director." :
       step.id==="build-brief" ? "Lock the objective, audience, offer, format, constraints and approved brand facts before asking Hercules to produce." :
       step.id==="review-shot-plan" ? "Hercules keeps shot requirements, provider routing, quality evidence, recovery and provenance visible instead of hiding the work behind one button." :
       step.id==="connect-approved-provider" ? "Provider-dependent actions remain unavailable until an authorized rendering or action adapter is connected." :
@@ -225,7 +231,13 @@ export function renderStudioLandingShell(){
     ["Movie Machine","/movie-machine","Turn one story idea into a full cinematic blueprint with emotional camera logic and proof."],
     ["HoloStage","/holostage","Pre-plan blocking, cameras and lighting on a virtual production floor with feasibility guards."],
     ["Legacy Vault","/legacy-vault","Build documentary-style legacy stories while keeping consent and source provenance attached."],
-    ["Studio Director","/studio-director","Route one project across the right Hercules Studio systems with proof gates, blast-radius rehearsal, and creative-intent drift protection."]
+    ["Reality Forge","/reality-forge","Transform worlds while protecting identity, performance timing, product geometry, and continuity."],
+    ["Performance Lab","/performance-lab","Direct emotion, voice, timing, blocking, and gestures as one continuity-protected performance system."],
+    ["SceneForge","/scene-forge","Stress-test continuity and lock director intent before execution burns time or budget."],
+    ["SoundWorld","/sound-world","Design dialogue, ambience, foley, music, silence, effects, and transitions as one emotional system."],
+    ["Actor Lab","/actor-lab","Protect character identity, role, voice, wardrobe, mannerisms, and likeness consent across scenes."],
+    ["Studio Director","/studio-director","Route one project across the right Hercules Studio systems with proof gates, blast-radius rehearsal, and creative-intent drift protection."],
+    ["Integrations Hub","/integrations","See connection readiness and permission boundaries without treating inventory as authorization."]
   ];
   const productCards=products.map((item,i)=>'<article class="plan"><span class="count">'+String(i+1).padStart(2,"0")+'</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[2])+'</p><a class="cta" href="'+esc(item[1])+'">Open</a></article>').join("");
   return wrap("SauceApproved Studio",
