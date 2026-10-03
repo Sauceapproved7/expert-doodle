@@ -1,5 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createHash } from 'node:crypto';
 
 const URL = Deno.env.get('SUPABASE_URL')!;
 const ANON = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!;
@@ -155,8 +156,10 @@ async function processRun(runId: string) {
   if (error || !run || !run.bulk_operation_gid || !['queued','failed','processing','downloading'].includes(run.status)) {
     throw new Error('bulk_run_not_processable');
   }
-  await DB.from('hercules_shopify_bulk_reconciliation_runs')
-    .update({ status: 'downloading', error_code: null, error_message: null }).eq('id', runId);
+  const { data: claim, error: claimError } = await DB.from('hercules_shopify_bulk_reconciliation_runs')
+    .update({ status: 'downloading', error_code: null, error_message: null })
+    .eq('id', runId).eq('status', 'queued').select('id').maybeSingle();
+  if (claimError || !claim) throw new Error('bulk_run_already_claimed');
   const conn = await connection(run.tenant_id);
   const token = await accessToken(conn);
   const data = await graphql(token,
@@ -174,8 +177,7 @@ async function processRun(runId: string) {
   await DB.from('hercules_shopify_bulk_reconciliation_runs').update({ status: 'processing' }).eq('id', runId);
   const reader = response.body.getReader();
   const decoder = new TextDecoder('utf-8', { fatal: true });
-  const digest = new Uint8Array(32);
-  const hashChunks: Uint8Array[] = [];
+  const digest = createHash('sha256');
   let buffer = '', bytes = 0, seen = 0, inserted = 0, updated = 0, skipped = 0;
   const apply = async (line: string) => {
     if (line.endsWith('\r')) line = line.slice(0, -1);
@@ -211,7 +213,7 @@ async function processRun(runId: string) {
       if (done) break;
       bytes += value.byteLength;
       if (bytes > 512 * 1024 * 1024) throw new Error('bulk_result_limit_exceeded');
-      hashChunks.push(value);
+      digest.update(value);
       buffer += decoder.decode(value, { stream: true });
       let i;
       while ((i = buffer.indexOf('\n')) >= 0) {
@@ -227,8 +229,7 @@ async function processRun(runId: string) {
   } finally {
     reader.releaseLock();
   }
-  const hash = await crypto.subtle.digest('SHA-256', new Blob(hashChunks).stream());
-  const resultHash = Array.from(new Uint8Array(hash)).map(x => x.toString(16).padStart(2, '0')).join('');
+  const resultHash = digest.digest('hex');
   const { error: finalizeError } = await DB.rpc('hercules_shopify_complete_bulk_reconciliation_v1', {
     p_run_id: runId, p_candidate_at: run.cursor_candidate_at, p_records_seen: seen,
     p_records_inserted: inserted, p_records_updated: updated, p_records_skipped: skipped,
@@ -267,7 +268,9 @@ async function handleCompletion(req: Request, raw: Uint8Array) {
     }).eq('id', run.id);
     return json({ received: true, failed: true });
   }
-  await DB.from('hercules_shopify_bulk_reconciliation_runs').update({ status: 'queued' }).eq('id', run.id);
+  const { data: queued } = await DB.from('hercules_shopify_bulk_reconciliation_runs')
+    .update({ status: 'queued' }).eq('id', run.id).eq('status', 'running').select('id').maybeSingle();
+  if (!queued) return json({ received: true, alreadyQueuedOrProcessing: true });
   const task = processRun(run.id).catch(async () => {
     await DB.from('hercules_shopify_bulk_reconciliation_runs').update({
       status: 'failed', error_code: 'PROCESSING_FAILED',
@@ -301,6 +304,11 @@ Deno.serve(async (req: Request) => {
         .select('id,tenant_id,status').eq('id', String(body.run_id || '')).maybeSingle();
       if (!run || !auth.organizations.has(String(run.tenant_id))) return json({ error: 'run_not_found' }, 404);
       if (run.status === 'completed') return json({ ok: true, alreadyCompleted: true });
+      if (['failed','processing','downloading'].includes(run.status)) {
+        await DB.from('hercules_shopify_bulk_reconciliation_runs').update({ status: 'queued' }).eq('id', run.id).eq('status', run.status);
+      } else if (run.status !== 'queued') {
+        return json({ error: 'run_not_ready_to_resume' }, 409);
+      }
       const result = await processRun(run.id);
       return json({ ok: true, ...result });
     }
