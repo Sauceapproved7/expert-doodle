@@ -31,6 +31,7 @@ test("builds Ethereum Sepolia smart-account plan with passkey recovery still gat
   assert.equal(plan.passkeyRecovery.active, false);
   assert.match(plan.passkeyRecovery.state, /audit|gated|inactive/);
   assert.equal(plan.mainnetEnabled, false);
+  assert.equal(plan.deployment.factoryInvocation, "entrypoint-sender-creator-only");
 });
 
 test("allows Base Sepolia but rejects mainnet or unknown networks", () => {
