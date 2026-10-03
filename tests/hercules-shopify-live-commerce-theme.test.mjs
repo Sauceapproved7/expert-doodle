@@ -10,7 +10,7 @@ async function read(relativePath) {
 
 test("live commerce extension is a theme app extension with no additional API scopes", async () => {
   const extension = await read("shopify.extension.toml");
-  const appConfig = await read("../shopify.app.toml");
+  const appConfig = await read("../../shopify.app.toml");
 
   assert.match(extension, /^type\s*=\s*"theme"$/m);
   assert.match(extension, /^handle\s*=\s*"hercules-live-commerce"$/m);
