@@ -176,6 +176,56 @@ test("controller reloads both scripts after NOSCRIPT", async () => {
 
 test("settlement source refreshes the bucket timestamp before returning refunded credits", async () => {
   const settlement = await import("../hercules-chat/redis/admission.mjs").then((m) => m.scripts.settlement);
-  assert.ok(settlement.includes('redis.call("HSET",KEYS[1]') && settlement.includes('"last_refill_ms",now'));
-  assert.ok(settlement.includes('"status","settled"'));
+  assert.match(settlement, /redis\.call\("HSET",KEYS\[1\],[^\n]*"last_refill_ms",now\)/);
+  assert.match(settlement, /"status","settled"/);
+});
+
+
+test("budget keys are period-scoped and remain in the tenant Redis Cluster slot", () => {
+  const keys = buildAdmissionKeys("tenant_7f3a", "req_period", "2026-10-03", "2026-10");
+  const tag = keys.tpm.match(/\{([^}]+)\}/)?.[1];
+  assert.match(keys.dailyBudget, /:budget:day:2026-10-03$/);
+  assert.match(keys.monthlyBudget, /:budget:month:2026-10$/);
+  assert.equal(keys.dailyBudget.includes("{" + tag + "}"), true);
+  assert.equal(keys.monthlyBudget.includes("{" + tag + "}"), true);
+});
+
+test("production contract rejects fractional refill rates", async () => {
+  const client = {async scriptLoad(){return "sha";}, async evalsha(){return [-1,0,0,0,"invalid_tpm_refill"];}};
+  const controller = new RedisAiAdmissionController(client);
+  await assert.rejects(() => controller.admit({
+    tenantId:"tenant", requestId:"req_fraction", tpmCapacityMicrocredits:60000,
+    tpmRefillMicrocreditsPerMinute:120000000.5, requestCostMicrocredits:1000,
+    rpmCapacity:60, rpmRefillRequestsPerMinute:60, maxConcurrent:4,
+    reservationTtlMs:120000, dailyPeriod:"2026-10-03", monthlyPeriod:"2026-10"
+  }), /integer/);
+});
+
+test("reservation contract stores accounting periods and a lease expiry for safe cleanup", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.match(scripts.admission, /"daily_period",daily_period/);
+  assert.match(scripts.admission, /"monthly_period",monthly_period/);
+  assert.match(scripts.admission, /"lease_expires_at_ms"/);
+});
+
+test("cleanup script only releases an active expired reservation", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.equal(typeof scripts.cleanup, "string");
+  assert.match(scripts.cleanup, /status~="active"/);
+  assert.match(scripts.cleanup, /lease_expires_at_ms/);
+  assert.match(scripts.cleanup, /"status","expired"/);
+});
+
+
+test("concurrency is derived from active leases rather than an expiring global counter", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.match(scripts.admission, /ZREMRANGEBYSCORE/);
+  assert.match(scripts.admission, /ZCARD/);
+  assert.doesNotMatch(scripts.admission, /SET",KEYS\[3\],concurrency\+1,"PX",ttl_ms/);
+});
+
+test("refill arithmetic guards the elapsed-times-rate product inside the safe integer range", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.match(scripts.admission, /safe_refill/);
+  assert.match(scripts.settlement, /safe_refill/);
 });
