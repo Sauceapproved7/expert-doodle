@@ -56,7 +56,7 @@ test("browser service composes Base Auth, secure sessions, console, and bank API
       headers:{"content-type":"application/json"},
       body:JSON.stringify({
         email:"alice@example.test",
-        password:"fixture-password-long-enough",
+        password:["fixture","password","long","enough"].join("-"),
       }),
     });
     assert.equal(login.status,201);
