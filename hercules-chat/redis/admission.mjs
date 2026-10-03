@@ -27,6 +27,7 @@ const SETTLEMENT_REASONS = new Set([
   "reservation_not_found",
   "reservation_not_active",
   "under_reserved",
+  "reservation_period_mismatch",
 ]);
 
 function fingerprint(value) {
@@ -59,6 +60,11 @@ export function buildAdmissionKeys(tenantId, requestId, dailyPeriod = "unspecifi
     reservation: `rl:{${tag}}:reservation:${request}`,
     leases: `rl:{${tag}}:leases`,
   };
+}
+
+export function buildCleanupKeys(tenantId, requestId) {
+  const keys = buildAdmissionKeys(tenantId, requestId);
+  return {concurrency: keys.concurrency, reservation: keys.reservation, leases: keys.leases};
 }
 
 export function buildSettlementKeys(tenantId, requestId, dailyPeriod = "unspecified-day", monthlyPeriod = "unspecified-month") {
@@ -208,6 +214,13 @@ export class RedisAiAdmissionController {
       tenantFingerprint,
     ]);
     return decodeAdmissionResult(result);
+  }
+
+  async cleanupExpired(input) {
+    const keys = buildCleanupKeys(input.tenantId, input.requestId);
+    const result = await this.evalWithReload("cleanup", Object.values(keys), [requestKey(input.requestId), input.reservationTtlMs]);
+    if (!Array.isArray(result) || result.length < 2) throw new Error("invalid cleanup result");
+    return {code: Number(result[0]), status: String(result[1])};
   }
 
   async settle(input) {
