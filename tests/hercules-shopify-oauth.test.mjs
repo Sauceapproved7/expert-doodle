@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { REQUIRED_SCOPES, buildAuthorizationUrl, verifyOAuthCallback, validateGrantedScopes } from "../shopify/hercules/backend/oauth.mjs";
 
 test("OAuth requests only current read-only Hercules scopes",()=>{
@@ -12,7 +13,6 @@ test("OAuth requests only current read-only Hercules scopes",()=>{
 test("OAuth callback verifies state and Shopify HMAC",()=>{
  const secret="oauth-secret";
  const query={code:"abc",shop:"sauceapproved-2.myshopify.com",state:"nonce",timestamp:"1791020000"};
- const crypto=require("node:crypto");
  const message=Object.entries(query).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join("&");
  query.hmac=crypto.createHmac("sha256",secret).update(message).digest("hex");
  assert.equal(verifyOAuthCallback({query,expectedState:"nonce",secret}).shop,"sauceapproved-2.myshopify.com");
