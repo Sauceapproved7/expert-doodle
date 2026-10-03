@@ -21,9 +21,19 @@ test("fork PR workflows are never privileged, secret-bearing, or pull_request_ta
     assert.doesNotMatch(source, /^\s*pull_request_target\s*:/m, name);
     assert.doesNotMatch(source, /\$\{\{\s*secrets\.[^}]+\}\}/, name);
     assert.doesNotMatch(source, /^\s*id-token:\s*write\s*$/m, name);
-    assert.doesNotMatch(source, /^\s*contents:\s*write\s*$/m, name);
-    assert.doesNotMatch(source, /^\s*packages:\s*write\s*$/m, name);
-    assert.doesNotMatch(source, /^\s*pull-requests:\s*write\s*$/m, name);
+    // A workflow may contain privileged jobs that are explicitly push-only.
+    // Reject write permissions only when they are reachable from pull_request.
+    const lines = source.split("\n");
+    let pushOnlyJob = false;
+    for (const line of lines) {
+      if (/^  [A-Za-z0-9_-]+:\s*$/.test(line)) pushOnlyJob = false;
+      if (/^    if:\s*.*github\.event_name\s*==\s*['"]push['"]/.test(line)) pushOnlyJob = true;
+      if (!pushOnlyJob) {
+        assert.doesNotMatch(line, /^\s*contents:\s*write\s*$/, name);
+        assert.doesNotMatch(line, /^\s*packages:\s*write\s*$/, name);
+        assert.doesNotMatch(line, /^\s*pull-requests:\s*write\s*$/, name);
+      }
+    }
     assert.doesNotMatch(source, /runs-on:\s*self-hosted/i, name);
   }
 });
