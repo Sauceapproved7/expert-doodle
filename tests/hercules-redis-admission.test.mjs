@@ -215,3 +215,17 @@ test("cleanup script only releases an active expired reservation", async () => {
   assert.match(scripts.cleanup, /lease_expires_at_ms/);
   assert.match(scripts.cleanup, /"status","expired"/);
 });
+
+
+test("concurrency is derived from active leases rather than an expiring global counter", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.match(scripts.admission, /ZREMRANGEBYSCORE/);
+  assert.match(scripts.admission, /ZCARD/);
+  assert.doesNotMatch(scripts.admission, /SET",KEYS\[3\],concurrency\+1,"PX",ttl_ms/);
+});
+
+test("refill arithmetic guards the elapsed-times-rate product inside the safe integer range", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.match(scripts.admission, /safe_refill/);
+  assert.match(scripts.settlement, /safe_refill/);
+});
