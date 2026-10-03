@@ -126,6 +126,6 @@ test("controller loads scripts once and uses EVALSHA for admission and settlemen
 
 test("settlement source refreshes the bucket timestamp before returning refunded credits", async () => {
   const settlement = await import("../hercules-chat/redis/admission.mjs").then((m) => m.scripts.settlement);
-  assert.match(settlement, /HSET"?,? KEYS\[1\][\s\S]*last_refill_ms/);
+  assert.match(settlement, /redis\\.call\\("HSET", KEYS\\[1\\][\\s\\S]*"last_refill_ms"/);
   assert.match(settlement, /status\", \"settled\"/);
 });
