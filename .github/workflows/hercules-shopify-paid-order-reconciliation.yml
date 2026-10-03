@@ -14,6 +14,7 @@ on:
       - "tests/shopify-bulk-jsonl.test.mjs"
       - "tests/hercules-shopify-bulk-reconciliation-contract.test.mjs"
       - "tests/shopify-bulk-reconciliation-contract.test.mjs"
+      - "tests/hercules-shopify-bulk-reconciliation-contract.test.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
       - "hercules-runtime/shopify-paid-order-runner-policy.json"
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
