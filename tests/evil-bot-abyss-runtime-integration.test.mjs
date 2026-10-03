@@ -39,6 +39,12 @@ test("resume is denied when audit trust is false",async()=>{
 test("trusted owner can stage a mutation but a separate owner approval is required to execute it",async()=>{
   const app=makeApp({emergencyStopActive:false,identityTrusted:true,auditTrusted:true});
   const owner={authorization:"Bearer valid-owner"};
+  const locked=await app.handle({...owner,method:"POST",url:"/api/command",body:{text:"move body to stand"}});
+  assert.equal(locked.status,200);
+  assert.equal(locked.body.mode,"stopped");
+  const resumed=await app.handle({...owner,method:"POST",url:"/api/resume",body:{}});
+  assert.equal(resumed.status,200);
+  assert.equal(resumed.body.status,"ready");
   const staged=await app.handle({...owner,method:"POST",url:"/api/command",body:{text:"move body to stand"}});
   assert.equal(staged.status,200);
   assert.equal(staged.body.mode,"awaiting-approval");
