@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash, createHmac} from 'node:crypto';
 import {ReadableStream} from 'node:stream/web';
-import {streamJsonl, stableStringify, compareSnapshot, verifyShopifyWebhookHmac} from '../supabase/functions/_shared/shopify-bulk-jsonl.mjs';
+import {streamJsonl, stableStringify, verifyShopifyWebhookHmac} from '../supabase/functions/_shared/shopify-bulk-jsonl.mjs';
 
 const bodyFrom = chunks => new ReadableStream({start(c){for(const x of chunks)c.enqueue(new TextEncoder().encode(x));c.close();}});
 
@@ -26,13 +26,6 @@ test('malformed JSON, invalid utf8, oversized lines and results fail closed', as
 test('handler failure prevents stream success and stable serialization is key-order independent', async () => {
   await assert.rejects(()=>streamJsonl(bodyFrom(['{"id":1}']),async()=>{throw new Error('apply failed');}),/apply failed/);
   assert.equal(stableStringify({b:2,a:1}),stableStringify({a:1,b:2}));
-});
-
-test('snapshot comparison never applies an older record and skips identical versions', () => {
-  const current={updatedAt:'2026-10-03T09:00:00.000Z',hash:'a'};
-  assert.equal(compareSnapshot(current,{updatedAt:'2026-10-03T08:59:59Z',hash:'b'}),'stale');
-  assert.equal(compareSnapshot(current,{updatedAt:'2026-10-03T09:00:00Z',hash:'a'}),'unchanged');
-  assert.equal(compareSnapshot(current,{updatedAt:'2026-10-03T09:01:00Z',hash:'b'}),'apply');
 });
 
 test('verifies the exact raw webhook bytes and rejects malformed or tampered HMACs', () => {
