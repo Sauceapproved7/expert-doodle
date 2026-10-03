@@ -22,7 +22,11 @@ local under=actual>reserved or actual_budget>reserved_budget
 local rt=redis.call("TIME"); local now=tonumber(rt[1])*1000+math.floor(tonumber(rt[2])/1000)
 local v=redis.call("HMGET",KEYS[1],"credits","last_refill_ms"); local credits=tonumber(v[1]) or capacity; local last=tonumber(v[2]) or now
 local elapsed=math.min(math.max(0,now-last),math.ceil(capacity*60000/rate))
-local function safe_refill(elapsed_ms,refill_rate)\n local whole=math.floor(elapsed_ms/60000); local rem=elapsed_ms-whole*60000\n return whole*refill_rate+math.floor(rem*refill_rate/60000)\nend\nlocal refilled=math.min(capacity,credits+safe_refill(elapsed,rate))
+local function safe_refill(elapsed_ms,refill_rate)
+ local whole=math.floor(elapsed_ms/60000); local rem=elapsed_ms-whole*60000
+ return whole*refill_rate+math.floor(rem*refill_rate/60000)
+end
+local refilled=math.min(capacity,credits+safe_refill(elapsed,rate))
 redis.call("HSET",KEYS[1],"credits",math.min(capacity,refilled+token_refund),"last_refill_ms",now); redis.call("PEXPIRE",KEYS[1],ttl)
 if budget_refund>0 then
  local du=tonumber(redis.call("GET",KEYS[3])) or 0; local mu=tonumber(redis.call("GET",KEYS[4])) or 0
