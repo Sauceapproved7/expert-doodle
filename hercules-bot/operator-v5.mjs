@@ -1,9 +1,9 @@
-export function createOperatorSession({console}={}) {
+export function createOperatorSession({console,initiallyStopped=false}={}) {
   if(!console || typeof console.plan!=="function" || typeof console.execute!=="function") {
     throw new TypeError("governed operator console required");
   }
   let pending=null;
-  let stopped=false;
+  let stopped=initiallyStopped===true;
 
   return Object.freeze({
     async receive(input) {
