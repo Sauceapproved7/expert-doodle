@@ -6,8 +6,9 @@ on:
       - "AGENTS.md"
       - "governance/hercules-shopify-paid-order-reconciliation-v1.json"
       - "supabase/migrations/*shopify_paid_order_reconciliation*"
-      - "scripts/hercules-shopify-paid-order-runner.mjs"
+      - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
+      - "hercules-runtime/shopify-paid-order-runner-policy.json"
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   push:
@@ -17,8 +18,9 @@ on:
       - "AGENTS.md"
       - "governance/hercules-shopify-paid-order-reconciliation-v1.json"
       - "supabase/migrations/*shopify_paid_order_reconciliation*"
-      - "scripts/hercules-shopify-paid-order-runner.mjs"
+      - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
+      - "hercules-runtime/shopify-paid-order-runner-policy.json"
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   workflow_dispatch:
