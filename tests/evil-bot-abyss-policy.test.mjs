@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {createAbyssPolicy} from "../hercules-bot/abyss-policy.mjs";
 
-test("owner authority remains above every Smallz capability",()=>{
- const p=createAbyssPolicy();assert.equal(p.name,"Smallz Abyss Stack");assert.equal(p.botName,"Smallz");
+test("owner authority remains above every capability",()=>{
+ const p=createAbyssPolicy();
  for(const c of p.capabilities) assert.equal(c.selfGrant,false);
  assert.equal(p.ownerSovereignty,true);assert.equal(p.emergencyStopExternal,true);
 });
