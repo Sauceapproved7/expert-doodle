@@ -206,6 +206,7 @@ create table if not exists private.hercules_usage_ledger (
   cached_input_tokens bigint not null default 0 check (cached_input_tokens >= 0),
   output_tokens bigint not null default 0 check (output_tokens >= 0),
   cost_microusd bigint not null default 0 check (cost_microusd >= 0),
+  reserved_tokens bigint not null default 0 check (reserved_tokens >= 0),
   status text not null
     check (status in ('reserved','completed','failed','cancelled')),
   created_at timestamptz not null default now(),
@@ -689,10 +690,10 @@ begin
   on conflict (id) do nothing;
 
   insert into private.hercules_usage_ledger (
-    request_id, user_id, session_id, provider, model, cost_microusd, status
+    request_id, user_id, session_id, provider, model, cost_microusd, reserved_tokens, status
   ) values (
     p_request_id, p_user_id, p_session_id, p_provider, p_model,
-    p_reserved_cost_microusd, 'reserved'
+    p_reserved_cost_microusd, p_reserved_tokens, 'reserved'
   )
   returning id into v_ledger_id;
 
@@ -706,6 +707,36 @@ revoke all on function private.hercules_reserve_ai_request(
 grant execute on function private.hercules_reserve_ai_request(
   uuid, uuid, uuid, text, text, bigint, bigint
 ) to service_role;
+
+
+create or replace function private.hercules_refund_token_reservation(
+  p_user_id uuid,
+  p_refund_tokens bigint
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_limit private.hercules_ai_plan_limits%rowtype;
+  v_capacity bigint;
+begin
+  if p_refund_tokens <= 0 then return; end if;
+  select l.* into v_limit from private.hercules_ai_plan_limits l
+  where l.plan = coalesce((select b.plan from public.hercules_billing b
+    where b.user_id=p_user_id and b.status not in ('canceled','cancelled','inactive') limit 1),'preview')
+    and l.enabled=true;
+  if not found or v_limit.tokens_per_minute is null then return; end if;
+  v_capacity := coalesce(v_limit.token_burst_capacity,v_limit.tokens_per_minute);
+  update private.hercules_token_buckets
+    set tokens=least(v_capacity::numeric,tokens+p_refund_tokens), updated_at=clock_timestamp()
+    where user_id=p_user_id;
+end;
+$$;
+
+revoke all on function private.hercules_refund_token_reservation(uuid,bigint) from public,anon,authenticated;
+grant execute on function private.hercules_refund_token_reservation(uuid,bigint) to service_role;
 
 
 create or replace function private.hercules_finalize_ai_request(
@@ -725,6 +756,9 @@ set search_path = ''
 as $$
 declare
   v_user_id uuid;
+  v_reserved_tokens bigint;
+  v_actual_tokens bigint;
+  v_refund_tokens bigint;
 begin
   if p_status not in ('completed','failed','cancelled') then
     raise exception 'INVALID_FINAL_STATUS';
@@ -746,7 +780,14 @@ begin
          completed_at = now()
    where request_id = p_request_id
      and status = 'reserved'
-   returning user_id into v_user_id;
+   returning user_id, reserved_tokens into v_user_id, v_reserved_tokens;
+
+  if v_user_id is not null then
+    v_actual_tokens := case when p_status='completed'
+      then greatest(0,p_input_tokens)+greatest(0,p_output_tokens) else 0 end;
+    v_refund_tokens := greatest(0,coalesce(v_reserved_tokens,0)-least(coalesce(v_reserved_tokens,0),v_actual_tokens));
+    perform private.hercules_refund_token_reservation(v_user_id,v_refund_tokens);
+  end if;
 
   update private.hercules_ai_requests
      set state = p_status,
