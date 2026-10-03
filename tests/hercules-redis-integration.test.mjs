@@ -19,9 +19,9 @@ test("real Redis admission is atomic, idempotent, period-scoped, and settles onc
  const first=await ctl.admit(input); assert.equal(first.status,"allowed");
  const replay=await ctl.admit(input); assert.equal(replay.status,"idempotent_active");
  const keys=buildAdmissionKeys(input.tenantId,input.requestId,input.dailyPeriod,input.monthlyPeriod);
- assert.equal(redis("GET",keys.dailyBudget),1000); assert.equal(redis("GET",keys.monthlyBudget),1000);
+ assert.equal(Number(redis("GET",keys.dailyBudget)), 1000); assert.equal(Number(redis("GET",keys.monthlyBudget)), 1000);
  const settled=await ctl.settle({...input,actualCostMicrocredits:5000000,actualCostMicrousd:600});
- assert.equal(settled.status,"settled"); assert.equal(redis("GET",keys.dailyBudget),600);
+ assert.equal(settled.status,"settled"); assert.equal(Number(redis("GET",keys.dailyBudget)), 600);
  const duplicate=await ctl.settle({...input,actualCostMicrocredits:5000000,actualCostMicrousd:600});
  assert.equal(duplicate.status,"already_settled");
 });
@@ -30,9 +30,9 @@ test("real Redis cleanup releases only an expired active concurrency lease",{ski
  redis("FLUSHDB"); const ctl=new RedisAiAdmissionController(client);
  const input={...base,requestId:"req-expire",requestCostMicrocredits:1000,reservationTtlMs:50};
  await ctl.admit(input); const keys=buildAdmissionKeys(input.tenantId,input.requestId,input.dailyPeriod,input.monthlyPeriod);
- assert.equal(redis("GET",keys.concurrency),1);
+ assert.equal(Number(redis("GET",keys.concurrency)), 1);
  await new Promise(r=>setTimeout(r,80));
  const cleaned=await ctl.cleanupExpired({...input,reservationTtlMs:2000});
- assert.equal(cleaned.status,"expired"); assert.equal(redis("GET",keys.concurrency),0);
+ assert.equal(cleaned.status,"expired"); assert.equal(Number(redis("GET",keys.concurrency)), 0);
  const again=await ctl.cleanupExpired({...input,reservationTtlMs:2000}); assert.equal(again.status,"already_final");
 });
