@@ -4,7 +4,7 @@ import {execFileSync} from "node:child_process";
 import {RedisAiAdmissionController, buildAdmissionKeys} from "../hercules-chat/redis/admission.mjs";
 
 const enabled=process.env.HERCULES_REDIS_INTEGRATION==="1";
-function redis(...args){const out=execFileSync("redis-cli",["--json",...args],{encoding:"utf8"}).trim(); return out?JSON.parse(out):null;}
+function redis(...args){const out=execFileSync("redis-cli",["--json",...args],{encoding:"utf8"}).trim(); if(!out)return null; if(out.startsWith("error:")) throw new Error(out); return JSON.parse(out);}
 const client={
  async scriptLoad(script){return redis("SCRIPT","LOAD",script);},
  async evalsha(sha,keyCount,...rest){return redis("EVALSHA",sha,String(keyCount),...rest.map(String));}
