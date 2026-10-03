@@ -2,6 +2,7 @@ import {createServer} from "node:http";
 import {routeBaseRequest} from "./router.mjs";
 import {routeAuthRequest} from "./auth-router.mjs";
 import {createPostgrestAuthStore} from "./auth-store.mjs";
+import {createSmokeScreenIngressObserver} from "../hercules-runtime/smokescreen-ingress.mjs";
 
 const host=process.env.HERCULES_BASE_HOST||"0.0.0.0";
 const port=Number(process.env.HERCULES_BASE_PORT||38800);
@@ -9,6 +10,8 @@ const controlToken=process.env.HERCULES_BASE_CONTROL_TOKEN||"";
 const jwtSecret=process.env.HERCULES_BASE_JWT_SECRET||"";
 const postgrestUrl=process.env.HERCULES_BASE_POSTGREST_URL||"http://postgrest:3000";
 const fixtureOnly=process.env.HERCULES_BASE_FIXTURE_ONLY==="true";
+const smokeScreenKey=process.env.HERCULES_SMOKESCREEN_HMAC_KEY||"";
+const smokeScreenObserver=smokeScreenKey?createSmokeScreenIngressObserver({hmacKey:smokeScreenKey,mode:"OBSERVE_ONLY",sink:(event)=>console.log("hercules_smokescreen_observation:"+JSON.stringify(event))}):null;
 
 if(!controlToken){
   throw new Error("HERCULES_BASE_CONTROL_TOKEN is required");
@@ -53,6 +56,9 @@ createServer(async(request,response)=>{
   try{
     const fetchRequest=nodeRequestToFetch(request);
     const pathname=new URL(fetchRequest.url).pathname;
+    if(smokeScreenObserver){
+      await smokeScreenObserver.observe({sessionId:String(request.socket?.remoteAddress||"network-session"),method:fetchRequest.method,route:pathname,signals:{}});
+    }
     const routed=pathname.startsWith("/v1/auth/")
       ?await routeAuthRequest(fetchRequest,{store:authStore,jwtSecret,fixtureOnly})
       :await routeBaseRequest(fetchRequest,{controlToken});
