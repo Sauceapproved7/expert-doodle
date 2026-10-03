@@ -2,6 +2,7 @@ import {resolve} from "node:path";
 import {listenHerculesDeployService} from "./control-api.mjs";
 import {createSupabaseEdgeFunctionAdapterFromEnv} from "./supabase-management.mjs";
 import {createMarketing16DeployBridge} from "./marketing-16-bridge.mjs";
+import {HerculesBotDeployTargetAdapter} from "./hercules-bot-adapter.mjs";
 
 function required(env, name) {
   const value = env[name];
