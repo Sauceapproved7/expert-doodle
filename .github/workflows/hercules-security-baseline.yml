@@ -32,8 +32,11 @@ jobs:
       - name: Run HURC security-sensitive tests
         run: node --test tests/hercules-hurc-*.test.mjs
 
+      - name: Run Abyss policy security tests
+        run: node --test tests/evil-bot-abyss-policy.test.mjs
+
+      - name: Run Abyss orchestration security tests
+        run: node --test tests/evil-bot-abyss-orchestrator.test.mjs
+
       - name: Run bounded Hercules adapter security tests
         run: node --test tests/evil-bot-hercules-adapters.test.mjs
-
-      - name: Run Smallz identity regression test
-        run: node --test tests/smallz-identity.test.mjs
