@@ -57,3 +57,14 @@ test("chat API bounds user-controlled payloads and metadata", () => {
   assert.match(edge, /32_000/);
   assert.match(edge, /boundedInt/);
 });
+
+
+test("internal AI router provider usage is propagated into chat accounting", async () => {
+  const router = await readFile(new URL("../supabase/functions/hercules-ai/index.ts", import.meta.url), "utf8");
+  assert.match(router, /input_tokens/);
+  assert.match(router, /output_tokens/);
+  assert.match(router, /usage:routed\.usage/);
+  assert.match(edge, /payload\.usage/);
+  assert.match(edge, /ai\.usage\?\.inputTokens/);
+  assert.match(edge, /ai\.usage\?\.outputTokens/);
+});

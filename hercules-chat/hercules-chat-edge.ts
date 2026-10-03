@@ -225,6 +225,11 @@ async function routeAi(req: Request, system: string, prompt: string) {
     provider: String(payload.provider ?? "hercules-ai"),
     model: String(payload.model ?? "routed"),
     attempts: Array.isArray(payload.attempts) ? payload.attempts : [],
+    usage: payload.usage && typeof payload.usage === "object" ? {
+      inputTokens: Math.max(0, Number((payload.usage as Record<string, unknown>).input_tokens ?? (payload.usage as Record<string, unknown>).prompt_tokens ?? 0) || 0),
+      outputTokens: Math.max(0, Number((payload.usage as Record<string, unknown>).output_tokens ?? (payload.usage as Record<string, unknown>).completion_tokens ?? 0) || 0),
+      totalTokens: Math.max(0, Number((payload.usage as Record<string, unknown>).total_tokens ?? 0) || 0),
+    } : null,
   };
 }
 
@@ -685,8 +690,8 @@ ${prompt}`
         "completed",
         Number(assistantMessage.id),
         null,
-        estimatedInputTokens,
-        estimatedOutputTokens,
+        ai.usage?.inputTokens || estimatedInputTokens,
+        ai.usage?.outputTokens || estimatedOutputTokens,
       );
       reservedRequestId = null;
 
