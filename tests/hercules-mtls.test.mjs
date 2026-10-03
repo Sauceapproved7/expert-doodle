@@ -1,21 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mtlsEnforced, verifyMtlsIdentity, requireMtlsIdentity } from "../hercules-chat/mtls.mjs";
 
-const source = await readFile(new URL("../hercules-chat/mtls.ts", import.meta.url), "utf8").catch(()=>"");
+const identity = (thumbprint="AA") => ({ certificateThumbprint: thumbprint, trusted: true, privateKeyProven: true });
+const token = (thumbprint="AA") => ({ cnf: { "x5t#S256": thumbprint } });
 
-test("mTLS policy requires explicit enforcement and certificate-bound identity", () => {
-  for (const needle of ["HERCULES_MTLS_ENFORCED","x5t#S256","certificateThumbprint","verifyMtlsIdentity"]) {
-    assert.ok(source.includes(needle), "missing "+needle);
-  }
+test("mTLS enforcement is opt-in", () => {
+  assert.equal(mtlsEnforced({}), false);
+  assert.equal(mtlsEnforced({ HERCULES_MTLS_ENFORCED: "true" }), true);
 });
 
-test("mTLS policy fails closed when transport identity is absent or untrusted", () => {
-  assert.match(source,/trusted/i);
-  assert.match(source,/fail.?closed|false/i);
+test("enabled mTLS accepts only trusted certificate-bound identity", () => {
+  assert.equal(verifyMtlsIdentity(identity(), token(), true), true);
+  assert.equal(verifyMtlsIdentity(identity("BB"), token(), true), false);
 });
 
-test("mTLS policy rejects bearer-only internal authentication", () => {
-  assert.match(source,/certificate/i);
-  assert.match(source,/private.?key|tls/i);
+test("enabled mTLS fails closed without trusted transport proof", () => {
+  assert.equal(verifyMtlsIdentity(null, token(), true), false);
+  assert.equal(verifyMtlsIdentity({ ...identity(), trusted: false }, token(), true), false);
+  assert.equal(verifyMtlsIdentity({ ...identity(), privateKeyProven: false }, token(), true), false);
+});
+
+test("mTLS rejects bearer-only internal identity", () => {
+  assert.throws(() => requireMtlsIdentity(null, token(), { HERCULES_MTLS_ENFORCED: "true" }), /MTLS_IDENTITY_REQUIRED/);
 });
