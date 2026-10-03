@@ -3,11 +3,12 @@ kind: Route
 metadata:
   name: hercules-shopify-api
 spec:
+  path: /webhooks/shopify
   to:
     kind: Service
     name: hercules-shopify-api
   port:
-    targetPort: http
+    targetPort: https
   tls:
-    termination: edge
+    termination: reencrypt
     insecureEdgeTerminationPolicy: Redirect
