@@ -8,7 +8,7 @@ export async function jwkThumbprint(jwk:JsonWebKey){if(jwk.kty!=="EC"||jwk.crv!=
 export async function verifyDpopRequest(req:Request,rawToken:string,expectedJkt:string,replay:(key:string,ttl:number)=>Promise<boolean>){
  const jwt=req.headers.get("DPoP")||"";const p=jwt.split(".");if(p.length!==3)throw new Error("DPOP_PROOF_REQUIRED");
  const h=JSON.parse(new TextDecoder().decode(dec(p[0]))),c=JSON.parse(new TextDecoder().decode(dec(p[1])));
- if(h.typ!=="dpop+jwt"||h.alg!=="ES256"||!h.jwk)throw new Error("DPOP_HEADER_INVALID");
+ if(h.typ!=="dpop+jwt"/* dpop+jwt */||h.alg!=="ES256"||!h.jwk)throw new Error("DPOP_HEADER_INVALID");
  const key=await crypto.subtle.importKey("jwk",h.jwk,{name:"ECDSA",namedCurve:"P-256"},false,["verify"]);
  if(!await crypto.subtle.verify({name:"ECDSA",hash:"SHA-256"},key,dec(p[2]),enc.encode(p[0]+"."+p[1])))throw new Error("DPOP_SIGNATURE_INVALID");
  if(c.htm!==req.method.toUpperCase()||canonicalHtu(c.htu)!==canonicalHtu(req.url))throw new Error("DPOP_REQUEST_MISMATCH");
