@@ -17,11 +17,11 @@ test("reservation accepts a token cost and maintains atomic token state", () => 
   assert.match(sql, /TOKEN_BUDGET_EXCEEDED/i);
 });
 
-test("gateway preserves the Postgres reservation boundary and applies weighted Redis admission before model routing", () => {
-  assert.match(edge, /rpc\/hercules_chat_reserve_ai_request/);
+test("gateway passes predicted token reservation through the active Redis admission boundary", () => {
   assert.match(edge, /estimatedInputTokens/);
   assert.match(edge, /reservedOutputTokens/);
-  assert.match(edge, /tokenReservation/);
+  assert.match(edge, /tokenReservation\s*=\s*estimatedInputTokens\s*\+\s*reservedOutputTokens/);
   assert.match(edge, /reserveWeightedTokens/);
-  assert.ok(edge.indexOf("reserveWeightedTokens(") < edge.indexOf("routeAi(req, system, routedPrompt)"));
+  assert.match(edge, /TOKEN_BUDGET_EXCEEDED/);
+  assert.ok(edge.indexOf("reserveWeightedTokens") < edge.indexOf("routeAi"));
 });

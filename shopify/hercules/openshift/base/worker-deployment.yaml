@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hercules-shopify-worker
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: hercules-shopify-worker
+  template:
+    metadata:
+      labels:
+        app: hercules-shopify-worker
+    spec:
+      serviceAccountName: hercules-shopify-worker
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: worker
+          image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest
+          args: ["node", "shopify/hercules/backend/worker.mjs"]
+          envFrom:
+            - configMapRef:
+                name: hercules-shopify-config
+          env:
+            - name: SHOPIFY_TOKEN_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hercules-shopify-secrets
+                  key: token-encryption-key
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi

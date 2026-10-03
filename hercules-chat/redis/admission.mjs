@@ -5,10 +5,8 @@ const ADMISSION_LUA = await readFile(
   new URL("./token-admission.lua", import.meta.url),
   "utf8",
 );
-const SETTLEMENT_LUA = await readFile(
-  new URL("./token-settlement.lua", import.meta.url),
-  "utf8",
-);
+const SETTLEMENT_LUA = await readFile(new URL("./token-settlement.lua", import.meta.url), "utf8");
+const CLEANUP_LUA = await readFile(new URL("./reservation-cleanup.lua", import.meta.url), "utf8");
 
 const ADMISSION_REASONS = new Set([
   "allowed",
@@ -29,6 +27,7 @@ const SETTLEMENT_REASONS = new Set([
   "reservation_not_found",
   "reservation_not_active",
   "under_reserved",
+  "reservation_period_mismatch",
 ]);
 
 function fingerprint(value) {
@@ -49,25 +48,34 @@ function hashTag(tenantId) {
   return "t:" + fingerprint(tenantId);
 }
 
-export function buildAdmissionKeys(tenantId, requestId) {
+export function buildAdmissionKeys(tenantId, requestId, dailyPeriod = "unspecified-day", monthlyPeriod = "unspecified-month") {
   const tag = hashTag(tenantId);
   const request = requestKey(requestId);
   return {
     tpm: `rl:{${tag}}:tpm`,
     rpm: `rl:{${tag}}:rpm`,
     concurrency: `rl:{${tag}}:concurrency`,
-    budget: `rl:{${tag}}:budget`,
+    dailyBudget: `rl:{${tag}}:budget:day:${requestKey(dailyPeriod)}`,
+    monthlyBudget: `rl:{${tag}}:budget:month:${requestKey(monthlyPeriod)}`,
     reservation: `rl:{${tag}}:reservation:${request}`,
+    leases: `rl:{${tag}}:leases`,
   };
 }
 
-export function buildSettlementKeys(tenantId, requestId) {
+export function buildCleanupKeys(tenantId, requestId) {
   const keys = buildAdmissionKeys(tenantId, requestId);
+  return {concurrency: keys.concurrency, reservation: keys.reservation, leases: keys.leases};
+}
+
+export function buildSettlementKeys(tenantId, requestId, dailyPeriod = "unspecified-day", monthlyPeriod = "unspecified-month") {
+  const keys = buildAdmissionKeys(tenantId, requestId, dailyPeriod, monthlyPeriod);
   return {
     tpm: keys.tpm,
     concurrency: keys.concurrency,
-    budget: keys.budget,
+    dailyBudget: keys.dailyBudget,
+    monthlyBudget: keys.monthlyBudget,
     reservation: keys.reservation,
+    leases: keys.leases,
   };
 }
 
@@ -149,6 +157,11 @@ export function decodeSettlementResult(result) {
   throw new Error(`invalid settlement result code for ${reason}`);
 }
 
+function integerRate(value, name) {
+  if (!Number.isSafeInteger(value) || value <= 0) throw new TypeError(`${name} must be a positive safe integer per minute`);
+  return value;
+}
+
 export class RedisAiAdmissionController {
   constructor(client) {
     if (!client || typeof client.evalsha !== "function" || typeof client.scriptLoad !== "function") {
@@ -160,11 +173,10 @@ export class RedisAiAdmissionController {
 
   async loadScripts() {
     if (!this.shas) {
-      const [admission, settlement] = await Promise.all([
-        this.client.scriptLoad(ADMISSION_LUA),
-        this.client.scriptLoad(SETTLEMENT_LUA),
+      const [admission, settlement, cleanup] = await Promise.all([
+        this.client.scriptLoad(ADMISSION_LUA), this.client.scriptLoad(SETTLEMENT_LUA), this.client.scriptLoad(CLEANUP_LUA),
       ]);
-      this.shas = {admission, settlement};
+      this.shas = {admission, settlement, cleanup};
     }
     return this.shas;
   }
@@ -183,14 +195,14 @@ export class RedisAiAdmissionController {
   }
 
   async admit(input) {
-    const keys = buildAdmissionKeys(input.tenantId, input.requestId);
+    const keys = buildAdmissionKeys(input.tenantId, input.requestId, input.dailyPeriod, input.monthlyPeriod);
     const tenantFingerprint = fingerprint(input.tenantId);
     const result = await this.evalWithReload("admission", Object.values(keys), [
       input.tpmCapacityMicrocredits,
-      input.tpmRefillMicrocreditsPerMs,
+      integerRate(input.tpmRefillMicrocreditsPerMinute ?? Number(input.tpmRefillMicrocreditsPerMs) * 60000, "tpm refill"),
       input.requestCostMicrocredits,
       input.rpmCapacity,
-      input.rpmRefillRequestsPerMs,
+      integerRate(input.rpmRefillRequestsPerMinute ?? Number(input.rpmRefillRequestsPerMs) * 60000, "rpm refill"),
       input.maxConcurrent,
       input.reservationTtlMs,
       input.dailyBudgetMicrousd ?? 0,
@@ -204,20 +216,27 @@ export class RedisAiAdmissionController {
     return decodeAdmissionResult(result);
   }
 
+  async cleanupExpired(input) {
+    const keys = buildCleanupKeys(input.tenantId, input.requestId);
+    const result = await this.evalWithReload("cleanup", Object.values(keys), [requestKey(input.requestId), input.reservationTtlMs]);
+    if (!Array.isArray(result) || result.length < 2) throw new Error("invalid cleanup result");
+    return {code: Number(result[0]), status: String(result[1])};
+  }
+
   async settle(input) {
-    const keys = buildSettlementKeys(input.tenantId, input.requestId);
+    const keys = buildSettlementKeys(input.tenantId, input.requestId, input.dailyPeriod, input.monthlyPeriod);
     const result = await this.evalWithReload("settlement", Object.values(keys), [
       input.tpmCapacityMicrocredits,
-      input.tpmRefillMicrocreditsPerMs,
+      integerRate(input.tpmRefillMicrocreditsPerMinute ?? Number(input.tpmRefillMicrocreditsPerMs) * 60000, "tpm refill"),
       input.actualCostMicrocredits,
       input.actualCostMicrousd ?? 0,
       input.reservationTtlMs,
+      input.dailyPeriod,
+      input.monthlyPeriod,
+      requestKey(input.requestId),
     ]);
     return decodeSettlementResult(result);
   }
 }
 
-export const scripts = Object.freeze({
-  admission: ADMISSION_LUA,
-  settlement: SETTLEMENT_LUA,
-});
+export const scripts = Object.freeze({admission: ADMISSION_LUA, settlement: SETTLEMENT_LUA, cleanup: CLEANUP_LUA});

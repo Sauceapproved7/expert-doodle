@@ -45,14 +45,7 @@ async function routeInternal(system:string,prompt:string){
       let data:any;
       try{data=JSON.parse(raw)}catch{attempts.push({provider:candidate.provider,error:'invalid_ai_response'});continue;}
       const text=String(data?.choices?.[0]?.message?.content||'').trim();
-      if(text){
-        const usage=data?.usage&&typeof data.usage==='object'?{
-          input_tokens:Math.max(0,Number(data.usage.input_tokens??data.usage.prompt_tokens??0)||0),
-          output_tokens:Math.max(0,Number(data.usage.output_tokens??data.usage.completion_tokens??0)||0),
-          total_tokens:Math.max(0,Number(data.usage.total_tokens??0)||0)
-        }:null;
-        return {text,provider:candidate.provider,model:String(data?.model||candidate.model),attempts,usage};
-      }
+      if(text){const usage=data?.usage&&typeof data.usage==='object'?{input_tokens:Math.max(0,Number(data.usage.input_tokens??data.usage.prompt_tokens??0)||0),output_tokens:Math.max(0,Number(data.usage.output_tokens??data.usage.completion_tokens??0)||0),total_tokens:Math.max(0,Number(data.usage.total_tokens??0)||0)}:null;return {text,provider:candidate.provider,model:String(data?.model||candidate.model),attempts,usage};}
       attempts.push({provider:candidate.provider,error:'empty_ai_response'});
     }catch(e){
       attempts.push({provider:candidate.provider,error:e instanceof Error?e.name:'ai_provider_unreachable'});
