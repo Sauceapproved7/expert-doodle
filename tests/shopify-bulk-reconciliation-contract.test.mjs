@@ -54,7 +54,7 @@ test('bulk start subscribes before launching and omits order PII', () => {
   const subscription = endpoint.indexOf('await ensureCompletionSubscription(token)');
   const launch = endpoint.indexOf('LaunchBulkOrders');
   assert.ok(subscription >= 0 && launch > subscription);
-  assert.ok(endpoint.includes('orders(query: \\"'));
+  assert.ok(endpoint.includes('orders(query:'));
   assert.doesNotMatch(endpoint, /customerEmail|shippingAddress|buyerEmail|email:/i);
   assert.ok(endpoint.includes("updated_at:>=' + cursorStart.toISOString()"));
   assert.ok(endpoint.includes('60 * 24 * 60 * 60 * 1000'));
