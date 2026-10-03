@@ -615,6 +615,7 @@ $('cleaneractivationrefresh').onclick=cleanerActivationRequests;
 
 Deno.serve(()=>new Response(html,{status:200,headers:new Headers({
   'Content-Type':'text/html; charset=UTF-8',
+  'X-Content-Type-Options':'nosniff',
   'Cache-Control':'no-store, no-cache, must-revalidate',
   'Pragma':'no-cache',
   'Strict-Transport-Security':'max-age=31536000; includeSubDomains',
