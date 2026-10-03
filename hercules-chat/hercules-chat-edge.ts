@@ -49,7 +49,7 @@ async function enforceDpop(req: Request, token: string): Promise<void> {
 
 
 
-import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";\nimport { validateMtlsTrustDomain } from "./mtls-trust-domain.mjs";
 import { createMtlsHttpClient, mtlsClientConfig } from "./mtls-client.ts";
 import { verifyDpopRequest } from "./dpop.ts";
 
