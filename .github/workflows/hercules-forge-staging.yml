@@ -52,6 +52,9 @@ jobs:
       - name: Prove Hercules Base Pulse lifecycle
         run: node scripts/base-realtime-staging-drill.mjs
 
+      - name: Prove Hercules Base Sparks control plane
+        run: node scripts/base-functions-staging-drill.mjs
+
       - name: Prove Forge restart and persistence
         run: node scripts/forge-staging-drill.mjs --confirm-isolated-staging
 
