@@ -35,7 +35,7 @@ On a host with Podman 5 or later, configure VS Code's **user** setting so Dev Co
 }
 ```
 
-Keep this in local VS Code user settings rather than workspace settings so contributors who use another compatible engine can choose it. Then open the repository in VS Code and run **Dev Containers: Reopen in Container**. Install and authenticate `oc`, `kubectl`, Ansible, and Helm through your approved host or managed toolchain when a task needs those CLIs; the editor extensions provide authoring and cluster visibility, not credentials or deployment approval.
+Keep this in local VS Code user settings rather than workspace settings so contributors who use another compatible engine can choose it. Then open the repository in VS Code and run **Dev Containers: Reopen in Container**. The container installs the pinned `oc`, `kubectl`, Helm, and Ansible Core CLI toolchain listed in `.devcontainer/toolchain-versions.json`. The cluster client targets OpenShift 4.20; update that pin when a target cluster requires another supported client version. The tools do not include cluster credentials or grant deployment authority.
 
 ## Verify the repository
 
