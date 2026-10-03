@@ -17,3 +17,9 @@ test("chat DPoP rollout is explicitly feature-gated",()=>{
   assert.match(edge,/dpopEnforced/);
   assert.match(edge,/Bearer /);
 });
+
+
+test("chat verifies OAuth token before accepting DPoP binding",()=>{
+  assert.match(edge,/auth\\.getUser\\(token\\)/);
+  assert.match(edge,/await authenticateChat\\(req, token\\)/);
+});
