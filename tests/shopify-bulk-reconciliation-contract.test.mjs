@@ -69,6 +69,6 @@ test('bulk correction is local state only and does not invoke paid-order effects
 test('workflow invokes focused reconciliation tests and has no duplicate run keys', () => {
   assert.ok(workflow.includes('tests/shopify-bulk-jsonl.test.mjs'));
   assert.ok(workflow.includes('tests/shopify-bulk-reconciliation-contract.test.mjs'));
-  const commands = workflow.split('\n').filter(line => line === '        run:');
+  const commands = workflow.split('\n').filter(line => line.trimStart().startsWith('run:'));
   assert.equal(commands.length, 2);
 });
