@@ -1,4 +1,11 @@
 
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { verifyDpopRequest } from "./dpop.ts";
+
+const HERCULES_DPOP_ENFORCED = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "").toLowerCase() === "true";
+
+const dpopEnforced = HERCULES_DPOP_ENFORCED;
+
 declare const Supabase: {
   ai: {
     Session: new (model: string) => {
@@ -10,9 +17,6 @@ declare const Supabase: {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const dpopEnforced = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "").toLowerCase() === "true";
-
-
 import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
 import { verifyDpopRequest } from "./dpop.ts";
 
@@ -20,7 +24,7 @@ const embeddingModel = new Supabase.ai.Session("gte-small");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Headers": "authorization, dpop, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -50,22 +54,47 @@ async function monitorAuthorized(req: Request): Promise<boolean> {
   return Boolean(rows?.[0]?.enabled && expected && expected === await sha256Hex(key));
 }
 
-function decodeJwtSub(req: Request): string {
+function accessToken(req: Request): string {
   const auth = req.headers.get("Authorization") ?? "";
-  if (!auth.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
+  if (!auth.startsWith("Bearer ") && !auth.startsWith("DPoP ")) throw new Error("UNAUTHORIZED");
+  const token = auth.slice(auth.indexOf(" ") + 1).trim();
+  if (!token) throw new Error("UNAUTHORIZED");
+  return token;
+}
 
-  const token = auth.slice(7);
+function decodeJwtPayload(token: string): Record<string, unknown> {
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("UNAUTHORIZED");
-
   let raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
   raw += "=".repeat((4 - (raw.length % 4)) % 4);
   const payload = JSON.parse(atob(raw));
+  if (!payload || typeof payload !== "object") throw new Error("UNAUTHORIZED");
+  return payload as Record<string, unknown>;
+}
 
-  if (typeof payload.sub !== "string" || payload.sub.length < 1) {
-    throw new Error("UNAUTHORIZED");
+async function authenticateChat(req: Request): Promise<string> {
+  const token = accessToken(req);
+  const auth = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: "Bearer " + token } },
+  });
+  const { data, error } = await auth.auth.getUser(token);
+  if (error || !data.user?.id) throw new Error("UNAUTHORIZED");
+
+  if (dpopEnforced) {
+    const payload = decodeJwtPayload(token);
+    const cnf = payload.cnf;
+    const expectedJkt = cnf && typeof cnf === "object" && typeof (cnf as Record<string, unknown>).jkt === "string"
+      ? String((cnf as Record<string, unknown>).jkt)
+      : "";
+    if (!expectedJkt) throw new Error("DPOP_TOKEN_BINDING_REQUIRED");
+    await verifyDpopRequest(req, token, expectedJkt, async (key, ttl) => {
+      const decision = await reserveWeightedTokens(key, 1, 0, 1, ttl * 1000);
+      return decision.allowed;
+    });
   }
-  return payload.sub;
+
+  return data.user.id;
 }
 
 function knownDbError(body: unknown): string | null {
@@ -690,7 +719,7 @@ ${prompt}`
     }
 
     const status =
-      message === "UNAUTHORIZED" ? 401 :
+      message === "UNAUTHORIZED" || message.startsWith("DPOP_") ? 401 :
       message.startsWith("RATE_LIMIT_") || message === "MONTHLY_AI_BUDGET_EXCEEDED" ? 429 :
       message === "NOT_FOUND" ? 404 :
       message === "AI_ROUTER_NOT_CONFIGURED" || message === "AI_PROVIDER_CHAIN_FAILED" ? 503 :
