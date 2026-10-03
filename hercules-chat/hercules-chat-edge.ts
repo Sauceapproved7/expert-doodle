@@ -613,7 +613,7 @@ Deno.serve(async (req: Request) => {
       const tokenPlan = estimateReservedTokens({
         system,
         prompt: routedPrompt,
-        requestedMaxOutput: body.max_output_tokens ?? 0,
+        requestedMaxOutput: body.max_output_tokens ?? limiterConfig(Deno.env.toObject()).outputCap,
         outputCap: limiterConfig(Deno.env.toObject()).outputCap,
       });
       if (!redisTokenLimiter) throw new Error("REDIS_RATE_LIMITER_NOT_CONFIGURED");
