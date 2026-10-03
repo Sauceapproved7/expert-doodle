@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { streamJsonl, stableStringify } from '../_shared/shopify-bulk-jsonl.mjs';
+import { streamJsonl, stableStringify, verifyShopifyWebhookHmac } from '../_shared/shopify-bulk-jsonl.mjs';
 
 const URL = Deno.env.get('SUPABASE_URL')!;
 const ANON = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!;
@@ -86,24 +86,6 @@ async function ensureCompletionSubscription(token: string) {
 async function hashText(value: string) {
   const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
   return Array.from(new Uint8Array(bytes)).map(x => x.toString(16).padStart(2, '0')).join('');
-}
-
-function safeEqual(a: string, b: string) {
-  const left = new TextEncoder().encode(a), right = new TextEncoder().encode(b);
-  if (left.length !== right.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < left.length; i++) mismatch |= left[i] ^ right[i];
-  return mismatch === 0;
-}
-
-async function verifyWebhook(raw: Uint8Array, supplied: string, signingSecret: string) {
-  if (!supplied) return false;
-  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(signingSecret),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-  const digest = new Uint8Array(await crypto.subtle.sign('HMAC', key, raw));
-  let binary = '';
-  for (const b of digest) binary += String.fromCharCode(b);
-  return safeEqual(btoa(binary), supplied);
 }
 
 async function startRun(tenantId: string, mode: string) {
@@ -193,8 +175,15 @@ async function handleCompletion(req: Request, raw: Uint8Array) {
   const configuredSecret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
   const conn = configuredSecret ? null : await connection();
   const signingSecret = configuredSecret || await secret(conn.signing_secret_ref);
-  if (!await verifyWebhook(raw, req.headers.get('x-shopify-hmac-sha256') || '', signingSecret)) {
+  if (!verifyShopifyWebhookHmac(raw, req.headers.get('x-shopify-hmac-sha256') || '', signingSecret)) {
     return json({ error: 'invalid_hmac' }, 401);
+  }
+  if ((req.headers.get('x-shopify-topic') || '').toLowerCase() !== 'bulk_operations/finish') {
+    return json({ received: true, ignored: true });
+  }
+  const webhookApiVersion = req.headers.get('x-shopify-api-version');
+  if (webhookApiVersion && webhookApiVersion !== API_VERSION) {
+    return json({ error: 'unsupported_webhook_api_version' }, 400);
   }
   let payload: any;
   try { payload = JSON.parse(new TextDecoder().decode(raw)); } catch { return json({ error: 'invalid_json' }, 400); }
