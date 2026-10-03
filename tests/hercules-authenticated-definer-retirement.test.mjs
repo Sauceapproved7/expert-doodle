@@ -51,7 +51,8 @@ test("launch browser client uses authenticated Edge action instead of privileged
 });
 
 test("chat usage runs only through JWT-gated Edge with service-role internal RPC",()=>{
-  assert.match(chat,/const token = accessToken\(req\)/);\n  assert.match(chat,/const userId = decodeJwtSub\(req, token\)/);
+  assert.match(chat,/const token = accessToken\(req\)/);
+  assert.match(chat,/const userId = decodeJwtSub\(req, token\)/);
   assert.match(chat,/rpc\/hercules_chat_current_usage_internal/);
   assert.match(chat,/p_user_id: userId/);
   const usage=chat.slice(chat.indexOf('if (action === "usage")'),chat.indexOf('if (action === "run_chat")'));
