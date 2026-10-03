@@ -2,11 +2,12 @@ import os, sqlite3, time, uuid
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from .mcp_server import dispatch
 
 DB=os.getenv("HERCULES_DB","/data/hercules.db")
 BASE=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
 DEFAULT=os.getenv("HERCULES_DEFAULT_MODEL","qwen2.5:7b")
-app=FastAPI(title="Hercules AI Core",version="1.0.0")
+app=FastAPI(title="Hercules AI Core",version="1.1.0")
 
 def db():
     c=sqlite3.connect(DB)
@@ -23,10 +24,27 @@ class ChatRequest(BaseModel):
     messages:list[Message]
     conversation_id:str|None=None
     stream:bool=False
+class RpcRequest(BaseModel):
+    jsonrpc:str
+    id:int|str|None=None
+    method:str
+    params:dict={}
 
 @app.get("/health")
 async def health():
-    return {"ok":True,"service":"hercules-ai","model":DEFAULT}
+    return {"ok":True,"service":"hercules-ai","model":DEFAULT,"mcp":"/mcp"}
+
+@app.post("/mcp")
+async def mcp(req:RpcRequest):
+    if req.jsonrpc!="2.0":
+        raise HTTPException(400,"JSON-RPC 2.0 required")
+    try:
+        result=dispatch(req.method,req.params)
+        return {"jsonrpc":"2.0","id":req.id,"result":result}
+    except KeyError as e:
+        return {"jsonrpc":"2.0","id":req.id,"error":{"code":-32601,"message":str(e)}}
+    except (ValueError,TypeError) as e:
+        return {"jsonrpc":"2.0","id":req.id,"error":{"code":-32602,"message":str(e)}}
 
 @app.post("/v1/chat/completions")
 async def chat(req:ChatRequest):
