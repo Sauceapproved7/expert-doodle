@@ -1,6 +1,6 @@
 # Hercules Growth Engine v1
 
-Owned operating specification for SauceApproved Enterprise LLC.
+Owned operating specification for SauceApproved enterprise LLC.
 
 ## Objective
 Create a repeatable, organic-first acquisition loop for SauceApproved and Hercules without depending on paid advertising.
