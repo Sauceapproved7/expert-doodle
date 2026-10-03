@@ -10,7 +10,7 @@ declare const Supabase: {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const dpopEnforced = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "").toLowerCase() === "true";
+const DPOP_ENFORCED = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "false").toLowerCase() === "true";
 
 
 import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
@@ -50,11 +50,18 @@ async function monitorAuthorized(req: Request): Promise<boolean> {
   return Boolean(rows?.[0]?.enabled && expected && expected === await sha256Hex(key));
 }
 
+function rawAccessToken(req: Request): string {
+  const auth = req.headers.get("Authorization") ?? "";
+  if (auth.startsWith("Bearer ")) return auth.slice(7);
+  if (auth.startsWith("DPoP ")) return auth.slice(5);
+  throw new Error("UNAUTHORIZED");
+}
+
 function decodeJwtSub(req: Request): string {
   const auth = req.headers.get("Authorization") ?? "";
-  if (!auth.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
+  if (!auth.startsWith("Bearer ") && !auth.startsWith("DPoP ")) throw new Error("UNAUTHORIZED");
 
-  const token = auth.slice(7);
+  const token = rawAccessToken(req);
   const parts = token.split(".");
   if (parts.length !== 3) throw new Error("UNAUTHORIZED");
 
@@ -276,9 +283,22 @@ Deno.serve(async (req: Request) => {
   let reservedRequestId: string | null = null;
 
   try {
-    const token = accessToken(req);
-    await enforceDpop(req, token);
-    const userId = decodeJwtSub(req, token);
+    const userId = decodeJwtSub(req);
+    if (DPOP_ENFORCED) {
+      const token = rawAccessToken(req);
+      const jkt = await rest(req, "rpc/hercules_get_dpop_key", {
+        method: "POST",
+        body: JSON.stringify({ p_user_id: userId }),
+      }, true);
+      if (typeof jkt !== "string" || !jkt) throw new Error("DPOP_KEY_NOT_ENROLLED");
+      await verifyDpopRequest(req, token, jkt, async (replayKey, ttlSeconds) => {
+        const claimed = await rest(req, "rpc/hercules_claim_dpop_replay", {
+          method: "POST",
+          body: JSON.stringify({ p_replay_key: replayKey, p_ttl_seconds: ttlSeconds }),
+        }, true);
+        return claimed === true;
+      });
+    }
     const body = await req.json();
     const action = body?.action;
 
