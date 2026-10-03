@@ -55,6 +55,14 @@ begin
   if v_expected is null then raise exception 'shopify_ingest_not_configured'; end if;
   if encode(extensions.digest(p_ingest_token,'sha256'),'hex')<>v_expected then raise exception 'shopify_ingest_unauthorized'; end if;
   if lower(trim(p_shop_domain))<>'sauceapproved-2.myshopify.com' then raise exception 'shop_not_allowed'; end if;
+  if not exists (
+    select 1
+    from public.hercules_provider_connections
+    where provider='shopify'
+      and account_key='sauceapproved-2.myshopify.com'
+      and status='active'
+      and access_secret_ref is not null
+  ) then raise exception 'shopify_installation_inactive'; end if;
   if lower(trim(p_topic)) not in ('orders/paid','app/uninstalled','domains/create','domains/update','domains/destroy') then raise exception 'topic_not_allowed'; end if;
   if p_payload_sha256 !~ '^[a-f0-9]{64}$' then raise exception 'payload_hash_invalid'; end if;
 
