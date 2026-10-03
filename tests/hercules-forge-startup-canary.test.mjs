@@ -422,3 +422,49 @@ test("startup canary rotates when creation races with an EEXIST collision", asyn
     assert.equal(result.projectId,createdId);
   }finally{await new Promise(resolve=>server.close(resolve));}
 });
+
+
+test("startup canary uses a fresh reserved identifier when the deterministic fallback is already occupied", async () => {
+  let createdId=null;
+  const occupied="ForgeCanary_a914b994697be8285386";
+  const server=http.createServer(async (req,res)=>{
+    if(req.method==="GET" && req.url==="/v1/projects/forge-prompt-canary-ai-v1"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:"forge-prompt-canary-ai-v1",metadata:{source:"manual"}}}));
+    }
+    if(req.method==="GET" && req.url==="/v1/projects/"+occupied){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:occupied,metadata:{source:"manual"}}}));
+    }
+    if(req.method==="GET" && req.url?.startsWith("/v1/projects/ForgeCanary_")){
+      const id=decodeURIComponent(req.url.split("/").at(-1));
+      if(createdId===id){
+        res.writeHead(200,{"content-type":"application/json"});
+        return res.end(JSON.stringify({project:{projectId:id,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"e".repeat(64)}}}));
+      }
+      res.writeHead(404,{"content-type":"application/json"});
+      return res.end(JSON.stringify({error:"not_found"}));
+    }
+    if(req.method==="POST" && req.url==="/v1/projects/from-prompt"){
+      let text=""; for await(const chunk of req) text+=chunk; const body=JSON.parse(text);
+      createdId=body.metadata.projectId;
+      assert.match(createdId,/^ForgeCanary_[a-f0-9]{20}$/);
+      assert.notEqual(createdId,occupied);
+      res.writeHead(201,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:createdId,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"e".repeat(64)}},revision:{revisionId:"fresh-r1"}}));
+    }
+    if(req.url==="/ready"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({ready:true,durableState:{ok:true,schema:"sauceapproved.hercules.forge.durable-state.v1",carriesCredentials:false,objectCount:6}}));
+    }
+    res.writeHead(404,{"content-type":"application/json"}); res.end(JSON.stringify({error:"not_found"}));
+  });
+  const origin=await listen(server);
+  try{
+    const result=await runForgeStartupPromptCanary({origin,controlToken,projectId:"forge-prompt-canary-ai-v1"});
+    assert.equal(result.ok,true);
+    assert.equal(result.collisionAvoided,true);
+    assert.equal(result.status,"created_and_verified");
+    assert.equal(result.projectId,createdId);
+  }finally{await new Promise(resolve=>server.close(resolve));}
+});
