@@ -41,5 +41,5 @@ export function parseShopifyHeaders(headers) {
   if (!webhookId) throw new Error("webhook_id_required");
   if (!/^\d{4}-\d{2}$/.test(apiVersion)) throw new Error("api_version_required");
   if (triggeredAt && Number.isNaN(new Date(triggeredAt).getTime())) throw new Error("triggered_at_invalid");
-  return { shopDomain, topic, webhookId, eventId, apiVersion, triggeredAt };
+  return triggeredAt ? { shopDomain, topic, webhookId, eventId, apiVersion, triggeredAt } : { shopDomain, topic, webhookId, eventId, apiVersion };
 }
