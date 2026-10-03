@@ -1,4 +1,6 @@
 
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+
 declare const Supabase: {
   ai: {
     Session: new (model: string) => {
@@ -45,6 +47,16 @@ async function enforceDpop(req: Request, token: string): Promise<void> {
       throw new Error("DPOP_REPLAY_STORE_UNAVAILABLE");
     }
   });
+}
+
+async function authenticateChat(req: Request, token: string): Promise<string> {
+  const auth = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: "Bearer " + token } },
+  });
+  const { data, error } = await auth.auth.getUser(token);
+  if (error || !data.user?.id) throw new Error("UNAUTHORIZED");
+  return data.user.id;
 }
 
 
