@@ -7,7 +7,7 @@ const ANON = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISH
 const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const STORE = 'sauceapproved-2.myshopify.com';
 const API_VERSION = '2026-10';
-const CALLBACK = URL + '/functions/v1/hercules-shopify-bulk-reconciliation';
+const CALLBACK = URL + '/functions/v1/hercules-shopify-webhook/bulk';
 const DB = createClient(URL, SERVICE, { auth: { persistSession: false } });
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
@@ -283,7 +283,7 @@ async function readBoundedBody(req: Request, limit: number) {
   return body;
 }
 
-Deno.serve(async (req: Request) => {
+export async function handleBulkReconciliationRequest(req: Request) {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
   const isWebhook = req.headers.has('x-shopify-hmac-sha256');
   const raw = await readBoundedBody(req, isWebhook ? 1024 * 1024 : 16 * 1024);
@@ -319,4 +319,6 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     return json({ error: error instanceof Error ? error.message : 'reconciliation_failed' }, 500);
   }
-});
+}
+
+if (import.meta.main) Deno.serve(handleBulkReconciliationRequest);
