@@ -23,7 +23,7 @@ test('reconciliation tables are service-only with row-level security enabled', (
 });
 
 test('state upserts bind run and tenant and reject stale snapshots', () => {
-  assert.match(rpc, /where id = p_run_id\\s+and tenant_id = p_tenant_id/);
+  assert.match(rpc, /where id = p_run_id\s+and tenant_id = p_tenant_id/);
   assert.ok(rpc.includes("and status = 'processing'"));
   assert.ok(rpc.includes('if p_updated_at < v_current.shopify_updated_at then'));
   assert.ok(rpc.includes('if p_updated_at = v_current.shopify_updated_at'));
