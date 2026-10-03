@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {randomBytes} from "node:crypto";
 import {mkdtemp,readFile,stat} from "node:fs/promises";
 import {tmpdir} from "node:os";
-import {join} from "node:path";
+import {dirname,join} from "node:path";
 
 import {
   normalizeBucketName,
@@ -34,7 +34,11 @@ test("filesystem blob store is content-addressed and never trusts object paths",
   assert.equal(second.sha256,digest);
   assert.equal(first.path,second.path);
   assert.equal((await readFile(first.path)).toString(),payload.toString());
-  assert.equal((await stat(first.path)).isFile(),true);
+  const fileStat=await stat(first.path);
+  const directoryStat=await stat(dirname(first.path));
+  assert.equal(fileStat.isFile(),true);
+  assert.equal(fileStat.mode & 0o777,0o600);
+  assert.equal(directoryStat.mode & 0o777,0o700);
   assert.equal(first.path.includes("avatars"),false);
 });
 
