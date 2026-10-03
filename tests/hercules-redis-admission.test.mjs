@@ -176,9 +176,8 @@ test("controller reloads both scripts after NOSCRIPT", async () => {
 
 test("settlement source refreshes the bucket timestamp before returning refunded credits", async () => {
   const settlement = await import("../hercules-chat/redis/admission.mjs").then((m) => m.scripts.settlement);
-  assert.equal(settlement.includes('redis.call("HSET",KEYS[1]'), true);
-  assert.equal(settlement.includes('"last_refill_ms",now'), true);
-  assert.match(settlement, /status\", \"settled\"/);
+  assert.match(settlement, /redis\.call\("HSET",KEYS\[1\],[^\n]*"last_refill_ms",now\)/);
+  assert.match(settlement, /"status","settled"/);
 });
 
 
@@ -204,15 +203,15 @@ test("production contract rejects fractional refill rates", async () => {
 
 test("reservation contract stores accounting periods and a lease expiry for safe cleanup", async () => {
   const {scripts} = await import("../hercules-chat/redis/admission.mjs");
-  assert.match(scripts.admission, /"daily_period", daily_period/);
-  assert.match(scripts.admission, /"monthly_period", monthly_period/);
+  assert.match(scripts.admission, /"daily_period",daily_period/);
+  assert.match(scripts.admission, /"monthly_period",monthly_period/);
   assert.match(scripts.admission, /"lease_expires_at_ms"/);
 });
 
 test("cleanup script only releases an active expired reservation", async () => {
   const {scripts} = await import("../hercules-chat/redis/admission.mjs");
   assert.equal(typeof scripts.cleanup, "string");
-  assert.match(scripts.cleanup, /status ~= "active"/);
+  assert.match(scripts.cleanup, /status~="active"/);
   assert.match(scripts.cleanup, /lease_expires_at_ms/);
-  assert.match(scripts.cleanup, /"status", "expired"/);
+  assert.match(scripts.cleanup, /"status","expired"/);
 });
