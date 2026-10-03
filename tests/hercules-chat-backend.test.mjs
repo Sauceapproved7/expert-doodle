@@ -40,7 +40,9 @@ test("semantic memory is owner-scoped and vector indexed", () => {
 
 test("edge ingress requires JWT and keeps privileged credentials server-side", () => {
   assert.match(edge, /Authorization/);
-  assert.match(edge, /decodeJwtSub/);
+  assert.match(edge, /authenticateChat/);
+  assert.match(edge, /\/auth\/v1\/user/);
+  assert.doesNotMatch(edge, /const userId = decodeJwtSub\(req\)/);
   assert.match(edge, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(edge, /action === "run_chat"/);
   assert.match(edge, /hercules_chat_reserve_ai_request/);
