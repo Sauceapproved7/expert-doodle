@@ -14,3 +14,5 @@ plugins:
         - bearer
       proof_of_possession_dpop: strict
       # Keep upstreams private and apply route/service authorization separately.
+
+# Deployment note: apply only after issuer/client/control-plane values are verified.
