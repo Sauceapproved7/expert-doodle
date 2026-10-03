@@ -966,7 +966,7 @@ returns bigint
 language sql
 security invoker
 set search_path = ''
-as $$
+as $
   select private.hercules_reserve_ai_request(
     p_user_id, p_request_id, p_session_id, p_provider, p_model,
     p_reserved_cost_microusd, p_reserved_tokens
