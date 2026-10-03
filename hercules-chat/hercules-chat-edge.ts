@@ -1,6 +1,4 @@
 
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-
 declare const Supabase: {
   ai: {
     Session: new (model: string) => {
@@ -15,13 +13,19 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const DPOP_ENFORCED = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "false").toLowerCase() === "true";
 
 async function authenticateChat(req: Request, token: string): Promise<string> {
-  const auth = createClient(SUPABASE_URL, ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    global: { headers: { Authorization: "Bearer " + token } },
+  if (!SUPABASE_URL || !ANON_KEY) throw new Error("SERVER_NOT_CONFIGURED");
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "GET",
+    headers: {
+      apikey: ANON_KEY,
+      Authorization: "Bearer " + token,
+    },
+    signal: AbortSignal.timeout(10000),
   });
-  const { data, error } = await auth.auth.getUser(token);
-  if (error || !data.user?.id) throw new Error("UNAUTHORIZED");
-  return data.user.id;
+  if (!response.ok) throw new Error("UNAUTHORIZED");
+  const user = await response.json().catch(() => null) as { id?: unknown } | null;
+  if (!user || typeof user.id !== "string" || !user.id) throw new Error("UNAUTHORIZED");
+  return user.id;
 }
 
 
