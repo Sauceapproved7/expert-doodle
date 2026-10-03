@@ -1,7 +1,7 @@
 name: hercules-staging
 services:
   postgres:
-    image: postgres:16.4-alpine@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
+    image: postgres:16.15-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
     environment:
       POSTGRES_DB: hercules_staging
       POSTGRES_USER: hercules_admin
@@ -20,7 +20,7 @@ services:
     networks: [staging]
 
   migrate:
-    image: postgres:16.4-alpine@sha256:5660c2cbfea50c7a9127d17dc4e48543eedd3d7a41a595a2dfa572471e37e64c
+    image: postgres:16.15-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
     depends_on:
       postgres: {condition: service_healthy}
     environment:
@@ -33,7 +33,7 @@ services:
     networks: [staging]
 
   postgrest:
-    image: postgrest/postgrest:v12.2.3@sha256:729bf65c733b73f5b52777f0e4b853f22ed73aa67a22d38269d289779b0a8401
+    image: postgrest/postgrest:v12.2.12@sha256:5f4ce744539bbba786b4e24dbbd95bdb2a956dcf568c5374995a0ff4a68f5bd2
     depends_on:
       migrate: {condition: service_completed_successfully}
     environment:
@@ -45,7 +45,7 @@ services:
     networks: [staging]
 
   base:
-    image: node:22.12.0-alpine@sha256:51eff88af6dff26f59316b6e356188ffa2c422bd3c3b76f2556a2e7e89d080bd
+    image: node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
     depends_on:
       postgrest: {condition: service_started}
     environment:
@@ -71,7 +71,7 @@ services:
     networks: [staging, edge]
 
   forge:
-    image: node:22.12.0-alpine@sha256:51eff88af6dff26f59316b6e356188ffa2c422bd3c3b76f2556a2e7e89d080bd
+    image: node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
     environment:
       FORGE_ROOT: /forge-state
       FORGE_CONTROL_TOKEN: ${HERCULES_FORGE_STAGING_CONTROL_TOKEN}
@@ -96,7 +96,7 @@ services:
     networks: [edge]
 
   api:
-    image: node:22.12.0-alpine@sha256:51eff88af6dff26f59316b6e356188ffa2c422bd3c3b76f2556a2e7e89d080bd
+    image: node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
     depends_on:
       postgrest: {condition: service_started}
     environment:

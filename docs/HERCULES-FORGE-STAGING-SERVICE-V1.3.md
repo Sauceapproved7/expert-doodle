@@ -8,7 +8,7 @@ This milestone does not claim public production hosting. It verifies that the pr
 
 ## Staging service
 
-The existing `staging-plane/compose.yml` now includes a `forge` service using the policy-approved `node:22.12.0-alpine` infrastructure image.
+The existing `staging-plane/compose.yml` now includes a `forge` service using the policy-approved `node:22.23.3-alpine` infrastructure image.
 
 Forge runs:
 
@@ -109,3 +109,8 @@ A green v1.3 staging gate proves:
 - owner-code/provenance controls remain intact.
 
 It still does not prove Internet-edge TLS termination, public DNS, public account recovery/email verification, multi-node database failover, or hardened arbitrary-code isolation. Those remain separate launch milestones.
+
+
+## Staging runtime image patch set
+
+The staging plane pins Node 22.23.3 Alpine, PostgreSQL 16.15 Alpine, and PostgREST 12.2.12 by explicit multi-platform sha256 digest. These images remain third-party infrastructure; the pinned references are governed by the owner-code policy and universal merge gate.
