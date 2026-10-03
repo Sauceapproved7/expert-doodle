@@ -209,11 +209,19 @@ async function routeAi(req: Request, system: string, prompt: string) {
   const result = String(payload.result ?? "").trim();
   if (!result) throw new Error("AI_EMPTY_RESPONSE");
 
+  const usage = payload.usage && typeof payload.usage === "object"
+    ? payload.usage as Record<string, unknown>
+    : null;
   return {
     text: result,
     provider: String(payload.provider ?? "hercules-ai"),
     model: String(payload.model ?? "routed"),
     attempts: Array.isArray(payload.attempts) ? payload.attempts : [],
+    usage: usage ? {
+      inputTokens: Math.max(0, Number(usage.input_tokens ?? usage.prompt_tokens ?? 0) || 0),
+      outputTokens: Math.max(0, Number(usage.output_tokens ?? usage.completion_tokens ?? 0) || 0),
+      totalTokens: Math.max(0, Number(usage.total_tokens ?? 0) || 0),
+    } : null,
   };
 }
 
@@ -223,6 +231,7 @@ async function finalize(
   status: "completed" | "failed" | "cancelled",
   responseMessageId: number | null = null,
   errorCode: string | null = null,
+  usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | null = null,
 ) {
   try {
     await rest(
@@ -233,9 +242,9 @@ async function finalize(
         body: JSON.stringify({
           p_request_id: requestId,
           p_status: status,
-          p_input_tokens: 0,
+          p_input_tokens: Math.max(0, Math.trunc(Number(usage?.inputTokens ?? 0))),
           p_cached_input_tokens: 0,
-          p_output_tokens: 0,
+          p_output_tokens: Math.max(0, Math.trunc(Number(usage?.outputTokens ?? 0))),
           p_actual_cost_microusd: 0,
           p_response_message_id: responseMessageId,
           p_error_code: errorCode,
@@ -648,6 +657,7 @@ Deno.serve(async (req: Request) => {
         "completed",
         Number(assistantMessage.id),
         null,
+        ai.usage,
       );
       reservedRequestId = null;
 
