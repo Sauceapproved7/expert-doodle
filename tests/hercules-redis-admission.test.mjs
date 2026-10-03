@@ -14,7 +14,9 @@ test("tenant keys use one opaque Redis Cluster hash tag and never expose the ten
   assert.ok(match);
   assert.ok(keys.rpm.includes("{" + match[1] + "}"));
   assert.ok(keys.concurrency.includes("{" + match[1] + "}"));
-  assert.ok(keys.dailyBudget.includes("{" + match[1] + "}"));\n  assert.ok(keys.monthlyBudget.includes("{" + match[1] + "}"));\n  assert.ok(keys.leases.includes("{" + match[1] + "}"));
+  assert.ok(keys.dailyBudget.includes("{" + match[1] + "}"));
+  assert.ok(keys.monthlyBudget.includes("{" + match[1] + "}"));
+  assert.ok(keys.leases.includes("{" + match[1] + "}"));
   assert.ok(keys.reservation.includes("{" + match[1] + "}"));
   assert.equal(Object.values(keys).some((key) => key.includes("tenant_7f3a")), false);
   assert.equal(keys.reservation.endsWith("req_123"), true);
