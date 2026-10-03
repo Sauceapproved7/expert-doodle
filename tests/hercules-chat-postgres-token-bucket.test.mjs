@@ -17,8 +17,11 @@ test("reservation accepts a token cost and maintains atomic token state", () => 
   assert.match(sql, /TOKEN_BUDGET_EXCEEDED/i);
 });
 
-test("gateway passes predicted token reservation into the existing reservation RPC", () => {
-  assert.match(edge, /p_reserved_tokens/);
+test("gateway passes predicted token reservation through the active Redis admission boundary", () => {
   assert.match(edge, /estimatedInputTokens/);
   assert.match(edge, /reservedOutputTokens/);
+  assert.match(edge, /tokenReservation\s*=\s*estimatedInputTokens\s*\+\s*reservedOutputTokens/);
+  assert.match(edge, /reserveWeightedTokens/);
+  assert.match(edge, /TOKEN_BUDGET_EXCEEDED/);
+  assert.ok(edge.indexOf("reserveWeightedTokens") < edge.indexOf("routeAi"));
 });
