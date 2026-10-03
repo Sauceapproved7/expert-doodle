@@ -9,7 +9,7 @@ export function normalizeBotWorkCommand(input={}){
   const code=String(input.code||"");
   if(!code.trim()) throw new Error("Shopify code required");
   const version=input.version==null?"":String(input.version);
-  if(version&&!/^\\d{4}-(01|04|07|10)$/.test(version)) throw new Error("invalid Shopify API version");
+  if(version&&!/^\d{4}-(01|04|07|10)$/.test(version)) throw new Error("invalid Shopify API version");
   return {action,api,code,...(version?{version}:{}),validationRequired:true,validator:"shopify-ai-toolkit"};
  }
  if(action==="smallz.verify.browser"){
