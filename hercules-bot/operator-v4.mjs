@@ -5,7 +5,7 @@ const PATTERNS=[
   {re:/^arm body$/i,verb:"arm",target:"body",mutates:true},
   {re:/^emergency stop$/i,verb:"emergency-stop",target:"body",mutates:true},
   {re:/^open browser (https?:\\/\\/\\S+)$/i,verb:"browser-navigate",target:"browser",mutates:true},
-  {re:/^inspect browser (https?:\\/\\/\\S+)$/i,verb:"browser-scrape",target:"browser",mutates:true}
+  {re:/^inspect browser (https?:\\/\\/\\S+)$/i,verb:"browser-scrape",target:"browser",mutates:true},\n  {re:/^deployment status ([A-Za-z0-9][A-Za-z0-9._:-]{0,199})$/i,verb:"deploy-status",target:"deployer",mutates:false},\n  {re:/^deploy release ([A-Za-z0-9][A-Za-z0-9._:-]{0,199}) commit ([A-Za-z0-9][A-Za-z0-9._:-]{0,199}) artifact ([A-Za-z0-9][A-Za-z0-9._:-]{0,199}) target ([A-Za-z0-9][A-Za-z0-9._:-]{0,199}) ([A-Za-z0-9][A-Za-z0-9._:-]{0,199})$/i,verb:"deploy-release",target:"deployer",mutates:true}
 ];
 
 function parse(text){
@@ -14,7 +14,7 @@ function parse(text){
     const m=normalized.match(p.re);
     if(!m) continue;
     const target=p.target ?? m[1];
-    const payload=p.verb==="move"?{pose:m[1]}:(p.verb.startsWith("browser-")?{target:m[1]}:undefined);
+    let payload=p.verb==="move"?{pose:m[1]}:(p.verb.startsWith("browser-")?{target:m[1]}:undefined);\n    if(p.verb==="deploy-status") payload={deploymentId:m[1]};\n    if(p.verb==="deploy-release") payload={releaseId:m[1],sourceCommit:m[2],artifactFingerprint:m[3],target:{kind:m[4],reference:m[5]}};
     return {status:"planned",command:{verb:p.verb,target,mutates:p.mutates,payload}};
   }
   return {status:"unrecognized",reason:"command-not-recognized"};
