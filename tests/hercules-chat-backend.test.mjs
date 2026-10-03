@@ -55,3 +55,18 @@ test("chat API bounds user-controlled payloads and metadata", () => {
   assert.match(edge, /32_000/);
   assert.match(edge, /boundedInt/);
 });
+
+
+test("chat gateway fails closed when distributed token limiting is not configured", () => {
+  assert.match(edge, /REDIS_RATE_LIMITER_NOT_CONFIGURED/);
+  assert.match(edge, /TOKEN_RATE_LIMIT_EXCEEDED/);
+  assert.match(edge, /Retry-After/);
+});
+
+test("chat gateway reserves bounded output before the AI router and reconciles usage", () => {
+  assert.match(edge, /estimateReservedTokens/);
+  assert.match(edge, /requestedMaxOutput: body\.max_output_tokens \?\? limiterConfig/);
+  assert.match(edge, /redisTokenLimiter\.admit/);
+  assert.match(edge, /redisTokenLimiter\.settle/);
+  assert.match(edge, /ai\.usage/);
+});
