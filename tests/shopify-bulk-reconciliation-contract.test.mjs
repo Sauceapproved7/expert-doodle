@@ -3,10 +3,11 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 const load = path => readFile(new URL(path, import.meta.url), 'utf8');
-const [schema, rpc, endpoint, workflow] = await Promise.all([
+const [schema, rpc, endpoint, webhook, workflow] = await Promise.all([
   load('../supabase/migrations/20261003060000_hercules_shopify_bulk_reconciliation_v1.sql'),
   load('../supabase/migrations/20261003060100_hercules_shopify_bulk_reconciliation_rpc_v1.sql'),
   load('../supabase/functions/hercules-shopify-bulk-reconciliation/index.ts'),
+  load('../supabase/functions/hercules-shopify-webhook/index.ts'),
   load('../.github/workflows/hercules-shopify-paid-order-reconciliation.yml')
 ]);
 
@@ -66,6 +67,17 @@ test('bulk start subscribes before launching and omits order PII', () => {
 test('bulk correction is local state only and does not invoke paid-order effects', () => {
   assert.doesNotMatch(endpoint, /hercules_reconcile_verified_shopify_paid_order_v1/);
   assert.doesNotMatch(endpoint, /write_orders|write_fulfillments|refundCreate|fulfillmentCreate/);
+});
+
+
+test('bulk reconciliation is routed through the existing Shopify webhook function slot', () => {
+  assert.ok(endpoint.includes("CALLBACK = URL + '/functions/v1/hercules-shopify-webhook/bulk'"));
+  assert.ok(endpoint.includes('export async function handleBulkReconciliationRequest'));
+  assert.ok(endpoint.includes('if (import.meta.main) Deno.serve(handleBulkReconciliationRequest)'));
+  assert.ok(webhook.includes("import { handleBulkReconciliationRequest } from '../hercules-shopify-bulk-reconciliation/index.ts'"));
+  const route = webhook.indexOf("endsWith('/hercules-shopify-webhook/bulk')");
+  const bodyRead = webhook.indexOf('const raw=await req.text()');
+  assert.ok(route >= 0 && bodyRead > route);
 });
 
 test('workflow invokes focused reconciliation tests and has no duplicate run keys', () => {
