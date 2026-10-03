@@ -1,4 +1,7 @@
 import {createServer} from "node:http";
+import {readFile} from "node:fs/promises";
+import {join} from "node:path";
+import {fileURLToPath} from "node:url";
 import {createOperatorController} from "./operator-controller.mjs";
 import {createOperatorConsole} from "./operator-v4.mjs";
 import {createOperatorSession} from "./operator-v5.mjs";
@@ -25,6 +28,7 @@ export function createHerculesBotApp({port=38801}={}) {
     const url=String(req.url??"/").split("?")[0];
 
     if(method==="GET" && url==="/health") return json(200,{ok:true,service:"hercules-bot",hardware:"disconnected"});
+    if(method==="GET" && url==="/app") return {status:200,headers:{"content-type":"text/html; charset=utf-8"},body:await readFile(join(fileURLToPath(new URL(".",import.meta.url)),"index.html"),"utf8")};
     if(method==="GET" && url==="/api/state") {
       return json(200,{
         body:await body.status(),
