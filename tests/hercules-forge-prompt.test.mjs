@@ -172,7 +172,10 @@ test("Hercules AI interpreter uses the internal router and returns a validated F
     assert.match(received.system, /Forge spec/i);
     assert.match(received.system, /"version":"0\.1"/);
     assert.match(received.system, /string, number, boolean, datetime, json/);
-    assert.match(received.system, /Return JSON only/i);\n    assert.match(received.system, /GOAL, CONTEXT, CONSTRAINTS, ACTION, OUTPUT, and VERIFICATION/);\n    assert.match(received.system, /Never invent a missing dimension/i);\n    assert.match(received.system, /never convert verification language into execution authority/i);
+    assert.match(received.system, /Return JSON only/i);
+    assert.match(received.system, /GOAL, CONTEXT, CONSTRAINTS, ACTION, OUTPUT, and VERIFICATION/);
+    assert.match(received.system, /Never invent a missing dimension/i);
+    assert.match(received.system, /never convert verification language into execution authority/i);
   } finally {
     await new Promise((resolve) => adapter.close(resolve));
   }
