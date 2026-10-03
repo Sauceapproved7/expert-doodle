@@ -10,8 +10,11 @@ declare const Supabase: {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const dpopEnforced = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "").toLowerCase() === "true";
+
 
 import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+import { verifyDpopRequest } from "./dpop.ts";
 
 const embeddingModel = new Supabase.ai.Session("gte-small");
 
@@ -145,7 +148,8 @@ function contentText(content: unknown): string {
         if (typeof p.text === "string") return p.text;
       }
       return "";
-    }).filter(Boolean).join("\n");
+    }).filter(Boolean).join("
+");
   }
   if (content && typeof content === "object") {
     const obj = content as Record<string, unknown>;
@@ -272,7 +276,9 @@ Deno.serve(async (req: Request) => {
   let reservedRequestId: string | null = null;
 
   try {
-    const userId = decodeJwtSub(req);
+    const token = accessToken(req);
+    await enforceDpop(req, token);
+    const userId = decodeJwtSub(req, token);
     const body = await req.json();
     const action = body?.action;
 
@@ -569,11 +575,14 @@ Deno.serve(async (req: Request) => {
       const conversation = recent.map((m) => {
         const role = String(m.role ?? "user");
         return `${role.toUpperCase()}: ${contentText(m.content).slice(0, 3000)}`;
-      }).join("\n\n").slice(-12000);
+      }).join("
+
+").slice(-12000);
 
       const memoryText = memories.map((m, i) =>
         `Memory ${i + 1}: ${String(m.content ?? "").slice(0, 1500)}`
-      ).join("\n").slice(0, 6000);
+      ).join("
+").slice(0, 6000);
 
       const system = [
         "You are Hercules, the SauceApproved AI execution assistant.",
@@ -584,10 +593,15 @@ Deno.serve(async (req: Request) => {
       ].join(" ");
 
       const routedPrompt = [
-        memoryText ? `Relevant stored memory:\n${memoryText}` : "",
-        conversation ? `Conversation:\n${conversation}` : "",
-        `Current request:\n${prompt}`
-      ].filter(Boolean).join("\n\n").slice(0, 16000);
+        memoryText ? `Relevant stored memory:
+${memoryText}` : "",
+        conversation ? `Conversation:
+${conversation}` : "",
+        `Current request:
+${prompt}`
+      ].filter(Boolean).join("
+
+").slice(0, 16000);
 
       if (Deno.env.get("HERCULES_TOKEN_BUCKET_ENFORCED") === "true") {
         const capacity = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_CAPACITY"), 120_000, 1, 10_000_000);

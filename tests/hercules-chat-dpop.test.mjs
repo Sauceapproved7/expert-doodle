@@ -11,7 +11,9 @@ test("DPoP verifier enforces proof type, asymmetric algorithm, method, URI, fres
 test("DPoP verifier has replay protection and constant-time comparisons",()=>{
   assert.match(source,/replay/i); assert.match(source,/timingSafe|constantTime/i);
 });
-test("chat DPoP implementation is not silently treated as enabled",()=>{
-  const gated = edge.includes("HERCULES_DPOP_ENFORCED") && edge.includes("verifyDpopRequest");
-  assert.equal(gated, false);
+test("chat DPoP rollout is explicitly feature-gated",()=>{
+  assert.match(edge,/HERCULES_DPOP_ENFORCED/);
+  assert.match(edge,/verifyDpopRequest/);
+  assert.match(edge,/dpopEnforced/);
+  assert.match(edge,/Bearer /);
 });
