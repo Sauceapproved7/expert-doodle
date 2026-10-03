@@ -150,7 +150,32 @@ async function processRun(runId: string) {
   const response = await fetch(downloadUrl, { redirect: 'error', signal: AbortSignal.timeout(120000) });
   if (!response.ok || !response.body) throw new Error('bulk_result_download_failed');
 
-  await DB.from('hercules_shopify_bulk_reconciliation_runs').update({ status: 'processing' }).eq('id', runId);
+  const { error: processingError } = await DB.from('hercules_shopify_bulk_reconciliation_runs')
+    .update({ status: 'processing' }).eq('id', runId).eq('status', 'downloading');
+  if (processingError) throw new Error('bulk_run_processing_state_failed');
+  let inserted = 0, updated = 0, skipped = 0;
+  const apply = async (order: any) => {
+    if (!order || typeof order.id !== 'string' || !order.id.startsWith('gid://shopify/Order/') || !order.updatedAt) {
+      throw new Error('bulk_jsonl_order_shape_invalid');
+    }
+    const canonical = {
+      id: order.id, updatedAt: order.updatedAt,
+      financialStatus: order.displayFinancialStatus ?? null,
+      fulfillmentStatus: order.displayFulfillmentStatus ?? null,
+      cancelledAt: order.cancelledAt ?? null,
+      test: order.test === true
+    };
+    const payloadHash = await hashText(stableStringify(canonical));
+    const { data: action, error: stateError } = await DB.rpc('hercules_shopify_upsert_bulk_order_state_v1', {
+      p_tenant_id: run.tenant_id, p_shop_domain: STORE, p_resource_gid: order.id,
+      p_updated_at: order.updatedAt, p_payload_sha256: payloadHash,
+      p_canonical_state: canonical, p_run_id: runId
+    });
+    if (stateError || !['inserted','updated','skipped'].includes(action)) throw new Error('bulk_state_apply_failed');
+    if (action === 'inserted') inserted++;
+    else if (action === 'updated') updated++;
+    else skipped++;
+  };
   const streamed = await streamJsonl(response.body, apply, {
     maxBytes: 512 * 1024 * 1024,
     maxLineBytes: 1024 * 1024
