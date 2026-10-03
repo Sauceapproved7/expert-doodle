@@ -11,6 +11,7 @@ on:
       - "scripts/base-auth-staging-drill.mjs"
       - "scripts/base-storage-staging-drill.mjs"
       - "scripts/base-realtime-staging-drill.mjs"
+      - "scripts/base-functions-staging-drill.mjs"
       - "scripts/staging-plane.mjs"
       - "scripts/validate-staging-plane.mjs"
       - "governance/owner-code-policy.json"
