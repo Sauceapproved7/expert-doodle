@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {generateKeyPairSync,sign} from "node:crypto";
-import {createAbyssRuntimeBoundary} from "./abyss-runtime-boundary.mjs";
+import {createAbyssRuntimeBoundary} from "../hercules-bot/abyss-runtime-boundary.mjs";
 
 const ownerId="owner-123";
 function response(status,body){return {ok:status>=200&&status<300,status,json:async()=>body};}
