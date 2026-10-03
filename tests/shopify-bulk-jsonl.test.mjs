@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createHash, createHmac} from 'node:crypto';
 import {ReadableStream} from 'node:stream/web';
-import {streamJsonl, stableStringify, compareSnapshot, verifyShopifyWebhookHmac} from '../hercules-runtime/shopify-bulk-jsonl.mjs';
+import {streamJsonl, stableStringify, compareSnapshot, verifyShopifyWebhookHmac} from '../supabase/functions/_shared/shopify-bulk-jsonl.mjs';
 
 const bodyFrom = chunks => new ReadableStream({start(c){for(const x of chunks)c.enqueue(new TextEncoder().encode(x));c.close();}});
 
