@@ -3,13 +3,22 @@
     "github.vscode-pull-request-github",
     "github.vscode-codeql",
     "eamodio.gitlens",
+    "editorconfig.editorconfig",
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode-remote.remote-ssh",
+    "ms-azuretools.vscode-containers",
     "redhat.vscode-yaml",
     "redhat.vscode-openshift-connector",
     "ms-kubernetes-tools.vscode-kubernetes-tools",
-    "ms-azuretools.vscode-containers",
+    "redhat.ansible",
+    "Tim-Koehler.helm-intellisense",
+    "42Crunch.vscode-openapi",
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "humao.rest-client",
-    "editorconfig.editorconfig"
+    "timonwong.shellcheck",
+    "foxundoon.shell-format",
+    "SonarSource.sonarlint-vscode",
+    "semgrep.semgrep"
   ]
 }
