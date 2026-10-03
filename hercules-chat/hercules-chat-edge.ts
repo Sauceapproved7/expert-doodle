@@ -56,7 +56,22 @@ async function authenticateChat(req: Request, token: string): Promise<string> {
   });
   const { data, error } = await auth.auth.getUser(token);
   if (error || !data.user?.id) throw new Error("UNAUTHORIZED");
-  return data.user.id;
+  const userId = data.user.id;
+  if (DPOP_ENFORCED) {
+    const jkt = await rest(req, "rpc/hercules_get_dpop_key", {
+      method: "POST",
+      body: JSON.stringify({ p_user_id: userId }),
+    }, true);
+    if (typeof jkt !== "string" || !jkt) throw new Error("DPOP_KEY_NOT_ENROLLED");
+    await verifyDpopRequest(req, token, jkt, async (replayKey, ttlSeconds) => {
+      const claimed = await rest(req, "rpc/hercules_claim_dpop_replay", {
+        method: "POST",
+        body: JSON.stringify({ p_replay_key: replayKey, p_ttl_seconds: ttlSeconds }),
+      }, true);
+      return claimed === true;
+    });
+  }
+  return userId;
 }
 
 
@@ -331,22 +346,8 @@ Deno.serve(async (req: Request) => {
   let reservedRequestId: string | null = null;
 
   try {
-    const userId = decodeJwtSub(req);
-    if (DPOP_ENFORCED) {
-      const token = rawAccessToken(req);
-      const jkt = await rest(req, "rpc/hercules_get_dpop_key", {
-        method: "POST",
-        body: JSON.stringify({ p_user_id: userId }),
-      }, true);
-      if (typeof jkt !== "string" || !jkt) throw new Error("DPOP_KEY_NOT_ENROLLED");
-      await verifyDpopRequest(req, token, jkt, async (replayKey, ttlSeconds) => {
-        const claimed = await rest(req, "rpc/hercules_claim_dpop_replay", {
-          method: "POST",
-          body: JSON.stringify({ p_replay_key: replayKey, p_ttl_seconds: ttlSeconds }),
-        }, true);
-        return claimed === true;
-      });
-    }
+    const token = rawAccessToken(req);
+    const userId = await authenticateChat(req, token);
     const body = await req.json();
     const action = body?.action;
 
