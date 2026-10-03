@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hercules Bot</title>
+<style>
+:root{color-scheme:dark;font-family:Inter,system-ui,sans-serif}body{margin:0;background:#090909;color:#f5f5f5}main{max-width:900px;margin:auto;padding:32px}h1{font-size:42px;margin:0 0 8px}.sub{color:#999}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0}.card{background:#151515;border:1px solid #292929;border-radius:16px;padding:20px}.status{font-size:28px}.safe{color:#7ee787}.danger{color:#ff6b6b}input{width:100%;box-sizing:border-box;padding:16px;background:#0d0d0d;color:white;border:1px solid #333;border-radius:10px;font-size:16px}button{padding:12px 16px;border:0;border-radius:10px;margin:8px 8px 0 0;font-weight:700;cursor:pointer}.primary{background:#fff;color:#000}.stop{background:#d33;color:#fff}.log{white-space:pre-wrap;background:#0d0d0d;padding:16px;border-radius:10px;min-height:120px;color:#bbb}</style></head>
+<body><main><h1>HERCULES BOT</h1><div class="sub">Owner-controlled software operator</div>
+<div class="grid"><section class="card"><div class="sub">BODY</div><div id="body" class="status">Checking…</div><button class="stop" onclick="post('/api/estop')">EMERGENCY STOP</button><button onclick="post('/api/resume')">RESUME</button></section>
+<section class="card"><div class="sub">CONTROL</div><div id="pending" class="status">No pending command</div><button class="primary" onclick="post('/api/approve')">APPROVE</button></section></div>
+<section class="card"><input id="cmd" placeholder="Talk to Hercules Bot: e.g. inspect vault" onkeydown="if(event.key==='Enter')send()"><button class="primary" onclick="send()">SEND</button><div id="log" class="log"></div></section>
+</main><script>
+const $=id=>document.getElementById(id);
+async function api(url,body){const r=await fetch(url,{method:body?'POST':'GET',headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined});return r.json()}
+async function post(url){const r=await api(url,{});log(JSON.stringify(r,null,2));refresh()}
+async function send(){const v=$('cmd').value.trim();if(!v)return;const r=await api('/api/command',{text:v});$('cmd').value='';log(JSON.stringify(r,null,2));refresh()}
+async function refresh(){const s=await api('/api/state');$('body').textContent=s.body.connected?'CONNECTED':'DISCONNECTED';$('body').className='status '+(s.body.emergencyStop?'safe':'danger');$('pending').textContent=s.pending?s.pending.command:'No pending command'}
+function log(x){$('log').textContent=x}refresh();setInterval(refresh,3000)
+</script></body></html>
