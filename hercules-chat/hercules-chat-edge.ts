@@ -47,9 +47,20 @@ async function enforceDpop(req: Request, token: string): Promise<void> {
   });
 }
 
+async function authenticateChat(req: Request, token: string): Promise<string> {
+  const auth = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: "Bearer " + token } },
+  });
+  const { data, error } = await auth.auth.getUser(token);
+  if (error || !data.user?.id) throw new Error("UNAUTHORIZED");
+  return data.user.id;
+}
+
 
 
 import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 import { createMtlsHttpClient, mtlsClientConfig } from "./mtls-client.ts";
 import { verifyDpopRequest } from "./dpop.ts";
 
@@ -323,7 +334,7 @@ Deno.serve(async (req: Request) => {
   try {
     const token = accessToken(req);
     await enforceDpop(req, token);
-    const userId = decodeJwtSub(req, token);
+    const userId = await authenticateChat(req, token);
     const body = await req.json();
     const action = body?.action;
 
