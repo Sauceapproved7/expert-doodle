@@ -31,3 +31,6 @@ jobs:
 
       - name: Run HURC security-sensitive tests
         run: node --test tests/hercules-hurc-*.test.mjs
+
+      - name: Run Abyss policy security tests
+        run: node --test tests/evil-bot-abyss-policy.test.mjs
