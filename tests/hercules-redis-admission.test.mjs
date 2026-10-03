@@ -14,7 +14,7 @@ test("tenant keys use one opaque Redis Cluster hash tag and never expose the ten
   assert.ok(match);
   assert.ok(keys.rpm.includes("{" + match[1] + "}"));
   assert.ok(keys.concurrency.includes("{" + match[1] + "}"));
-  assert.ok(keys.budget.includes("{" + match[1] + "}"));
+  assert.ok(keys.dailyBudget.includes("{" + match[1] + "}"));\n  assert.ok(keys.monthlyBudget.includes("{" + match[1] + "}"));\n  assert.ok(keys.leases.includes("{" + match[1] + "}"));
   assert.ok(keys.reservation.includes("{" + match[1] + "}"));
   assert.equal(Object.values(keys).some((key) => key.includes("tenant_7f3a")), false);
   assert.equal(keys.reservation.endsWith("req_123"), true);
@@ -134,7 +134,7 @@ test("controller loads scripts once and uses EVALSHA for admission and settlemen
   });
 
   assert.equal(settlement.status, "settled");
-  assert.equal(calls.filter((call) => call[0] === "load").length, 2);
+  assert.equal(calls.filter((call) => call[0] === "load").length, 3);
   assert.equal(calls.filter((call) => call[0] === "evalsha").length, 2);
 });
 
@@ -167,7 +167,7 @@ test("controller reloads both scripts after NOSCRIPT", async () => {
     monthlyPeriod: "2026-10",
   });
   assert.equal(result.status, "allowed");
-  assert.equal(loadCount, 4);
+  assert.equal(loadCount, 6);
   assert.equal(evalCount, 2);
 });
 
