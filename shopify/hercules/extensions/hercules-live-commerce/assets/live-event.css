@@ -1,0 +1,64 @@
+.hercules-live-event {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  align-items: center;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 1rem;
+}
+
+.hercules-live-event__status {
+  display: inline-flex;
+  margin: 0 0 0.75rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.07);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.hercules-live-event__title {
+  margin: 0 0 0.75rem;
+}
+
+.hercules-live-event__time {
+  margin: 0 0 1rem;
+}
+
+.hercules-live-event__watch,
+.hercules-live-event__product-link {
+  display: inline-flex;
+  width: fit-content;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: #171717;
+  color: #fff;
+  text-decoration: none;
+}
+
+.hercules-live-event__product {
+  display: grid;
+  grid-template-columns: minmax(6rem, 0.8fr) 1.2fr;
+  gap: 1rem;
+  align-items: center;
+}
+
+.hercules-live-event__product img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+.hercules-live-event__product-details h3 {
+  margin: 0 0 0.5rem;
+}
+
+.hercules-live-event__product-details p {
+  margin: 0 0 0.75rem;
+}
+
+.hercules-live-event__unavailable {
+  opacity: 0.7;
+}
