@@ -11,7 +11,16 @@ test("DPoP verifier enforces proof type, asymmetric algorithm, method, URI, fres
 test("DPoP verifier has replay protection and constant-time comparisons",()=>{
   assert.match(source,/replay/i); assert.match(source,/timingSafe|constantTime/i);
 });
-test("chat DPoP implementation is not silently treated as enabled",()=>{
-  const gated = edge.includes("HERCULES_DPOP_ENFORCED") && edge.includes("verifyDpopRequest");
-  assert.equal(gated, false);
+test("chat DPoP enforcement is explicitly gated and uses verified Supabase identity",()=>{
+  assert.match(edge,/HERCULES_DPOP_ENFORCED/);
+  assert.match(edge,/verifyDpopRequest/);
+  assert.match(edge,/auth\.getUser\(token\)/);
+  assert.match(edge,/cnf/);
+  assert.match(edge,/\.jkt/);
+  assert.match(edge,/reserveWeightedTokens/);
+});
+
+test("chat DPoP enforcement fails closed when token binding is absent",()=>{
+  assert.match(edge,/DPOP_TOKEN_BINDING_REQUIRED/);
+  assert.match(edge,/DPOP_REPLAY_STORE_UNAVAILABLE/);
 });
