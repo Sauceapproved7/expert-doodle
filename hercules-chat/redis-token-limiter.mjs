@@ -20,8 +20,9 @@ local rpm_refill_per_ms = tonumber(ARGV[6])
 local concurrency_limit = tonumber(ARGV[7])
 local daily_limit = tonumber(ARGV[8])
 local ttl_ms = tonumber(ARGV[9])
-local reservation_id = ARGV[10]
-local model_class = ARGV[11]
+local daily_ttl_ms = tonumber(ARGV[10])
+local reservation_id = ARGV[11]
+local model_class = ARGV[12]
 
 if cost <= 0 then return {0, 0, 0, "invalid_cost"} end
 if cost > capacity then return {0, 0, -1, "request_exceeds_burst_capacity"} end
@@ -64,7 +65,7 @@ rpm = rpm - 1
 redis.call("HSET", KEYS[1], "tokens", tpm, "last_refill_ms", now)
 redis.call("HSET", KEYS[2], "tokens", rpm, "last_refill_ms", now)
 redis.call("SET", KEYS[3], active + 1, "PX", ttl_ms)
-redis.call("SET", KEYS[4], daily + cost, "PX", ttl_ms)
+redis.call("SET", KEYS[4], daily + cost, "PX", daily_ttl_ms)
 
 redis.call("HSET", KEYS[5],
   "status", "active",
@@ -81,6 +82,7 @@ local actual = tonumber(ARGV[1])
 local now = tonumber(ARGV[2])
 local capacity = tonumber(ARGV[3])
 local ttl_ms = tonumber(ARGV[4])
+local daily_ttl_ms = tonumber(ARGV[5])
 
 local values = redis.call("HMGET", KEYS[4], "status", "reserved_tokens")
 local status = values[1]
@@ -99,7 +101,7 @@ tokens = math.min(capacity, tokens + refund)
 redis.call("HSET", KEYS[1], "tokens", tokens, "last_refill_ms", now)
 
 local daily = math.max(0, tonumber(redis.call("GET", KEYS[2]) or "0") - refund)
-redis.call("SET", KEYS[2], daily, "PX", ttl_ms)
+redis.call("SET", KEYS[2], daily, "PX", daily_ttl_ms)
 
 local active = math.max(0, tonumber(redis.call("GET", KEYS[3]) or "0") - 1)
 redis.call("SET", KEYS[3], active, "PX", ttl_ms)
@@ -224,6 +226,7 @@ export function createRedisTokenLimiter({url, token, config = limiterConfig()} =
       config.concurrentRequests,
       config.dailyTokens,
       config.reservationTtlMs,
+      config.keyTtlMs,
       requestId,
       modelClass,
     ]);
@@ -244,6 +247,7 @@ export function createRedisTokenLimiter({url, token, config = limiterConfig()} =
       nowMs,
       config.tokenBurst,
       config.reservationTtlMs,
+      config.keyTtlMs,
     ]);
     return normalizeLimiterDecision(result);
   }
