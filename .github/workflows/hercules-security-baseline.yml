@@ -43,3 +43,6 @@ jobs:
 
       - name: Run Abyss runtime boundary tests
         run: node --test tests/evil-bot-abyss-runtime-boundary.test.mjs
+
+      - name: Run operator emergency-stop tests
+        run: node --test tests/smallz-operator-emergency-stop.test.mjs
