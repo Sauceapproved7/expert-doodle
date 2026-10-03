@@ -232,6 +232,13 @@
       "dependencies": [
         "nodejs"
       ]
+    },
+    {
+      "path": "scripts/hercules-preflight.mjs",
+      "kind": "owned-internal-process",
+      "dependencies": [
+        "nodejs"
+      ]
     }
   ],
   "shellCommandBoundaries": [
