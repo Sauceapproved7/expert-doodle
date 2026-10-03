@@ -491,6 +491,9 @@ Deno.serve(async (req: Request) => {
 
       const requestId = crypto.randomUUID();
       reservedRequestId = requestId;
+      const estimatedInputTokens = Math.max(1, Math.ceil(new TextEncoder().encode(prompt).length / 4));
+      const reservedOutputTokens = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_MAX_OUTPUT"), 4096, 1, 128000);
+      const reservedTokens = estimatedInputTokens + reservedOutputTokens;
 
       await rest(
         req,
@@ -504,6 +507,7 @@ Deno.serve(async (req: Request) => {
             p_provider: "hercules-ai",
             p_model: "routed",
             p_reserved_cost_microusd: 0,
+            p_reserved_tokens: reservedTokens,
           }),
         },
         true,
