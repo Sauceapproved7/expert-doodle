@@ -43,7 +43,7 @@ export function createStudioCommercialManifest(){
 
 export function renderStudioPricingShell(){
   const cards=STUDIO_COMMERCIAL_PLANS.map((p,i)=>'<article class="plan '+(i===1?'featured':'')+'"><span class="count">0'+(i+1)+'</span><h2>'+esc(p.name)+'</h2><div class="price">$' + esc(p.monthlyUsd) + '<small>/month</small></div><p>'+esc(p.tag)+'</p><ul>'+p.features.map(f=>'<li>'+esc(f)+'</li>').join('')+'</ul><a class="cta" href="/market">Request founding access</a></article>').join('');
-  return wrap("SauceApproved Studio Pricing",'<section class="hero"><div class="eyebrow">Founding Customer Release</div><h1>Studio plans built to grow with the work.</h1><p class="lead">Choose the Studio level that matches your creative workflow. Paid checkout remains intentionally locked until SauceApproved verifies its business payout, billing identity, checkout and refund path.</p><div class="notice">Pricing is public for evaluation. No charge is created from this page. Founding-access requests remain controlled until paid launch verification is complete.</div></section><section class="grid">'+cards+'</section><p class="foot"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p>');
+  return wrap("SauceApproved Studio Pricing",'<section class="hero"><div class="eyebrow">Founding Customer Release</div><h1>Studio plans built to grow with the work.</h1><p class="lead">These monthly Starter, Pro, and Business plans are the future subscription catalog. Their checkout remains intentionally locked while billing verification is completed. The separate $99 one-time Founding Pilot is already live through Shopify.</p><div class="notice">Monthly-plan pricing is public for evaluation and no subscription charge is created from this page. <a href="https://sauceapproved-2.myshopify.com/products/sauceapproved-studio-founding-pilot-access">The $99 one-time Founding Pilot is live here</a>.</div></section><section class="grid">'+cards+'</section><p class="foot"><a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p>');
 }
 
 const LEGAL_DOCUMENTS=Object.freeze({
@@ -107,7 +107,13 @@ export function createStudioOnboardingManifest(){
       "/movie-machine",
       "/holostage",
       "/legacy-vault",
-      "/studio-director"
+      "/reality-forge",
+      "/performance-lab",
+      "/scene-forge",
+      "/sound-world",
+      "/actor-lab",
+      "/studio-director",
+      "/integrations"
     ],
     firstRun:[
       {step:1,id:"choose-workflow",label:"Choose a Studio workflow",path:"/"},
@@ -120,7 +126,7 @@ export function createStudioOnboardingManifest(){
       "No provider is represented as connected unless Hercules verifies it.",
       "Mutation and execution stay fail-closed without trusted authorization.",
       "AI and rendered outputs require human review before commercial publication.",
-      "Paid checkout stays disabled until owner approvals and the payment path are verified."
+      "Monthly subscription checkout stays disabled until its commercial approvals and payment path are verified."
     ],
     commercial:{
       plans:commercial.plans,
@@ -136,7 +142,7 @@ export function renderStudioGettingStartedShell(){
   const manifest=createStudioOnboardingManifest();
   const steps=manifest.firstRun.map(step=>
     '<article class="plan"><span class="count">0'+esc(step.step)+'</span><h2>'+esc(step.label)+'</h2><p>'+esc(
-      step.id==="choose-workflow" ? "Start with the workflow that matches the job: video production, Content Multiplier, Brand Brain, AI Sales Agent, Vintage Camera, or Kids Studio." :
+      step.id==="choose-workflow" ? "Start with the workflow that matches the job: video production, Campaign Forge, Reality Forge, Performance Lab, SceneForge, SoundWorld, Actor Lab, Content Multiplier, Brand Brain, AI Sales Agent, Vintage Camera, Kids Studio, or Studio Director." :
       step.id==="build-brief" ? "Lock the objective, audience, offer, format, constraints and approved brand facts before asking Hercules to produce." :
       step.id==="review-shot-plan" ? "Hercules keeps shot requirements, provider routing, quality evidence, recovery and provenance visible instead of hiding the work behind one button." :
       step.id==="connect-approved-provider" ? "Provider-dependent actions remain unavailable until an authorized rendering or action adapter is connected." :
@@ -147,16 +153,16 @@ export function renderStudioGettingStartedShell(){
   return wrap("SauceApproved Studio — Getting Started",
     '<section class="hero"><div class="eyebrow">FOUNDING CUSTOMER ONBOARDING</div><h1>Start strong. Keep the evidence.</h1><p class="lead">SauceApproved Studio is built around a visible production chain: brief → plan → shots → provider routing → quality checks → assembly → evidence. The first-run path below keeps that workflow clear without pretending unavailable providers or billing are ready.</p></section>'+
     '<section class="grid">'+steps+'</section>'+
-    '<article class="doc"><h2>Hercules trust rules</h2><ul>'+rules+'</ul><div class="notice">Paid checkout is still locked. You can review the product and founding-access path now; no subscription charge can be created until the commercial and payment gates are cleared.</div><p class="foot"><a href="/market">Founding access</a> · <a href="/pricing">Pricing</a> · <a href="/support">Support</a> · <a href="/">Open Studio</a></p></article>');
+    '<article class="doc"><h2>Hercules trust rules</h2><ul>'+rules+'</ul><div class="notice">The $99 one-time Founding Pilot is live through Shopify. The separate monthly subscription checkout remains locked until its commercial and payment gates are cleared.</div><p class="foot"><a href="/market">Founding access</a> · <a href="/pricing">Pricing</a> · <a href="/support">Support</a> · <a href="/">Open Studio</a></p></article>');
 }
 
 export function renderStudioSupportShell(){
   const commercial=createStudioCommercialManifest();
   const rows=[
-    ["Studio access","Use the Studio root and public modules to review the product. Paid subscriber access is not enabled until checkout verification passes."],
+    ["Studio access","Use the Studio root and public modules to review the product. Verified $99 Founding Pilot buyers can activate private access; future monthly subscriber access remains locked."],
     ["Provider connection","If a render or action provider is unavailable, Hercules keeps the affected action locked rather than fabricating a result."],
     ["Run recovery","Verified run identity, recovery state and evidence are preserved by the Hercules Video contract. Resume remains gated by integrity and authorization."],
-    ["Billing","The current pricing is public for review, but checkout stays fail-closed until owner approval, Stripe readiness, and the controlled payment/refund verification are complete."],
+    ["Billing","The $99 one-time Founding Pilot checkout is live through Shopify. The separate monthly subscription checkout stays fail-closed until its billing and controlled payment/refund verification are complete."],
     ["Terms and Privacy","The public Terms and Privacy pages are rendered from the canonical version-controlled candidates used by the Hercules approval gate."],
     ["Ads Engine","For paid-ad planning and campaign governance, use the separate SauceApproved Ads Engine product surface."]
   ];
@@ -225,15 +231,21 @@ export function renderStudioLandingShell(){
     ["Movie Machine","/movie-machine","Turn one story idea into a full cinematic blueprint with emotional camera logic and proof."],
     ["HoloStage","/holostage","Pre-plan blocking, cameras and lighting on a virtual production floor with feasibility guards."],
     ["Legacy Vault","/legacy-vault","Build documentary-style legacy stories while keeping consent and source provenance attached."],
-    ["Studio Director","/studio-director","Route one project across the right Hercules Studio systems with proof gates, blast-radius rehearsal, and creative-intent drift protection."]
+    ["Reality Forge","/reality-forge","Transform worlds while protecting identity, performance timing, product geometry, and continuity."],
+    ["Performance Lab","/performance-lab","Direct emotion, voice, timing, blocking, and gestures as one continuity-protected performance system."],
+    ["SceneForge","/scene-forge","Stress-test continuity and lock director intent before execution burns time or budget."],
+    ["SoundWorld","/sound-world","Design dialogue, ambience, foley, music, silence, effects, and transitions as one emotional system."],
+    ["Actor Lab","/actor-lab","Protect character identity, role, voice, wardrobe, mannerisms, and likeness consent across scenes."],
+    ["Studio Director","/studio-director","Route one project across the right Hercules Studio systems with proof gates, blast-radius rehearsal, and creative-intent drift protection."],
+    ["Integrations Hub","/integrations","See connection readiness and permission boundaries without treating inventory as authorization."]
   ];
   const productCards=products.map((item,i)=>'<article class="plan"><span class="count">'+String(i+1).padStart(2,"0")+'</span><h2>'+esc(item[0])+'</h2><p>'+esc(item[2])+'</p><a class="cta" href="'+esc(item[1])+'">Open</a></article>').join("");
   return wrap("SauceApproved Studio",
-    '<section class="hero"><div class="eyebrow">SAUCEAPPROVED / HERCULES-POWERED CREATIVE SYSTEM</div><h1>Tell Hercules what you want. Get finished work.</h1><p class="lead">Start with an idea. Hercules turns it into a clear path from planning to creation to review, so you can focus on the result instead of learning the machinery underneath it.</p><div class="notice">Founding Customer release. Paid checkout remains locked until SauceApproved finishes owner approvals and live payment verification.</div><p class="foot"><a href="/demo">See how it works</a> · <a href="/getting-started">Start here</a> · <a href="/market">Studios Market — explore Hercules tools</a> · <a href="/support">Support</a></p></section>'+
+    '<section class="hero"><div class="eyebrow">SAUCEAPPROVED / HERCULES-POWERED CREATIVE SYSTEM</div><h1>Tell Hercules what you want. Get finished work.</h1><p class="lead">Start with an idea. Hercules turns it into a clear path from planning to creation to review, so you can focus on the result instead of learning the machinery underneath it.</p><div class="notice">Founding Pilot access is live now for $99 one time through Shopify. The separate monthly Starter, Pro, and Business subscription plans remain locked until billing verification is complete. <a href="https://sauceapproved-2.myshopify.com/products/sauceapproved-studio-founding-pilot-access">Get Founding Pilot access</a>.</div><p class="foot"><a href="/demo">See how it works</a> · <a href="/getting-started">Start here</a> · <a href="/market">Studios Market — explore Hercules tools</a> · <a href="/support">Support</a></p></section>'+
     '<article class="doc"><div class="eyebrow">THE SIMPLE VERSION</div><h2>Idea → Hercules → Finished Result.</h2><p>Tell Hercules what you want to make. Hercules organizes the work, keeps the important checks visible, and brings you back a result you can review. You do not need to understand every model, provider, server or workflow behind it.</p></article>'+
     '<section class="grid">'+productCards+'</section>'+
     '<article class="doc"><div class="eyebrow">TWO HERCULES DIFFERENTIATORS</div><h2>Evidence-first production</h2><p>Run identity, shot state, quality gates, recovery and final-output proof stay visible so teams can see what was actually verified.</p><h2>Provider-transparent routing</h2><p>External models stay replaceable rendering backends. Hercules keeps the workflow brain, routing, provenance and fail-closed controls in the owned SauceApproved layer.</p></article>'+
     '<section class="grid">'+planCards+'</section>'+
-    '<article class="doc"><h2>Commercial state</h2><p>Plans are public for evaluation. Checkout policy: <strong>'+esc(commercial.checkoutPolicy)+'</strong>. Paid checkout enabled: <strong>'+esc(commercial.paidCheckoutEnabled)+'</strong>.</p><p class="foot"><a href="/pricing">Pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p></article>');
+    '<article class="doc"><h2>Commercial state</h2><p>Monthly plans are public for evaluation. Monthly checkout policy: <strong>'+esc(commercial.checkoutPolicy)+'</strong>. Monthly checkout enabled: <strong>'+esc(commercial.paidCheckoutEnabled)+'</strong>. The separate $99 one-time Founding Pilot is live through Shopify.</p><p class="foot"><a href="/pricing">Pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p></article>');
 }
 

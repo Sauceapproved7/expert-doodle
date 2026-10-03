@@ -1,0 +1,35 @@
+{
+  "name": "Hercules Operator Bot",
+  "version": "1.0.0",
+  "defaultMode": "direct",
+  "defaultDecision": "deny",
+  "ownerControls": {
+    "killSwitch": true,
+    "approvalForMutations": true,
+    "approvalForIrreversibleActions": true
+  },
+  "capabilityDomains": [
+    "vault-read",
+    "repo-read",
+    "repo-propose",
+    "build",
+    "test",
+    "deploy-propose",
+    "commerce-read",
+    "marketing-draft",
+    "diagnostics",
+    "observability"
+  ],
+  "forbidden": [
+    "disable-safety",
+    "bypass-auth",
+    "exfiltrate-secrets",
+    "self-grant-permissions",
+    "erase-audit-log"
+  ],
+  "audit": {
+    "appendOnlyReceipts": true,
+    "recordAuthorizationDecision": true,
+    "redactSecrets": true
+  }
+}

@@ -103,14 +103,20 @@ test("Studio execution endpoints stay locked when trusted bridge is unavailable"
   }
 });
 
-test("Studio status fails closed when no verified run state exists",async()=>{
+test("Studio status stays monitorable and fail-closed when no verified run state exists",async()=>{
   const handle=createStudioHttpHandler({
     statusReader:async()=>null,
     executionBridgeProvider:async()=>({connected:false,reason:"execution_bridge_unavailable"})
   });
   const response=await handle({method:"GET",pathname:"/api/studio/status"});
-  assert.equal(response.status,404);
-  assert.equal(JSON.parse(response.body).error,"studio_run_state_unavailable");
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.ok,true);
+  assert.equal(body.product,"SauceApproved Studio");
+  assert.equal(body.executionPolicy,"fail-closed");
+  assert.equal(body.runStateAvailable,false);
+  assert.equal(body.executionBridgeConnected,false);
+  assert.equal(body.reason,"studio_run_state_unavailable");
 });
 
 test("Studio health does not expose run paths or credentials",async()=>{
@@ -378,7 +384,8 @@ test("Studio onboarding and support surfaces are public, mobile-safe and commerc
   assert.match(onboarding.headers["content-type"],/text\/html/);
   assert.match(onboarding.body,/FOUNDING CUSTOMER ONBOARDING/);
   assert.match(onboarding.body,/Start strong\. Keep the evidence\./);
-  assert.match(onboarding.body,/Paid checkout is still locked/);
+  assert.match(onboarding.body,/\$99 one-time Founding Pilot is live through Shopify/);
+  assert.match(onboarding.body,/separate monthly subscription checkout remains locked/);
   assert.match(onboarding.body,/href="\/support"/);
 
   const support=await handle({method:"GET",pathname:"/support"});
@@ -397,7 +404,7 @@ test("Studio onboarding and support surfaces are public, mobile-safe and commerc
   assert.ok(body.publicRoutes.includes("/getting-started"));
   assert.ok(body.publicRoutes.includes("/support"));
   assert.equal(body.firstRun.length,5);
-  assert.ok(body.trustRules.some(rule=>/Paid checkout stays disabled/.test(rule)));
+  assert.ok(body.trustRules.some(rule=>/Monthly subscription checkout stays disabled/.test(rule)));
 });
 
 test("Studio root links customers to onboarding and support",async()=>{
@@ -422,7 +429,9 @@ test("Studio public root is the commercial founding-customer front door",async()
   assert.match(response.body,/href="\/operator"/);
   assert.match(response.body,/href="\/getting-started"/);
   assert.match(response.body,/href="\/pricing"/);
-  assert.match(response.body,/Paid checkout remains locked/);
+  assert.match(response.body,/Founding Pilot access is live now for \$99 one time through Shopify/);
+  assert.match(response.body,/monthly Starter, Pro, and Business subscription plans remain locked/);
+  assert.match(response.body,/sauceapproved-studio-founding-pilot-access/);
   assert.match(response.body,/Content Multiplier/);
   assert.match(response.body,/href="\/content-multiplier"/);
   assert.match(response.body,/href="\/vintage-camera"/);
@@ -511,4 +520,60 @@ test("Studio public surfaces advertise Studio Director",async()=>{
   const onboarding=await handle({method:"GET",pathname:"/api/studio/onboarding/manifest"});
   assert.equal(onboarding.status,200);
   assert.ok(JSON.parse(onboarding.body).publicRoutes.includes("/studio-director"));
+});
+
+test("Studio exposes complete Hercules system registry and fail-closed status",async()=>{
+  const handle=createStudioHttpHandler();
+  const manifestResponse=await handle({method:"GET",pathname:"/api/studio/systems/manifest"});
+  assert.equal(manifestResponse.status,200);
+  const manifest=JSON.parse(manifestResponse.body);
+  assert.equal(manifest.implementationOwner,"SauceApproved enterprise LLC");
+  assert.ok(manifest.systems.some(system=>system.id==="studio-global-closure"));
+  assert.ok(manifest.systems.some(system=>system.id==="studio-memory-grid"));
+  const statusResponse=await handle({method:"GET",pathname:"/api/studio/systems/status"});
+  assert.equal(statusResponse.status,200);
+  const status=JSON.parse(statusResponse.body);
+  assert.equal(status.ready,false);
+  assert.equal(status.failClosed,true);
+  assert.ok(status.blockedSystemIds.includes("hardware-engineering-program"));
+});
+
+
+test("Studio exposes Guardian Watchtower as read-only evidence only",async()=>{
+  const handle=createStudioHttpHandler({
+    guardianWatchtowerReader:async()=>({
+      status:"HEALTHY",
+      results:[{id:"studio",status:"HEALTHY",executionAuthority:false}],
+      executionAuthority:false
+    })
+  });
+  const response=await handle({method:"GET",pathname:"/api/studio/guardian/status"});
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.mode,"read-only");
+  assert.equal(body.executionAuthority,false);
+  assert.equal(body.watchtower.status,"HEALTHY");
+});
+
+test("Studio Guardian status fails closed when Watchtower evidence is unavailable",async()=>{
+  const handle=createStudioHttpHandler({
+    guardianWatchtowerReader:async()=>{throw new Error("watchtower unavailable")}
+  });
+  const response=await handle({method:"GET",pathname:"/api/studio/guardian/status"});
+  assert.equal(response.status,503);
+  const body=JSON.parse(response.body);
+  assert.equal(body.ok,false);
+  assert.equal(body.error,"guardian_watchtower_unavailable");
+  assert.equal(body.executionAuthority,false);
+});
+
+
+test("Studio default runtime Guardian reader emits real read-only Watchtower evidence",async()=>{
+  const {createStudioGuardianWatchtowerReader}=await import("../hercules-video/studio-guardian-watchtower.mjs");
+  const reader=createStudioGuardianWatchtowerReader();
+  const result=await reader();
+  assert.equal(result.executionAuthority,false);
+  assert.equal(result.results[0].id,"studio");
+  assert.equal(result.results[0].status,"HEALTHY");
+  assert.match(result.results[0].guardian.proof.id,/^guardian-proof-[a-f0-9]{24}$/);
 });

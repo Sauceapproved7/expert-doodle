@@ -247,3 +247,11 @@ test("Deploy Plane production config keeps control credentials out of safe summa
   assert.equal("token" in safe, false);
   assert.equal(JSON.stringify(safe).includes(controlToken), false);
 });
+
+
+test("Deploy Plane never treats AppDeploy as Hercules catalog pricing authority", async () => {
+  const gate = await readFile(new URL("../supabase/functions/hercules-launch-gate/index.ts", import.meta.url), "utf8");
+  assert.match(gate, /appDeployAttestationHasNoPricingAuthority/);
+  assert.match(gate, /paymentProviderReady/);
+  assert.doesNotMatch(gate, /COMMERCE_ENABLED\s*=\s*true/);
+});

@@ -154,3 +154,16 @@ export async function activateCleanerDevice({
   if(!activated?.deviceCredential)throw new Error("Cleaner device credential missing from activation response");
   return activated;
 }
+
+export function buildDpopBootstrapProof({identity,challenge}={}){
+  if(identity?.schema!=="sauceapproved.hercules-cleaner.device-identity")throw new Error("valid Cleaner device identity required");
+  const value=String(challenge||"");
+  if(!value||value.length>512)throw new Error("bounded DPoP bootstrap challenge required");
+  return {
+    scheme:"hercules-cleaner-ed25519-bootstrap-v1",
+    deviceId:String(identity.deviceId),
+    publicKeyPem:String(identity.publicKeyPem),
+    challenge:value,
+    signature:signDeviceChallenge({privateKeyPem:identity.privateKeyPem,challenge:value}),
+  };
+}

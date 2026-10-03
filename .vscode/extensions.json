@@ -1,0 +1,31 @@
+{
+  "recommendations": [
+    "github.vscode-pull-request-github",
+    "github.vscode-codeql",
+    "eamodio.gitlens",
+    "editorconfig.editorconfig",
+    "ms-vscode-remote.remote-containers",
+    "ms-vscode-remote.remote-ssh",
+    "ms-azuretools.vscode-containers",
+    "redhat.vscode-yaml",
+    "redhat.vscode-openshift-connector",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "redhat.ansible",
+    "Tim-Koehler.helm-intellisense",
+    "42Crunch.vscode-openapi",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "humao.rest-client",
+    "timonwong.shellcheck",
+    "foxundermoon.shell-format",
+    "SonarSource.sonarlint-vscode",
+    "semgrep.semgrep",
+    "github.vscode-github-actions",
+    "usernamehw.errorlens",
+    "hashicorp.terraform"
+  ],
+  "unwantedRecommendations": [
+    "redhat.project-initializer",
+    "formulahendry.code-runner"
+  ]
+}

@@ -57,3 +57,20 @@ test("launch gate reconciles its system-owned provider readiness approval from l
   assert.match(gate,/p_verified:paymentProviderReady/);
   assert.match(gate,/owner_approval_required:false/);
 });
+
+
+test("global launch gate accepts the approved Studio Pilot Shopify lane without owner self-purchase",()=>{
+  assert.match(gate,/STUDIO_PILOT_PRODUCT_CODE/);
+  assert.match(gate,/studioPilotOwnerApprovalsComplete/);
+  assert.match(gate,/studioPilotProviderReady/);
+  assert.match(gate,/studioPilotLaunchCapabilityReady/);
+  assert.match(gate,/studioPilotStorefrontPublished/);
+  assert.match(gate,/studioPilotPaidLaunchReady/);
+  assert.match(gate,/postLaunchObservationRequired/);
+  assert.match(gate,/first_real_customer_order/);
+});
+
+test("legacy Titan lane still requires verified live payment path",()=>{
+  assert.match(gate,/legacyTitanPaidLaunchReady/);
+  assert.match(gate,/paymentProviderReady&&paymentPathVerified&&shopifyOfferReconciled/);
+});

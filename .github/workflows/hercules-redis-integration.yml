@@ -1,0 +1,32 @@
+name: Hercules Redis Integration
+on:
+  pull_request:
+    paths:
+      - "hercules-chat/redis/**"
+      - "tests/hercules-redis-*.test.mjs"
+      - ".github/workflows/hercules-redis-integration.yml"
+permissions:
+  contents: read
+jobs:
+  redis-integration:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Install Redis CLI
+        run: sudo apt-get update && sudo apt-get install -y redis-tools
+      - name: Unit contract
+        run: node --test tests/hercules-redis-admission.test.mjs
+      - name: Real Redis integration
+        env:
+          HERCULES_REDIS_INTEGRATION: "1"
+        run: node --test tests/hercules-redis-integration.test.mjs

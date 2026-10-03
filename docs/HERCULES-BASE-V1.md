@@ -56,17 +56,40 @@ Every compiled blueprint declares its escape path:
 
 This makes portability a build property instead of a future migration project.
 
+### Recommendation Engine
+
+Hercules Base includes an owned recommendation engine for ranking software
+resources against explicit task signals.
+
+Version 1:
+
+- accepts a task query plus explicit signals such as `shopify`, `security`,
+  `typescript`, or `api`;
+- ranks internal modules, libraries, security controls, documentation,
+  workflows, services, and tools;
+- filters resources by caller-authorized scope before ranking;
+- suppresses resources the caller already knows about;
+- favors owned and reviewed resources over unreviewed observations;
+- returns deterministic scores and short explanations;
+- emits only bounded result fields and does not echo arbitrary resource
+  metadata or credential-shaped fields;
+- has no dependency on the historical GitHub Recommender System dataset.
+
+The engine is intentionally local and deterministic in v1. External discovery
+providers can be added later as adapters, but provider access does not grant
+additional Hercules permissions.
+
 ## Current capability state
 
 Implemented and evidenced:
 
 - Hercules Base Auth with scrypt password hashing, JWT access tokens, rotating opaque refresh tokens, server-only credential/session RPCs, and fixture-only staging identities;
-
 - PostgreSQL database substrate in isolated Hercules staging;
 - PostgREST data API substrate;
 - Blueprint Engine;
 - Guardian policy compiler;
 - Portability Capsule;
+- Recommendation Engine;
 - authenticated Hercules Base control API;
 - staging backup/restore verification inherited from the existing staging plane.
 
@@ -88,9 +111,10 @@ Public:
 Control-token protected:
 
 - `POST /v1/blueprints/compile`
+- `POST /v1/recommendations`
 
-Blueprint requests are bounded and validated. The response never contains the
-control credential.
+Recommendation requests are bounded, validated, scope-filtered, and return only
+the normalized recommendation result surface.
 
 ## Self-hosted staging
 
@@ -111,6 +135,7 @@ availability or complete Supabase replacement parity.
 Owned Hercules source:
 
 - `hercules-base/core.mjs`
+- `hercules-base/recommender.mjs`
 - `hercules-base/router.mjs`
 - `hercules-base/server.mjs`
 - Hercules Base tests, docs, policy logic, and future owned control software.

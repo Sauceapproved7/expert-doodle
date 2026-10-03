@@ -1,5 +1,6 @@
 import {
   STUDIO_SHOPIFY_PRODUCT,
+  isStudioShopDomainAllowed,
   normalizeStudioBuyerEmail,
   studioEntitlementKey,
   validateStudioShopifyPaidOrder
@@ -9,8 +10,11 @@ const enc=new TextEncoder();
 const MAX_BODY_BYTES=512*1024;
 const TITAN_SHOPIFY_PRODUCT=Object.freeze({
   productId:'10261114782016',
+  variantId:'53144447811904',
   sku:'HERCULES-TITAN-FOUNDING',
-  productCode:'hercules-titan-founding-access'
+  productCode:'hercules-titan-founding-access',
+  planCode:'founding-access',
+  entitlementVersion:'titan-shopify-founding-access-v1'
 });
 
 function out(body:unknown,status=200){
@@ -47,18 +51,40 @@ async function callbackAuthorized(admin:any,supplied:string){
 }
 function exactTitanLineItem(item:any){
   const productId=String(item?.product_id??'').trim();
+  const variantId=String(item?.variant_id??'').trim();
   const sku=String(item?.sku??'').trim();
   const quantity=Number(item?.quantity||0);
-  if(productId!==TITAN_SHOPIFY_PRODUCT.productId||sku!==TITAN_SHOPIFY_PRODUCT.sku||!Number.isSafeInteger(quantity)||quantity<1){
+  if(
+    productId!==TITAN_SHOPIFY_PRODUCT.productId||
+    variantId!==TITAN_SHOPIFY_PRODUCT.variantId||
+    sku!==TITAN_SHOPIFY_PRODUCT.sku||
+    !Number.isSafeInteger(quantity)||
+    quantity<1
+  ){
     return null;
   }
   return {
     lineItemId:String(item?.id??'').trim()||null,
     productId,
-    variantId:String(item?.variant_id??'').trim()||null,
+    variantId,
     sku,
     quantity
   };
+}
+
+async function titanEntitlementKey(order:any,lineItem:any){
+  if(!order?.shopDomain||!order?.orderId||!lineItem?.variantId||!lineItem?.sku){
+    throw new Error('titan_entitlement_identity_incomplete');
+  }
+  return sha256Hex(JSON.stringify({
+    version:TITAN_SHOPIFY_PRODUCT.entitlementVersion,
+    provider:'shopify',
+    shopDomain:String(order.shopDomain),
+    orderId:String(order.orderId),
+    productId:String(lineItem.productId),
+    variantId:String(lineItem.variantId),
+    sku:String(lineItem.sku)
+  }));
 }
 
 function moneyToCents(value:any){
@@ -139,7 +165,7 @@ export async function handleStudioShopifyPaidWebhook(req:Request,url:URL,admin:a
   const webhookId=String(req.headers.get('x-shopify-webhook-id')||'').trim();
   const eventId=String(req.headers.get('x-shopify-event-id')||'').trim()||null;
   if(!webhookId||webhookId.length>160)return out({error:'shopify_webhook_id_required'},400);
-  if(shopDomain!==STUDIO_SHOPIFY_PRODUCT.shopDomain)return out({error:'shop_domain_mismatch'},403);
+  if(!isStudioShopDomainAllowed(shopDomain))return out({error:'shop_domain_mismatch'},403);
   if(topic!=='orders/paid')return out({error:'webhook_topic_mismatch'},400);
 
   const len=Number(req.headers.get('content-length')||'0');
@@ -240,28 +266,63 @@ export async function handleStudioShopifyPaidWebhook(req:Request,url:URL,admin:a
     });
   }
 
-  if(rows.length){
+  const titanRows=[];
+  for(const line of titanGiftLines){
+    titanRows.push({
+      entitlement_key:await titanEntitlementKey(order,line),
+      provider:'shopify',
+      shop_domain:order.shopDomain,
+      provider_order_id:order.orderId,
+      provider_line_item_id:line.lineItemId,
+      product_code:TITAN_SHOPIFY_PRODUCT.productCode,
+      product_id:line.productId,
+      variant_id:line.variantId,
+      sku:line.sku,
+      quantity:line.quantity,
+      buyer_email_sha256:buyerEmailSha256,
+      status:'paid_pending_claim',
+      source_webhook_id:webhookId,
+      currency:order.currency,
+      paid_total:order.totalPrice,
+      metadata:{
+        entitlement_version:TITAN_SHOPIFY_PRODUCT.entitlementVersion,
+        plan_code:TITAN_SHOPIFY_PRODUCT.planCode,
+        source:'shopify_orders_paid',
+        callback_credential_verified:true,
+        shop_header_verified:true,
+        topic_header_verified:true,
+        shopify_hmac_verified:false,
+        raw_email_stored:false
+      }
+    });
+  }
+
+  const entitlementRows=[...rows,...titanRows];
+  if(entitlementRows.length){
     const {error:entitlementError}=await admin.from('hercules_studio_purchase_entitlements')
-      .upsert(rows,{onConflict:'entitlement_key',ignoreDuplicates:true});
+      .upsert(entitlementRows,{onConflict:'entitlement_key',ignoreDuplicates:true});
     if(entitlementError)return out({error:'entitlement_persist_failed'},500);
   }
 
   await writeEvent(admin,{
     webhook_id:webhookId,event_id:eventId,topic,shop_domain:shopDomain,payload_sha256:payloadSha256,
-    state:'entitled',entitlement_count:rows.length,reason_code:null,
+    state:'entitled',entitlement_count:entitlementRows.length,reason_code:null,
     metadata:{
       order_id:order.orderId,
       entitlement_version:STUDIO_SHOPIFY_PRODUCT.entitlementVersion,
+      titan_entitlement_version:TITAN_SHOPIFY_PRODUCT.entitlementVersion,
       callback_credential_verified:true,
       soundworld_gift_eligibility:giftEligibility,
       titan_gift_line_count:titanGiftLines.length,
+      titan_entitlement_count:titanRows.length,
       raw_email_stored:false
     }
   });
   return out({
     ok:true,
-    entitled:rows.length>0,
-    entitlementCount:rows.length,
+    entitled:entitlementRows.length>0,
+    entitlementCount:entitlementRows.length,
+    titanEntitlementCount:titanRows.length,
     soundworldGiftEligibility:giftEligibility
   });
 }

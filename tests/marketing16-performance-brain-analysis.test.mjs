@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createMarketing16PerformanceBridge} from '../sauceapproved-studio/marketing-16/performance-brain-bridge.mjs';
+const pack={schema:'sauceapproved.studio.campaign-forge.pack',outputs:[{format:'short_video',dna:{brand:'SauceApproved'}},{format:'social_post',dna:{brand:'SauceApproved'}}]};
+const metrics={short_video:{impressions:100,clicks:20,conversions:4,spend:10,evidence:{impressions:true,clicks:true,conversions:true,spend:true}},social_post:{impressions:100,clicks:10,conversions:1,spend:5,evidence:{impressions:true,clicks:true,conversions:true,spend:true}}};
+test('evaluates verified evidence without execution authority',()=>{const r=createMarketing16PerformanceBridge().evaluate(pack,{objective:'conversion_rate',metrics});assert.equal(r.status,'verified_comparison');assert.equal(r.winner,'short_video');assert.equal(r.publishReady,false);assert.equal(r.outcomeLoop.automaticMutation,false);});
+test('review produces non-executing audit receipt',()=>{const b=createMarketing16PerformanceBridge();const e=b.evaluate(pack,{objective:'conversion_rate',metrics});const v=b.review(e,{decision:'approve',reviewer:'owner'});const r=b.receipt(v,{reviewedAt:'2026-10-01T22:20:00Z'});assert.equal(v.approved,true);assert.equal(v.autoPublish,false);assert.equal(v.autoSpend,false);assert.equal(r.executionAuthorized,false);assert.equal(r.decision,'approved');});

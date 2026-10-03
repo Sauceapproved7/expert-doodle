@@ -1,0 +1,35 @@
+name: Hercules Studio Founding Pilot Commercial
+
+on:
+  pull_request:
+    paths:
+      - "docs/legal/SAUCEAPPROVED-STUDIO-FOUNDING-PILOT-*"
+      - "supabase/migrations/*studio_founding_pilot_commercial*"
+      - "supabase/functions/hercules-private-bridge/index.ts"
+      - "supabase/functions/hercules-integrations/index.ts"
+      - "tests/hercules-studio-founding-pilot-commercial.test.mjs"
+      - ".github/workflows/hercules-studio-founding-pilot-commercial.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/legal/SAUCEAPPROVED-STUDIO-FOUNDING-PILOT-*"
+      - "supabase/migrations/*studio_founding_pilot_commercial*"
+      - "supabase/functions/hercules-private-bridge/index.ts"
+      - "supabase/functions/hercules-integrations/index.ts"
+      - "tests/hercules-studio-founding-pilot-commercial.test.mjs"
+      - ".github/workflows/hercules-studio-founding-pilot-commercial.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  studio-pilot-commercial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --test tests/hercules-studio-founding-pilot-commercial.test.mjs

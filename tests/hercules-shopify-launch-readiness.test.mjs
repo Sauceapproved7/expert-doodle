@@ -6,6 +6,10 @@ const sql=await readFile(
   new URL("../supabase/migrations/20260927063000_hercules_shopify_launch_readiness_v1.sql",import.meta.url),
   "utf8"
 );
+const liveDomainPatch=await readFile(
+  new URL("../supabase/migrations/20260930172000_hercules_shopify_live_store_domain_v1.sql",import.meta.url),
+  "utf8"
+);
 
 test("readiness is pinned to the verified production shop and anchor product",()=>{
   assert.match(sql,/gid:\/\/shopify\/Shop\/100002726208/);
@@ -49,4 +53,11 @@ test("monitor cadence is bounded to fifteen minutes and idle without first-party
   assert.match(sql,/provider='shopify'/);
   assert.match(sql,/access_secret_ref is not null/);
   assert.match(sql,/return null/);
+});
+
+
+test("scheduled readiness submitter targets the live SauceApproved Shopify account key",()=>{
+  assert.match(liveDomainPatch,/hercules_shopify_launch_readiness_submit/);
+  assert.ok(liveDomainPatch.includes("account_key='sauceapproved-2.myshopify.com'"));
+  assert.equal(liveDomainPatch.includes("account_key='azymhc-x0.myshopify.com'"),false);
 });
