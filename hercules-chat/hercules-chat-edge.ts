@@ -11,6 +11,8 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
+import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+
 const embeddingModel = new Supabase.ai.Session("gte-small");
 
 const corsHeaders = {
@@ -584,6 +586,31 @@ Deno.serve(async (req: Request) => {
         conversation ? `Conversation:\n${conversation}` : "",
         `Current request:\n${prompt}`
       ].filter(Boolean).join("\n\n").slice(0, 16000);
+
+      if (Deno.env.get("HERCULES_TOKEN_BUCKET_ENFORCED") === "true") {
+        const capacity = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_CAPACITY"), 120_000, 1, 10_000_000);
+        const refillPerMinute = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_TPM"), 120_000, 1, 10_000_000);
+        const burst = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_BURST"), capacity, 1, capacity);
+        const refillPerMs = refillPerMinute / 60_000;
+        const estimatedInputTokens = Math.max(1, Math.ceil(new TextEncoder().encode(system + routedPrompt).length / 4));
+        const reservedOutputTokens = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_MAX_OUTPUT"), 4_096, 1, 128_000);
+        const tokenReservation = estimatedInputTokens + reservedOutputTokens;
+        if (tokenReservation > burst) throw new Error("TOKEN_BUDGET_EXCEEDED");
+
+        const decision = await reserveWeightedTokens(
+          `hercules:ai:tpm:${userId}`,
+          burst,
+          refillPerMs,
+          tokenReservation,
+          boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_TTL_MS"), 120_000, 1_000, 86_400_000),
+        );
+
+        if (!decision.allowed) {
+          const error = new Error("TOKEN_BUDGET_EXCEEDED");
+          (error as Error & { retryAfterMs?: number }).retryAfterMs = decision.retryAfterMs;
+          throw error;
+        }
+      }
 
       const ai = await routeAi(req, system, routedPrompt);
 
