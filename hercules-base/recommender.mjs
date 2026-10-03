@@ -123,6 +123,11 @@ function trustScore(trust){
   return 0;
 }
 
+function kindIntentBonus(request,resource){
+  if(request.signals.includes("security")&&resource.kind==="security-control")return 20;
+  return 0;
+}
+
 function scoreResource(request,resource){
   const signals=new Set(request.signals);
   const queryTerms=new Set(request.queryTerms);
@@ -145,7 +150,8 @@ function scoreResource(request,resource){
   const score=
     matchedSignals.length*20+
     matchedQuery.length*8+
-    trustScore(resource.trust);
+    trustScore(resource.trust)+
+    kindIntentBonus(request,resource);
 
   const reasons=[];
   if(matchedSignals.length){
@@ -154,6 +160,9 @@ function scoreResource(request,resource){
   if(matchedQuery.length){
     const extras=matchedQuery.filter((term)=>!matchedSignals.includes(term));
     if(extras.length)reasons.push("query: "+extras.join(", "));
+  }
+  if(request.signals.includes("security")&&resource.kind==="security-control"){
+    reasons.push("security-control intent");
   }
   reasons.push("trust: "+resource.trust);
 
