@@ -334,9 +334,9 @@ Deno.serve(async (req: Request) => {
   let reservedRequestId: string | null = null;
 
   try {
-    const userId = decodeJwtSub(req);
+    const token = rawAccessToken(req);
+    const userId = await authenticateChat(req, token);
     if (DPOP_ENFORCED) {
-      const token = rawAccessToken(req);
       const jkt = await rest(req, "rpc/hercules_get_dpop_key", {
         method: "POST",
         body: JSON.stringify({ p_user_id: userId }),
