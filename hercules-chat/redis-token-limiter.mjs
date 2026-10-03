@@ -10,8 +10,7 @@ const DEFAULTS = Object.freeze({
   keyTtlMs: 172_800_000,
 });
 
-export const TOKEN_BUCKET_LUA = `#!lua flags=allow-key-locking
-local now = tonumber(ARGV[1])
+export const TOKEN_BUCKET_LUA = `local now = tonumber(ARGV[1])
 local capacity = tonumber(ARGV[2])
 local refill_per_ms = tonumber(ARGV[3])
 local cost = tonumber(ARGV[4])
@@ -77,8 +76,7 @@ redis.call("PEXPIRE", KEYS[5], ttl_ms)
 
 return {1, math.floor(tpm), 0, "allowed"}`;
 
-export const REFUND_LUA = `#!lua flags=allow-key-locking
-local actual = tonumber(ARGV[1])
+export const REFUND_LUA = `local actual = tonumber(ARGV[1])
 local now = tonumber(ARGV[2])
 local capacity = tonumber(ARGV[3])
 local ttl_ms = tonumber(ARGV[4])
@@ -169,6 +167,20 @@ function envNumber(env, key, fallback) {
   return Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
+export function dailyBudgetWindow(nowMs = Date.now()) {
+  const now = new Date(nowMs);
+  const dateKey = now.toISOString().slice(0, 10);
+  const nextUtcMidnight = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate() + 1,
+  );
+  return Object.freeze({
+    dateKey,
+    ttlMs: Math.max(1, nextUtcMidnight - nowMs),
+  });
+}
+
 export function limiterConfig(env = {}) {
   return Object.freeze({
     tokensPerMinute: envNumber(env, "HERCULES_TPM", DEFAULTS.tokensPerMinute),
@@ -209,11 +221,12 @@ export function createRedisTokenLimiter({url, token, config = limiterConfig()} =
     const tag = `{tenant:${hash}}`;
     const tpmRate = config.tokensPerMinute / 60_000;
     const rpmRate = config.requestsPerMinute / 60_000;
+    const dailyWindow = dailyBudgetWindow(nowMs);
     const keys = [
       `${tag}:tpm`,
       `${tag}:rpm`,
       `${tag}:concurrency`,
-      `${tag}:daily`,
+      `${tag}:daily:${dailyWindow.dateKey}`,
       `${tag}:reservation:${requestId}`,
     ];
     const result = await evalLua(TOKEN_BUCKET_LUA, keys, [
@@ -226,7 +239,7 @@ export function createRedisTokenLimiter({url, token, config = limiterConfig()} =
       config.concurrentRequests,
       config.dailyTokens,
       config.reservationTtlMs,
-      config.keyTtlMs,
+      dailyWindow.ttlMs,
       requestId,
       modelClass,
     ]);
@@ -236,9 +249,10 @@ export function createRedisTokenLimiter({url, token, config = limiterConfig()} =
   async function settle({tenantId, requestId, actualTokens, nowMs = Date.now()} = {}) {
     const hash = await tenantHash(tenantId);
     const tag = `{tenant:${hash}}`;
+    const dailyWindow = dailyBudgetWindow(nowMs);
     const keys = [
       `${tag}:tpm`,
-      `${tag}:daily`,
+      `${tag}:daily:${dailyWindow.dateKey}`,
       `${tag}:concurrency`,
       `${tag}:reservation:${requestId}`,
     ];
@@ -247,7 +261,7 @@ export function createRedisTokenLimiter({url, token, config = limiterConfig()} =
       nowMs,
       config.tokenBurst,
       config.reservationTtlMs,
-      config.keyTtlMs,
+      dailyWindow.ttlMs,
     ]);
     return normalizeLimiterDecision(result);
   }
