@@ -107,7 +107,12 @@ begin
     set last_successful_updated_at=greatest(
           coalesce(public.hercules_shopify_bulk_reconciliation_watermarks.last_successful_updated_at,'epoch'::timestamptz),
           excluded.last_successful_updated_at),
-        last_successful_run_id=excluded.last_successful_run_id, updated_at=now();
+        last_successful_run_id=case
+          when excluded.last_successful_updated_at > coalesce(public.hercules_shopify_bulk_reconciliation_watermarks.last_successful_updated_at,'epoch'::timestamptz)
+          then excluded.last_successful_run_id
+          else public.hercules_shopify_bulk_reconciliation_watermarks.last_successful_run_id
+        end,
+        updated_at=now();
 end;
 $$;
 revoke all on function public.hercules_shopify_complete_bulk_reconciliation_v1(uuid,timestamptz,bigint,bigint,bigint,bigint,text) from public,anon,authenticated;
