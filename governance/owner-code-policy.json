@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 15,
+  "version": 16,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -359,6 +359,36 @@
       "id": "devcontainers-node",
       "name": "Microsoft Dev Containers JavaScript and Node.js development image",
       "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainer-python-feature",
+      "name": "Microsoft Dev Containers Python feature",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainer-ansible-feature",
+      "name": "Dev Containers Extra Ansible feature and ansible-core CLI",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainer-helm-feature",
+      "name": "Microsoft Dev Containers Helm feature and Helm CLI",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "openshift-cli",
+      "name": "Red Hat OpenShift oc and kubectl client binaries",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainer-cli",
+      "name": "Microsoft Dev Containers CLI used only for CI image validation",
+      "ownership": "third-party-ci-infrastructure",
       "packagedAsHerculesCode": false
     }
   ]
