@@ -24,3 +24,8 @@ test("chat DPoP enforcement fails closed when token binding is absent",()=>{
   assert.match(edge,/DPOP_TOKEN_BINDING_REQUIRED/);
   assert.match(edge,/DPOP_REPLAY_STORE_UNAVAILABLE/);
 });
+
+
+test("chat DPoP enforcement remains opt-in by environment gate",()=>{
+  assert.match(edge,/const HERCULES_DPOP_ENFORCED = Deno\.env\.get\("HERCULES_DPOP_ENFORCED"\) === "true"/);
+});
