@@ -45,6 +45,24 @@ test("live Stripe without complete checkout refund and payout proof remains owne
   assert.ok(routed.ownerActions.includes("DA-27"));
 });
 
+test("complete Stripe evidence permits reconciliation but never creates a charge",()=>{
+  const routed=routeVerificationSnapshot({
+    stripe:{
+      liveAuthorized:true,
+      providerReady:true,
+      evidenceFresh:true,
+      provenance:provenance("stripe-live","stripe456"),
+      paymentProof:{checkout:true,refund:true,payout:true}
+    }
+  });
+
+  assert.deepEqual(routed.autoResume,[{
+    id:"DA-27",
+    action:"reconcile_payment_evidence",
+    provenanceFingerprint:"sha256:stripe456"
+  }]);
+});
+
 test("native Supabase leaked-password protection clearing can auto-resume auth reconciliation",()=>{
   const routed=routeVerificationSnapshot({
     supabase:{
@@ -70,6 +88,23 @@ test("pending Spaceship authorization is surfaced as owner action and never DNS 
 
   assert.deepEqual(routed.autoResume,[]);
   assert.ok(routed.ownerActions.includes("DA-20"));
+});
+
+test("authorized LinkedIn company page plus Metricool can resume verification without publishing",()=>{
+  const routed=routeVerificationSnapshot({
+    social:{
+      linkedinCompanyPageAuthorized:true,
+      metricoolBrandAuthorized:true,
+      evidenceFresh:true,
+      provenance:provenance("metricool-linkedin","social123")
+    }
+  });
+
+  assert.deepEqual(routed.autoResume,[{
+    id:"DA-24",
+    action:"verify_linkedin_metricool_connection",
+    provenanceFingerprint:"sha256:social123"
+  }]);
 });
 
 test("Founding Access never auto-publishes even when all prerequisite evidence is green",()=>{
