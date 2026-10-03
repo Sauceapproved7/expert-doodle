@@ -3,7 +3,9 @@ const PATTERNS=[
   {re:/^status (vault|forge|repo|body|system)$/i,verb:"status",mutates:false},
   {re:/^move body to (stand|sit|neutral|wave)$/i,verb:"move",target:"body",mutates:true},
   {re:/^arm body$/i,verb:"arm",target:"body",mutates:true},
-  {re:/^emergency stop$/i,verb:"emergency-stop",target:"body",mutates:true}
+  {re:/^emergency stop$/i,verb:"emergency-stop",target:"body",mutates:true},
+  {re:/^open browser (https?:\\/\\/\\S+)$/i,verb:"browser-navigate",target:"browser",mutates:true},
+  {re:/^inspect browser (https?:\\/\\/\\S+)$/i,verb:"browser-scrape",target:"browser",mutates:true}
 ];
 
 function parse(text){
@@ -12,7 +14,7 @@ function parse(text){
     const m=normalized.match(p.re);
     if(!m) continue;
     const target=p.target ?? m[1];
-    const payload=p.verb==="move"?{pose:m[1]}:undefined;
+    const payload=p.verb==="move"?{pose:m[1]}:(p.verb.startsWith("browser-")?{target:m[1]}:undefined);
     return {status:"planned",command:{verb:p.verb,target,mutates:p.mutates,payload}};
   }
   return {status:"unrecognized",reason:"command-not-recognized"};
