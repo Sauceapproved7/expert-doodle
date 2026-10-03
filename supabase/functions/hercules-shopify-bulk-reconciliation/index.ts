@@ -189,7 +189,10 @@ async function processRun(runId: string) {
   });
   const seen = streamed.recordsSeen;
   const resultHash = streamed.sha256;
-  if (Number(operation.rootObjectCount) !== seen) throw new Error('bulk_result_count_mismatch');
+  const expectedRootCount = Number(operation.rootObjectCount);
+  if (operation.rootObjectCount == null || !Number.isSafeInteger(expectedRootCount) || expectedRootCount !== seen) {
+    throw new Error('bulk_result_count_mismatch');
+  }
   const { error: finalizeError } = await DB.rpc('hercules_shopify_complete_bulk_reconciliation_v1', {
     p_run_id: runId, p_candidate_at: run.cursor_candidate_at, p_records_seen: seen,
     p_records_inserted: inserted, p_records_updated: updated, p_records_skipped: skipped,
