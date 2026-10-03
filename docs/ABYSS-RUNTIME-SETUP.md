@@ -18,7 +18,7 @@ Apply `supabase/migrations/20261003000000_hercules_abyss_control.sql` to the int
 
 Set the Edge Function secret `HERCULES_ABYSS_OWNER_USER_ID` to the same owner UUID. Supabase supplies the function's `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY`; keep the service role key inside Supabase and never copy it into the Smallz host.
 
-The control row starts with the emergency stop active. Resume is accepted only for the authenticated owner and only while the event hash chain verifies. If the function, database, identity check, or audit check is unavailable, mutation and resume requests fail closed. The stop endpoint still stops the current Smallz session locally if the external service is unavailable.
+The control row starts with the emergency stop active. Each Smallz process also starts with its local session locked, so an owner must explicitly resume against trusted external state after every restart. Resume is accepted only for the authenticated owner and only while the event hash chain verifies. If the function, database, identity check, or audit check is unavailable, mutation and resume requests fail closed. The stop endpoint still stops the current Smallz session locally if the external service is unavailable.
 
 ## 3. Configure the recovery verification key
 
