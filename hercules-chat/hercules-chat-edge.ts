@@ -1,6 +1,4 @@
 
-import { createClient } from "npm:@supabase/supabase-js@2.57.4";
-
 declare const Supabase: {
   ai: {
     Session: new (model: string) => {
@@ -50,13 +48,18 @@ async function enforceDpop(req: Request, token: string): Promise<void> {
 }
 
 async function authenticateChat(req: Request, token: string): Promise<string> {
-  const auth = createClient(SUPABASE_URL, ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    global: { headers: { Authorization: "Bearer " + token } },
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "GET",
+    headers: {
+      apikey: ANON_KEY,
+      Authorization: "Bearer " + token,
+    },
+    signal: AbortSignal.timeout(10000),
   });
-  const { data, error } = await auth.auth.getUser(token);
-  if (error || !data.user?.id) throw new Error("UNAUTHORIZED");
-  return data.user.id;
+  if (!response.ok) throw new Error("UNAUTHORIZED");
+  const data = await response.json();
+  if (!data?.id || typeof data.id !== "string") throw new Error("UNAUTHORIZED");
+  return data.id;
 }
 
 
