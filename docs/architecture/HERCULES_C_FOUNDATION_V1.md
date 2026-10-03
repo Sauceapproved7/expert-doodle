@@ -15,10 +15,10 @@ Status: proposed dependency allowlist. This document does not vendor, download, 
 
 | Component | Hercules role | Upstream license | Adoption state |
 | --- | --- | --- | --- |
-| libsodium | authenticated encryption, signatures, password hashing and secure primitives | ISC | APPROVED CANDIDATE |
-| SQLite | embedded durable local state and indexes | Public Domain core | APPROVED CANDIDATE |
-| libuv | cross-platform event loop, async I/O, IPC and worker/thread primitives | MIT + documented bundled exceptions | APPROVED CANDIDATE |
-| zlib | DEFLATE/gzip-compatible compression where interoperability requires it | zlib license | APPROVED CANDIDATE |
+| libsodium | authenticated encryption, signatures, password hashing and secure primitives | ISC | VERIFIED TARGET: 1.0.22-stable |
+| SQLite | embedded durable local state and indexes | Public Domain core | VERIFIED TARGET: 3.53.4 |
+| libuv | cross-platform event loop, async I/O, IPC and worker/thread primitives | MIT + documented bundled exceptions | HOLD: exact release/hash verification required |
+| zlib | DEFLATE/gzip-compatible compression where interoperability requires it | zlib license | HOLD: exact release/hash verification required |
 
 ## Integration boundaries
 
@@ -49,3 +49,10 @@ A component moves from candidate to active only after:
 ## Explicitly not approved by this document
 
 Everything else in the referenced Awesome C catalog remains unapproved until independently reviewed. This allowlist is intentionally narrow.
+
+## Verified release notes (2026-10-03)
+
+- libsodium: upstream documentation identifies 1.0.22-stable as the latest version.
+- SQLite: upstream release history identifies 3.53.4 (2026-07-24) as the current released version. SQLite 3.54.0 is draft/unreleased as of this review and MUST NOT be treated as an approved release.
+- SQLite 3.53.4 canonical source/amalgamation hashes must be checked against the official SQLite download/release metadata during acquisition.
+- libuv and zlib remain HOLD until their exact upstream release and immutable source hash are independently recorded.
