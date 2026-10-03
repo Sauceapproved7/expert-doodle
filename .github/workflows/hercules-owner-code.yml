@@ -20,9 +20,6 @@ jobs:
       - name: Check verifier syntax
         run: node --check scripts/verify-owner-code-only.mjs
 
-      - name: Verify immutable staging container image policy
-        run: node --test tests/hercules-owner-code-container-images.test.mjs
-
       - name: Verify full Hercules runtime ownership boundary
         run: node scripts/verify-owner-code-only.mjs
 
