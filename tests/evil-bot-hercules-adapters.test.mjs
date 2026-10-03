@@ -57,3 +57,8 @@ test("credential-shaped fields and values are rejected recursively before invoca
   {action:"search",items:["prefix ghp_abcdefghijklmnopqrstuvwxyz1234567890"]},
  ]) await assert.rejects(()=>a.vault(input),/credential/);
 });
+
+test("credential-shaped service responses are rejected before returning to callers",async()=>{
+ const leaking=createHerculesAbyssAdapters({...boundary,browser:async()=>(calls.push(["leaking-browser"]),{accessToken:"not-for-caller"})});
+ await assert.rejects(()=>leaking.browser({action:"screenshot"}),/credential field rejected/);
+});

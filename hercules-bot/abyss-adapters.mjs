@@ -33,7 +33,7 @@ export function createHerculesAbyssAdapters(d={}){
  async function invoke(service,input,{containment=false}={}){
   const x=clean(input);
   if(!authorized(d,service,x,containment))throw new Error("external identity, emergency-stop, and authorization checks required");
-  return need(d[service],service)(x);
+  return clean(await need(d[service],service)(x));
  }
  return Object.freeze({
   async browser(input){const x=clean(input);if(!["navigate","scrape","screenshot","interact","close_session"].includes(x?.action))throw new Error("browser action denied");return invoke("browser",x)},
@@ -41,6 +41,6 @@ export function createHerculesAbyssAdapters(d={}){
   async forge(input){const x=clean(input);if(x?.action!=="build"||x.preview!==true)throw new Error("preview required");return invoke("forge",x)},
   async deploy(input){const x=clean(input);if(x?.action!=="status")throw new Error("deploy mutation denied");return invoke("deploy",x)},
   async contain(input){const x=clean(input);if(!["revoke-identities","kill-sessions","quarantine-workers","freeze-deployments","preserve-evidence"].includes(x?.action))throw new Error("containment action denied");return invoke("containment",x,{containment:true})},
-  async recover(input){const x=clean(input);if(!x||typeof x!=="object"||!exactTrue(d.verifyRecoveryArtifact,x.artifact))throw new Error("externally verified signed known-good artifact required");if(!authorized(d,"recovery",x))throw new Error("external identity, emergency-stop, and authorization checks required");return need(d.recovery,"recovery")(x)}
+  async recover(input){const x=clean(input);if(!x||typeof x!=="object"||!exactTrue(d.verifyRecoveryArtifact,x.artifact))throw new Error("externally verified signed known-good artifact required");if(!authorized(d,"recovery",x))throw new Error("external identity, emergency-stop, and authorization checks required");return clean(await need(d.recovery,"recovery")(x))}
  });
 }

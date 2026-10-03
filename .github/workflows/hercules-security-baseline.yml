@@ -31,3 +31,6 @@ jobs:
 
       - name: Run HURC security-sensitive tests
         run: node --test tests/hercules-hurc-*.test.mjs
+
+      - name: Run bounded Hercules adapter security tests
+        run: node --test tests/evil-bot-hercules-adapters.test.mjs
