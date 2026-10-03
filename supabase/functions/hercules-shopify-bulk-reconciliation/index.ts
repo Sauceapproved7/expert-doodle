@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { streamJsonl, stableStringify } from '../../../hercules-runtime/shopify-bulk-jsonl.mjs';
+import { streamJsonl, stableStringify } from '../_shared/shopify-bulk-jsonl.mjs';
 
 const URL = Deno.env.get('SUPABASE_URL')!;
 const ANON = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!;
