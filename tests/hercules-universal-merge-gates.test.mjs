@@ -1,4 +1,5 @@
 import "./hercules-owner-code-container-images.test.mjs";
+import "./hercules-staging-runtime-patch-levels.test.mjs";
 import "./hercules-founding-pilot-admission.test.mjs";
 import "./hercules-soundworld-launch-gift.test.mjs";
 import "./hercules-soundworld-gift-backend-ledger.test.mjs";
