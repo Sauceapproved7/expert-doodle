@@ -174,6 +174,40 @@ test("Storage is requestable through Hercules Base backend intent", async () => 
   assert.deepEqual(intent.capabilities,["api","database","storage"]);
 });
 
+test("Storage stops streaming an undeclared oversized object at the byte limit", async () => {
+  const {routeStorageRequest}=await import("../hercules-base/storage-router.mjs");
+  const {signJwtHs256}=await import("../hercules-base/auth-core.mjs");
+  const jwtSecret=randomBytes(48).toString("hex");
+  const token=signJwtHs256({
+    sub:"11111111-1111-4111-8111-111111111111",
+    role:"staging_user",
+    issuer:"hercules-base",
+    audience:"hercules-base-api",
+    ttlSeconds:900,
+  },jwtSecret);
+  let pulls=0;
+  const body=new ReadableStream({
+    pull(controller){
+      pulls+=1;
+      if(pulls===1)return controller.enqueue(new Uint8Array(6));
+      if(pulls===2)return controller.enqueue(new Uint8Array(6));
+      throw new Error("storage reader pulled past the rejection boundary");
+    },
+  });
+  const response=await routeStorageRequest(
+    new Request("https://base.local/v1/storage/objects/private-assets/stream.bin",{
+      method:"PUT",
+      headers:{authorization:"Bearer "+token},
+      body,
+      duplex:"half",
+    }),
+    {jwtSecret,store:{async putObject(){throw new Error("must not persist");}},blobs:{async put(){throw new Error("must not persist");}},maxObjectBytes:8},
+  );
+  assert.equal(response.status,413);
+  assert.equal(pulls,2);
+});
+
+
 test("self-hosted Storage uses a persistent blob volume and is reported implemented", async () => {
   const {readFile}=await import("node:fs/promises");
   const {BASE_CAPABILITIES}=await import("../hercules-base/core.mjs");
