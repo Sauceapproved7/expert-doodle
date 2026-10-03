@@ -37,7 +37,6 @@ contract HerculesSmartAccount {
     error InvalidSender(address sender);
     error ExecutionFailed(uint256 index, bytes reason);
     error BatchTooLarge(uint256 length);
-    error UnauthorizedFactoryCaller(address caller);
 
     constructor(address owner_, address entryPoint_) {
         if (owner_ == address(0) || entryPoint_ == address(0)) revert ZeroAddress();
@@ -140,6 +139,7 @@ contract HerculesSmartAccountFactory {
     address public immutable entryPoint;
 
     error ZeroAddress();
+    error UnauthorizedFactoryCaller(address caller);
     event AccountCreated(address indexed account, address indexed owner, uint256 indexed salt);
 
     constructor(address entryPoint_) {
