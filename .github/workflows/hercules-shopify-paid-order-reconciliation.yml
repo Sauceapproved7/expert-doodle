@@ -6,6 +6,7 @@ on:
       - "AGENTS.md"
       - "governance/hercules-shopify-paid-order-reconciliation-v1.json"
       - "supabase/migrations/*shopify_paid_order_reconciliation*"
+      - "supabase/migrations/*shopify_openshift_webhook*"
       - "supabase/functions/hercules-shopify-webhook/index.ts"
       - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
@@ -13,6 +14,8 @@ on:
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
       - "tests/hercules-shopify-owned-control-plane.test.mjs"
+      - "tests/hercules-shopify-openshift-webhook.test.mjs"
+      - "openshift/shopify-webhook/**"
       - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   push:
@@ -22,6 +25,7 @@ on:
       - "AGENTS.md"
       - "governance/hercules-shopify-paid-order-reconciliation-v1.json"
       - "supabase/migrations/*shopify_paid_order_reconciliation*"
+      - "supabase/migrations/*shopify_openshift_webhook*"
       - "supabase/functions/hercules-shopify-webhook/index.ts"
       - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
@@ -29,6 +33,8 @@ on:
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
       - "tests/hercules-shopify-owned-control-plane.test.mjs"
+      - "tests/hercules-shopify-openshift-webhook.test.mjs"
+      - "openshift/shopify-webhook/**"
       - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   workflow_dispatch:
@@ -45,7 +51,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-      - name: Verify bounded reconciliation contract and runner
-        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/hercules-shopify-owned-control-plane.test.mjs
+      - name: Verify bounded reconciliation contract and OpenShift receiver
+        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/hercules-shopify-owned-control-plane.test.mjs tests/hercules-shopify-openshift-webhook.test.mjs
       - name: Verify Hercules execution contract
         run: node scripts/verify-hercules-execution-contract.mjs
