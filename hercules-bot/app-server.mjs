@@ -51,7 +51,7 @@ export function createHerculesBotApp({port=Number(process.env.PORT||38801),bound
   const deployer=createDeployerAdapter({request:createServerSideDeployRequest()});
   const controller=createOperatorController({adapters:{body,system:{status:async()=>({ok:true,mode:"software"})},vault:{inspect:async()=>({available:true,mode:"read-only"})},forge:{inspect:async()=>({available:true,mode:"read-only"})},browser,deployer}});
   const console=createOperatorConsole({controller});
-  const session=createOperatorSession({console});
+  const session=createOperatorSession({console,initiallyStopped:true});
 
   const orchestratorFor=state=>createAbyssOrchestrator({
     emergencyStopClear:()=>state.emergencyStopClear===true,
