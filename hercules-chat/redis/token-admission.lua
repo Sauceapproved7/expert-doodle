@@ -51,7 +51,6 @@ if monthly_limit>0 and monthly_used+budget_cost>monthly_limit then return {0,tpm
 local remaining=tpm-cost; local lease=now+ttl_ms
 redis.call("HSET",KEYS[1],"credits",remaining,"last_refill_ms",now); redis.call("PEXPIRE",KEYS[1],ttl_ms)
 redis.call("HSET",KEYS[2],"credits",rpm-1,"last_refill_ms",now); redis.call("PEXPIRE",KEYS[2],ttl_ms)
-redis.call("SET",KEYS[3],concurrency+1,"PX",ttl_ms)
 redis.call("SET",KEYS[4],daily_used+budget_cost,"PX",ttl_ms); redis.call("SET",KEYS[5],monthly_used+budget_cost,"PX",ttl_ms)
 redis.call("HSET",KEYS[6],"status","active","tenant_fingerprint",tenant,"request_id",request_id,
  "reserved_cost_microcredits",cost,"reserved_cost_microusd",budget_cost,"daily_period",daily_period,
