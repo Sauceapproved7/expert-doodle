@@ -17,16 +17,6 @@ export function stableStringify(value) {
   return '{' + Object.keys(value).sort().map(key => JSON.stringify(key) + ':' + stableStringify(value[key])).join(',') + '}';
 }
 
-export function compareSnapshot(current, incoming) {
-  const oldAt = current?.updatedAt == null ? null : Date.parse(current.updatedAt);
-  const newAt = Date.parse(incoming?.updatedAt);
-  if (!Number.isFinite(newAt) || (oldAt !== null && !Number.isFinite(oldAt))) throw new TypeError('snapshot_timestamp_invalid');
-  if (!current) return 'apply';
-  if (newAt < oldAt) return 'stale';
-  if (newAt === oldAt && incoming.hash === current.hash) return 'unchanged';
-  return 'apply';
-}
-
 export async function streamJsonl(body, onRecord, {maxBytes=536870912,maxLineBytes=1048576}={}) {
   if (!body?.getReader || typeof onRecord !== 'function') throw new TypeError('stream_arguments_invalid');
   const reader=body.getReader(), decoder=new TextDecoder('utf-8',{fatal:true}), digest=createHash('sha256');
