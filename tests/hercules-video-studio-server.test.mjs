@@ -28,6 +28,9 @@ test("Vintage Camera serves an owned local-first capture surface and client",asy
   assert.equal(dimensions.status,200);
   assert.match(dimensions.body,/planExportDimensions/);
   assert.match(page.body,/Save QA receipt/);
+  assert.match(page.body,/Launch proof checklist/);
+  assert.match(page.body,/All four looks used/);
+  assert.match(page.body,/Loaded-clip playback confirmed/);
   assert.match(quality.body,/low_frame_cadence/);
   const root=await handle({method:"GET",pathname:"/"});
   assert.match(root.body,/href="\/vintage-camera"/);
