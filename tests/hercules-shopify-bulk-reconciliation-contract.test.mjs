@@ -12,7 +12,7 @@ test('bulk order state RPC validates tenant, Shopify identity, state, timestamps
   assert.ok(sql.includes('p_updated_at is null'));
   assert.ok(sql.includes("coalesce(p_payload_sha256, '') !~ '^[a-f0-9]{64}$'"));
   assert.ok(sql.includes("jsonb_typeof(p_canonical_state) <> 'object'"));
-  assert.ok(sql.includes('where id = p_run_id and tenant_id = p_tenant_id'));
+  assert.match(sql, /where id = p_run_id\\s+and tenant_id = p_tenant_id/);
   assert.ok(sql.includes("and status = 'processing'"));
   assert.ok(sql.includes('pg_advisory_xact_lock'));
   assert.ok(sql.includes('revoke all on function public.hercules_shopify_upsert_bulk_order_state_v1'));
