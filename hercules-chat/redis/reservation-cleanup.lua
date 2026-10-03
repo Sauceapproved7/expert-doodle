@@ -12,6 +12,8 @@ local lease=tonumber(redis.call("HGET",KEYS[2],"lease_expires_at_ms")) or 0
 local t=redis.call("TIME")
 local now_ms=tonumber(t[1])*1000+math.floor(tonumber(t[2])/1000)
 if lease>now_ms then return {0,"lease_not_expired"} end
+local concurrency=tonumber(redis.call("GET",KEYS[1])) or 0
+redis.call("SET",KEYS[1],math.max(0,concurrency-1),"PX",ttl_ms)
 redis.call("HSET",KEYS[2],"status","expired","expired_at_ms",now_ms)
 redis.call("PEXPIRE",KEYS[2],ttl_ms)
 redis.call("ZREM",KEYS[3],request_id)
