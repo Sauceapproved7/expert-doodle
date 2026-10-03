@@ -1,18 +1,6 @@
 name: Hercules SmokeScreen Public Package
 
 on:
-  workflow_dispatch:
-  pull_request:
-    paths:
-      - "hercules-runtime/smokescreen-agent.mjs"
-      - "hercules-runtime/smokescreen-forge-ingress.mjs"
-      - "hercules-runtime/smokescreen-attack-enrichment.mjs"
-      - "scripts/smokescreen-global-benchmark.mjs"
-      - "scripts/package-smokescreen-release.mjs"
-      - "tests/hercules-smokescreen*.test.mjs"
-      - "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md"
-      - "releases/hercules-smokescreen-v2.2.0/**"
-      - ".github/workflows/hercules-smokescreen-release-package.yml"
   push:
     branches:
       - main
@@ -37,7 +25,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SOURCE_SHA: ${{ github.sha }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
