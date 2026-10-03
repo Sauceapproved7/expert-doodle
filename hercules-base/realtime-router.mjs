@@ -39,11 +39,24 @@ async function readJsonBounded(request,maxBytes){
     error.status=413;
     throw error;
   }
-  const text=await request.text();
-  if(new TextEncoder().encode(text).byteLength>maxBytes){
-    const error=new Error("request body too large");
-    error.status=413;
-    throw error;
+  const reader=request.body?.getReader();
+  const decoder=new TextDecoder();
+  let total=0;
+  let text="";
+  if(reader){
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      total+=value.byteLength;
+      if(total>maxBytes){
+        try{await reader.cancel();}catch{}
+        const error=new Error("request body too large");
+        error.status=413;
+        throw error;
+      }
+      text+=decoder.decode(value,{stream:true});
+    }
+    text+=decoder.decode();
   }
   try{return JSON.parse(text||"{}");}
   catch{throw new TypeError("invalid JSON");}
