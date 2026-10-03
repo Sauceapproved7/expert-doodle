@@ -14,6 +14,7 @@ const dpopEnforced = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "").toLowerCase(
 
 
 import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+import { createMtlsHttpClient, mtlsClientConfig } from "./mtls-client.ts";
 import { verifyDpopRequest } from "./dpop.ts";
 
 const embeddingModel = new Supabase.ai.Session("gte-small");
@@ -184,20 +185,28 @@ async function getInternalAiKey(req: Request): Promise<string> {
 }
 
 async function routeAi(req: Request, system: string, prompt: string) {
+  const mtlsClient = createMtlsHttpClient(mtlsClientConfig(Deno.env.toObject()));
   const key = await getInternalAiKey(req);
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/hercules-ai`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-hercules-internal-key": key,
-    },
-    body: JSON.stringify({
-      action: "route_internal",
-      system: system.slice(0, 12000),
-      prompt: prompt.slice(0, 16000),
-    }),
-    signal: AbortSignal.timeout(60000),
-  });
+
+  let response: Response;
+  try {
+    response = await fetch(`${SUPABASE_URL}/functions/v1/hercules-ai`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-hercules-internal-key": key,
+      },
+      body: JSON.stringify({
+        action: "route_internal",
+        system: system.slice(0, 12000),
+        prompt: prompt.slice(0, 16000),
+      }),
+      signal: AbortSignal.timeout(60000),
+      ...(mtlsClient ? { client: mtlsClient } : {}),
+    });
+  } finally {
+    mtlsClient?.close();
+  }
 
   const raw = await response.text();
   let payload: Record<string, unknown> = {};
