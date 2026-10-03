@@ -617,7 +617,6 @@ Deno.serve(()=>new Response(html,{status:200,headers:new Headers({
   'Content-Type':'text/html; charset=UTF-8',
   'Cache-Control':'no-store, no-cache, must-revalidate',
   'Pragma':'no-cache',
-  'X-Frame-Options':'DENY',
   'Strict-Transport-Security':'max-age=31536000; includeSubDomains',
   'Referrer-Policy':'no-referrer',
   'Permissions-Policy':'camera=(), microphone=(), geolocation=()',
