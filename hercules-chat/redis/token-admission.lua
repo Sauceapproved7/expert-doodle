@@ -31,17 +31,17 @@ if existing then
   return {-1,0,0,0,"reservation_already_settled"}
 end
 local rt=redis.call("TIME"); local now=tonumber(rt[1])*1000+math.floor(tonumber(rt[2])/1000)
-local function bucket(key,capacity,rate)
+local function safe_refill(elapsed,rate)\n  local whole=math.floor(elapsed/60000); local rem=elapsed-whole*60000\n  return whole*rate+math.floor(rem*rate/60000)\nend\nlocal function bucket(key,capacity,rate)
   local v=redis.call("HMGET",key,"credits","last_refill_ms"); local credits=tonumber(v[1]); local last=tonumber(v[2])
   if not credits or not last then credits=capacity; last=now end
   local elapsed=math.max(0,now-last)
   local max_elapsed=math.ceil(capacity*60000/rate)
   elapsed=math.min(elapsed,max_elapsed)
-  local refill=math.floor(elapsed*rate/60000)
+  local refill=safe_refill(elapsed,rate)
   return math.min(capacity,credits+refill)
 end
 local tpm=bucket(KEYS[1],tpm_capacity,tpm_rate); local rpm=bucket(KEYS[2],rpm_capacity,rpm_rate)
-local concurrency=tonumber(redis.call("GET",KEYS[3])) or 0
+redis.call("ZREMRANGEBYSCORE",KEYS[7],"-inf",now)\nlocal concurrency=tonumber(redis.call("ZCARD",KEYS[7])) or 0
 local daily_used=tonumber(redis.call("GET",KEYS[4])) or 0; local monthly_used=tonumber(redis.call("GET",KEYS[5])) or 0
 if tpm<cost then return {0,tpm,math.ceil((cost-tpm)*60000/tpm_rate),0,"token_rate_limited"} end
 if rpm<1 then return {0,tpm,math.ceil(60000/rpm_rate),0,"request_rate_limited"} end
@@ -57,5 +57,5 @@ redis.call("HSET",KEYS[6],"status","active","tenant_fingerprint",tenant,"request
  "reserved_cost_microcredits",cost,"reserved_cost_microusd",budget_cost,"daily_period",daily_period,
  "monthly_period",monthly_period,"reserved_at_ms",now,"lease_expires_at_ms",lease)
 redis.call("PEXPIRE",KEYS[6],ttl_ms*2)
-redis.call("ZADD",KEYS[7],lease,request_id); redis.call("PEXPIRE",KEYS[7],ttl_ms*2)
+redis.call("ZADD",KEYS[7],lease,request_id)
 return {1,remaining,0,math.ceil((tpm_capacity-remaining)*60000/tpm_rate),"allowed",concurrency+1}
