@@ -13,35 +13,61 @@ spec:
         app: hercules-shopify-api
     spec:
       serviceAccountName: hercules-shopify-api
+      automountServiceAccountToken: false
       securityContext:
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: api
-          image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest
+          image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify@sha256:0000000000000000000000000000000000000000000000000000000000000000
           args: ["node", "shopify/hercules/backend/api.mjs"]
           ports:
-            - containerPort: 8080
+            - name: https
+              containerPort: 8443
           envFrom:
             - configMapRef:
                 name: hercules-shopify-config
           env:
+            - name: PORT
+              value: "8443"
             - name: SHOPIFY_CLIENT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: hercules-shopify-secrets
                   key: client-secret
-            - name: SHOPIFY_WEBHOOK_SECRET
+            - name: SHOPIFY_INGEST_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: hercules-shopify-secrets
-                  key: webhook-secret
+                  key: ingest-token
+            - name: SUPABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: hercules-shopify-endpoint
+                  key: url
+            - name: SUPABASE_ANON_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: hercules-shopify-endpoint
+                  key: anon-key
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
             capabilities:
               drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 20
           resources:
             requests:
               cpu: 50m
@@ -49,3 +75,11 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+          volumeMounts:
+            - name: serving-cert
+              mountPath: /var/run/shopify-tls
+              readOnly: true
+      volumes:
+        - name: serving-cert
+          secret:
+            secretName: hercules-shopify-api-tls
