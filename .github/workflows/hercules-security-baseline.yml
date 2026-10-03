@@ -46,3 +46,6 @@ jobs:
 
       - name: Run operator emergency-stop tests
         run: node --test tests/smallz-operator-emergency-stop.test.mjs
+
+      - name: Run Abyss runtime integration tests
+        run: node --test tests/evil-bot-abyss-runtime-integration.test.mjs
