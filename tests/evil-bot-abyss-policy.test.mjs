@@ -2,17 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {createAbyssPolicy} from "../hercules-bot/abyss-policy.mjs";
 
-test("owner authority remains above every Evil Bot capability",()=>{
+test("owner authority remains above every capability",()=>{
  const p=createAbyssPolicy();
- assert.equal(p.name,"Evil Bot Abyss Stack");
- assert.equal(p.botName,"Evil Bot");
  for(const c of p.capabilities) assert.equal(c.selfGrant,false);
- assert.equal(p.ownerSovereignty,true); assert.equal(p.emergencyStopExternal,true);
+ assert.equal(p.ownerSovereignty,true);assert.equal(p.emergencyStopExternal,true);
 });
 test("hostile testing is sandbox-only and production mutation fails closed",()=>{
  const p=createAbyssPolicy();
- for(const id of ["red-team","adversarial-twin","chaos-engine","betrayal-tests","nightmare-tests","deception-lab"])
-  assert.equal(p.capabilities.find(x=>x.id===id).environment,"sandbox");
+ for(const id of ["red-team","adversarial-twin","chaos-engine","betrayal-tests","nightmare-tests","deception-lab"])assert.equal(p.capabilities.find(x=>x.id===id).environment,"sandbox");
  assert.equal(p.productionAdversarialMutation,false);
 });
 test("blackout freezes mutation when authority or audit integrity is uncertain",()=>{
