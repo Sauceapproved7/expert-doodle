@@ -9,8 +9,8 @@ function response(status, code = null) {
   return { status, code };
 }
 
-export async function acceptWebhook({ rawBody, headers, secret, persist, enqueue, now = new Date() } = {}) {
-  if (typeof persist !== "function" || typeof enqueue !== "function") throw new TypeError("durable_adapters_required");
+export async function acceptWebhook({ rawBody, headers, secret, admit, now = new Date() } = {}) {
+  if (typeof admit !== "function") throw new TypeError("durable_admission_required");
   const suppliedHmac = String(headers?.get?.("x-shopify-hmac-sha256") || "");
   if (!await verifyShopifyWebhook(rawBody, suppliedHmac, secret)) return response(401, "invalid_hmac");
 
@@ -36,19 +36,11 @@ export async function acceptWebhook({ rawBody, headers, secret, persist, enqueue
     payload,
   };
 
-  let receipt;
   try {
-    receipt = await persist(envelope);
+    const receipt = await admit(envelope);
+    if (receipt?.accepted !== true && receipt?.duplicate !== true) return response(503, "durable_admission_rejected");
   } catch {
-    return response(503, "inbox_unavailable");
-  }
-
-  if (receipt?.duplicate === true) return response(204);
-
-  try {
-    await enqueue({ receiptId: receipt?.id ?? null, webhookId: metadata.webhookId, shopDomain: metadata.shopDomain });
-  } catch {
-    return response(503, "queue_unavailable");
+    return response(503, "durable_admission_unavailable");
   }
 
   return response(204);
