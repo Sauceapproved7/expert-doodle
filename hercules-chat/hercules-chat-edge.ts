@@ -14,41 +14,6 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const DPOP_ENFORCED = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "false").toLowerCase() === "true";
 
-function accessToken(req: Request): string {
-  const auth = req.headers.get("Authorization") ?? "";
-  if (!auth.startsWith("Bearer ") && !auth.startsWith("DPoP ")) throw new Error("UNAUTHORIZED");
-  const token = auth.slice(auth.indexOf(" ") + 1).trim();
-  if (!token) throw new Error("UNAUTHORIZED");
-  return token;
-}
-
-function decodeJwtPayload(token: string): Record<string, unknown> {
-  const parts = token.split(".");
-  if (parts.length !== 3) throw new Error("UNAUTHORIZED");
-  let raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-  raw += "=".repeat((4 - (raw.length % 4)) % 4);
-  const payload = JSON.parse(atob(raw));
-  if (!payload || typeof payload !== "object") throw new Error("UNAUTHORIZED");
-  return payload as Record<string, unknown>;
-}
-
-async function enforceDpop(req: Request, token: string): Promise<void> {
-  if (!dpopEnforced) return;
-  const payload = decodeJwtPayload(token);
-  const cnf = payload.cnf;
-  const expectedJkt = cnf && typeof cnf === "object" && typeof (cnf as Record<string, unknown>).jkt === "string"
-    ? String((cnf as Record<string, unknown>).jkt) : "";
-  if (!expectedJkt) throw new Error("DPOP_TOKEN_BINDING_REQUIRED");
-  await verifyDpopRequest(req, token, expectedJkt, async (key, ttl) => {
-    try {
-      const decision = await reserveWeightedTokens(key, 1, 0, 1, ttl * 1000);
-      return decision.allowed;
-    } catch {
-      throw new Error("DPOP_REPLAY_STORE_UNAVAILABLE");
-    }
-  });
-}
-
 async function authenticateChat(req: Request, token: string): Promise<string> {
   const auth = createClient(SUPABASE_URL, ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
@@ -68,7 +33,7 @@ const embeddingModel = new Supabase.ai.Session("gte-small");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Headers": "authorization, dpop, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -105,23 +70,6 @@ function rawAccessToken(req: Request): string {
   throw new Error("UNAUTHORIZED");
 }
 
-function decodeJwtSub(req: Request): string {
-  const auth = req.headers.get("Authorization") ?? "";
-  if (!auth.startsWith("Bearer ") && !auth.startsWith("DPoP ")) throw new Error("UNAUTHORIZED");
-
-  const token = rawAccessToken(req);
-  const parts = token.split(".");
-  if (parts.length !== 3) throw new Error("UNAUTHORIZED");
-
-  let raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-  raw += "=".repeat((4 - (raw.length % 4)) % 4);
-  const payload = JSON.parse(atob(raw));
-
-  if (typeof payload.sub !== "string" || payload.sub.length < 1) {
-    throw new Error("UNAUTHORIZED");
-  }
-  return payload.sub;
-}
 
 function knownDbError(body: unknown): string | null {
   const text =
@@ -331,9 +279,9 @@ Deno.serve(async (req: Request) => {
   let reservedRequestId: string | null = null;
 
   try {
-    const userId = decodeJwtSub(req);
+    const token = rawAccessToken(req);
+    const userId = await authenticateChat(req, token);
     if (DPOP_ENFORCED) {
-      const token = rawAccessToken(req);
       const jkt = await rest(req, "rpc/hercules_get_dpop_key", {
         method: "POST",
         body: JSON.stringify({ p_user_id: userId }),
@@ -758,7 +706,7 @@ ${prompt}`
     }
 
     const status =
-      message === "UNAUTHORIZED" ? 401 :
+      message === "UNAUTHORIZED" || message.startsWith("DPOP_") ? 401 :
       message.startsWith("RATE_LIMIT_") || message === "MONTHLY_AI_BUDGET_EXCEEDED" ? 429 :
       message === "NOT_FOUND" ? 404 :
       message === "AI_ROUTER_NOT_CONFIGURED" || message === "AI_PROVIDER_CHAIN_FAILED" ? 503 :
