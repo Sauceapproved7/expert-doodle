@@ -6,7 +6,7 @@ const source = await readFile(new URL("../hercules-chat/dpop.ts", import.meta.ur
 const edge = await readFile(new URL("../hercules-chat/hercules-chat-edge.ts", import.meta.url), "utf8");
 
 test("DPoP verifier enforces proof type, asymmetric algorithm, method, URI, freshness, ath and cnf.jkt",()=>{
-  for (const needle of ["dpop+jwt","ES256","htm","htu","iat","jti","ath","cnf","jkt"]) assert.match(source,new RegExp(needle,"i"));
+  for (const needle of ["dpop+jwt","ES256","htm","htu","iat","jti","ath","cnf","jkt"]) assert.match(source,new RegExp(needle.replace(/[.*+?^${}()|[\\]\\\\]/g,"\\\\for (const needle of ["dpop+jwt","ES256","htm","htu","iat","jti","ath","cnf","jkt"]) assert.match(source,new RegExp(needle,"i"));"),"i"));
 });
 test("DPoP verifier has replay protection and constant-time comparisons",()=>{
   assert.match(source,/replay/i); assert.match(source,/timingSafe|constantTime/i);
