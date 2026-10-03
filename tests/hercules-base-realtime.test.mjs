@@ -209,3 +209,76 @@ test("server bridge streams Response bodies without buffering whole SSE response
   assert.equal(Buffer.concat(chunks).toString(),"data: one\n\ndata: two\n\n");
   assert.equal(fakeNodeResponse.ended,true);
 });
+
+
+test("Pulse stops undeclared oversized event bodies while streaming", async () => {
+  const {routeRealtimeRequest}=await import("../hercules-base/realtime-router.mjs");
+  const {signJwtHs256}=await import("../hercules-base/auth-core.mjs");
+  const jwtSecret=fixtureJwtSecret();
+  const token=signJwtHs256({
+    sub:"11111111-1111-4111-8111-111111111111",
+    role:"staging_user",
+    issuer:"hercules-base",
+    audience:"hercules-base-api",
+    ttlSeconds:900,
+  },jwtSecret);
+  let pulls=0;
+  const body=new ReadableStream({
+    pull(controller){
+      pulls+=1;
+      if(pulls===1)return controller.enqueue(new TextEncoder().encode('{"event":"x","data":"'));
+      if(pulls===2)return controller.enqueue(new TextEncoder().encode("xxxxxxxxxxxxxxxx"));
+      throw new Error("Pulse reader pulled past the rejection boundary");
+    },
+  });
+  const response=await routeRealtimeRequest(
+    new Request("https://base.local/v1/realtime/channels/orders-live/events",{
+      method:"POST",
+      headers:{authorization:"Bearer "+token,"content-type":"application/json"},
+      body,
+      duplex:"half",
+    }),
+    {jwtSecret,store:{async publish(){throw new Error("must not publish");}},maxEventBytes:24},
+  );
+  assert.equal(response.status,413);
+  assert.equal(pulls,2);
+});
+
+test("Pulse SSE honors backpressure and stops polling after cancellation", async () => {
+  const {routeRealtimeRequest}=await import("../hercules-base/realtime-router.mjs");
+  const {signJwtHs256}=await import("../hercules-base/auth-core.mjs");
+  const jwtSecret=fixtureJwtSecret();
+  const token=signJwtHs256({
+    sub:"11111111-1111-4111-8111-111111111111",
+    role:"staging_user",
+    issuer:"hercules-base",
+    audience:"hercules-base-api",
+    ttlSeconds:900,
+  },jwtSecret);
+  let polls=0;
+  const store={
+    async poll(){
+      polls+=1;
+      return [{id:polls,event_name:"pulse.event",payload:{polls}}];
+    },
+  };
+  const response=await routeRealtimeRequest(
+    new Request("https://base.local/v1/realtime/channels/orders-live/stream",{
+      headers:{authorization:"Bearer "+token},
+    }),
+    {jwtSecret,store,streamPollIntervalMs:10,streamHeartbeatMs:1000},
+  );
+  await new Promise((resolve)=>setTimeout(resolve,60));
+  assert.equal(polls,1);
+  await response.body.cancel();
+  await new Promise((resolve)=>setTimeout(resolve,30));
+  assert.equal(polls,1);
+});
+
+test("Base server aborts realtime work when the client connection closes", async () => {
+  const {readFile}=await import("node:fs/promises");
+  const source=await readFile(new URL("../hercules-base/server.mjs",import.meta.url),"utf8");
+  assert.match(source,/new AbortController\(\)/);
+  assert.match(source,/response\.once\("close",\(\)=>abortController\.abort\(\)\)/);
+  assert.match(source,/writeFetchResponse\(response,routed\)/);
+});
