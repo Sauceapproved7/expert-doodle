@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { createHash } from 'node:crypto';
+import { streamJsonl, stableStringify } from '../../../hercules-runtime/shopify-bulk-jsonl.mjs';
 
 const URL = Deno.env.get('SUPABASE_URL')!;
 const ANON = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!;
@@ -81,12 +81,6 @@ async function ensureCompletionSubscription(token: string) {
   const payload = result?.webhookSubscriptionCreate;
   if (payload?.userErrors?.length || !payload?.webhookSubscription?.id) throw new Error('bulk_finish_subscription_failed');
   return String(payload.webhookSubscription.id);
-}
-
-function stable(value: any): string {
-  if (value === null || typeof value !== 'object') return JSON.stringify(value);
-  if (Array.isArray(value)) return '[' + value.map(stable).join(',') + ']';
-  return '{' + Object.keys(value).sort().map(k => JSON.stringify(k) + ':' + stable(value[k])).join(',') + '}';
 }
 
 async function hashText(value: string) {
@@ -175,61 +169,12 @@ async function processRun(runId: string) {
   if (!response.ok || !response.body) throw new Error('bulk_result_download_failed');
 
   await DB.from('hercules_shopify_bulk_reconciliation_runs').update({ status: 'processing' }).eq('id', runId);
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder('utf-8', { fatal: true });
-  const digest = createHash('sha256');
-  let buffer = '', bytes = 0, seen = 0, inserted = 0, updated = 0, skipped = 0;
-  const apply = async (line: string) => {
-    if (line.endsWith('\r')) line = line.slice(0, -1);
-    if (!line.trim()) return;
-    let order: any;
-    try { order = JSON.parse(line); } catch { throw new Error('bulk_jsonl_invalid'); }
-    if (!order || typeof order.id !== 'string' || !order.id.startsWith('gid://shopify/Order/') || !order.updatedAt) {
-      throw new Error('bulk_jsonl_order_shape_invalid');
-    }
-    const canonical = {
-      id: order.id, updatedAt: order.updatedAt,
-      financialStatus: order.displayFinancialStatus ?? null,
-      fulfillmentStatus: order.displayFulfillmentStatus ?? null,
-      cancelledAt: order.cancelledAt ?? null,
-      test: order.test === true
-    };
-    const payloadHash = await hashText(stable(canonical));
-    const { data: action, error: stateError } = await DB.rpc('hercules_shopify_upsert_bulk_order_state_v1', {
-      p_tenant_id: run.tenant_id, p_shop_domain: STORE, p_resource_gid: order.id,
-      p_updated_at: order.updatedAt, p_payload_sha256: payloadHash,
-      p_canonical_state: canonical, p_run_id: runId
-    });
-    if (stateError || !['inserted','updated','skipped'].includes(action)) throw new Error('bulk_state_apply_failed');
-    seen++;
-    if (action === 'inserted') inserted++;
-    else if (action === 'updated') updated++;
-    else skipped++;
-  };
-
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      bytes += value.byteLength;
-      if (bytes > 512 * 1024 * 1024) throw new Error('bulk_result_limit_exceeded');
-      digest.update(value);
-      buffer += decoder.decode(value, { stream: true });
-      let i;
-      while ((i = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, i);
-        if (new TextEncoder().encode(line).length > 1024 * 1024) throw new Error('bulk_line_limit_exceeded');
-        buffer = buffer.slice(i + 1);
-        await apply(line);
-      }
-      if (new TextEncoder().encode(buffer).length > 1024 * 1024) throw new Error('bulk_line_limit_exceeded');
-    }
-    buffer += decoder.decode();
-    if (buffer) await apply(buffer);
-  } finally {
-    reader.releaseLock();
-  }
-  const resultHash = digest.digest('hex');
+  const streamed = await streamJsonl(response.body, apply, {
+    maxBytes: 512 * 1024 * 1024,
+    maxLineBytes: 1024 * 1024
+  });
+  const seen = streamed.recordsSeen;
+  const resultHash = streamed.sha256;
   const { error: finalizeError } = await DB.rpc('hercules_shopify_complete_bulk_reconciliation_v1', {
     p_run_id: runId, p_candidate_at: run.cursor_candidate_at, p_records_seen: seen,
     p_records_inserted: inserted, p_records_updated: updated, p_records_skipped: skipped,
