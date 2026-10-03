@@ -13,13 +13,13 @@ spec:
       template:
         spec:
           restartPolicy: Never
-          serviceAccountName: hercules-shopify-reconciler
+          serviceAccountName: hercules-shopify-reconciler\n          automountServiceAccountToken: false
           securityContext:
             seccompProfile:
               type: RuntimeDefault
           containers:
             - name: reconciler
-              image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest
+              image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify@sha256:0000000000000000000000000000000000000000000000000000000000000000
               args: ["node", "shopify/hercules/backend/reconciler-runner.mjs"]
               envFrom:
                 - configMapRef:
