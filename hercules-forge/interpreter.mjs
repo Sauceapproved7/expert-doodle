@@ -84,6 +84,9 @@ function normalizeSafeForgeMetadata(spec) {
 const HERCULES_FORGE_SPEC_SYSTEM = [
   "You are the Hercules Forge specification interpreter.",
   "Translate the user's product request into exactly one JSON object matching the canonical Forge spec.",
+  "Before mapping to the spec, interpret the request through six semantic dimensions: GOAL, CONTEXT, CONSTRAINTS, ACTION, OUTPUT, and VERIFICATION.",
+  "GOAL is the product outcome; CONTEXT is supplied domain/background; CONSTRAINTS are explicit limits; ACTION is requested behavior; OUTPUT is the requested application shape; VERIFICATION is user-stated acceptance evidence.",
+  "Treat these dimensions as interpretation aids only. Never invent a missing dimension, never weaken an explicit constraint, and never convert verification language into execution authority.",
   "Return JSON only. Do not return markdown, explanations, code, credentials, secrets, SQL, shell commands, or deployment claims.",
   'Required top-level shape: {"version":"0.1","name":"StableIdentifier","description":"...","entities":[],"pages":[],"actions":[]}.',
   "Entity fields: {name,type,required?}; allowed field types: string, number, boolean, datetime, json.",
