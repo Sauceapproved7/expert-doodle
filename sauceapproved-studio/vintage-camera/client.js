@@ -27,6 +27,25 @@ const grainTextures=Array.from({length:16},()=>{
 let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
 let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,scheduledFrame=null,exportTimer=null,exportDriver=null,mode='idle',captureMode='idle',captureLook=null,captureReceipt=null,chunks=[],rawChunks=[];
 const deviceProof={cameraOpened:false,looksUsed:new Set(),cameraReceipt:null,clipReceipt:null};
+const proofLabels={cameraOpened:'proof-camera-opened',allLooksUsed:'proof-looks',cameraCapturePassed:'proof-camera-capture',clipCapturePassed:'proof-clip-capture',originalAvailable:'proof-original',cameraPlaybackConfirmed:'proof-camera-playback',clipPlaybackConfirmed:'proof-clip-playback'};
+const currentDeviceProof=()=>createDeviceProofReceipt({
+  cameraOpened:deviceProof.cameraOpened,
+  looksUsed:[...deviceProof.looksUsed],
+  cameraReceipt:deviceProof.cameraReceipt,
+  clipReceipt:deviceProof.clipReceipt,
+  cameraPlaybackConfirmed:$('camera-playback').checked,
+  clipPlaybackConfirmed:$('clip-playback').checked,
+  originalAvailable:!!originalUrl
+});
+const renderProofProgress=()=>{
+  const proof=currentDeviceProof();
+  for(const [name,id] of Object.entries(proofLabels)){
+    const node=$(id);if(!node)continue;
+    const passed=proof.checks[name]===true;
+    node.textContent=(passed?'✓ ':'○ ')+node.textContent.replace(/^[✓○]\s*/,'');
+  }
+  $('device-proof').disabled=proof.missing.length>0;
+};
 const setStatus=message=>{$('status').textContent=message;};
 const setButtonState=()=>{
   const ready=mode==='camera'||mode==='clip';
@@ -34,6 +53,7 @@ const setButtonState=()=>{
   $('record').disabled=!ready||recordingFinalizing||typeof MediaRecorder==='undefined'||!HTMLCanvasElement.prototype.captureStream;
   $('stop').disabled=mode==='idle'||recordingFinalizing;$('original').disabled=!originalUrl;
   $('receipt').disabled=!captureReceipt;
+  renderProofProgress();
   for(const id of ['stock','strength','grain'])$(id).disabled=mode==='recording'||recordingFinalizing;
   $('record').textContent=mode==='clip'?'Process clip':'Record look';
 };
@@ -182,18 +202,11 @@ document.addEventListener('visibilitychange',()=>{
 $('recipe').addEventListener('click',()=>saveBlob(new Blob([JSON.stringify(recipe(),null,2)],{type:'application/json'}),'sauceapproved-look-recipe.json'));
 $('receipt').addEventListener('click',()=>{if(captureReceipt)saveBlob(new Blob([JSON.stringify(captureReceipt,null,2)],{type:'application/json'}),'sauceapproved-capture-qa.json');});
 $('original').addEventListener('click',()=>{if(!originalUrl)return;const link=document.createElement('a');link.href=originalUrl;link.download=sourceName||`sauceapproved-original.${extensionForMime(rawRecorder?.mimeType||'')}`;link.click();});
-$('stock').addEventListener('change',()=>deviceProof.looksUsed.add($('stock').value));
+$('stock').addEventListener('change',()=>{deviceProof.looksUsed.add($('stock').value);renderProofProgress();});
 for(const id of ['strength','grain'])$(id).addEventListener('input',()=>{$(id+'-value').value=$(id).value+'%';});
+for(const id of ['camera-playback','clip-playback'])$(id).addEventListener('change',renderProofProgress);
 $('device-proof').addEventListener('click',()=>{
-  const proof=createDeviceProofReceipt({
-    cameraOpened:deviceProof.cameraOpened,
-    looksUsed:[...deviceProof.looksUsed],
-    cameraReceipt:deviceProof.cameraReceipt,
-    clipReceipt:deviceProof.clipReceipt,
-    cameraPlaybackConfirmed:$('camera-playback').checked,
-    clipPlaybackConfirmed:$('clip-playback').checked,
-    originalAvailable:!!originalUrl
-  });
+  const proof=currentDeviceProof();
   saveBlob(new Blob([JSON.stringify(proof,null,2)],{type:'application/json'}),'sauceapproved-device-proof.json');
   const missing=describeMissingDeviceProof(proof);
   setStatus(proof.ok?'Device proof passed. Save this receipt with your launch evidence.':`Device proof incomplete: ${missing.join('; ')}.`);
