@@ -16,3 +16,12 @@ test("Bot work route rejects credential-shaped payload fields",()=>{
 test("Bot work route rejects non-http browser URLs",()=>{
  assert.throws(()=>normalizeBotWorkCommand({action:"bot.browser.navigate",url:"file:\/\/\/etc\/passwd"}),/invalid browser url/);
 });
+
+test("Smallz verification lane is fixed to the production health canary",()=>{
+ assert.deepEqual(normalizeBotWorkCommand({action:"smallz.verify.browser"}),{
+  action:"smallz.verify.browser",
+  url:"https://smallz-hercules.onrender.com/health",
+  verificationOnly:true
+ });
+ assert.throws(()=>normalizeBotWorkCommand({action:"smallz.verify.browser",url:"https://example.com"}),/verification target is fixed/);
+});
