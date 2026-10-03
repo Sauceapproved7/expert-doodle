@@ -13,12 +13,13 @@ spec:
         app: hercules-shopify-worker
     spec:
       serviceAccountName: hercules-shopify-worker
+      automountServiceAccountToken: false
       securityContext:
         seccompProfile:
           type: RuntimeDefault
       containers:
         - name: worker
-          image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest
+          image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify@sha256:0000000000000000000000000000000000000000000000000000000000000000
           args: ["node", "shopify/hercules/backend/worker.mjs"]
           envFrom:
             - configMapRef:
