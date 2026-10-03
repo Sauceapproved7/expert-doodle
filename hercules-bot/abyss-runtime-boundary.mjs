@@ -33,7 +33,8 @@ export function createAbyssRuntimeBoundary({
   now=()=>Date.now()
 }={}){
   const authBase=supabaseUrl?baseUrl(supabaseUrl,"Supabase auth"):null;
-  const controlBase=controlUrl?baseUrl(controlUrl,"external Abyss control plane"):null;
+  const resolvedControlUrl=controlUrl||(supabaseUrl?new URL("/functions/v1/hercules-abyss-control",supabaseUrl).toString():undefined);
+  const controlBase=resolvedControlUrl?baseUrl(resolvedControlUrl,"external Abyss control plane"):null;
   const ownerId=String(ownerUserId??"").trim();
 
   async function authenticateOwner(authorization){
