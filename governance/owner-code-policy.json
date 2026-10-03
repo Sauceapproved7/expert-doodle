@@ -155,6 +155,7 @@
     "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
   ],
   "allowedContainerImages": [
+    "image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest",
     "mcr.microsoft.com/devcontainers/javascript-node:5.2.1-22-bookworm@sha256:ec12180252047b3400ffffe008789cb8462bfff6f0703e285c2fb9986d47dae7",
     "node:22.12.0-alpine",
     "postgres:16.4-alpine",
