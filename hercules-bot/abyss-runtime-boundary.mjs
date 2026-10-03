@@ -1,7 +1,7 @@
 import {createPublicKey, verify as verifySignature} from "node:crypto";
 
 const BEARER=/^Bearer\s+\S+$/i;
-const SHA256=/^[a-f0-9]{64}$/i;
+const SHA256=/^[a-f0-9]{64}$/;
 const B64URL=/^[A-Za-z0-9_-]+$/;
 
 function stable(value){
