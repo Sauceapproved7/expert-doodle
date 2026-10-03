@@ -12,6 +12,7 @@ on:
       - "supabase/functions/_shared/shopify-bulk-jsonl.mjs"
       - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/shopify-bulk-jsonl.test.mjs"
+      - "tests/shopify-bulk-reconciliation-contract.test.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
       - "hercules-runtime/shopify-paid-order-runner-policy.json"
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
@@ -37,6 +38,7 @@ on:
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
       - "tests/hercules-shopify-owned-control-plane.test.mjs"
       - "tests/shopify-bulk-jsonl.test.mjs"
+      - "tests/shopify-bulk-reconciliation-contract.test.mjs"
       - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   workflow_dispatch:
@@ -53,8 +55,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-      - name: Verify bounded reconciliation contract and runner
-        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/hercules-shopify-owned-control-plane.test.mjs
-        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/shopify-bulk-jsonl.test.mjs
+      - name: Verify paid-order and bulk reconciliation contracts
+        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/hercules-shopify-owned-control-plane.test.mjs tests/shopify-bulk-jsonl.test.mjs tests/shopify-bulk-reconciliation-contract.test.mjs
       - name: Verify Hercules execution contract
         run: node scripts/verify-hercules-execution-contract.mjs
