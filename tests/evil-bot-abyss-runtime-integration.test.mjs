@@ -64,3 +64,9 @@ test("external control failure prevents mutation staging and leaves nothing pend
   assert.equal(noPending.status,200);
   assert.equal(noPending.body.status,"no-pending-command");
 });
+
+test("browser work route also requires verified owner identity",async()=>{
+  const app=makeApp({emergencyStopActive:false,identityTrusted:true,auditTrusted:true});
+  const result=await app.handle({method:"POST",url:"/api/browser",body:{action:"bot.browser.navigate",url:"https://example.com"}});
+  assert.equal(result.status,401);
+});
