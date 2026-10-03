@@ -41,13 +41,28 @@ async function readObjectBytes(request,maxObjectBytes){
     error.status=413;
     throw error;
   }
-  const bytes=Buffer.from(await request.arrayBuffer());
-  if(bytes.byteLength>maxObjectBytes){
-    const error=new Error("object too large");
-    error.status=413;
-    throw error;
+  if(!request.body)return Buffer.alloc(0);
+  const reader=request.body.getReader();
+  const chunks=[];
+  let total=0;
+  try{
+    while(true){
+      const {done,value}=await reader.read();
+      if(done)break;
+      const chunk=Buffer.from(value);
+      total+=chunk.byteLength;
+      if(total>maxObjectBytes){
+        try{await reader.cancel();}catch{}
+        const error=new Error("object too large");
+        error.status=413;
+        throw error;
+      }
+      chunks.push(chunk);
+    }
+  }finally{
+    reader.releaseLock();
   }
-  return bytes;
+  return Buffer.concat(chunks,total);
 }
 
 function parseObjectPath(pathname){
