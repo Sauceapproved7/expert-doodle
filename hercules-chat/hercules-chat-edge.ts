@@ -13,7 +13,7 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const dpopEnforced = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "").toLowerCase() === "true";
 
 
-import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";\nimport { createMtlsHttpClient, mtlsClientConfig } from "./mtls-client.ts";
 import { verifyDpopRequest } from "./dpop.ts";
 
 const embeddingModel = new Supabase.ai.Session("gte-small");
@@ -183,9 +183,9 @@ async function getInternalAiKey(req: Request): Promise<string> {
   return secret;
 }
 
-async function routeAi(req: Request, system: string, prompt: string) {
+async function routeAi(req: Request, system: string, prompt: string) {\n  const mtlsClient = createMtlsHttpClient(mtlsClientConfig(Deno.env.toObject()));
   const key = await getInternalAiKey(req);
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/hercules-ai`, {
+  let response: Response;\n  try {\n    response = await fetch(`${SUPABASE_URL}/functions/v1/hercules-ai`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
