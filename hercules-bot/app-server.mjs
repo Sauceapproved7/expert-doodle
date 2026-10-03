@@ -6,19 +6,19 @@ import {createOperatorController} from "./operator-controller.mjs";
 import {createOperatorConsole} from "./operator-v4.mjs";
 import {createOperatorSession} from "./operator-v5.mjs";
 import {createSimulatedBodyAdapter} from "./body-sim-adapter.mjs";
-import {createBrowserAdapter} from "./browser-adapter.mjs";
+import {createBrowserAdapter} from "./browser-adapter.mjs";\nimport {createDeployerAdapter} from "./deployer-adapter.mjs";
 
 function json(status,body){return {status,headers:{"content-type":"application/json; charset=utf-8"},body};}
 function readBody(req){return req?.body && typeof req.body==="object"?req.body:{};}
 
-function createServerSideBrowserSubmit(){\n  const endpoint=process.env.HERCULES_BROWSER_BRIDGE_URL;\n  const token=process.env.HERCULES_BROWSER_BRIDGE_TOKEN;\n  if(!endpoint || !token) return async()=>{ throw Object.assign(new Error("browser-bridge-not-configured"),{code:"browser-bridge-not-configured"}); };\n  return async request=>{\n    const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json","authorization:`Bearer ${token}`},body:JSON.stringify(request),signal:AbortSignal.timeout(120000)});\n    if(!response.ok) throw Object.assign(new Error("browser-bridge-request-failed"),{code:"browser-bridge-request-failed",status:response.status});\n    return response.json();\n  };\n}\n\nexport function createHerculesBotApp({port=38801}={}) {
-  const body=createSimulatedBodyAdapter();\n  const browser=createBrowserAdapter({submit:createServerSideBrowserSubmit()});
+function createServerSideBrowserSubmit(){\n  const endpoint=process.env.HERCULES_BROWSER_BRIDGE_URL;\n  const token=process.env.HERCULES_BROWSER_BRIDGE_TOKEN;\n  if(!endpoint || !token) return async()=>{ throw Object.assign(new Error("browser-bridge-not-configured"),{code:"browser-bridge-not-configured"}); };\n  return async request=>{\n    const response=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/json","authorization:`Bearer ${token}`},body:JSON.stringify(request),signal:AbortSignal.timeout(120000)});\n    if(!response.ok) throw Object.assign(new Error("browser-bridge-request-failed"),{code:"browser-bridge-request-failed",status:response.status});\n    return response.json();\n  };\n}\n\nfunction createServerSideDeployRequest(){\n  const base=process.env.HERCULES_DEPLOY_URL;\n  const token=process.env.HERCULES_DEPLOY_CONTROL_TOKEN;\n  if(!base || !token) return async()=>{ throw Object.assign(new Error("deployer-not-configured"),{code:"deployer-not-configured"}); };\n  return async({method,path,body})=>{\n    const url=new URL(path,base);\n    const response=await fetch(url,{method,headers:{"authorization":`Bearer ${token}`,...(body?{"content-type":"application/json"}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(120000)});\n    if(!response.ok) throw Object.assign(new Error("deployer-request-failed"),{code:"deployer-request-failed",status:response.status});\n    return response.json();\n  };\n}\n\nexport function createHerculesBotApp({port=38801}={}) {
+  const body=createSimulatedBodyAdapter();\n  const browser=createBrowserAdapter({submit:createServerSideBrowserSubmit()});\n  const deployer=createDeployerAdapter({request:createServerSideDeployRequest()});
   const controller=createOperatorController({
     adapters:{
       body,
       system:{status:async()=>({ok:true,mode:"software"})},
       vault:{inspect:async()=>({available:true,mode:"read-only"})},
-      forge:{inspect:async()=>({available:true,mode:"read-only"})},\n      browser
+      forge:{inspect:async()=>({available:true,mode:"read-only"})},\n      browser,\n      deployer
     }
   });
   const console=createOperatorConsole({controller});
