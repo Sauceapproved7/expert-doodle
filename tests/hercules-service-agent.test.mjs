@@ -1,0 +1,78 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {createServiceSession, authorizeServiceSession, planRepair} from "../hercules-service-agent/core.mjs";
+
+test("service session starts read-only and excludes private-content collection",()=>{
+  const s=createServiceSession({customerConsent:true,deviceId:"device-1"});
+  assert.equal(s.mode,"diagnostic");
+  assert.equal(s.permissions.mutate,false);
+  assert.equal(s.permissions.privateContent,false);
+});
+
+test("mutation requires explicit repair authorization and recovery capsule",()=>{
+  const s=authorizeServiceSession(createServiceSession({customerConsent:true,deviceId:"device-1"}),{repairApproval:true});
+  assert.throws(()=>planRepair({session:s,diagnosis:{code:"startup-load",severity:"medium"},capsule:null}),/recovery capsule/i);
+  const p=planRepair({session:s,diagnosis:{code:"startup-load",severity:"medium"},capsule:{id:"cap-1",verified:true}});
+  assert.equal(p.failClosed,true);
+  assert.equal(p.requiresVerification,true);
+});
+
+
+test("Windows diagnostics normalize only technical-health signals",async()=>{
+  const {normalizeWindowsDiagnostics}=await import("../hercules-service-agent/windows-diagnostics.mjs");
+  const report=normalizeWindowsDiagnostics({
+    platform:"win32",freeDiskPercent:7,memoryPressurePercent:91,
+    pendingReboot:true,failedUpdates:2,startupImpact:"high",
+    privateFiles:["secret.docx"],browserHistory:["example.com"]
+  });
+  assert.equal(report.schema,"sauceapproved.hercules-service-agent.diagnostic-report");
+  assert.equal(report.signals.disk.status,"critical");
+  assert.equal(report.signals.memory.status,"warning");
+  assert.equal(report.signals.updates.status,"warning");
+  assert.equal("privateFiles" in report,false);
+  assert.equal("browserHistory" in report,false);
+});
+
+test("repair catalog is allow-listed and rejects unknown repair codes",async()=>{
+  const {getRepairModule}=await import("../hercules-service-agent/repair-catalog.mjs");
+  assert.equal(getRepairModule("clear-user-temp").risk,"low");
+  assert.equal(getRepairModule("repair-windows-image").requiresElevation,true);
+  assert.throws(()=>getRepairModule("run-arbitrary-command"),/not allow-listed/i);
+});
+
+
+test("collector maps read-only Windows probe output without exposing raw command output",async()=>{
+  const {collectWindowsDiagnostics}=await import("../hercules-service-agent/windows-collector.mjs");
+  const report=await collectWindowsDiagnostics({probe:async()=>({
+    platform:"win32",freeDiskPercent:18,memoryPressurePercent:40,pendingReboot:false,failedUpdates:0,startupImpact:"medium",
+    raw:"must-not-escape"
+  })});
+  assert.equal(report.signals.disk.status,"warning");
+  assert.equal("raw" in report,false);
+});
+
+test("repair binding requires an allow-listed module and a sealed Cleaner recovery capsule",async()=>{
+  const {bindRepairExecution}=await import("../hercules-service-agent/repair-binding.mjs");
+  const session=authorizeServiceSession(createServiceSession({customerConsent:true,deviceId:"device-1"}),{repairApproval:true});
+  assert.throws(()=>bindRepairExecution({session,repairCode:"clear-user-temp",capsule:{id:"cap-1",state:"preparing"}}),/sealed recovery capsule/i);
+  const bound=bindRepairExecution({session,repairCode:"clear-user-temp",capsule:{id:"cap-1",state:"sealed",schema:"sauceapproved.hercules-cleaner.recovery-capsule"}});
+  assert.equal(bound.repair.code,"clear-user-temp");
+  assert.equal(bound.execute,false);
+  assert.equal(bound.requiresPostRepairVerification,true);
+});
+
+
+test("Windows probe parses bounded PowerShell health payload and rejects non-Windows hosts",async()=>{
+  const {createWindowsProbe}=await import("../hercules-service-agent/windows-probe.mjs");
+  const probe=createWindowsProbe({platform:"win32",execFileImpl:async(file,args,options)=>({
+    stdout:JSON.stringify({freeDiskPercent:32,memoryPressurePercent:61,pendingReboot:true,failedUpdates:1,startupImpact:"low"}),
+    stderr:""
+  })});
+  const raw=await probe();
+  assert.equal(raw.platform,"win32");
+  assert.equal(raw.freeDiskPercent,32);
+  assert.equal(raw.pendingReboot,true);
+  assert.deepEqual(Object.keys(raw).sort(),["failedUpdates","freeDiskPercent","memoryPressurePercent","pendingReboot","platform","startupImpact"].sort());
+  const bad=createWindowsProbe({platform:"linux",execFileImpl:async()=>({stdout:"{}",stderr:""})});
+  await assert.rejects(()=>bad(),/Windows host required/i);
+});
