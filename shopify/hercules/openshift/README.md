@@ -13,3 +13,5 @@ Safety defaults:
 - The public Route targets only the API service; worker and reconciler are not exposed.
 
 Promotion requires a reviewed app image, durable PostgreSQL/queue wiring, end-to-end webhook persistence tests, Shopify GraphQL reconciliation tests, image/SBOM/security evidence, and an explicit production authorization. The current live Shopify path remains authoritative until that evidence exists.
+
+<!-- hardening-v2 RED checkpoint: implementation intentionally absent at this commit -->
