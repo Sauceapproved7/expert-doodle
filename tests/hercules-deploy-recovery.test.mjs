@@ -115,3 +115,5 @@ test("Deploy Plane requires recovery storage independent from primary state", ()
   });
   assert.equal(config.recoveryRoot, "/tmp/hercules-recovery");
 });
+
+// GREEN candidate: exact-head CI must pass before merge.
