@@ -177,3 +177,40 @@ test("settlement source refreshes the bucket timestamp before returning refunded
   assert.match(settlement, /redis\\.call\\("HSET", KEYS\\[1\\][\\s\\S]*"last_refill_ms"/);
   assert.match(settlement, /status\", \"settled\"/);
 });
+
+
+test("budget keys are period-specific so settlement cannot refund a newer day or month", () => {
+  const keys = buildAdmissionKeys("tenant_7f3a", "req_period", {
+    dailyPeriod: "2026-10-03",
+    monthlyPeriod: "2026-10",
+  });
+  assert.match(keys.dailyBudget, /:budget:day:2026-10-03$/);
+  assert.match(keys.monthlyBudget, /:budget:month:2026-10$/);
+  assert.equal("budget" in keys, false);
+});
+
+test("admission uses integer refill numerators and periods instead of fractional per-ms rates", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.match(scripts.admission, /tpm_refill_numerator/);
+  assert.match(scripts.admission, /tpm_refill_period_ms/);
+  assert.doesNotMatch(scripts.admission, /elapsed \* refill_per_ms/);
+});
+
+test("reservation stores accounting periods and a concurrency lease marker", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.match(scripts.admission, /"daily_period", daily_period/);
+  assert.match(scripts.admission, /"monthly_period", monthly_period/);
+  assert.match(scripts.admission, /"concurrency_lease", "1"/);
+});
+
+test("settlement targets reservation-period budget keys and releases concurrency once", async () => {
+  const {scripts} = await import("../hercules-chat/redis/admission.mjs");
+  assert.match(scripts.settlement, /daily_period/);
+  assert.match(scripts.settlement, /monthly_period/);
+  assert.match(scripts.settlement, /concurrency_lease/);
+  assert.match(scripts.settlement, /"concurrency_lease", "0"/);
+});
+
+test("controller exposes abandoned-reservation recovery", () => {
+  assert.equal(typeof RedisAiAdmissionController.prototype.reap, "function");
+});
