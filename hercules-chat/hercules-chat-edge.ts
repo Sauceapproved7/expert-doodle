@@ -12,6 +12,42 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const dpopEnforced = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "").toLowerCase() === "true";
 
+function accessToken(req: Request): string {
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!auth.startsWith("Bearer ") && !auth.startsWith("DPoP ")) throw new Error("UNAUTHORIZED");
+  const token = auth.slice(auth.indexOf(" ") + 1).trim();
+  if (!token) throw new Error("UNAUTHORIZED");
+  return token;
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  const parts = token.split(".");
+  if (parts.length !== 3) throw new Error("UNAUTHORIZED");
+  let raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+  raw += "=".repeat((4 - (raw.length % 4)) % 4);
+  const payload = JSON.parse(atob(raw));
+  if (!payload || typeof payload !== "object") throw new Error("UNAUTHORIZED");
+  return payload as Record<string, unknown>;
+}
+
+async function enforceDpop(req: Request, token: string): Promise<void> {
+  if (!dpopEnforced) return;
+  const payload = decodeJwtPayload(token);
+  const cnf = payload.cnf;
+  const expectedJkt = cnf && typeof cnf === "object" && typeof (cnf as Record<string, unknown>).jkt === "string"
+    ? String((cnf as Record<string, unknown>).jkt) : "";
+  if (!expectedJkt) throw new Error("DPOP_TOKEN_BINDING_REQUIRED");
+  await verifyDpopRequest(req, token, expectedJkt, async (key, ttl) => {
+    try {
+      const decision = await reserveWeightedTokens(key, 1, 0, 1, ttl * 1000);
+      return decision.allowed;
+    } catch {
+      throw new Error("DPOP_REPLAY_STORE_UNAVAILABLE");
+    }
+  });
+}
+
+
 
 import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
 import { createMtlsHttpClient, mtlsClientConfig } from "./mtls-client.ts";
