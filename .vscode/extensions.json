@@ -4,7 +4,7 @@
     "github.vscode-codeql",
     "eamodio.gitlens",
     "redhat.vscode-yaml",
-    "redhat.vscode-openshift-extension-pack",
+    "redhat.vscode-openshift-connector",
     "ms-kubernetes-tools.vscode-kubernetes-tools",
     "ms-azuretools.vscode-containers",
     "dbaeumer.vscode-eslint",
