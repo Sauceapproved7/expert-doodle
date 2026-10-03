@@ -15,3 +15,5 @@ test("chat DPoP implementation is not silently treated as enabled",()=>{
   const gated = edge.includes("HERCULES_DPOP_ENFORCED") && edge.includes("verifyDpopRequest");
   assert.equal(gated, false);
 });
+
+// DPoP edge integration contract: feature-gated, bearer-compatible when disabled.
