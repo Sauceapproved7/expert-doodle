@@ -13,8 +13,6 @@ on:
       - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/shopify-bulk-jsonl.test.mjs"
       - "tests/hercules-shopify-bulk-reconciliation-contract.test.mjs"
-      - "tests/shopify-bulk-reconciliation-contract.test.mjs"
-      - "tests/hercules-shopify-bulk-reconciliation-contract.test.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
       - "hercules-runtime/shopify-paid-order-runner-policy.json"
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
@@ -40,7 +38,6 @@ on:
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
       - "tests/hercules-shopify-owned-control-plane.test.mjs"
       - "tests/shopify-bulk-jsonl.test.mjs"
-      - "tests/shopify-bulk-reconciliation-contract.test.mjs"
       - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   workflow_dispatch:
