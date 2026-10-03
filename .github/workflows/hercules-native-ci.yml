@@ -1,0 +1,45 @@
+name: Hercules Native CI
+
+on:
+  pull_request:
+    paths:
+      - "hercules-native/**"
+      - ".github/workflows/hercules-native-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-native/**"
+      - ".github/workflows/hercules-native-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  strict-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S hercules-native -B build/native-strict -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build/native-strict --parallel
+      - name: Test
+        run: ctest --test-dir build/native-strict --output-on-failure
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    env:
+      ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+      UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure ASan and UBSan
+        run: >
+          cmake -S hercules-native -B build/native-sanitize
+          -DCMAKE_BUILD_TYPE=Debug
+          -DCMAKE_C_FLAGS="-O1 -g -fno-omit-frame-pointer -fsanitize=address,undefined"
+          -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+      - name: Build
+        run: cmake --build build/native-sanitize --parallel
+      - name: Test under sanitizers
+        run: ctest --test-dir build/native-sanitize --output-on-failure
