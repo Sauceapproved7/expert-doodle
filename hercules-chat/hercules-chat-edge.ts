@@ -223,6 +223,7 @@ async function finalize(
   status: "completed" | "failed" | "cancelled",
   responseMessageId: number | null = null,
   errorCode: string | null = null,
+  estimatedActualTokens = 0,
 ) {
   try {
     await rest(
@@ -233,7 +234,7 @@ async function finalize(
         body: JSON.stringify({
           p_request_id: requestId,
           p_status: status,
-          p_input_tokens: 0,
+          p_input_tokens: estimatedActualTokens,
           p_cached_input_tokens: 0,
           p_output_tokens: 0,
           p_actual_cost_microusd: 0,
