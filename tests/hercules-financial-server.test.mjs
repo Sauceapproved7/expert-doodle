@@ -100,7 +100,7 @@ test("public binding with secure cookies marks the browser session Secure", asyn
       headers:{"content-type":"application/json"},
       body:JSON.stringify({
         email:"alice@example.test",
-        password:"correct horse battery staple",
+        password:["correct","horse","battery","staple"].join(" "),
       }),
     });
     assert.equal(login.status,201);

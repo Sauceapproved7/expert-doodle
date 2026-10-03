@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hercules-shopify-reconciler
+spec:
+  schedule: "17 * * * *"
+  suspend: true
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          serviceAccountName: hercules-shopify-reconciler
+          securityContext:
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: reconciler
+              image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest
+              args: ["node", "shopify/hercules/backend/reconciler-runner.mjs"]
+              envFrom:
+                - configMapRef:
+                    name: hercules-shopify-config
+              env:
+                - name: SHOPIFY_TOKEN_ENCRYPTION_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: hercules-shopify-secrets
+                      key: token-encryption-key
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 1000m
+                  memory: 512Mi

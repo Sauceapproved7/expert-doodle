@@ -1,15 +1,15 @@
-export function createOperatorSession({console}={}) {
+export function createOperatorSession({console,initiallyStopped=false}={}) {
   if(!console || typeof console.plan!=="function" || typeof console.execute!=="function") {
     throw new TypeError("governed operator console required");
   }
   let pending=null;
-  let stopped=false;
+  let stopped=initiallyStopped===true;
 
   return Object.freeze({
     async receive(input) {
-      if(stopped) return {mode:"stopped",reason:"emergency-stop-active"};
       const plan=await console.plan(input);
       if(plan.status!=="planned") return plan;
+      if(stopped&&plan.requiresApproval) return {mode:"stopped",reason:"emergency-stop-active"};
       if(plan.requiresApproval) {
         pending={input,plan};
         return {mode:"awaiting-approval",command:plan.command};

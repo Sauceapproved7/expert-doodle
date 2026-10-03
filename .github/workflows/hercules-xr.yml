@@ -1,0 +1,30 @@
+name: Hercules XR
+
+on:
+  pull_request:
+    paths:
+      - "sauceapproved-studio/xr/**"
+      - "tests/hercules-xr-*.test.mjs"
+      - "docs/HERCULES-XR-*.md"
+      - ".github/workflows/hercules-xr.yml"
+  push:
+    branches: [main]
+    paths:
+      - "sauceapproved-studio/xr/**"
+      - "tests/hercules-xr-*.test.mjs"
+      - "docs/HERCULES-XR-*.md"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node scripts/verify-owner-code-only.mjs
+      - run: node --test tests/hercules-xr-*.test.mjs
+      - run: node scripts/verify-hercules-execution-contract.mjs

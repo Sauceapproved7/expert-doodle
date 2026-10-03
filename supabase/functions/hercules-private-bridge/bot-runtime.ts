@@ -27,7 +27,11 @@ async function internalKey(purpose:string){
 }
 function safeUrl(raw:unknown){
  let u:URL; try{u=new URL(String(raw||""));}catch{throw new Error("invalid_browser_url")}
- if(!["http:","https:"].includes(u.protocol))throw new Error("invalid_browser_url");
+ const h=u.hostname.toLowerCase();
+ if(u.protocol!=="https:")throw new Error("invalid_browser_url");
+ if(h==="localhost"||h.endsWith(".local")||h==="0.0.0.0"||h==="127.0.0.1"||h==="::1")throw new Error("invalid_browser_url");
+ if(/^10\\./.test(h)||/^192\\.168\\./.test(h)||/^169\\.254\\./.test(h))throw new Error("invalid_browser_url");
+ const m=/^172\\.(\\d+)\\./.exec(h); if(m&&Number(m[1])>=16&&Number(m[1])<=31)throw new Error("invalid_browser_url");
  return u.toString();
 }
 export async function handleBotRuntimeRequest(req:Request){

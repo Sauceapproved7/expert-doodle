@@ -19,3 +19,13 @@ test("bot runtime exposes browser and read-only deploy status",()=>{
   assert.match(runtime,/browser\.scrape/);
   assert.match(runtime,/deploy\.status/);
 });
+
+
+test("bot runtime rejects non-HTTPS and private-network browser targets",()=>{
+  assert.match(runtime,/u\.protocol!==\"https:\"/);
+  assert.match(runtime,/localhost/);
+  assert.match(runtime,/169\\\.254/);
+  assert.match(runtime,/192\\\.168/);
+  assert.match(runtime,/172\\\./);
+  assert.match(runtime,/10\\\./);
+});

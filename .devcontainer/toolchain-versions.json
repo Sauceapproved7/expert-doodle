@@ -1,0 +1,9 @@
+{
+  "schema": "sauceapproved.devcontainer-toolchain",
+  "version": 1,
+  "openshift": "4.20.0",
+  "kubectl": "bundled-with-openshift-4.20.0",
+  "helm": "4.3.0",
+  "ansibleCore": "2.19.13",
+  "python": "base-distribution-provided"
+}

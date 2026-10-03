@@ -206,6 +206,7 @@ create table if not exists private.hercules_usage_ledger (
   cached_input_tokens bigint not null default 0 check (cached_input_tokens >= 0),
   output_tokens bigint not null default 0 check (output_tokens >= 0),
   cost_microusd bigint not null default 0 check (cost_microusd >= 0),
+  reserved_tokens bigint not null default 0 check (reserved_tokens >= 0),
   status text not null
     check (status in ('reserved','completed','failed','cancelled')),
   created_at timestamptz not null default now(),
@@ -234,15 +235,17 @@ create table if not exists private.hercules_ai_plan_limits (
     check (monthly_cost_microusd is null or monthly_cost_microusd >= 0),
   max_output_tokens integer
     check (max_output_tokens is null or max_output_tokens > 0),
+  tokens_per_minute bigint check (tokens_per_minute is null or tokens_per_minute > 0),
+  token_burst_capacity bigint check (token_burst_capacity is null or token_burst_capacity > 0),
   enabled boolean not null default true,
   updated_at timestamptz not null default now()
 );
 
 insert into private.hercules_ai_plan_limits
-  (plan, requests_per_minute, requests_per_day, monthly_cost_microusd, max_output_tokens, enabled)
+  (plan, requests_per_minute, requests_per_day, monthly_cost_microusd, max_output_tokens, tokens_per_minute, token_burst_capacity, enabled)
 values
-  ('preview', 10, 100, null, 4096, true),
-  ('pro', 60, 5000, null, 16384, true)
+  ('preview', 10, 100, null, 4096, 60000, 60000, true),
+  ('pro', 60, 5000, null, 16384, 240000, 240000, true)
 on conflict (plan) do nothing;
 
 
@@ -254,6 +257,13 @@ create table if not exists private.hercules_rate_limit_buckets (
   primary key (user_id, bucket, window_start)
 );
 
+
+create table if not exists private.hercules_token_buckets (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  tokens numeric not null check (tokens >= 0),
+  last_refill_at timestamptz not null default clock_timestamp(),
+  updated_at timestamptz not null default clock_timestamp()
+);
 
 create table if not exists private.hercules_ai_runs (
   id uuid primary key default gen_random_uuid(),
@@ -549,7 +559,8 @@ create or replace function private.hercules_reserve_ai_request(
   p_session_id uuid,
   p_provider text,
   p_model text,
-  p_reserved_cost_microusd bigint default 0
+  p_reserved_cost_microusd bigint default 0,
+  p_reserved_tokens bigint default 0
 )
 returns bigint
 language plpgsql
@@ -564,7 +575,11 @@ declare
   v_day_count integer;
   v_month_cost bigint;
   v_ledger_id bigint;
+  v_token_state private.hercules_token_buckets%rowtype;
+  v_token_capacity bigint;
+  v_refilled_tokens numeric;
 begin
+  if p_reserved_tokens < 0 then raise exception 'INVALID_RESERVED_TOKENS'; end if;
   if p_reserved_cost_microusd < 0 then
     raise exception 'INVALID_RESERVED_COST';
   end if;
@@ -633,6 +648,26 @@ begin
     raise exception 'RATE_LIMIT_DAY_EXCEEDED';
   end if;
 
+  if p_reserved_tokens > 0 and v_limit.tokens_per_minute is not null then
+    v_token_capacity := coalesce(v_limit.token_burst_capacity, v_limit.tokens_per_minute);
+    if p_reserved_tokens > v_token_capacity then raise exception 'TOKEN_BUDGET_EXCEEDED'; end if;
+    insert into private.hercules_token_buckets (user_id, tokens)
+    values (p_user_id, v_token_capacity)
+    on conflict (user_id) do nothing;
+    select * into v_token_state from private.hercules_token_buckets
+      where user_id = p_user_id for update;
+    v_refilled_tokens := least(v_token_capacity::numeric,
+      v_token_state.tokens + greatest(0, extract(epoch from (clock_timestamp() - v_token_state.last_refill_at)))
+      * (v_limit.tokens_per_minute::numeric / 60));
+    if v_refilled_tokens < p_reserved_tokens then
+      update private.hercules_token_buckets set tokens=v_refilled_tokens,
+        last_refill_at=clock_timestamp(), updated_at=clock_timestamp() where user_id=p_user_id;
+      raise exception 'TOKEN_BUDGET_EXCEEDED';
+    end if;
+    update private.hercules_token_buckets set tokens=v_refilled_tokens-p_reserved_tokens,
+      last_refill_at=clock_timestamp(), updated_at=clock_timestamp() where user_id=p_user_id;
+  end if;
+
   if v_limit.monthly_cost_microusd is not null then
     select coalesce(sum(cost_microusd), 0)
       into v_month_cost
@@ -655,10 +690,10 @@ begin
   on conflict (id) do nothing;
 
   insert into private.hercules_usage_ledger (
-    request_id, user_id, session_id, provider, model, cost_microusd, status
+    request_id, user_id, session_id, provider, model, cost_microusd, reserved_tokens, status
   ) values (
     p_request_id, p_user_id, p_session_id, p_provider, p_model,
-    p_reserved_cost_microusd, 'reserved'
+    p_reserved_cost_microusd, p_reserved_tokens, 'reserved'
   )
   returning id into v_ledger_id;
 
@@ -667,11 +702,41 @@ end;
 $$;
 
 revoke all on function private.hercules_reserve_ai_request(
-  uuid, uuid, uuid, text, text, bigint
+  uuid, uuid, uuid, text, text, bigint, bigint
 ) from public, anon, authenticated;
 grant execute on function private.hercules_reserve_ai_request(
-  uuid, uuid, uuid, text, text, bigint
+  uuid, uuid, uuid, text, text, bigint, bigint
 ) to service_role;
+
+
+create or replace function private.hercules_refund_token_reservation(
+  p_user_id uuid,
+  p_refund_tokens bigint
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_limit private.hercules_ai_plan_limits%rowtype;
+  v_capacity bigint;
+begin
+  if p_refund_tokens <= 0 then return; end if;
+  select l.* into v_limit from private.hercules_ai_plan_limits l
+  where l.plan = coalesce((select b.plan from public.hercules_billing b
+    where b.user_id=p_user_id and b.status not in ('canceled','cancelled','inactive') limit 1),'preview')
+    and l.enabled=true;
+  if not found or v_limit.tokens_per_minute is null then return; end if;
+  v_capacity := coalesce(v_limit.token_burst_capacity,v_limit.tokens_per_minute);
+  update private.hercules_token_buckets
+    set tokens=least(v_capacity::numeric,tokens+p_refund_tokens), updated_at=clock_timestamp()
+    where user_id=p_user_id;
+end;
+$$;
+
+revoke all on function private.hercules_refund_token_reservation(uuid,bigint) from public,anon,authenticated;
+grant execute on function private.hercules_refund_token_reservation(uuid,bigint) to service_role;
 
 
 create or replace function private.hercules_finalize_ai_request(
@@ -691,6 +756,9 @@ set search_path = ''
 as $$
 declare
   v_user_id uuid;
+  v_reserved_tokens bigint;
+  v_actual_tokens bigint;
+  v_refund_tokens bigint;
 begin
   if p_status not in ('completed','failed','cancelled') then
     raise exception 'INVALID_FINAL_STATUS';
@@ -712,7 +780,14 @@ begin
          completed_at = now()
    where request_id = p_request_id
      and status = 'reserved'
-   returning user_id into v_user_id;
+   returning user_id, reserved_tokens into v_user_id, v_reserved_tokens;
+
+  if v_user_id is not null then
+    v_actual_tokens := case when p_status='completed'
+      then greatest(0,p_input_tokens)+greatest(0,p_output_tokens) else 0 end;
+    v_refund_tokens := greatest(0,coalesce(v_reserved_tokens,0)-least(coalesce(v_reserved_tokens,0),v_actual_tokens));
+    perform private.hercules_refund_token_reservation(v_user_id,v_refund_tokens);
+  end if;
 
   update private.hercules_ai_requests
      set state = p_status,
@@ -925,24 +1000,25 @@ create or replace function public.hercules_chat_reserve_ai_request(
   p_session_id uuid,
   p_provider text,
   p_model text,
-  p_reserved_cost_microusd bigint default 0
+  p_reserved_cost_microusd bigint default 0,
+  p_reserved_tokens bigint default 0
 )
 returns bigint
 language sql
 security invoker
 set search_path = ''
-as $$
+as $
   select private.hercules_reserve_ai_request(
     p_user_id, p_request_id, p_session_id, p_provider, p_model,
-    p_reserved_cost_microusd
+    p_reserved_cost_microusd, p_reserved_tokens
   );
 $$;
 
 revoke all on function public.hercules_chat_reserve_ai_request(
-  uuid, uuid, uuid, text, text, bigint
+  uuid, uuid, uuid, text, text, bigint, bigint
 ) from public, anon, authenticated;
 grant execute on function public.hercules_chat_reserve_ai_request(
-  uuid, uuid, uuid, text, text, bigint
+  uuid, uuid, uuid, text, text, bigint, bigint
 ) to service_role;
 
 
@@ -1122,3 +1198,29 @@ comment on table public.hercules_chat_memories is
   'User-owned semantic chat memory using 384-dimensional gte-small embeddings.';
 comment on table private.hercules_usage_ledger is
   'Server-only idempotent AI request usage ledger and reservation state.';
+
+
+create table if not exists private.hercules_dpop_replay (
+  replay_hash text primary key,
+  expires_at timestamptz not null
+);
+
+create or replace function public.hercules_dpop_claim_replay(p_replay_hash text, p_ttl_seconds integer)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_replay_hash is null or length(p_replay_hash) <> 64 or p_ttl_seconds < 1 or p_ttl_seconds > 600 then
+    return false;
+  end if;
+  delete from private.hercules_dpop_replay where expires_at <= now();
+  insert into private.hercules_dpop_replay(replay_hash, expires_at)
+  values (p_replay_hash, now() + make_interval(secs => p_ttl_seconds))
+  on conflict (replay_hash) do nothing;
+  return found;
+end;
+$$;
+revoke all on function public.hercules_dpop_claim_replay(text, integer) from public, anon, authenticated;
+grant execute on function public.hercules_dpop_claim_replay(text, integer) to service_role;
