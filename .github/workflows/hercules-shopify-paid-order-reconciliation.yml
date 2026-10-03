@@ -12,6 +12,8 @@ on:
       - "hercules-runtime/shopify-paid-order-runner-policy.json"
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
+      - "tests/hercules-shopify-owned-control-plane.test.mjs"
+      - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   push:
     branches:
@@ -26,6 +28,8 @@ on:
       - "hercules-runtime/shopify-paid-order-runner-policy.json"
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
+      - "tests/hercules-shopify-owned-control-plane.test.mjs"
+      - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   workflow_dispatch:
 
@@ -42,6 +46,6 @@ jobs:
         with:
           node-version: "22"
       - name: Verify bounded reconciliation contract and runner
-        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs
+        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/hercules-shopify-owned-control-plane.test.mjs
       - name: Verify Hercules execution contract
         run: node scripts/verify-hercules-execution-contract.mjs
