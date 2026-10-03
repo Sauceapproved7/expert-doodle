@@ -13,6 +13,7 @@ on:
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
       - "tests/hercules-shopify-owned-control-plane.test.mjs"
+      - "tests/hercules-shopify-openshift-*.test.mjs"
       - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   push:
@@ -29,6 +30,7 @@ on:
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
       - "tests/hercules-shopify-owned-control-plane.test.mjs"
+      - "tests/hercules-shopify-openshift-*.test.mjs"
       - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   workflow_dispatch:
