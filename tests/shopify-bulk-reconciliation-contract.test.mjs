@@ -32,9 +32,9 @@ test('state upserts bind run and tenant and reject stale snapshots', () => {
 });
 
 test('watermark advances only in the atomic successful-run finalizer', () => {
-  assert.ok(schema.includes("v_run.status <> 'processing' or v_run.records_failed <> 0"));
-  assert.ok(schema.includes('p_records_inserted + p_records_updated + p_records_skipped <> p_records_seen'));
-  assert.ok(schema.includes('insert into public.hercules_shopify_bulk_reconciliation_watermarks'));
+  assert.ok(rpc.includes("v_run.status <> 'processing' or v_run.records_failed <> 0"));
+  assert.ok(rpc.includes('p_records_inserted + p_records_updated + p_records_skipped <> p_records_seen'));
+  assert.ok(rpc.includes('insert into public.hercules_shopify_bulk_reconciliation_watermarks'));
   assert.ok(endpoint.includes('operation.rootObjectCount == null'));
   assert.ok(endpoint.includes('Number.isSafeInteger(expectedRootCount)'));
   assert.ok(endpoint.includes('expectedRootCount !== seen'));
