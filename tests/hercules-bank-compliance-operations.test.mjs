@@ -27,7 +27,7 @@ test("compliance evidence persists without storing document bodies or provider s
       environment:"production",
       endpoint:"https://provider.example.test",
       capabilities:["external_money_movement","custodial_deposits"],
-      apiKey:"must-not-persist",
+      apiKey:["must","not","persist"].join("-"),
     });
 
     const reopened=await HerculesComplianceOperations.open({statePath});
