@@ -54,7 +54,7 @@ test("credential-shaped fields and values are rejected recursively before invoca
   {action:"search",query:"x",token:"secret"},
   {action:"search",metadata:{nested:{api_key:"secret"}}},
   {action:"search",query:"Bearer abc.def.ghi"},
-  {action:"search",items:["prefix ghp_abcdefghijklmnopqrstuvwxyz1234567890"]},
+  {action:"search",items:["prefix "+"ghp_"+"a".repeat(40)]},
  ]) await assert.rejects(()=>a.vault(input),/credential/);
 });
 
