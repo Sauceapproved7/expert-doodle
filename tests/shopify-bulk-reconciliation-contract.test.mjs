@@ -17,27 +17,27 @@ test('reconciliation tables are service-only with row-level security enabled', (
     'hercules_shopify_bulk_resource_state',
     'hercules_shopify_bulk_webhook_receipts'
   ]) {
-    assert.match(schema + rpc, new RegExp('alter table public\\.' + table + ' enable row level security'));
-    assert.match(schema + rpc, new RegExp('revoke all on public\\.' + table + ' from public, anon, authenticated'));
+    assert.ok((schema + rpc).includes('alter table public.' + table + ' enable row level security'));
+    assert.ok((schema + rpc).includes('revoke all on public.' + table + ' from public, anon, authenticated'));
   }
 });
 
 test('state upserts bind run and tenant and reject stale snapshots', () => {
-  assert.match(rpc, /id = p_run_id and tenant_id = p_tenant_id/);
-  assert.match(rpc, /status = 'processing'/);
-  assert.match(rpc, /p_updated_at < v_current\\.shopify_updated_at then/);
-  assert.match(rpc, /p_updated_at = v_current\\.shopify_updated_at/);
-  assert.match(rpc, /pg_advisory_xact_lock/);
-  assert.match(rpc, /p_resource_gid !~ '\\^gid:\/\/shopify\/Order/);
+  assert.ok(rpc.includes('where id = p_run_id and tenant_id = p_tenant_id'));
+  assert.ok(rpc.includes("and status = 'processing'"));
+  assert.ok(rpc.includes('if p_updated_at < v_current.shopify_updated_at then'));
+  assert.ok(rpc.includes('if p_updated_at = v_current.shopify_updated_at'));
+  assert.ok(rpc.includes('pg_advisory_xact_lock'));
+  assert.ok(rpc.includes("p_resource_gid !~ '^gid://shopify/Order/[0-9]+$'"));
 });
 
 test('watermark advances only in the atomic successful-run finalizer', () => {
-  assert.match(schema, /v_run.status <> 'processing' or v_run.records_failed <> 0/);
-  assert.match(schema, /p_records_inserted \+ p_records_updated \+ p_records_skipped <> p_records_seen/);
-  assert.match(schema, /insert into public\\.hercules_shopify_bulk_reconciliation_watermarks/);
-  assert.match(endpoint, /Number\(operation.rootObjectCount\) !== seen/);
-  assert.match(endpoint, /hercules_shopify_complete_bulk_reconciliation_v1/);
-  assert.ok(endpoint.indexOf('rootObjectCount) !== seen') < endpoint.indexOf('hercules_shopify_complete_bulk_reconciliation_v1'));
+  assert.ok(schema.includes("v_run.status <> 'processing' or v_run.records_failed <> 0"));
+  assert.ok(schema.includes('p_records_inserted + p_records_updated + p_records_skipped <> p_records_seen'));
+  assert.ok(schema.includes('insert into public.hercules_shopify_bulk_reconciliation_watermarks'));
+  assert.ok(endpoint.includes('Number(operation.rootObjectCount) !== seen'));
+  assert.ok(endpoint.includes('hercules_shopify_complete_bulk_reconciliation_v1'));
+  assert.ok(endpoint.indexOf('Number(operation.rootObjectCount) !== seen') < endpoint.indexOf('hercules_shopify_complete_bulk_reconciliation_v1'));
 });
 
 test('completion ingress verifies raw HMAC before JSON parsing and deduplicates deliveries', () => {
@@ -45,20 +45,20 @@ test('completion ingress verifies raw HMAC before JSON parsing and deduplicates 
   const end = endpoint.indexOf('async function readBoundedBody', start);
   const handler = endpoint.slice(start, end);
   assert.ok(handler.indexOf('verifyShopifyWebhookHmac') < handler.indexOf('JSON.parse'));
-  assert.match(handler, /x-shopify-topic/);
-  assert.match(handler, /hercules_shopify_bulk_webhook_receipts.*insert/s);
-  assert.match(handler, /status: 'queued'/);
+  assert.ok(handler.includes('x-shopify-topic'));
+  assert.ok(handler.includes("from('hercules_shopify_bulk_webhook_receipts').insert"));
+  assert.ok(handler.includes("status: 'queued'"));
 });
 
 test('bulk start subscribes before launching and omits order PII', () => {
   const subscription = endpoint.indexOf('await ensureCompletionSubscription(token)');
   const launch = endpoint.indexOf('LaunchBulkOrders');
   assert.ok(subscription >= 0 && launch > subscription);
-  assert.match(endpoint, /orders\(query: \\"/);
+  assert.ok(endpoint.includes('orders(query: \\"'));
   assert.doesNotMatch(endpoint, /customerEmail|shippingAddress|buyerEmail|email:/i);
-  assert.match(endpoint, /updated_at:>=' \+ cursorStart\.toISOString\(\)/);
-  assert.match(endpoint, /60 \* 24 \* 60 \* 60 \* 1000/);
-  assert.match(endpoint, /if \(watermarkError\) throw/);
+  assert.ok(endpoint.includes("updated_at:>=' + cursorStart.toISOString()"));
+  assert.ok(endpoint.includes('60 * 24 * 60 * 60 * 1000'));
+  assert.ok(endpoint.includes('if (watermarkError) throw'));
 });
 
 test('bulk correction is local state only and does not invoke paid-order effects', () => {
@@ -67,8 +67,8 @@ test('bulk correction is local state only and does not invoke paid-order effects
 });
 
 test('workflow invokes focused reconciliation tests and has no duplicate run keys', () => {
-  assert.match(workflow, /tests\/shopify-bulk-jsonl\.test\.mjs/);
-  assert.match(workflow, /tests\/shopify-bulk-reconciliation-contract\.test\.mjs/);
-  const commands = workflow.match(/^        run:/gm) || [];
+  assert.ok(workflow.includes('tests/shopify-bulk-jsonl.test.mjs'));
+  assert.ok(workflow.includes('tests/shopify-bulk-reconciliation-contract.test.mjs'));
+  const commands = workflow.split('\n').filter(line => line === '        run:');
   assert.equal(commands.length, 2);
 });
