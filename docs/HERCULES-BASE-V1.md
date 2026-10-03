@@ -83,6 +83,7 @@ additional Hercules permissions.
 
 Implemented and evidenced:
 
+- Hercules Base Storage with content-addressed SHA-256 blobs, private JWT-owned buckets and objects, PostgreSQL metadata, persistent self-hosted storage, and download-time integrity verification;
 - Hercules Base Auth with scrypt password hashing, JWT access tokens, rotating opaque refresh tokens, server-only credential/session RPCs, and fixture-only staging identities;
 - PostgreSQL database substrate in isolated Hercules staging;
 - PostgREST data API substrate;
@@ -95,7 +96,6 @@ Implemented and evidenced:
 
 Planned, not represented as complete:
 
-- Hercules Base Storage;
 - Hercules Base Realtime;
 - Hercules Base Functions;
 - multi-project provisioning onto deployment targets;
@@ -112,6 +112,12 @@ Control-token protected:
 
 - `POST /v1/blueprints/compile`
 - `POST /v1/recommendations`
+
+Authenticated user storage:
+
+- `POST /v1/storage/buckets`
+- `PUT|GET|DELETE /v1/storage/objects/{bucket}/{key}`
+- `GET /v1/storage/objects/{bucket}`
 
 Recommendation requests are bounded, validated, scope-filtered, and return only
 the normalized recommendation result surface.
@@ -136,6 +142,9 @@ Owned Hercules source:
 
 - `hercules-base/core.mjs`
 - `hercules-base/recommender.mjs`
+- `hercules-base/storage-core.mjs`
+- `hercules-base/storage-router.mjs`
+- `hercules-base/storage-store.mjs`
 - `hercules-base/router.mjs`
 - `hercules-base/server.mjs`
 - Hercules Base tests, docs, policy logic, and future owned control software.
