@@ -7,9 +7,9 @@ export function createOperatorSession({console}={}) {
 
   return Object.freeze({
     async receive(input) {
-      if(stopped) return {mode:"stopped",reason:"emergency-stop-active"};
       const plan=await console.plan(input);
       if(plan.status!=="planned") return plan;
+      if(stopped&&plan.requiresApproval) return {mode:"stopped",reason:"emergency-stop-active"};
       if(plan.requiresApproval) {
         pending={input,plan};
         return {mode:"awaiting-approval",command:plan.command};
