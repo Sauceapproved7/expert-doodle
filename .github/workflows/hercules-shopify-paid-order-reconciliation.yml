@@ -62,6 +62,6 @@ jobs:
         with:
           node-version: "22"
       - name: Verify bounded reconciliation contract and runner
-        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/hercules-shopify-owned-control-plane.test.mjs tests/hercules-shopify-openshift-foundation.test.mjs tests/hercules-shopify-openshift-runtime.test.mjs tests/shopify-bulk-jsonl.test.mjs tests/shopify-bulk-reconciliation-contract.test.mjs tests/hercules-live-commerce-control-plane.test.mjs tests/hercules-shopify-oauth.test.mjs
+        run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/hercules-shopify-owned-control-plane.test.mjs tests/hercules-shopify-openshift-foundation.test.mjs tests/hercules-shopify-openshift-runtime.test.mjs tests/shopify-bulk-jsonl.test.mjs tests/shopify-bulk-reconciliation-contract.test.mjs tests/hercules-live-commerce-control-plane.test.mjs tests/hercules-shopify-oauth.test.mjs tests/hercules-shopify-admin-read-client.test.mjs
       - name: Verify Hercules execution contract
         run: node scripts/verify-hercules-execution-contract.mjs
