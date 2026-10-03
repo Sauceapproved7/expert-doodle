@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "github.vscode-pull-request-github",
+    "github.vscode-codeql",
+    "eamodio.gitlens",
+    "redhat.vscode-yaml",
+    "redhat.vscode-openshift-connector",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "ms-azuretools.vscode-containers",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "humao.rest-client",
+    "editorconfig.editorconfig"
+  ]
+}
