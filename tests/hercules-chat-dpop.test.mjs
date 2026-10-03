@@ -17,3 +17,17 @@ test("chat DPoP rollout is explicitly feature-gated",()=>{
   assert.match(edge,/dpopEnforced/);
   assert.match(edge,/Bearer /);
 });
+
+
+test("chat DPoP enforcement verifies the token before trusting cnf.jkt",()=>{
+  assert.match(edge,/auth\\.getUser\\(token\\)/);
+  assert.match(edge,/cnf/);
+  assert.match(edge,/\\.jkt/);
+  assert.match(edge,/DPOP_TOKEN_BINDING_REQUIRED/);
+  assert.match(edge,/DPOP_REPLAY_STORE_UNAVAILABLE/);
+});
+
+test("chat accepts DPoP authorization and exposes the proof header to CORS",()=>{
+  assert.match(edge,/!auth\\.startsWith\\("DPoP "\\)/);
+  assert.match(edge,/authorization, dpop, apikey/);
+});
