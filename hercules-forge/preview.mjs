@@ -105,9 +105,13 @@ export async function startForgePreview({
   artifactDir,
   runtimeDataDir = join(artifactDir, "runtime-data"),
   runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
+  onRuntimeMutation = null,
 }) {
   if (!Number.isSafeInteger(runtimeDataMaxBytes) || runtimeDataMaxBytes < 1024) {
     throw new TypeError("runtimeDataMaxBytes must be an integer >= 1024");
+  }
+  if (onRuntimeMutation !== null && typeof onRuntimeMutation !== "function") {
+    throw new TypeError("onRuntimeMutation must be a function");
   }
   const artifact = await verifyForgeArtifact(artifactDir);
   const bundleRoot = join(artifactDir, "bundle");
@@ -192,6 +196,18 @@ export async function startForgePreview({
           redirect: "error",
         });
         const responseBody = Buffer.from(await upstream.arrayBuffer());
+        if (
+          upstream.ok &&
+          onRuntimeMutation &&
+          !["GET", "HEAD", "OPTIONS"].includes(req.method ?? "GET") &&
+          (url.pathname === "/api" || url.pathname.startsWith("/api/"))
+        ) {
+          await onRuntimeMutation({
+            method:req.method ?? "GET",
+            pathname:url.pathname,
+            statusCode:upstream.status,
+          });
+        }
         res.writeHead(upstream.status, {
           "content-type": upstream.headers.get("content-type") ?? "application/octet-stream",
           "cache-control": "no-store",
@@ -238,12 +254,19 @@ export async function startForgePreview({
 }
 
 export class ForgePreviewManager {
-  constructor(root, {runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES} = {}) {
+  constructor(root, {
+    runtimeDataMaxBytes = DEFAULT_RUNTIME_DATA_MAX_BYTES,
+    onRuntimeMutation = null,
+  } = {}) {
     if (!Number.isSafeInteger(runtimeDataMaxBytes) || runtimeDataMaxBytes < 1024) {
       throw new TypeError("runtimeDataMaxBytes must be an integer >= 1024");
     }
+    if (onRuntimeMutation !== null && typeof onRuntimeMutation !== "function") {
+      throw new TypeError("onRuntimeMutation must be a function");
+    }
     this.root = root;
     this.runtimeDataMaxBytes = runtimeDataMaxBytes;
+    this.onRuntimeMutation = onRuntimeMutation;
     this.sessions = new Map();
   }
 
@@ -260,6 +283,7 @@ export class ForgePreviewManager {
       artifactDir: built.artifactDir,
       runtimeDataDir: join(this.root, "runtime-data", projectId),
       runtimeDataMaxBytes: this.runtimeDataMaxBytes,
+      onRuntimeMutation: this.onRuntimeMutation,
     });
     this.sessions.set(projectId, session);
     return this.get(projectId);

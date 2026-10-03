@@ -1,0 +1,12 @@
+[[extensions]]
+name = "Hercules Paid Order"
+type = "flow_action"
+handle = "hercules-paid-order"
+description = "Send a paid Shopify order to the Hercules fail-closed reconciliation endpoint"
+runtime_url = "https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-shopify-webhook"
+
+[settings]
+
+[[settings.fields]]
+type = "order_reference"
+required = true

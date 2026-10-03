@@ -119,3 +119,104 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
 - Third-party infrastructure: Node.js and GitHub Actions remain external infrastructure governed by their own terms and are not claimed as SauceApproved-owned code.
 - Security scope: defensive detection, deception, throttling, quarantine, session isolation guidance, honeytokens, and evidence capture only inside authorized infrastructure; no hack-back capability.
+
+
+## Hercules Cleaner v1 provenance — 2026-09-28
+
+- Component paths: `hercules-cleaner/*.mjs`, `tests/hercules-cleaner*.test.mjs`, `docs/HERCULES-CLEANER-V1.md`, command-surface routing, and the dedicated CI workflow.
+- Origin: project-authored Hercules implementation created for SauceApproved with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only. No vendored or third-party runtime source is included.
+- External operating-system infrastructure: Windows Task Scheduler, Apple launchd, and systemd user services are adapters only and remain third-party OS infrastructure.
+- Safety scope: user-scoped cleanup roots, explicit protected paths, dry-run plans, bounded scans, loopback-only dashboard control, transactional Recovery Capsules, integrity verification, and fail-closed restore semantics.
+- Market-research note: scheduled cleanup is common in Windows Storage Sense, CCleaner, BleachBit, Wise Disk Cleaner and CleanMyMac. Session Clean and Recovery Capsules are Hercules differentiators based on the reviewed mainstream feature sets; no absolute market-first claim is made.
+
+
+## Hercules Cleaner v1.0.0 release packaging provenance — 2026-09-28
+
+- Package paths: `releases/hercules-cleaner-v1.0.0/`, `scripts/package-hercules-cleaner-release.mjs`, `.github/workflows/hercules-cleaner-release-package.yml`, Forge package registration, and release-package tests.
+- Origin: original SauceApproved/Hercules packaging implementation created with AI assistance around the canonical Cleaner runtime.
+- Runtime/package dependencies: Node.js built-ins plus GitHub Actions infrastructure; no vendored third-party runtime source is added.
+- Distribution evidence: exact 40-character source commit identity, per-file SHA-256 hashes, deterministic archive checksum, and GitHub artifact attestation on main pushes.
+- Commercial boundary: Early Access package only; checkout remains disabled and candidate pricing remains owner-approval required.
+
+## SauceApproved Content Multiplier v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/content-multiplier/*.mjs`, `tests/sauceapproved-content-multiplier.test.mjs`, `docs/HERCULES-CONTENT-MULTIPLIER-V1.md`, and the dedicated CI workflow.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- Third-party infrastructure: any future model, social-publishing, analytics, storage or messaging provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
+- Trust scope: generation fails closed without an injected provider; locked facts and banned phrases are validated before generated assets are accepted.
+- Market-position note: Content DNA, Variation Tree, Content Opportunity Radar and Variant Fatigue Guard are SauceApproved differentiators. No absolute market-first claim is made without separate current verification.
+
+
+## SauceApproved AI Sales Agent v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/ai-sales-agent/*.mjs`, `tests/sauceapproved-ai-sales-agent.test.mjs`, `docs/HERCULES-AI-SALES-AGENT-V1.md`, and the dedicated CI workflow.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- Third-party infrastructure: any future CRM, helpdesk, messaging, email, SMS, voice, booking, checkout, model, or analytics provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
+- Trust scope: recommendations are grounded in approved active product data; unsupported recommendations fail safely; lead capture is consent-gated; sensitive profiling is excluded from Adaptive Pitch Memory; business actions require explicit allowlisting plus a configured adapter.
+- Differentiators: Objection Intelligence Map, Adaptive Pitch Memory, Confidence-to-Handoff Governor, and Objection-to-Asset Bridge. No absolute market-first claim is made without separate current verification.
+
+
+## Hercules Cleaner catalog integration provenance — 2026-09-28
+
+- Component paths: `supabase/migrations/20260928120000_hercules_cleaner_software_catalog_v1.sql`, `hercules-forge/offers/hercules-cleaner/index.html`, Cleaner commercial-control registration, legal candidate disclosures, and `tests/hercules-forge-cleaner-commerce.test.mjs`.
+- Origin: SauceApproved/Hercules-owned catalog and Early Access integration created with AI assistance around the existing Cleaner v1.0.0 runtime and release package.
+- External infrastructure: Supabase Data API/database/Edge Functions and browser runtime remain third-party infrastructure; they are not represented as SauceApproved-owned source.
+- Commercial boundary: product status is Early Access, candidate pricing remains owner-approval required, and checkout remains disabled. This integration does not approve pricing, Terms, Privacy, provider readiness, or the paid checkout path.
+- Privacy boundary: the public access-request surface does not require local file inventory or Recovery Capsule contents; Cleaner filesystem authority remains local to the authorized device.
+
+
+## SauceApproved Brand Brain v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/brand-brain/*.mjs`, `tests/sauceapproved-brand-brain.test.mjs`, `docs/HERCULES-BRAND-BRAIN-V1.md`, and the dedicated CI workflow.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- Third-party infrastructure: any future DAM, CMS, design, Figma, website, document, knowledge-base, model, or analytics provider remains external infrastructure governed by its own terms and is not claimed as SauceApproved-owned code.
+- Trust scope: approved facts preserve source provenance; locked facts do not auto-overwrite; Constitution conflicts are rejected; fact changes remain review-required; cross-channel simulation never silently rewrites approved facts.
+- Differentiators: Brand Constitution, Cross-Channel Consistency Simulator, Rule Blast Radius Preview, and Brand Drift Time Machine. No absolute market-first claim is made without separate current verification.
+
+
+## SauceApproved Studios Market v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/market/*.mjs`, Studio market routing/rendering in `hercules-video/studio-*.mjs`, Studio integration tests, and `docs/SAUCEAPPROVED-STUDIOS-MARKET-V1.md`.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance under the repository's existing contribution and ownership controls.
+- Runtime dependencies: Node.js built-ins only; no vendored or third-party runtime source added.
+- External infrastructure: founding-access CTAs navigate to the existing protected Hercules launch/pilot intake hosted on the existing Supabase project; Supabase is external infrastructure and is not claimed as SauceApproved-owned code.
+- Commercial boundary: public discovery and applications are open, while paid checkout remains disabled pending explicit pricing/legal/payment-path gates. No charge or subscription is created by the Market surface.
+- Claims boundary: no fabricated testimonial, guaranteed ROI, unverified certification, or falsely connected integration is included.
+
+## SauceApproved Vintage Camera v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/vintage-camera/`, Studio route/manifest integration, focused Studio tests, and `docs/SAUCEAPPROVED-VINTAGE-CAMERA-V1.md`.
+- Origin: original SauceApproved/Hercules implementation created with AI assistance at the founder's request for an old-school camera experience.
+- Runtime dependencies: browser-standard camera/canvas/MediaRecorder APIs and Node.js built-ins; no copied third-party filters, assets, binaries, or vendored runtime source.
+- Scope: local-first capture and WebM export where supported; no server upload or unverified AI execution. Split-frame proof and portable look recipe are Hercules differentiators, not claims of global uniqueness.
+
+## SauceApproved Kids Studio v1 provenance — 2026-09-28
+
+- Component paths: `sauceapproved-studio/kids/`, Studio route and manifest integration, focused tests, and `docs/SAUCEAPPROVED-KIDS-STUDIO-V1.md`.
+- Origin: original SauceApproved/Hercules implementation created with AI assistance for parent-operated family storytelling.
+- Runtime dependencies: browser-standard JavaScript and Node.js built-ins; no copied third-party templates, artwork, binaries, or vendor source.
+- Scope: local browser-memory planning and explicit text download. No child account, server upload, public posting, AI media generation, or automatic video linkage. The six planning additions are Hercules differentiators, with no exclusivity claim about competitors.
+
+
+## Hercules Cleaner device activation v1 provenance — 2026-09-29
+
+- Component paths: `hercules-cleaner/device-identity.mjs`, Cleaner CLI device commands, `supabase/functions/hercules-cleaner-device/index.ts`, `supabase/migrations/20260929122000_hercules_cleaner_device_activation_v1.sql`, and focused device-activation tests.
+- Origin: original SauceApproved/Hercules implementation created with AI assistance under the repository's existing ownership/provenance controls.
+- Runtime dependencies: Node.js built-ins for local Ed25519 identity and Supabase Edge Functions/Postgres as external infrastructure; no vendored third-party runtime source is added.
+- Privacy boundary: activation transmits opaque device identity, platform family, Cleaner version, public key, one-time activation code, and signed challenge proof only. Hostname, hardware identifiers, usernames, filenames, paths, cleanup inventory, Recovery Capsule contents, and the private key are excluded.
+- Secret-storage boundary: activation codes and returned device credentials are stored server-side only as SHA-256 hashes; the private key and plaintext device credential remain local to the activated device.
+- Commercial boundary: device activation does not approve or enable pricing, checkout, Terms, Privacy, payment-provider readiness, or paid-path verification.
+
+
+## SauceApproved Studio completion pass v1 provenance — 2026-09-30
+
+- Component paths: `hercules-video/studio-server.mjs`, `hercules-video/studio-commercial.mjs`, `sauceapproved-studio/{scene-forge,sound-world,actor-lab,integrations,completion}/`, `tests/hercules-video-studio-completion.test.mjs`, and `docs/SAUCEAPPROVED-STUDIO-COMPLETION-PASS-V1.md`.
+- Origin: project-authored SauceApproved/Hercules implementation created with AI assistance from the founder-directed Studio completeness audit.
+- Runtime dependencies: repository-owned runtime modules and Node.js platform facilities only; no vendored third-party runtime source, model weights, binaries, fonts, copied UI assets, or credentials were added.
+- External services remain external: deployment, commerce, identity, model, and publishing providers are represented as authorization-sensitive integration classes and are not claimed as SauceApproved-owned technology.
+- Trust scope: hidden owned modules are promoted to customer-facing routes without weakening consent, likeness, execution, provider, physical-device, payment, or publication gates.
+- Evidence scope: Vintage Camera physical-device/full-quality export proof and post-first-real-order payment observation remain explicitly unverified until real evidence exists.

@@ -29,6 +29,8 @@ test("master operating instructions encode the founder execution model", async (
   assert.ok(master.includes("Hercules Browser is the default browser execution path"));
   assert.ok(master.includes("Revenue → Customers → Repeat customers → Recurring revenue → Scalable software/products → Durable company assets"));
   assert.ok(master.includes("What changed → What was verified → What remains → Next highest-value action"));
+  assert.ok(master.includes('### "DO YOU" EXECUTION COMMAND'));
+  assert.ok(master.includes('When the founder says "do you," Hercules should handle the work using its best professional judgment'));
 });
 
 test("machine-readable execution contract is fail-closed and binds canonical rules", async () => {
@@ -62,6 +64,16 @@ test("machine-readable execution contract is fail-closed and binds canonical rul
   assert.equal(policy.execution?.continueOnGoBuildImplementFixFinishContinueHandle, true);
   assert.equal(policy.execution?.chooseOrdinaryImplementationDetailsIndependently, true);
   assert.equal(policy.execution?.completeIndependentWorkWhileDependencyBlocked, true);
+  assert.equal(policy.founderDirectives?.doYouExecutionCommand?.enabled, true);
+  assert.equal(policy.founderDirectives?.doYouExecutionCommand?.useBestProfessionalJudgment, true);
+  assert.equal(policy.founderDirectives?.doYouExecutionCommand?.doNotRequireFounderToDirectRoutineTechnicalWork, true);
+  assert.equal(policy.founderDirectives?.doYouExecutionCommand?.preserveOwnerOnlySecurityAndAuthorizationBoundaries, true);
+  assert.equal(policy.founderDirectives?.strengthAndNameStandard?.enabled, true);
+  assert.equal(policy.founderDirectives?.outsideTheBoxBuildRule?.enabled, true);
+  assert.equal(policy.founderDirectives?.billionDollarOperatingStandard?.enabled, true);
+  assert.equal(policy.founderDirectives?.marketLeadershipMindset?.enabled, true);
+  assert.equal(policy.founderDirectives?.differentiatorRequirement?.minimumPerBuild, 2);
+  assert.equal(policy.founderDirectives?.nightlyWholeHerculesAudit?.requiredOperatingTarget, true);
   assert.equal(policy.quality?.commerciallyUsable, true);
   assert.equal(policy.quality?.visuallyPolished, true);
   assert.equal(policy.security?.securityIsPartOfBuild, true);

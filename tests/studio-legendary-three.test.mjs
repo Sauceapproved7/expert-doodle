@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createSceneForgeManifest,buildSceneForgePlan} from '../sauceapproved-studio/scene-forge/core.mjs';
+import {createSoundWorldManifest,buildSoundWorldPlan} from '../sauceapproved-studio/sound-world/core.mjs';
+import {createActorLabManifest,buildActorLabPlan} from '../sauceapproved-studio/actor-lab/core.mjs';
+test('SceneForge differentiators',()=>assert.deepEqual(createSceneForgeManifest().differentiators,['Continuity Stress Lab','Director Intent Lock']));
+test('SceneForge blocks continuity and intent drift',()=>{const p=buildSceneForgePlan({title:'S',directorIntent:'lonely noir',scenes:[{id:'1',wardrobe:'black',intent:'lonely noir'},{id:'2',wardrobe:'white',intent:'bright comedy'}]});assert.equal(p.executionReady,false);assert.ok(p.continuityStressLab.issues.length);assert.equal(p.directorIntentLock.driftDetected,true);});
+test('SoundWorld differentiators',()=>assert.deepEqual(createSoundWorldManifest().differentiators,['Audio Continuity Memory','Emotional Sound Mapping']));
+test('SoundWorld detects sonic breaks and maps emotion',()=>{const p=buildSoundWorldPlan({title:'S',beats:[{id:'1',emotion:'dread',ambience:'rain'},{id:'2',emotion:'dread',ambience:'beach'}]});assert.ok(p.audioContinuityMemory.issues.length);assert.equal(p.emotionalSoundMapping.length,2);assert.equal(p.publishReady,false);});
+test('Actor Lab differentiators',()=>assert.deepEqual(createActorLabManifest().differentiators,['Character Contract Ledger','Role Boundary Simulator']));
+test('Actor Lab gates likeness and role drift',()=>{const p=buildActorLabPlan({name:'A',usesRealPersonLikeness:true,traits:{role:'mentor',voice:'low'},scenes:[{id:'1',role:'mentor'},{id:'2',role:'villain'}]});assert.ok(p.blockers.some(x=>x.code==='likeness_consent_required'));assert.equal(p.roleBoundarySimulator.driftDetected,true);assert.equal(p.executionReady,false);});

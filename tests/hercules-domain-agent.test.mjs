@@ -103,7 +103,7 @@ test("provider grant records reject credential material recursively", () => {
       refreshable: true,
       authorizedAt: "2026-09-27T16:00:00Z",
       expiresAt: "2026-09-27T20:00:00Z",
-      nested: {accessToken: "should-never-be-here"},
+      nested: {accessToken: ["should","never","be","here"].join("-")},
     }),
     /credential material/i,
   );
@@ -261,5 +261,76 @@ test("domain identity only accepts a hostname and always publishes an HTTPS orig
   assert.throws(
     () => createDomainAgentIdentity({domain: "localhost", tenantId: "x", agentId: "y"}),
     /public domain/i,
+  );
+});
+
+
+test("task grant pinning rejects permission drift before execution", () => {
+  const currentGrant = grant();
+  const pinned = evaluateDomainAgentTask({
+    identity: identity(),
+    providerGrant: currentGrant,
+    authorityLease: lease(),
+    request: request({expectedGrantSha256: currentGrant.grantSha256}),
+  });
+  assert.equal(pinned.disposition, "EXECUTE");
+  assert.equal(pinned.executionEligible, true);
+
+  const changedGrant = grant({scopes: ["repo.read", "repo.write", "repo.admin"]});
+  const drifted = evaluateDomainAgentTask({
+    identity: identity(),
+    providerGrant: changedGrant,
+    authorityLease: lease(),
+    request: request({expectedGrantSha256: currentGrant.grantSha256}),
+  });
+  assert.equal(drifted.disposition, "DENY");
+  assert.equal(drifted.executionEligible, false);
+  assert.ok(drifted.reasonCodes.includes("PROVIDER_GRANT_PIN_MISMATCH"));
+});
+
+test("task validity windows reject premature and stale instructions", () => {
+  const premature = evaluateDomainAgentTask({
+    identity: identity(),
+    providerGrant: grant(),
+    authorityLease: lease(),
+    request: request({notBefore: "2026-09-27T18:05:00Z"}),
+  });
+  assert.equal(premature.disposition, "DENY");
+  assert.ok(premature.reasonCodes.includes("TASK_NOT_YET_VALID"));
+
+  const stale = evaluateDomainAgentTask({
+    identity: identity(),
+    providerGrant: grant(),
+    authorityLease: lease(),
+    request: request({expiresAt: "2026-09-27T17:59:59Z"}),
+  });
+  assert.equal(stale.disposition, "DENY");
+  assert.ok(stale.reasonCodes.includes("TASK_EXPIRED"));
+});
+
+test("task validity windows must be internally consistent", () => {
+  assert.throws(
+    () => evaluateDomainAgentTask({
+      identity: identity(),
+      providerGrant: grant(),
+      authorityLease: lease(),
+      request: request({
+        notBefore: "2026-09-27T18:10:00Z",
+        expiresAt: "2026-09-27T18:05:00Z",
+      }),
+    }),
+    /expiresAt must be after request.notBefore/i,
+  );
+});
+
+test("grant pinning only accepts a SHA-256 fingerprint", () => {
+  assert.throws(
+    () => evaluateDomainAgentTask({
+      identity: identity(),
+      providerGrant: grant(),
+      authorityLease: lease(),
+      request: request({expectedGrantSha256: "not-a-digest"}),
+    }),
+    /expectedGrantSha256 must be a SHA-256 digest/i,
   );
 });

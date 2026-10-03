@@ -4,8 +4,23 @@ on:
   pull_request:
     paths:
       - "hercules-runtime/smokescreen-agent.mjs"
+      - "hercules-runtime/smokescreen-forge-ingress.mjs"
+      - "hercules-runtime/smokescreen-attack-enrichment.mjs"
       - "hercules-runtime/command-surface.mjs"
+      - "hercules-forge/control-api.mjs"
+      - "hercules-forge/production.mjs"
       - "tests/hercules-smokescreen-agent.test.mjs"
+      - "tests/hercules-smokescreen-attack-enrichment.test.mjs"
+      - "tests/hercules-smokescreen-global-benchmark.test.mjs"
+      - "tests/hercules-smokescreen-release-package.test.mjs"
+      - "scripts/package-smokescreen-release.mjs"
+      - "releases/hercules-smokescreen-v2.1.0/**"
+      - "scripts/smokescreen-global-benchmark.mjs"
+      - "benchmarks/HERCULES-SMOKESCREEN-GLOBAL-BENCHMARK-2026-09-28.md"
+      - "tests/hercules-smokescreen-forge-ingress.test.mjs"
+      - "tests/hercules-forge-production.test.mjs"
+      - "staging-plane/compose.yml"
+      - "scripts/forge-staging-drill.mjs"
       - "docs/HERCULES-SMOKESCREEN-SENTINEL-V1.md"
       - "docs/HERCULES-THREAT-MODEL.md"
       - ".github/workflows/hercules-smokescreen-agent.yml"
@@ -28,6 +43,12 @@ jobs:
       - name: Enforce owner-code boundary
         run: node scripts/verify-owner-code-only.mjs
       - name: Run SmokeScreen Sentinel tests
-        run: node --test tests/hercules-smokescreen-agent.test.mjs
+        run: node --test tests/hercules-smokescreen-agent.test.mjs tests/hercules-smokescreen-attack-enrichment.test.mjs
+      - name: Run SmokeScreen global benchmark contract
+        run: node --test tests/hercules-smokescreen-global-benchmark.test.mjs
+      - name: Run SmokeScreen synthetic global benchmark
+        run: node scripts/smokescreen-global-benchmark.mjs
+      - name: Run SmokeScreen release package contract
+        run: node --test tests/hercules-smokescreen-release-package.test.mjs tests/hercules-smokescreen-forge-ingress.test.mjs tests/hercules-forge-production.test.mjs
       - name: Run security baseline
         run: node scripts/security-baseline.mjs

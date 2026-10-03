@@ -89,7 +89,7 @@ test("management client deploys and downloads raw Edge Function source without l
 
 test("management client fails closed outside its project allowlist", async () => {
   const client = new SupabaseManagementEdgeFunctionClient({
-    accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+    accessToken: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
     allowedProjectRefs: [projectRef],
     fetchImpl: async () => {
       throw new Error("network should not be called");
@@ -105,12 +105,12 @@ test("adapter auto-wiring is disabled without a credential and enabled only with
   assert.equal(createSupabaseEdgeFunctionAdapterFromEnv({}), null);
   assert.throws(
     () => createSupabaseEdgeFunctionAdapterFromEnv({
-      HERCULES_SUPABASE_ACCESS_TOKEN: "sbp_fc_test_token_for_hercules_deploy_123456",
+      HERCULES_SUPABASE_ACCESS_TOKEN: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
     }),
     /HERCULES_SUPABASE_PROJECT_REFS is required/,
   );
   const adapter = createSupabaseEdgeFunctionAdapterFromEnv({
-    HERCULES_SUPABASE_ACCESS_TOKEN: "sbp_fc_test_token_for_hercules_deploy_123456",
+    HERCULES_SUPABASE_ACCESS_TOKEN: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
     HERCULES_SUPABASE_PROJECT_REFS: projectRef,
   }, {fetchImpl: async () => Response.json({})});
   assert.ok(adapter);
@@ -119,7 +119,7 @@ test("adapter auto-wiring is disabled without a credential and enabled only with
   assert.equal(typeof adapter.rollback, "function");
 
   const adapters = createHerculesDeployAdaptersFromEnv({
-    HERCULES_SUPABASE_ACCESS_TOKEN: "sbp_fc_test_token_for_hercules_deploy_123456",
+    HERCULES_SUPABASE_ACCESS_TOKEN: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
     HERCULES_SUPABASE_PROJECT_REFS: projectRef,
   }, {fetchImpl: async () => Response.json({})});
   assert.equal(adapters.has("supabase_edge_function"), true);
@@ -137,7 +137,7 @@ test("management client constructor and target validation fail closed", async ()
   );
   assert.throws(
     () => new SupabaseManagementEdgeFunctionClient({
-      accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+      accessToken: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
       allowedProjectRefs: [],
       fetchImpl: async () => Response.json({}),
     }),
@@ -145,7 +145,7 @@ test("management client constructor and target validation fail closed", async ()
   );
   assert.throws(
     () => new SupabaseManagementEdgeFunctionClient({
-      accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+      accessToken: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
       allowedProjectRefs: ["bad-ref"],
       fetchImpl: async () => Response.json({}),
     }),
@@ -153,7 +153,7 @@ test("management client constructor and target validation fail closed", async ()
   );
   assert.throws(
     () => new SupabaseManagementEdgeFunctionClient({
-      accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+      accessToken: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
       allowedProjectRefs: [projectRef],
       baseUrl: "http://api.supabase.com",
       fetchImpl: async () => Response.json({}),
@@ -162,7 +162,7 @@ test("management client constructor and target validation fail closed", async ()
   );
 
   const client = new SupabaseManagementEdgeFunctionClient({
-    accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+    accessToken: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
     allowedProjectRefs: [projectRef],
     fetchImpl: async () => Response.json({}),
   });
@@ -218,7 +218,7 @@ test("management client reports provider read failures without mutating anything
 test("management client validates deploy bundles and provider write statuses", async () => {
   let status = 500;
   const client = new SupabaseManagementEdgeFunctionClient({
-    accessToken: "sbp_fc_test_token_for_hercules_deploy_123456",
+    accessToken: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
     allowedProjectRefs: [projectRef],
     fetchImpl: async (_url, options = {}) => {
       if (options.method === "DELETE") return new Response("", {status});

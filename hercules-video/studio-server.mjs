@@ -1,7 +1,36 @@
 import {createServer} from "node:http";
 import {pathToFileURL} from "node:url";
+import {readFile} from "node:fs/promises";
 import {inspectLaunchRunStateFile} from "./run-status.mjs";
 import {buildStudioViewModel,createStudioManifest} from "./studio-contract.mjs";
+import {createContentMultiplierManifest} from "../sauceapproved-studio/content-multiplier/core.mjs";
+import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/core.mjs";
+import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core.mjs";
+import {createCampaignForgeManifest,renderCampaignForge} from "../sauceapproved-studio/campaign-forge/core.mjs";
+import {createPerformanceBrainManifest,renderPerformanceBrain,buildCampaignPerformanceInput,evaluateCampaignPerformance} from "../sauceapproved-studio/performance-brain/core.mjs";
+import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
+import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
+import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
+import {createMovieMachineManifest,renderMovieMachine} from "../sauceapproved-studio/movie-machine/core.mjs";
+import {createHoloStageManifest,renderHoloStage} from "../sauceapproved-studio/holostage/core.mjs";
+import {createLegacyVaultManifest,renderLegacyVault} from "../sauceapproved-studio/legacy-vault/core.mjs";
+import {createStudioDirectorManifest,renderStudioDirector} from "../sauceapproved-studio/studio-director/core.mjs";
+import {createRealityForgeManifest,renderRealityForge} from "../sauceapproved-studio/reality-forge/core.mjs";
+import {createPerformanceLabManifest,renderPerformanceLab} from "../sauceapproved-studio/performance-lab/core.mjs";
+import {createSceneForgeManifest,renderSceneForge} from "../sauceapproved-studio/scene-forge/core.mjs";
+import {createSoundWorldManifest,renderSoundWorld} from "../sauceapproved-studio/sound-world/core.mjs";
+import {createActorLabManifest,renderActorLab} from "../sauceapproved-studio/actor-lab/core.mjs";
+import {createIntegrationsManifest,renderIntegrationsHub} from "../sauceapproved-studio/integrations/core.mjs";
+import {createCreationFloorManifest} from "../sauceapproved-studio/creation-floor/core.mjs";
+import {renderCreationFloor} from "../sauceapproved-studio/creation-floor/render.mjs";
+import {createStudioCompletionManifest} from "../sauceapproved-studio/completion/core.mjs";
+import {createStudioSystemRegistry,evaluateStudioSystemRegistry} from "../sauceapproved-studio/system-registry/core.mjs";
+import {createReleaseTruthEvidenceStore} from "../sauceapproved-studio/release-truth/evidence-store.mjs";
+import {createReleaseTruthEvidenceLedger} from "../sauceapproved-studio/release-truth/evidence-ledger.mjs";
+import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
+import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
+import {createStudioGuardianWatchtowerReader} from "./studio-guardian-watchtower.mjs";
+import {createProductionGuardianRuntime} from "../hercules-guardian/production-watchtower-runtime.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -14,9 +43,32 @@ const HTML_HEADERS=Object.freeze({
   "x-content-type-options":"nosniff",
   "content-security-policy":"default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; form-action 'none'; frame-ancestors 'none'; base-uri 'none'"
 });
+const CAMERA_HTML_HEADERS=Object.freeze({...HTML_HEADERS,
+  "content-security-policy":"default-src 'none'; script-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:; media-src 'self' blob:; form-action 'none'; frame-ancestors 'none'; base-uri 'none'"
+});
+const CAMERA_JS_HEADERS=Object.freeze({
+  "content-type":"text/javascript; charset=utf-8",
+  "cache-control":"no-store",
+  "x-content-type-options":"nosniff"
+});
 
 function json(body,status=200) {
   return {status,headers:JSON_HEADERS,body:JSON.stringify(body)};
+}
+
+async function readHttpRequestBody(request,{maxBytes=16384}={}){
+  const chunks=[];
+  let total=0;
+  for await (const chunk of request){
+    total+=chunk.length;
+    if(total>maxBytes){
+      const error=new Error("studio_request_body_too_large");
+      error.code="STUDIO_REQUEST_BODY_TOO_LARGE";
+      throw error;
+    }
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 function humanize(value) {
@@ -46,6 +98,221 @@ function renderTimeline(model) {
         <em>${shot.safelyReusable ? "REUSABLE" : shot.requiresResubmission ? "RESUBMIT" : "HELD"}</em>
       </div>
     </article>`).join("");
+}
+
+function renderContentMultiplierShell(manifest) {
+  const cards=manifest.differentiators.map((name,index)=>`
+    <article class="feature">
+      <span>0${index+1}</span>
+      <h2>${escapeHtml(name)}</h2>
+      <p>${escapeHtml({
+        "Content DNA":"Keeps vocabulary, tone, offers, audiences, banned phrases and locked facts attached to the brand.",
+        "Variation Tree":"Branches hooks, audiences, platforms, lengths and offers without losing parent-child lineage.",
+        "Content Opportunity Radar":"Surfaces strong unused source moments and approved brand facts before they get overlooked.",
+        "Variant Fatigue Guard":"Stops near-duplicate content from multiplying and pushes the next branch toward a materially different angle."
+      }[name] || "Owned SauceApproved content intelligence.")}</p>
+    </article>`).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SauceApproved Content Multiplier</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f7f7f7}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 18% 0,#2c1b19 0,#0b0b0b 34%,#040404 74%)}
+main{width:min(1120px,100%);margin:auto;padding:clamp(18px,4vw,42px)}
+a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-decoration:none;font-weight:700}
+.hero{padding:clamp(24px,5vw,54px);border:1px solid #2a2524;border-radius:32px;background:linear-gradient(145deg,#171313,#0b0b0b);box-shadow:0 28px 100px #0009}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#bf9189}.title{font-size:clamp(42px,9vw,86px);line-height:.92;margin:10px 0 18px;font-weight:950;letter-spacing:-.055em}.title em{font-style:normal;color:#e1b6ae}
+.sub{max-width:760px;color:#b5b5b5;font-size:clamp(16px,2vw,20px);line-height:1.6}
+.status{margin-top:24px;padding:16px 18px;border:1px solid #5a3c24;border-radius:18px;background:#1d140d;color:#f0c789;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.feature{min-height:210px;padding:24px;border-radius:24px;border:1px solid #282323;background:#0c0c0cee}.feature span{font-size:11px;letter-spacing:.18em;color:#8d706b}.feature h2{font-size:24px;margin:38px 0 10px}.feature p{color:#999;line-height:1.55;margin:0}
+.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px;padding:18px;border:1px solid #222;border-radius:20px;background:#090909;color:#888}.pill{font-size:12px;border:1px solid #333;padding:7px 10px;border-radius:999px;color:#bbb}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.hero{border-radius:24px}.feature{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">SauceApproved Studios / Hercules-owned module</div>
+<h1 class="title">Content <em>Multiplier</em></h1>
+<p class="sub">Turn one approved source into a governed content system. Brand truth stays locked, variation stays traceable, and repetitive branches are caught before they waste output.</p>
+<div class="status">Generation provider not connected — generation stays fail-closed until an authorized provider is configured.</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="footer">
+<span>Execution policy: <b>${escapeHtml(manifest.executionPolicy)}</b></span>
+<span class="pill">Provider required for generation</span>
+</div>
+</main>
+</body>
+</html>`;
+}
+
+function renderSalesAgentShell(manifest) {
+  const descriptions={
+    "Objection Intelligence Map":"Groups explicit buyer friction into useful objection evidence without inferring sensitive traits.",
+    "Adaptive Pitch Memory":"Keeps only explicitly stated sales context for the active session so the conversation adapts without hidden profiling.",
+    "Confidence-to-Handoff Governor":"Uses approved-knowledge support, locked-fact coverage, ambiguity and action risk to decide whether to answer, clarify or hand off.",
+    "Objection-to-Asset Bridge":"Turns recurring objection evidence into review-required Content Multiplier briefs instead of silently changing brand truth."
+  };
+  const cards=manifest.differentiators.map((name,index)=>`
+    <article class="feature">
+      <span>0${index+1}</span>
+      <h2>${escapeHtml(name)}</h2>
+      <p>${escapeHtml(descriptions[name] || "Owned SauceApproved sales intelligence.")}</p>
+    </article>`).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SauceApproved AI Sales Agent</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f7f7f7}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 80% 0,#17221c 0,#0a0d0b 36%,#040404 74%)}
+main{width:min(1120px,100%);margin:auto;padding:clamp(18px,4vw,42px)}
+a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-decoration:none;font-weight:700}
+.hero{padding:clamp(24px,5vw,54px);border:1px solid #25312a;border-radius:32px;background:linear-gradient(145deg,#111713,#0a0b0a);box-shadow:0 28px 100px #0009}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#86b698}.title{font-size:clamp(42px,9vw,86px);line-height:.92;margin:10px 0 18px;font-weight:950;letter-spacing:-.055em}.title em{font-style:normal;color:#aee0bd}
+.sub{max-width:780px;color:#b5b5b5;font-size:clamp(16px,2vw,20px);line-height:1.6}
+.status{margin-top:24px;padding:16px 18px;border:1px solid #574224;border-radius:18px;background:#1c160d;color:#f0ce8e;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.feature{min-height:220px;padding:24px;border-radius:24px;border:1px solid #202b24;background:#0b0e0cee}.feature span{font-size:11px;letter-spacing:.18em;color:#6f967c}.feature h2{font-size:24px;margin:38px 0 10px}.feature p{color:#999;line-height:1.55;margin:0}
+.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px;padding:18px;border:1px solid #222;border-radius:20px;background:#090909;color:#888}.pill{font-size:12px;border:1px solid #333;padding:7px 10px;border-radius:999px;color:#bbb}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.hero{border-radius:24px}.feature{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">SauceApproved Studios / Hercules-owned module</div>
+<h1 class="title">AI Sales <em>Agent</em></h1>
+<p class="sub">Grounded sales intelligence built around approved products, explicit customer context, consent, auditable handoff decisions and controlled business actions.</p>
+<div class="status">Action adapter not connected — business actions stay fail-closed until an authorized adapter is configured.</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="footer">
+<span>Execution policy: <b>${escapeHtml(manifest.executionPolicy)}</b></span>
+<span class="pill">Sensitive profiling disabled</span>
+</div>
+</main>
+</body>
+</html>`;
+}
+
+function renderBrandBrainShell(manifest) {
+  const descriptions={
+    "Brand Constitution":"Turns brand rules into versioned, enforceable policy with precedence, inherited rules, explicit overrides and conflict detection.",
+    "Cross-Channel Consistency Simulator":"Finds contradictions in price, CTA, disclosure, promise, audience and timing before content ships.",
+    "Rule Blast Radius Preview":"Shows which assets, agents and campaigns a proposed rule change would affect before approval.",
+    "Brand Drift Time Machine":"Compares two Constitution versions and judges the same asset against both rule sets."
+  };
+  const cards=manifest.differentiators.map((name,index)=>`
+    <article class="feature">
+      <span>0${index+1}</span>
+      <h2>${escapeHtml(name)}</h2>
+      <p>${escapeHtml(descriptions[name] || "Owned SauceApproved brand governance.")}</p>
+    </article>`).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SauceApproved Brand Brain</title>
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f7f7f7}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% -10%,#262036 0,#0d0b11 36%,#040404 75%)}
+main{width:min(1120px,100%);margin:auto;padding:clamp(18px,4vw,42px)}
+a{color:inherit}.back{display:inline-flex;margin-bottom:26px;color:#aaa;text-decoration:none;font-weight:700}
+.hero{padding:clamp(24px,5vw,54px);border:1px solid #302a3c;border-radius:32px;background:linear-gradient(145deg,#17131e,#0a090c);box-shadow:0 28px 100px #0009}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#ae94cf}.title{font-size:clamp(42px,9vw,86px);line-height:.92;margin:10px 0 18px;font-weight:950;letter-spacing:-.055em}.title em{font-style:normal;color:#ceb3ee}
+.sub{max-width:800px;color:#b5b5b5;font-size:clamp(16px,2vw,20px);line-height:1.6}
+.status{margin-top:24px;padding:16px 18px;border:1px solid #574224;border-radius:18px;background:#1c160d;color:#f0ce8e;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.feature{min-height:220px;padding:24px;border-radius:24px;border:1px solid #2a2432;background:#0d0b10ee}.feature span{font-size:11px;letter-spacing:.18em;color:#9078ab}.feature h2{font-size:24px;margin:38px 0 10px}.feature p{color:#999;line-height:1.55;margin:0}
+.footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:18px;padding:18px;border:1px solid #222;border-radius:20px;background:#090909;color:#888}.pill{font-size:12px;border:1px solid #333;padding:7px 10px;border-radius:999px;color:#bbb}
+@media(max-width:720px){.grid{grid-template-columns:1fr}.hero{border-radius:24px}.feature{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">SauceApproved Studios / Hercules-owned governance</div>
+<h1 class="title">Brand <em>Brain</em></h1>
+<p class="sub">A governed source of truth for approved facts, provenance, Brand Constitution rules, multi-brand inheritance, cross-channel consistency and downstream impact analysis.</p>
+<div class="status">Changes require review — Brand Brain does not silently auto-learn or rewrite approved brand truth.</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="footer">
+<span>Change policy: <b>${escapeHtml(manifest.executionPolicy)}</b></span>
+<span class="pill">Silent auto-learning disabled</span>
+</div>
+</main>
+</body>
+</html>`;
+}
+
+function renderStudiosMarketShell(manifest) {
+  const cards=manifest.products.map((item,index)=>`
+    <article class="offer">
+      <div class="count">0${index+1}</div>
+      <h2>${escapeHtml(item.name)}</h2>
+      <p>${escapeHtml(item.summary)}</p>
+      <div class="actions">
+        <a class="secondary" href="${escapeHtml(item.route)}">View product</a>
+        <a class="primary" href="${escapeHtml(item.ctaUrl)}" rel="noreferrer">${escapeHtml(item.ctaLabel)}</a>
+      </div>
+    </article>`).join("");
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SauceApproved Studios Market</title>
+<meta name="description" content="Explore SauceApproved Studios products and request controlled founding access.">
+<style>
+:root{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#050505;color:#f6f6f6}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 15% -10%,#2d201b 0,#10100f 32%,#040404 72%)}
+main{width:min(1180px,100%);margin:auto;padding:clamp(18px,4vw,46px)}
+a{color:inherit;text-decoration:none}.back{display:inline-flex;margin-bottom:24px;color:#aaa;font-weight:750}
+.hero{border:1px solid #332b27;border-radius:32px;padding:clamp(26px,5vw,58px);background:linear-gradient(145deg,#1b1512,#0b0b0b);box-shadow:0 28px 100px #0009}
+.eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#c6927d}
+h1{font-size:clamp(46px,9vw,92px);line-height:.9;letter-spacing:-.06em;margin:12px 0 20px;font-weight:950}
+h1 em{font-style:normal;color:#e8b7a4}.lead{max-width:820px;color:#bababa;font-size:clamp(17px,2vw,21px);line-height:1.6}
+.state{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:26px}.state div{border:1px solid #2d2927;border-radius:16px;padding:14px;background:#0d0c0b}.state span{display:block;color:#777;font-size:10px;letter-spacing:.14em;text-transform:uppercase}.state strong{display:block;margin-top:6px}.open{color:#9ee2af}.locked{color:#f0c787}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}.offer{min-height:300px;border:1px solid #282422;border-radius:24px;padding:26px;background:#0b0b0bea;display:flex;flex-direction:column}.count{color:#876e63;font-size:11px;letter-spacing:.18em}.offer h2{font-size:28px;margin:42px 0 12px}.offer p{color:#999;line-height:1.6;margin:0 0 24px}.actions{margin-top:auto;display:flex;gap:10px;flex-wrap:wrap}.actions a{padding:12px 14px;border-radius:13px;font-weight:850;font-size:13px}.primary{background:#f2f2f2;color:#070707}.secondary{border:1px solid #34302e;color:#c8c8c8}
+.notice{margin-top:18px;border:1px solid #574224;background:#1b140d;color:#eccb91;padding:18px;border-radius:18px;line-height:1.55}
+.foot{margin-top:18px;color:#777;font-size:13px;line-height:1.6}
+@media(max-width:760px){.grid,.state{grid-template-columns:1fr}.hero{border-radius:24px}.offer{min-height:auto}}
+</style>
+</head>
+<body>
+<main>
+<a class="back" href="/">← SauceApproved Studio</a>
+<section class="hero">
+<div class="eyebrow">SauceApproved Studios / Market</div>
+<h1>Built to work. <em>Built to sell.</em></h1>
+<p class="lead">Four owned Hercules-grade products plus the controlled Studios Bundle are open for public discovery. Vintage Camera is available as a free preview; founding-access products still use the protected Hercules intake.</p>
+<div class="state">
+  <div><span>Discovery</span><strong class="open">Public</strong></div>
+  <div><span>Founding applications</span><strong class="open">Open</strong></div>
+  <div><span>Paid checkout</span><strong class="locked">Locked pending verification</strong></div>
+</div>
+</section>
+<section class="grid">${cards}</section>
+<div class="notice"><b>Paid checkout remains locked.</b> Pricing approval, Terms, Privacy, and the payout/checkout/refund path must be verified before SauceApproved accepts a public paid software order. Founding-access requests are open now; they do not create a charge.</div>
+<p class="foot"><a href="/pricing">Studio pricing</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">SauceApproved Ads Engine</a></p>
+<p class="foot">Current product surfaces show verified owned capabilities and clearly disclose unavailable provider integrations. No testimonial, ROI guarantee, uptime claim, or external integration is represented as live without evidence.</p>
+</main>
+</body>
+</html>`;
 }
 
 function renderStudioShell({manifest,model,bridge}) {
@@ -82,6 +349,7 @@ main{width:min(1180px,100%);margin:auto;padding:24px}.top{display:grid;gap:18px;
 <section class="top">
 <div><div class="eyebrow">SauceApproved / Owned Video System</div><h1 class="title">SauceApproved <span class="accent">Studio</span></h1></div>
 <p class="sub">A verified operator surface for Hercules Video. Run identity, shot state, quality gates, recovery and evidence stay visible. Execution stays fail-closed until a trusted bridge is connected.</p>
+<p class="sub"><a href="/getting-started">Getting started</a> · <a href="/pricing">View Studio plans</a> · <a href="/market">Founding access</a> · <a href="/support">Support</a> · <a href="https://sauceapproved-ads-engine.floot.app/products">Ads Engine</a></p>
 <div class="rail">
 ${statusBadge("Mode",mode)}
 ${statusBadge("Run stage",stage)}
@@ -95,7 +363,7 @@ ${statusBadge("Execution",bridgeLabel,bridgeConnected ? "good" : "warn")}
 <div><div class="eyebrow">Operator</div><h2>${escapeHtml(surfaces.get("project-brief"))}</h2><p>Capture the creative brief and prepare the run plan without pretending execution is connected.</p></div>
 <div class="notice">${escapeHtml(bridgeLabel)}. Start and resume stay locked until the owned execution bridge is verified.</div>
 <div class="surface-list">
-${manifest.surfaces.map(surface=>`<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
+${manifest.surfaces.map(surface=>surface.id==="content-multiplier" ? `<a class="surface" href="/content-multiplier">${escapeHtml(surface.label)}</a>` : surface.id==="ai-sales-agent" ? `<a class="surface" href="/ai-sales-agent">${escapeHtml(surface.label)}</a>` : surface.id==="brand-brain" ? `<a class="surface" href="/brand-brain">${escapeHtml(surface.label)}</a>` : surface.id==="campaign-forge" ? `<a class="surface" href="/campaign-forge">${escapeHtml(surface.label)}</a>` : surface.id==="movie-machine" ? `<a class="surface" href="/movie-machine">${escapeHtml(surface.label)}</a>` : surface.id==="holostage" ? `<a class="surface" href="/holostage">${escapeHtml(surface.label)}</a>` : surface.id==="legacy-vault" ? `<a class="surface" href="/legacy-vault">${escapeHtml(surface.label)}</a>` : surface.id==="market" ? `<a class="surface" href="/market">${escapeHtml(surface.label)}</a>` : surface.id==="vintage-camera" ? `<a class="surface" href="/vintage-camera">${escapeHtml(surface.label)}</a>` : surface.id==="kids" ? `<a class="surface" href="/kids">${escapeHtml(surface.label)}</a>` : `<div class="surface">${escapeHtml(surface.label)}</div>`).join("")}
 </div>
 <div>
 <h2>${escapeHtml(surfaces.get("run-status"))}</h2>
@@ -134,9 +402,19 @@ export function createStudioHttpHandler({
   statusReader=async()=>null,
   executionBridgeProvider=async()=>({connected:false,reason:"execution_bridge_unavailable"}),
   authorizeOperator=async()=>false,
-  actions={}
+  authorizeGiftClaim=async()=>false,
+  launchGiftClockProvider=async()=>null,
+  verifyGiftPurchase=async()=>null,
+  giftReservationStore=Object.freeze({
+    list:async()=>[],
+    create:async()=>null
+  }),
+  actions={},
+  releaseTruthBacking=[],
+  guardianWatchtowerReader=async()=>null
 }={}) {
   const manifest=createStudioManifest();
+  const releaseTruthLedger=createReleaseTruthEvidenceLedger({backing:releaseTruthBacking});
 
   async function readContext() {
     const [runStatus,bridge]=await Promise.all([statusReader(),executionBridgeProvider()]);
@@ -159,19 +437,362 @@ export function createStudioHttpHandler({
       });
     }
 
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/guardian/status") {
+      try {
+        const watchtower=await guardianWatchtowerReader();
+        if (!watchtower || watchtower.executionAuthority!==false) {
+          return json({ok:false,error:"guardian_watchtower_unavailable",mode:"read-only",executionAuthority:false},503);
+        }
+        return json({ok:true,mode:"read-only",executionAuthority:false,watchtower});
+      } catch {
+        return json({ok:false,error:"guardian_watchtower_unavailable",mode:"read-only",executionAuthority:false},503);
+      }
+    }
+
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/manifest") {
       return json(manifest);
     }
 
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/content-multiplier/manifest") {
+      return json(createContentMultiplierManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/content-multiplier") {
+      return {status:200,headers:HTML_HEADERS,body:renderContentMultiplierShell(createContentMultiplierManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/ai-sales-agent/manifest") {
+      return json(createSalesAgentManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/ai-sales-agent") {
+      return {status:200,headers:HTML_HEADERS,body:renderSalesAgentShell(createSalesAgentManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/brand-brain/manifest") {
+      return json(createBrandBrainManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/brand-brain") {
+      return {status:200,headers:HTML_HEADERS,body:renderBrandBrainShell(createBrandBrainManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/campaign-forge/manifest") {
+      return json(createCampaignForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/performance-brain/manifest") {
+      return json(createPerformanceBrainManifest());
+    }
+
+    if (normalizedMethod==="POST" && normalizedPath==="/api/studio/performance-brain/evaluate") {
+      let payload={};
+      try{
+        payload=typeof request.body==="string" ? JSON.parse(request.body||"{}") : (request.body||{});
+      }catch{
+        return json({ok:false,error:"invalid_json_body"},400);
+      }
+      try{
+        const input=buildCampaignPerformanceInput(payload.pack,{objective:payload.objective,metrics:payload.metrics});
+        return json(evaluateCampaignPerformance(input));
+      }catch(error){
+        return json({ok:false,error:String(error?.message||"performance_brain_evaluation_failed")},400);
+      }
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/performance-brain") {
+      return {status:200,headers:HTML_HEADERS,body:renderPerformanceBrain()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/campaign-forge") {
+      return {status:200,headers:HTML_HEADERS,body:renderCampaignForge()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/movie-machine/manifest") {
+      return json(createMovieMachineManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/movie-machine") {
+      return {status:200,headers:HTML_HEADERS,body:renderMovieMachine()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/holostage/manifest") {
+      return json(createHoloStageManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/holostage") {
+      return {status:200,headers:HTML_HEADERS,body:renderHoloStage()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/legacy-vault/manifest") {
+      return json(createLegacyVaultManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/legacy-vault") {
+      return {status:200,headers:HTML_HEADERS,body:renderLegacyVault()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/studio-director/manifest") {
+      return json(createStudioDirectorManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/studio-director") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioDirector()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/reality-forge/manifest") {
+      return json(createRealityForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/reality-forge") {
+      return {status:200,headers:HTML_HEADERS,body:renderRealityForge()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/performance-lab/manifest") {
+      return json(createPerformanceLabManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/performance-lab") {
+      return {status:200,headers:HTML_HEADERS,body:renderPerformanceLab()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/scene-forge/manifest") {
+      return json(createSceneForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/scene-forge") {
+      return {status:200,headers:HTML_HEADERS,body:renderSceneForge()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/sound-world/manifest") {
+      return json(createSoundWorldManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/sound-world") {
+      return {status:200,headers:HTML_HEADERS,body:renderSoundWorld()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/actor-lab/manifest") {
+      return json(createActorLabManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/actor-lab") {
+      return {status:200,headers:HTML_HEADERS,body:renderActorLab()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/creation-floor/manifest") {
+      return json(createCreationFloorManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/creation-floor") {
+      return {status:200,headers:HTML_HEADERS,body:renderCreationFloor()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/integrations/manifest") {
+      return json(createIntegrationsManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/integrations") {
+      return {status:200,headers:HTML_HEADERS,body:renderIntegrationsHub()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/market/manifest") {
+      return json(createStudiosMarketManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/market") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudiosMarketShell(createStudiosMarketManifest())};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/commercial/manifest") {
+      return json(createStudioCommercialManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/completion/manifest") {
+      return json(createStudioCompletionManifest({commercial:createStudioCommercialManifest()}));
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/systems/manifest") {
+      return json(createStudioSystemRegistry());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/systems/status") {
+      return json(evaluateStudioSystemRegistry(createStudioSystemRegistry(),{}));
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/release-truth/status") {
+      return json(createReleaseTruthEvidenceStore({initialEvidence:releaseTruthLedger.currentEvidence()}).status());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/release-truth") {
+      const truth=createReleaseTruthEvidenceStore({initialEvidence:releaseTruthLedger.currentEvidence()}).status();
+      const blocked=truth.blockedSystemIds.map(id=>`<li><code>${id}</code></li>`).join("");
+      return {status:200,headers:HTML_HEADERS,body:`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Release Truth Room · SauceApproved Studio</title></head><body><main><h1>Release Truth Room</h1><p><strong>Release blocked</strong> until every required Studio system has genuine, current, verified evidence.</p><p>Synthetic evidence is not allowed. Software presence alone is not physical proof.</p><p>Final authority: <strong>owner-controlled release</strong>.</p><h2>Blocked systems</h2><ul>${blocked}</ul></main></body></html>`};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/launch-gift/manifest") {
+      const publicPaidLaunchOpenedAt=await launchGiftClockProvider();
+      return json(createSoundWorldLaunchGiftManifest({publicPaidLaunchOpenedAt}));
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/launch-gift") {
+      const publicPaidLaunchOpenedAt=await launchGiftClockProvider();
+      const giftManifest=createSoundWorldLaunchGiftManifest({publicPaidLaunchOpenedAt});
+      return {status:200,headers:HTML_HEADERS,body:renderSoundWorldLaunchGiftPage(giftManifest)};
+    }
+
+    if (normalizedMethod==="POST" && normalizedPath==="/api/studio/launch-gift/reserve") {
+      const authorized=await authorizeGiftClaim(request);
+      if(!authorized) return json({ok:false,error:"launch_gift_claim_authorization_required"},401);
+
+      let payload={};
+      try{
+        payload=typeof request.body==="string" ? JSON.parse(request.body||"{}") : (request.body||{});
+      }catch{
+        return json({ok:false,error:"invalid_json_body"},400);
+      }
+
+      const purchaseId=String(payload.purchaseId||"").trim();
+      const giftCode=String(payload.giftCode||"").trim();
+      if(!purchaseId||!giftCode) return json({ok:false,error:"purchase_id_and_gift_code_required"},400);
+
+      const publicPaidLaunchOpenedAt=await launchGiftClockProvider();
+      if(!publicPaidLaunchOpenedAt) return json({ok:false,error:"public_paid_launch_not_open"},423);
+
+      const purchase=await verifyGiftPurchase(purchaseId,request);
+      if(!purchase) return json({ok:false,error:"purchase_not_verified"},422);
+
+      const existingReservations=await giftReservationStore.list({purchaseId,customerId:purchase.customerId});
+      const result=reserveSoundWorldLaunchGift({
+        purchase,
+        giftCode,
+        publicPaidLaunchOpenedAt,
+        existingReservations
+      });
+
+      if(!result.ok){
+        const status=result.error==="gift_already_reserved_for_purchase" ? 409
+          : result.error==="invalid_soundworld_gift_choice" ? 400
+          : 422;
+        return json(result,status);
+      }
+
+      const stored=await giftReservationStore.create(result.reservation);
+      if(!stored) return json({ok:false,error:"gift_reservation_store_unavailable"},503);
+      return json({ok:true,reservation:stored},201);
+    }
+
+    if (normalizedMethod==="POST" && normalizedPath==="/api/studio/checkout") {
+      const commercial=createStudioCommercialManifest();
+      return json({ok:false,error:commercial.checkoutLockedReason,commercial},423);
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/demo/manifest") {
+      return json(createStudioDemoManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/demo") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioDemoShell()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/onboarding/manifest") {
+      return json(createStudioOnboardingManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/getting-started") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioGettingStartedShell()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/support") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioSupportShell()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/pricing") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioPricingShell()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/terms") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioLegalShell("terms")};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/privacy") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioLegalShell("privacy")};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/vintage-camera") {
+      return {status:200,headers:CAMERA_HTML_HEADERS,body:renderVintageCamera()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/vintage-camera.js") {
+      const body=await readFile(new URL("../sauceapproved-studio/vintage-camera/client.js",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/capture-quality.mjs") {
+      const body=await readFile(new URL("../sauceapproved-studio/vintage-camera/capture-quality.mjs",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/capture-receipt.mjs") {
+      const body=await readFile(new URL("../sauceapproved-studio/vintage-camera/capture-receipt.mjs",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/frame-scheduler.mjs") {
+      const body=await readFile(new URL("../sauceapproved-studio/vintage-camera/frame-scheduler.mjs",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/device-proof.mjs") {
+      const body=await readFile(new URL("../sauceapproved-studio/vintage-camera/device-proof.mjs",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/export-dimensions.mjs") {
+      const body=await readFile(new URL("../sauceapproved-studio/vintage-camera/export-dimensions.mjs",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/vintage-camera/manifest") {
+      return json(createVintageCameraManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/kids") {
+      return {status:200,headers:CAMERA_HTML_HEADERS,body:renderKidsStudio()};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/assets/kids-studio.js") {
+      const body=await readFile(new URL("../sauceapproved-studio/kids/client.js",import.meta.url),"utf8");
+      return {status:200,headers:CAMERA_JS_HEADERS,body};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/kids/manifest") {
+      return json(createKidsStudioManifest());
+    }
+
+    // Monitoring remains available even when execution has no verified run state.
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/status") {
-      const {model}=await readContext();
-      if (!model) return json({ok:false,error:"studio_run_state_unavailable"},404);
+      const {model,bridge}=await readContext();
+      if (!model) {
+        return json({
+          ok:true,
+          product:"SauceApproved Studio",
+          executionPolicy:"fail-closed",
+          runStateAvailable:false,
+          executionBridgeConnected:Boolean(bridge?.connected),
+          reason:"studio_run_state_unavailable"
+        });
+      }
       return json(model);
     }
 
-    if (normalizedMethod==="GET" && normalizedPath==="/") {
+    if (normalizedMethod==="GET" && normalizedPath==="/operator") {
       const {bridge,model}=await readContext();
       return {status:200,headers:HTML_HEADERS,body:renderStudioShell({manifest,model,bridge})};
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/") {
+      return {status:200,headers:HTML_HEADERS,body:renderStudioLandingShell()};
     }
 
     if (normalizedMethod==="POST" && (normalizedPath==="/api/studio/start" || normalizedPath==="/api/studio/resume")) {
@@ -204,7 +825,12 @@ export async function startStudioServer({
   statePath=null,
   executionBridgeProvider,
   authorizeOperator,
-  actions
+  authorizeGiftClaim,
+  launchGiftClockProvider,
+  verifyGiftPurchase,
+  giftReservationStore,
+  actions,
+  guardianWatchtowerReader=createStudioGuardianWatchtowerReader()
 }={}) {
   const statusReader=statePath
     ? async()=>inspectLaunchRunStateFile(statePath).catch(error=>{
@@ -212,15 +838,29 @@ export async function startStudioServer({
         throw error;
       })
     : async()=>null;
-  const handle=createStudioHttpHandler({statusReader,executionBridgeProvider,authorizeOperator,actions});
+  const handle=createStudioHttpHandler({
+    statusReader,
+    executionBridgeProvider,
+    authorizeOperator,
+    authorizeGiftClaim,
+    launchGiftClockProvider,
+    verifyGiftPurchase,
+    giftReservationStore,
+    actions,
+    guardianWatchtowerReader
+  });
   const server=createServer(async(req,res)=>{
     try {
       const pathname=new URL(req.url || "/","http://studio.local").pathname;
-      const response=await handle({method:req.method || "GET",pathname,headers:req.headers});
+      const method=req.method || "GET";
+      const body=(method==="GET" || method==="HEAD") ? null : await readHttpRequestBody(req);
+      const response=await handle({method,pathname,headers:req.headers,body});
       res.writeHead(response.status,response.headers);
       res.end(response.body);
     } catch (error) {
-      const response=json({ok:false,error:"studio_internal_error"},500);
+      const response=error?.code==="STUDIO_REQUEST_BODY_TOO_LARGE"
+        ? json({ok:false,error:"studio_request_body_too_large"},413)
+        : json({ok:false,error:"studio_internal_error"},500);
       res.writeHead(response.status,response.headers);
       res.end(response.body);
     }
@@ -236,8 +876,19 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   const port=Number(process.env.PORT || 8787);
   const host=String(process.env.HOST || "0.0.0.0");
   const statePath=process.env.HERCULES_VIDEO_STATE_PATH || null;
-  const {server}=await startStudioServer({host,port,statePath});
-  const shutdown=()=>server.close(()=>process.exit(0));
+  const publicPaidLaunchOpenedAt=process.env.HERCULES_PUBLIC_PAID_LAUNCH_OPENED_AT || null;
+  const launchGiftClockProvider=async()=>publicPaidLaunchOpenedAt;
+  const guardianRuntime=await createProductionGuardianRuntime();
+  await guardianRuntime.tick();
+  guardianRuntime.start();
+  const {server}=await startStudioServer({
+    host,port,statePath,launchGiftClockProvider,
+    guardianWatchtowerReader:guardianRuntime.readStatus
+  });
+  const shutdown=()=>{
+    guardianRuntime.stop();
+    server.close(()=>process.exit(0));
+  };
   process.once("SIGINT",shutdown);
   process.once("SIGTERM",shutdown);
 }

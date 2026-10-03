@@ -6,6 +6,7 @@ import dns from "node:dns/promises";
 import net from "node:net";
 import { randomBytes } from "node:crypto";
 import { chromium } from "playwright-core";
+import { detectOwnerCheckpointText, stripePaymentBoundary } from "./checkpoints.mjs";
 
 const PORT = Number(process.env.PORT || 10000);
 const AUTH_VERIFY_URL = "https://xbwuablxhhwsaoomsoco.supabase.co/rest/v1/rpc/hercules_browser_standalone_token_consume_public";
@@ -284,21 +285,20 @@ async function ownerControlledField(page,selector) {
     if(id)label=document.querySelector(`label[for="${CSS.escape(id)}"]`)?.textContent||"";
     return (parts.join(" ")+" "+label).toLowerCase();
   }).catch(()=>"");
+  const cardNumber=await page.locator('input[autocomplete="cc-number"]').first().inputValue().catch(()=>"");
+  const paymentBoundary=stripePaymentBoundary({
+    url:page.url(),
+    fieldInfo:info,
+    selector,
+    cardNumber
+  });
+  if(paymentBoundary)return paymentBoundary;
   if(/password/.test(info))return "password";
   if(/one-time-code|\botp\b|verification code|security code/.test(info))return "one-time-code";
   if(/\bmfa\b|two[- ]factor|2fa/.test(info))return "mfa";
   if(/captcha|not a robot|human verification/.test(info))return "captcha";
   if(/accept.*terms|terms.*accept|agree.*terms|terms.*agree/.test(info))return "terms";
   if(/authorize|authorization|consent|allow access|grant access/.test(info))return "consent";
-  return null;
-}
-
-function detectOwnerCheckpointText(text) {
-  const t=String(text||"").toLowerCase();
-  if(/captcha|verify you are human|not a robot/.test(t))return "captcha";
-  if(/one-time code|verification code|two-factor|two factor|\bmfa\b/.test(t))return "mfa";
-  if(/accept.*terms|agree.*terms/.test(t))return "terms";
-  if(/authorize|allow access|grant access|consent/.test(t))return "consent";
   return null;
 }
 

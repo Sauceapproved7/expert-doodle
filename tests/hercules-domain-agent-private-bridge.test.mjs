@@ -66,3 +66,45 @@ test("generic private bridge advertises domain-agent capability after multiplexi
   assert.match(bridge,/domain_agent_preflight/);
   assert.match(bridge,/domain_agent_discovery/);
 });
+
+
+test("live private bridge advertises and enforces task validity windows",()=>{
+  assert.match(agent,/taskValidityWindows:true/);
+  assert.match(agent,/body\.not_before/);
+  assert.match(agent,/body\.expires_at/);
+  assert.match(agent,/TASK_NOT_YET_VALID/);
+  assert.match(agent,/TASK_EXPIRED/);
+  const windowCheck=agent.indexOf("taskWindowDecision(body)");
+  const ownerBoundary=agent.indexOf("body.owner_boundary");
+  const grantResolution=agent.indexOf("resolveGrant(principal.organizationId,body)");
+  assert.ok(windowCheck>=0 && ownerBoundary>windowCheck && grantResolution>windowCheck);
+});
+
+test("live private bridge pins provider execution to a resolved grant fingerprint",()=>{
+  assert.match(agent,/grantFingerprintPinning:true/);
+  assert.match(agent,/expected_grant_fingerprint_sha256/);
+  assert.match(agent,/grant_fingerprint_sha256/);
+  assert.match(agent,/PROVIDER_GRANT_PIN_MISMATCH/);
+  const pinCheck=agent.indexOf("assertGrantPin(body,grant)");
+  const usage=agent.indexOf("recordUsage(principal,requestId");
+  assert.ok(pinCheck>=0 && usage>pinCheck);
+});
+
+
+test("domain agent exposes a Spaceship DNS inspection adapter through the existing secure lane",()=>{
+  assert.match(agent,/'spaceship\.dns\.inspect'/);
+  assert.match(agent,/provider:'spaceship'/);
+  assert.match(agent,/service:'hercules-private-bridge'/);
+  assert.match(agent,/purpose:'spaceship-dns'/);
+  assert.match(agent,/action:'inspect_shopify_dns'/);
+  assert.match(agent,/resolveSpaceshipGrant/);
+});
+
+test("Spaceship authorization is derived from existing control state without reading raw credentials",()=>{
+  assert.match(agent,/hercules_spaceship_dns_credentials/);
+  assert.match(agent,/hercules_spaceship_mcp_oauth/);
+  assert.match(agent,/spaceship_provider_authorization_required/);
+  assert.match(agent,/credential_custody:'supabase_vault'/);
+  assert.doesNotMatch(agent,/api_key_secret_ref|api_secret_secret_ref/);
+  assert.doesNotMatch(agent,/hercules_get_secret.*spaceship/i);
+});

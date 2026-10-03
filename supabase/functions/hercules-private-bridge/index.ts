@@ -5,6 +5,11 @@ import { handleSpaceshipMcpRequest, isSpaceshipMcpAction } from './spaceship-mcp
 import { handlePersonalBrowserRequest, isPersonalBrowserAction } from './personal-browser.ts';
 import { handleDomainAgentRequest, isDomainAgentAction, isDomainAgentGet } from './domain-agent.ts';
 import {issuePilotAdmission,pilotAdmissionControlStatus,pilotAdmissionInternalAuthorized,PILOT_ADMISSION_OWNER_ERROR,PILOT_ADMISSION_INTERNAL_ERROR} from './pilot-admission.ts';
+import {handleForgeStateRequest,isForgeStateAction} from './forge-state.ts';
+import {handleStudioShopifyPaidWebhook,isStudioShopifyPaidWebhook} from './studio-commerce-webhook.ts';
+import {handleCleanerDeviceRequest,isCleanerDeviceAction} from './cleaner-device.ts';
+import {handleSoundWorldLaunchGiftRequest,isSoundWorldLaunchGiftRequest} from './soundworld-launch-gift.ts';
+import {handleBotRuntimeRequest,isBotRuntimeRequest} from './bot-runtime.ts';
 
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}').default||Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -34,6 +39,38 @@ const LAUNCH_PACKET={
   }
 } as const;
 const LAUNCH_PACKET_CONFIRMATION='APPROVE HERCULES LAUNCH PACKET '+LAUNCH_PACKET.digest.slice(0,12).toUpperCase();
+const SAUCEAPPROVED_SOFTWARE_TERMS_SHA='2bf27cfb7f94d5599de509aa8c529a94751023d3';
+const SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA='04f6217770cbc53829da36c25ecf3fa6584704fb';
+const SOFTWARE_COMMERCIAL_BUNDLE_VERSION='software-commercial-v2';
+const SOFTWARE_COMMERCIAL_BUNDLE_DIGEST='cd8f2488748f0aed1e85726816ace5c86288de3f873de7719d136ed9e4275b72';
+const SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION='APPROVE SAUCEAPPROVED SOFTWARE COMMERCIAL PACKET '+SOFTWARE_COMMERCIAL_BUNDLE_DIGEST.slice(0,12).toUpperCase();
+const SOFTWARE_COMMERCIAL_BUNDLE={
+  version:SOFTWARE_COMMERCIAL_BUNDLE_VERSION,
+  digest:SOFTWARE_COMMERCIAL_BUNDLE_DIGEST,
+  products:['sauceapproved-studio','sauceapproved-ads'],
+  approvals:['pricing','terms','privacy'],
+  pricing:{starter:2900,pro:7900,agency:19900},
+  documents:{
+    terms:{path:'docs/legal/SAUCEAPPROVED-SOFTWARE-TERMS-CANDIDATE-V1.md',sha:SAUCEAPPROVED_SOFTWARE_TERMS_SHA},
+    privacy:{path:'docs/legal/SAUCEAPPROVED-SOFTWARE-PRIVACY-CANDIDATE-V1.md',sha:SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA}
+  }
+} as const;
+const TITAN_PRODUCT_CODE='hercules-titan-founding-access';
+const TITAN_COMMERCIAL_PACKET_VERSION='hercules-titan-commercial-v1';
+const TITAN_COMMERCIAL_PACKET_DIGEST='33c0f4567b6c0c06410b9bd546efdac8e2cc097f4c75b86728d539901e8bd5c7';
+const TITAN_COMMERCIAL_PACKET_CONFIRMATION='APPROVE HERCULES TITAN COMMERCIAL PACKET '+TITAN_COMMERCIAL_PACKET_DIGEST.slice(0,12).toUpperCase();
+const TITAN_TERMS_PATH='docs/legal/HERCULES-TITAN-TERMS-CANDIDATE-V1.md';
+const TITAN_PRIVACY_PATH='docs/legal/HERCULES-TITAN-PRIVACY-CANDIDATE-V1.md';
+const TITAN_TERMS_SHA='5d4daec3fa321db5c13366f05cc66814348182f6';
+const TITAN_PRIVACY_SHA='0ba9e0587ae38b3667a6397a70939f8f2c03b727';
+const STUDIO_PILOT_PRODUCT_CODE='sauceapproved-studio-founding-pilot';
+const STUDIO_PILOT_COMMERCIAL_PACKET_VERSION='sauceapproved-studio-founding-pilot-commercial-v1';
+const STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST='edb61c9817f34f6445172a2d88f71def13be873870f401ff4bf17f008d2734ab';
+const STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION='APPROVE SAUCEAPPROVED STUDIO FOUNDING PILOT '+STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST.slice(0,12).toUpperCase();
+const STUDIO_PILOT_TERMS_PATH='docs/legal/SAUCEAPPROVED-STUDIO-FOUNDING-PILOT-TERMS-CANDIDATE-V1.md';
+const STUDIO_PILOT_PRIVACY_PATH='docs/legal/SAUCEAPPROVED-STUDIO-FOUNDING-PILOT-PRIVACY-CANDIDATE-V1.md';
+const STUDIO_PILOT_TERMS_SHA='7a524ec1240a08c88ac85e88eeb02fe8e8781814';
+const STUDIO_PILOT_PRIVACY_SHA='c8b676fef1e8ab2a4b2052d0e9befd447819c9f7';
 
 async function actor(req:Request){
   const h=req.headers.get('authorization')||'', token=h.startsWith('Bearer ')?h.slice(7):'';
@@ -43,7 +80,7 @@ async function actor(req:Request){
   if(error||!data.user)return null;
   const {data:m}=await db.from('hercules_memberships').select('organization_id,role,status')
     .eq('user_id',data.user.id).eq('status','active').in('role',['owner','admin']).limit(1).maybeSingle();
-  return m?{user:data.user,m}:null;
+  return m?{user:data.user,m,db}:null;
 }
 
 function validServerUrl(raw:string){
@@ -173,6 +210,212 @@ async function launchApprovalEnvelopeStatus(){
     approvals:packetApprovals,
     gate:status.gate||null,
     publicRegistrationOpen:status.publicRegistrationOpen
+  };
+}
+
+async function softwareCommercialBundleStatus(){
+  const productCodes=[...SOFTWARE_COMMERCIAL_BUNDLE.products];
+  const [{data:products,error:productError},{data:plans,error:planError},{data:approvals,error:approvalError}]=await Promise.all([
+    admin.from('hercules_software_products').select('code,name,status,checkout_enabled').in('code',productCodes).order('code'),
+    admin.from('hercules_software_product_plans').select('product_code,plan_code,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',productCodes).order('candidate_monthly_price_cents'),
+    admin.from('hercules_software_commercial_approvals').select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at').in('product_code',productCodes).order('approval_type')
+  ]);
+  if(productError||planError||approvalError)throw (productError||planError||approvalError);
+
+  const expectedPlanEntries=Object.entries(SOFTWARE_COMMERCIAL_BUNDLE.pricing);
+  const catalogMatches=productCodes.every(code=>{
+    const rows=(plans||[]).filter((row:any)=>row.product_code===code);
+    return rows.length===expectedPlanEntries.length && expectedPlanEntries.every(([planCode,amount])=>{
+      const row=rows.find((x:any)=>x.plan_code===planCode);
+      return Boolean(row&&Number(row.candidate_monthly_price_cents)===Number(amount)&&row.checkout_enabled===false);
+    });
+  });
+  const termsRefsMatch=productCodes.every(code=>{
+    const row=(approvals||[]).find((x:any)=>x.product_code===code&&x.approval_type==='terms');
+    return row?.document_ref===SOFTWARE_COMMERCIAL_BUNDLE.documents.terms.path;
+  });
+  const privacyRefsMatch=productCodes.every(code=>{
+    const row=(approvals||[]).find((x:any)=>x.product_code===code&&x.approval_type==='privacy');
+    return row?.document_ref===SOFTWARE_COMMERCIAL_BUNDLE.documents.privacy.path;
+  });
+  const checkoutHeldClosed=productCodes.every(code=>
+    (products||[]).find((x:any)=>x.code===code)?.checkout_enabled===false
+  );
+  const ownerRows=(approvals||[]).filter((x:any)=>
+    productCodes.includes(x.product_code)&&SOFTWARE_COMMERCIAL_BUNDLE.approvals.includes(x.approval_type)
+  );
+  const ownerApprovalsComplete=ownerRows.length===6&&ownerRows.every((x:any)=>x.status==='approved');
+
+  return {
+    ok:true,
+    packet:{
+      version:SOFTWARE_COMMERCIAL_BUNDLE.version,
+      digest:SOFTWARE_COMMERCIAL_BUNDLE.digest,
+      fingerprint:SOFTWARE_COMMERCIAL_BUNDLE.digest.slice(0,12).toUpperCase(),
+      confirmation:SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION,
+      products:SOFTWARE_COMMERCIAL_BUNDLE.products,
+      pricing:SOFTWARE_COMMERCIAL_BUNDLE.pricing,
+      documents:SOFTWARE_COMMERCIAL_BUNDLE.documents
+    },
+    readiness:{
+      catalogMatches,
+      termsRefsMatch,
+      privacyRefsMatch,
+      checkoutHeldClosed,
+      ownerApprovalsComplete,
+      canApprove:catalogMatches&&termsRefsMatch&&privacyRefsMatch&&checkoutHeldClosed&&!ownerApprovalsComplete
+    },
+    approvals:ownerRows.map((x:any)=>({
+      product_code:x.product_code,
+      approval_type:x.approval_type,
+      status:x.status,
+      approved_at:x.approved_at,
+      document_ref:x.document_ref,
+      updated_at:x.updated_at
+    }))
+  };
+}
+
+async function titanCommercialBundleStatus(){
+  const [{data:product,error:productError},{data:approvals,error:approvalError}]=await Promise.all([
+    admin.from('hercules_software_products')
+      .select('code,name,descriptor,status,checkout_enabled,metadata,updated_at')
+      .eq('code',TITAN_PRODUCT_CODE)
+      .maybeSingle(),
+    admin.from('hercules_software_commercial_approvals')
+      .select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at')
+      .eq('product_code',TITAN_PRODUCT_CODE)
+      .order('approval_type')
+  ]);
+  if(productError||approvalError)throw (productError||approvalError);
+  if(!product)throw new Error('titan_product_missing');
+
+  const byType=Object.fromEntries((approvals||[]).map((row:any)=>[row.approval_type,row]));
+  const pricingMatches=Boolean(
+    product?.metadata?.commercial_mode==='founding_access_one_time' &&
+    product?.metadata?.billing_model==='one_time' &&
+    Number(product?.metadata?.candidate_price_cents)===4900 &&
+    String(product?.metadata?.currency||'').toUpperCase()==='USD' &&
+    product?.metadata?.commercial_packet_version===TITAN_COMMERCIAL_PACKET_VERSION &&
+    product?.metadata?.commercial_packet_digest===TITAN_COMMERCIAL_PACKET_DIGEST
+  );
+  const termsRefMatches=byType?.terms?.document_ref===TITAN_TERMS_PATH &&
+    byType?.terms?.evidence?.terms_sha===TITAN_TERMS_SHA;
+  const privacyRefMatches=byType?.privacy?.document_ref===TITAN_PRIVACY_PATH &&
+    byType?.privacy?.evidence?.privacy_sha===TITAN_PRIVACY_SHA;
+  const checkoutHeldClosed=product.checkout_enabled===false;
+  const ownerApprovalTypes=['pricing','terms','privacy'];
+  const ownerApprovalsComplete=ownerApprovalTypes.every(type=>byType?.[type]?.status==='approved');
+
+  return {
+    ok:true,
+    packet:{
+      version:TITAN_COMMERCIAL_PACKET_VERSION,
+      digest:TITAN_COMMERCIAL_PACKET_DIGEST,
+      fingerprint:TITAN_COMMERCIAL_PACKET_DIGEST.slice(0,12).toUpperCase(),
+      confirmation:TITAN_COMMERCIAL_PACKET_CONFIRMATION,
+      product_code:TITAN_PRODUCT_CODE,
+      price:{currency:'USD',amount_cents:4900,billing_model:'one_time'},
+      documents:{
+        terms:{path:TITAN_TERMS_PATH,sha:TITAN_TERMS_SHA},
+        privacy:{path:TITAN_PRIVACY_PATH,sha:TITAN_PRIVACY_SHA}
+      }
+    },
+    readiness:{
+      pricingMatches,
+      termsRefMatches,
+      privacyRefMatches,
+      checkoutHeldClosed,
+      ownerApprovalsComplete,
+      paymentProviderReady:byType?.payment_provider_ready?.status==='approved',
+      paymentPathVerified:byType?.payment_path_verified?.status==='approved',
+      canApprove:pricingMatches&&termsRefMatches&&privacyRefMatches&&checkoutHeldClosed&&!ownerApprovalsComplete
+    },
+    approvals:(approvals||[]).map((row:any)=>({
+      approval_type:row.approval_type,
+      status:row.status,
+      approved_at:row.approved_at||null,
+      document_ref:row.document_ref||null,
+      updated_at:row.updated_at||null
+    }))
+  };
+}
+
+
+async function studioPilotCommercialBundleStatus(){
+  const [{data:product,error:productError},{data:approvals,error:approvalError}]=await Promise.all([
+    admin.from('hercules_software_products')
+      .select('code,name,descriptor,status,checkout_enabled,metadata,updated_at')
+      .eq('code',STUDIO_PILOT_PRODUCT_CODE)
+      .maybeSingle(),
+    admin.from('hercules_software_commercial_approvals')
+      .select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at')
+      .eq('product_code',STUDIO_PILOT_PRODUCT_CODE)
+      .order('approval_type')
+  ]);
+  if(productError||approvalError)throw (productError||approvalError);
+  if(!product)throw new Error('studio_pilot_product_missing');
+
+  const byType=Object.fromEntries((approvals||[]).map((row:any)=>[row.approval_type,row]));
+  const pricingMatches=Boolean(
+    product?.metadata?.commercial_mode==='founding_pilot_one_time' &&
+    product?.metadata?.billing_model==='one_time' &&
+    product?.metadata?.payment_provider==='shopify' &&
+    Number(product?.metadata?.candidate_price_cents)===9900 &&
+    String(product?.metadata?.currency||'').toUpperCase()==='USD' &&
+    String(product?.metadata?.shop_domain||'').toLowerCase()==='sauceapproved-2.myshopify.com' &&
+    product?.metadata?.shopify_product_id==='gid://shopify/Product/15397259477312' &&
+    product?.metadata?.shopify_variant_id==='gid://shopify/ProductVariant/67601341153600' &&
+    product?.metadata?.shopify_sku==='SA-STUDIO-PILOT-001' &&
+    product?.metadata?.commercial_packet_version===STUDIO_PILOT_COMMERCIAL_PACKET_VERSION &&
+    product?.metadata?.commercial_packet_digest===STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST
+  );
+  const termsRefMatches=byType?.terms?.document_ref===STUDIO_PILOT_TERMS_PATH &&
+    byType?.terms?.evidence?.terms_sha===STUDIO_PILOT_TERMS_SHA;
+  const privacyRefMatches=byType?.privacy?.document_ref===STUDIO_PILOT_PRIVACY_PATH &&
+    byType?.privacy?.evidence?.privacy_sha===STUDIO_PILOT_PRIVACY_SHA;
+  const checkoutHeldClosed=product.checkout_enabled===false;
+  const ownerApprovalTypes=['pricing','terms','privacy'];
+  const ownerApprovalsComplete=ownerApprovalTypes.every(type=>byType?.[type]?.status==='approved');
+
+  return {
+    ok:true,
+    packet:{
+      version:STUDIO_PILOT_COMMERCIAL_PACKET_VERSION,
+      digest:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST,
+      fingerprint:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST.slice(0,12).toUpperCase(),
+      confirmation:STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION,
+      product_code:STUDIO_PILOT_PRODUCT_CODE,
+      price:{currency:'USD',amount_cents:9900,billing_model:'one_time',payment_provider:'shopify'},
+      shopify:{
+        shop_domain:'sauceapproved-2.myshopify.com',
+        product_id:'gid://shopify/Product/15397259477312',
+        variant_id:'gid://shopify/ProductVariant/67601341153600',
+        sku:'SA-STUDIO-PILOT-001'
+      },
+      documents:{
+        terms:{path:STUDIO_PILOT_TERMS_PATH,sha:STUDIO_PILOT_TERMS_SHA},
+        privacy:{path:STUDIO_PILOT_PRIVACY_PATH,sha:STUDIO_PILOT_PRIVACY_SHA}
+      },
+      separate_from_monthly_catalog:true
+    },
+    readiness:{
+      pricingMatches,
+      termsRefMatches,
+      privacyRefMatches,
+      checkoutHeldClosed,
+      ownerApprovalsComplete,
+      paymentProviderReady:byType?.payment_provider_ready?.status==='approved',
+      paymentPathVerified:byType?.payment_path_verified?.status==='approved',
+      canApprove:pricingMatches&&termsRefMatches&&privacyRefMatches&&checkoutHeldClosed&&!ownerApprovalsComplete
+    },
+    approvals:(approvals||[]).map((row:any)=>({
+      approval_type:row.approval_type,
+      status:row.status,
+      approved_at:row.approved_at||null,
+      document_ref:row.document_ref||null,
+      updated_at:row.updated_at||null
+    }))
   };
 }
 
@@ -359,6 +602,9 @@ async function handleSpaceshipCredentialDrop(req:Request,requestUrl:URL){
 
 Deno.serve(async(req:Request)=>{
   const requestUrl=new URL(req.url);
+  if(isBotRuntimeRequest(requestUrl))return handleBotRuntimeRequest(req);
+  if(isSoundWorldLaunchGiftRequest(requestUrl))return handleSoundWorldLaunchGiftRequest(req,requestUrl,admin);
+  if(isStudioShopifyPaidWebhook(requestUrl))return handleStudioShopifyPaidWebhook(req,requestUrl,admin);
   if(isDomainAgentGet(req,requestUrl))return handleDomainAgentRequest(req);
   if(requestUrl.searchParams.get('spaceship_credentials')==='1'){
     return handleSpaceshipCredentialDrop(req,requestUrl);
@@ -372,11 +618,13 @@ Deno.serve(async(req:Request)=>{
   if(req.method==='POST'){
     const probe=await req.clone().json().catch(()=>({}));
     const probeAction=String(probe?.action||'');
+    if(isCleanerDeviceAction(probeAction))return handleCleanerDeviceRequest(req,probe);
     if(probeAction==='pilot_admission_issue_internal'){
       if(!await pilotAdmissionInternalAuthorized(req,admin))return out({error:PILOT_ADMISSION_INTERNAL_ERROR},403);
       const result=await issuePilotAdmission(admin,probe,{principal:'hercules-internal',syntheticOnly:true,launchBaseUrl:U+'/functions/v1/hercules-launch'});
       return out(result.body,result.status);
     }
+    if(isForgeStateAction(probeAction))return handleForgeStateRequest(req,admin);
     if(isDomainAgentAction(probeAction))return handleDomainAgentRequest(req);
     if(isSpaceshipMcpAction(probeAction))return handleSpaceshipMcpRequest(req);
     if(isPersonalBrowserAction(probeAction))return handlePersonalBrowserRequest(req);
@@ -386,8 +634,8 @@ Deno.serve(async(req:Request)=>{
   }
   if(req.method==='GET'){
     const {count}=await admin.from('hercules_private_bridge_profiles').select('id',{count:'exact',head:true});
-    return out({ok:true,service:'hercules-private-bridge',version:'1.6.0',status:'ready',
-      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission'],
+    return out({ok:true,service:'hercules-private-bridge',version:'1.7.0',status:'ready',
+      capabilities:['profile_registry','private_dns','route_policy','reconnect_policy','health_state','software_commercial_status','software_commercial_approve','software_commercial_bundle_status','software_commercial_bundle_approve','studio_pilot_commercial_bundle_status','studio_pilot_commercial_bundle_approve','titan_commercial_bundle_status','titan_commercial_bundle_approve','launch_approval_status','launch_owner_decision','launch_approval_bundle','privacy_request_list','privacy_request_verify','privacy_request_preview','privacy_export','privacy_deletion_plan','privacy_delete_user_content','domain_agent_authorization','domain_agent_preflight','domain_agent_discovery','domain_agent_execute','domain_agent_usage','domain_agent_api','controlled_pilot_admission','forge_durable_state','cleaner_device_activation','cleaner_activation_requests'],
       configuredProfiles:count||0,nativeAndroidClient:'future_phase',operatorInteraction:'conversation_only',
       manualOperatorSteps:false,checkedAt:new Date().toISOString()});
   }
@@ -395,6 +643,18 @@ Deno.serve(async(req:Request)=>{
   const a=await actor(req); if(!a)return out({error:'owner_or_admin_required'},403);
   const org=String(a.m.organization_id), uid=String(a.user.id);
   const b=await req.json().catch(()=>({})), action=String(b.action||'status');
+
+  if(action==='cleaner_activation_requests'){
+    const allowedStatuses=['new','reviewing','qualified','invited'];
+    const {data,error}=await admin.from('hercules_software_access_requests')
+      .select('id,product_code,plan_code,email,full_name,company,role,status,created_at,updated_at')
+      .eq('product_code','hercules-cleaner')
+      .in('status',allowedStatuses)
+      .order('created_at',{ascending:false})
+      .limit(50);
+    if(error)return out({error:'cleaner_activation_requests_failed'},500);
+    return out({ok:true,productCode:'hercules-cleaner',requests:data||[],eligibleStatuses:allowedStatuses});
+  }
 
   if(action==='pilot_admission_status'){
     try{return out(await pilotAdmissionControlStatus(admin))}
@@ -407,6 +667,285 @@ Deno.serve(async(req:Request)=>{
       const result=await issuePilotAdmission(admin,b,{principal:'owner',actorUserId:uid,launchBaseUrl:U+'/functions/v1/hercules-launch'});
       return out(result.body,result.status);
     }catch{return out({error:'pilot_admission_issue_failed'},500)}
+  }
+
+  if(action==='studio_pilot_commercial_bundle_status'){
+    try{return out(await studioPilotCommercialBundleStatus())}
+    catch(error){return out({error:'studio_pilot_commercial_bundle_status_failed',detail:error instanceof Error?error.message:String(error)},500)}
+  }
+
+  if(action==='studio_pilot_commercial_bundle_approve'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const packetVersion=String(b.packet_version||'').trim();
+    const packetDigest=String(b.packet_digest||'').trim().toLowerCase();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+
+    if(packetVersion!==STUDIO_PILOT_COMMERCIAL_PACKET_VERSION)return out({
+      error:'studio_pilot_commercial_packet_version_mismatch',
+      expected:STUDIO_PILOT_COMMERCIAL_PACKET_VERSION
+    },409);
+    if(packetDigest!==STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST)return out({
+      error:'studio_pilot_commercial_packet_digest_mismatch',
+      expected:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST
+    },409);
+    if(confirmation!==STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION)return out({
+      error:'explicit_confirmation_required',
+      expected:STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION
+    },400);
+
+    const envelope=await studioPilotCommercialBundleStatus();
+    if(!envelope.readiness.pricingMatches)return out({error:'studio_pilot_pricing_catalog_mismatch'},409);
+    if(!envelope.readiness.termsRefMatches)return out({error:'studio_pilot_terms_document_mismatch'},409);
+    if(!envelope.readiness.privacyRefMatches)return out({error:'studio_pilot_privacy_document_mismatch'},409);
+    if(!envelope.readiness.checkoutHeldClosed)return out({error:'studio_pilot_checkout_must_remain_locked_during_owner_approval'},409);
+
+    const {data,error}=await admin.rpc('hercules_studio_pilot_owner_approve_bundle',{
+      p_user_id:uid,
+      p_packet_version:STUDIO_PILOT_COMMERCIAL_PACKET_VERSION,
+      p_packet_digest:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST,
+      p_confirmation:STUDIO_PILOT_COMMERCIAL_PACKET_CONFIRMATION
+    });
+    if(error)return out({error:'studio_pilot_commercial_bundle_approval_failed',detail:error.message},500);
+
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'studio.pilot.commercial.bundle.approved',
+      resource_type:'sauceapproved_studio_founding_pilot_commercial_bundle',
+      resource_id:STUDIO_PILOT_COMMERCIAL_PACKET_VERSION,
+      details:{
+        packet_digest:STUDIO_PILOT_COMMERCIAL_PACKET_DIGEST,
+        product_code:STUDIO_PILOT_PRODUCT_CODE,
+        price_cents:9900,
+        billing_model:'one_time',
+        payment_provider:'shopify',
+        approvals:['pricing','terms','privacy'],
+        terms_sha:STUDIO_PILOT_TERMS_SHA,
+        privacy_sha:STUDIO_PILOT_PRIVACY_SHA,
+        monthly_catalog_unchanged:true,
+        payment_gates_unchanged:true,
+        shopify_product_status_unchanged:true
+      }
+    });
+
+    return out({
+      ok:true,
+      approval:data,
+      envelope:await studioPilotCommercialBundleStatus(),
+      launch_gate:await refreshLaunchGate()
+    });
+  }
+
+  if(action==='titan_commercial_bundle_status'){
+    try{return out(await titanCommercialBundleStatus())}
+    catch(error){return out({error:'titan_commercial_bundle_status_failed',detail:error instanceof Error?error.message:String(error)},500)}
+  }
+
+  if(action==='titan_commercial_bundle_approve'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const packetVersion=String(b.packet_version||'').trim();
+    const packetDigest=String(b.packet_digest||'').trim().toLowerCase();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+
+    if(packetVersion!==TITAN_COMMERCIAL_PACKET_VERSION)return out({
+      error:'titan_commercial_packet_version_mismatch',
+      expected:TITAN_COMMERCIAL_PACKET_VERSION
+    },409);
+    if(packetDigest!==TITAN_COMMERCIAL_PACKET_DIGEST)return out({
+      error:'titan_commercial_packet_digest_mismatch',
+      expected:TITAN_COMMERCIAL_PACKET_DIGEST
+    },409);
+    if(confirmation!==TITAN_COMMERCIAL_PACKET_CONFIRMATION)return out({
+      error:'explicit_confirmation_required',
+      expected:TITAN_COMMERCIAL_PACKET_CONFIRMATION
+    },400);
+
+    const envelope=await titanCommercialBundleStatus();
+    if(!envelope.readiness.pricingMatches)return out({error:'titan_pricing_catalog_mismatch'},409);
+    if(!envelope.readiness.termsRefMatches)return out({error:'titan_terms_document_mismatch'},409);
+    if(!envelope.readiness.privacyRefMatches)return out({error:'titan_privacy_document_mismatch'},409);
+    if(!envelope.readiness.checkoutHeldClosed)return out({error:'titan_checkout_must_remain_locked_during_owner_approval'},409);
+
+    const {data,error}=await admin.rpc('hercules_titan_owner_approve_bundle',{
+      p_user_id:uid,
+      p_packet_version:TITAN_COMMERCIAL_PACKET_VERSION,
+      p_packet_digest:TITAN_COMMERCIAL_PACKET_DIGEST,
+      p_confirmation:TITAN_COMMERCIAL_PACKET_CONFIRMATION
+    });
+    if(error)return out({error:'titan_commercial_bundle_approval_failed',detail:error.message},500);
+
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'titan.commercial.bundle.approved',
+      resource_type:'hercules_titan_commercial_bundle',
+      resource_id:TITAN_COMMERCIAL_PACKET_VERSION,
+      details:{
+        packet_digest:TITAN_COMMERCIAL_PACKET_DIGEST,
+        product_code:TITAN_PRODUCT_CODE,
+        price_cents:4900,
+        billing_model:'one_time',
+        approvals:['pricing','terms','privacy'],
+        terms_sha:TITAN_TERMS_SHA,
+        privacy_sha:TITAN_PRIVACY_SHA,
+        payment_gates_unchanged:true
+      }
+    });
+
+    return out({
+      ok:true,
+      approval:data,
+      envelope:await titanCommercialBundleStatus(),
+      launch_gate:await refreshLaunchGate()
+    });
+  }
+
+  if(action==='software_commercial_bundle_status'){
+    try{return out(await softwareCommercialBundleStatus())}
+    catch(error){return out({error:'software_commercial_bundle_status_failed',detail:error instanceof Error?error.message:String(error)},500)}
+  }
+
+  if(action==='software_commercial_bundle_approve'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const bundleVersion=String(b.bundle_version||'').trim();
+    const bundleDigest=String(b.bundle_digest||'').trim().toLowerCase();
+    const confirmation=String(b.confirmation||'').trim().toUpperCase();
+
+    if(bundleVersion!==SOFTWARE_COMMERCIAL_BUNDLE_VERSION)return out({
+      error:'software_commercial_bundle_version_mismatch',
+      expected:SOFTWARE_COMMERCIAL_BUNDLE_VERSION
+    },409);
+    if(bundleDigest!==SOFTWARE_COMMERCIAL_BUNDLE_DIGEST)return out({
+      error:'software_commercial_bundle_digest_mismatch',
+      expected:SOFTWARE_COMMERCIAL_BUNDLE_DIGEST
+    },409);
+    if(confirmation!==SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION)return out({
+      error:'explicit_confirmation_required',
+      expected:SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION
+    },400);
+
+    const envelope=await softwareCommercialBundleStatus();
+    if(!envelope.readiness.catalogMatches)return out({error:'software_commercial_catalog_mismatch'},409);
+    if(!envelope.readiness.termsRefsMatch)return out({error:'software_terms_document_mismatch'},409);
+    if(!envelope.readiness.privacyRefsMatch)return out({error:'software_privacy_document_mismatch'},409);
+    if(!envelope.readiness.checkoutHeldClosed)return out({error:'checkout_must_remain_locked_during_owner_bundle_approval'},409);
+
+    const {data,error}=await a.db.rpc('hercules_software_owner_approve_bundle',{
+      p_bundle_version:SOFTWARE_COMMERCIAL_BUNDLE_VERSION,
+      p_bundle_digest:SOFTWARE_COMMERCIAL_BUNDLE_DIGEST,
+      p_confirmation:SOFTWARE_COMMERCIAL_BUNDLE_CONFIRMATION
+    });
+    if(error)return out({error:'software_commercial_bundle_approval_failed',detail:error.message},500);
+
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'software.commercial.bundle.approved',
+      resource_type:'hercules_software_commercial_bundle',
+      resource_id:SOFTWARE_COMMERCIAL_BUNDLE_VERSION,
+      details:{
+        bundle_digest:SOFTWARE_COMMERCIAL_BUNDLE_DIGEST,
+        products:SOFTWARE_COMMERCIAL_BUNDLE.products,
+        approvals:SOFTWARE_COMMERCIAL_BUNDLE.approvals,
+        terms_sha:SAUCEAPPROVED_SOFTWARE_TERMS_SHA,
+        privacy_sha:SAUCEAPPROVED_SOFTWARE_PRIVACY_SHA
+      }
+    });
+
+    let softwareCatalogSync:any={ok:false,status:'stripe_not_connected_or_sync_unavailable'};
+    try{
+      const response=await fetch(U+'/functions/v1/hercules-provider-connect',{
+        method:'POST',
+        headers:{
+          'content-type':'application/json',
+          'authorization':req.headers.get('authorization')||'',
+          'apikey':A
+        },
+        body:JSON.stringify({action:'sync_software_catalog'}),
+        signal:AbortSignal.timeout(30000)
+      });
+      const payload=await response.json().catch(()=>({}));
+      softwareCatalogSync=response.ok?payload:{ok:false,status:payload?.error||('http_'+response.status)};
+    }catch(error){
+      softwareCatalogSync={ok:false,status:'software_catalog_sync_deferred',detail:error instanceof Error?error.message:String(error)};
+    }
+
+    return out({
+      ok:true,
+      approval:data,
+      envelope:await softwareCommercialBundleStatus(),
+      software_catalog_sync:softwareCatalogSync
+    });
+  }
+
+  if(action==='software_commercial_status'){
+    try{
+      const productCodes=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner','hercules-titan-founding-access'];
+      const [{data:products,error:productError},{data:plans,error:planError},{data:approvals,error:approvalError},{data:stripe,error:stripeError}]=await Promise.all([
+        admin.from('hercules_software_products').select('code,name,descriptor,status,live_url,checkout_enabled').in('code',productCodes).order('code'),
+        admin.from('hercules_software_product_plans').select('product_code,plan_code,label,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',productCodes).order('candidate_monthly_price_cents'),
+        admin.from('hercules_software_commercial_approvals').select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at').in('product_code',productCodes).order('approval_type'),
+        admin.from('hercules_provider_connections').select('provider,account_key,status,connected_at,last_error,metadata,updated_at').eq('organization_id',org).eq('provider','stripe').order('updated_at',{ascending:false}).limit(1).maybeSingle()
+      ]);
+      if(productError||planError||approvalError||stripeError)throw (productError||planError||approvalError||stripeError);
+      const result=productCodes.map(code=>({
+        product:(products||[]).find((x:any)=>x.code===code)||null,
+        plans:(plans||[]).filter((x:any)=>x.product_code===code),
+        approvals:(approvals||[]).filter((x:any)=>x.product_code===code).map((x:any)=>({
+          approval_type:x.approval_type,
+          status:x.status,
+          approved_at:x.approved_at,
+          document_ref:x.document_ref,
+          evidence:x.evidence,
+          updated_at:x.updated_at
+        }))
+      }));
+      return out({ok:true,products:result,stripe:stripe||{provider:'stripe',status:'not_connected'}});
+    }catch(error){
+      return out({error:'software_commercial_status_failed',detail:error instanceof Error?error.message:String(error)},500);
+    }
+  }
+
+  if(action==='software_commercial_approve'){
+    if(String(a.m.role)!=='owner')return out({error:'owner_required'},403);
+    const productCode=String(b.product_code||'').trim();
+    const approvalType=String(b.approval_type||'').trim();
+    const confirmation=String(b.confirmation||'').trim();
+    if(!['sauceapproved-studio','sauceapproved-ads','hercules-cleaner','hercules-titan-founding-access'].includes(productCode))return out({error:'valid_product_code_required'},400);
+    if(!['pricing','terms','privacy'].includes(approvalType))return out({error:'valid_approval_type_required'},400);
+    const expected='APPROVE '+productCode+' '+approvalType.toUpperCase()+' V1';
+    if(confirmation!==expected)return out({error:'explicit_confirmation_required',expected},400);
+    const {data,error}=await a.db.rpc('hercules_software_owner_approve',{
+      p_product_code:productCode,
+      p_approval_type:approvalType,
+      p_confirmation:confirmation
+    });
+    if(error)return out({error:'software_commercial_approval_failed',detail:error.message},500);
+    await admin.from('hercules_audit_log').insert({
+      organization_id:org,
+      actor_user_id:uid,
+      action:'software.commercial.'+approvalType+'.approved',
+      resource_type:'hercules_software_product',
+      resource_id:productCode,
+      details:{approval_type:approvalType,confirmation_version:'v1'}
+    });
+    const statusReq=new Request(req.url,{method:'POST',headers:req.headers,body:JSON.stringify({action:'software_commercial_status'})});
+    const [{data:products},{data:plans},{data:approvals},{data:stripe}]=await Promise.all([
+      admin.from('hercules_software_products').select('code,name,descriptor,status,live_url,checkout_enabled').in('code',['sauceapproved-studio','sauceapproved-ads','hercules-cleaner']).order('code'),
+      admin.from('hercules_software_product_plans').select('product_code,plan_code,label,candidate_monthly_price_cents,pricing_status,checkout_enabled').in('product_code',['sauceapproved-studio','sauceapproved-ads','hercules-cleaner']).order('candidate_monthly_price_cents'),
+      admin.from('hercules_software_commercial_approvals').select('product_code,approval_type,status,approved_at,document_ref,evidence,updated_at').in('product_code',['sauceapproved-studio','sauceapproved-ads','hercules-cleaner']).order('approval_type'),
+      admin.from('hercules_provider_connections').select('provider,account_key,status,connected_at,last_error,metadata,updated_at').eq('organization_id',org).eq('provider','stripe').order('updated_at',{ascending:false}).limit(1).maybeSingle()
+    ]);
+    const productCodes=['sauceapproved-studio','sauceapproved-ads','hercules-cleaner'];
+    const productsOut=productCodes.map(code=>({
+      product:(products||[]).find((x:any)=>x.code===code)||null,
+      plans:(plans||[]).filter((x:any)=>x.product_code===code),
+      approvals:(approvals||[]).filter((x:any)=>x.product_code===code).map((x:any)=>({
+        approval_type:x.approval_type,status:x.status,approved_at:x.approved_at,
+        document_ref:x.document_ref,evidence:x.evidence,updated_at:x.updated_at
+      }))
+    }));
+    return out({ok:true,approval:data,products:productsOut,stripe:stripe||{provider:'stripe',status:'not_connected'}});
   }
 
   if(action==='launch_approval_status'){

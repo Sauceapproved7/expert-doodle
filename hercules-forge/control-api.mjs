@@ -146,8 +146,25 @@ function errorStatus(error) {
   if (error?.code === "EEXIST") return 409;
   if (Array.isArray(error?.details)) return 400;
   if (error instanceof TypeError) return 400;
-  if (/path-safe identifier/.test(error?.message ?? "")) return 400;
+  if (/path-safe identifier|invalid source path/.test(error?.message ?? "")) return 400;
   return 500;
+}
+
+const SAFE_INTERNAL_CODES = new Set([
+  "forge_interpreter_failed",
+  "forge_project_create_failed",
+  "forge_audit_failed",
+  "forge_durable_flush_failed",
+]);
+
+function withInternalStage(error, code) {
+  if (!SAFE_INTERNAL_CODES.has(code)) throw new TypeError("invalid Forge internal stage code");
+  if (errorStatus(error) < 500) return error;
+  if (error && typeof error === "object") {
+    error.forgeCode ??= code;
+    return error;
+  }
+  return Object.assign(new Error("Forge internal stage failed"), {forgeCode: code});
 }
 
 export function createForgeControlService({
@@ -162,6 +179,8 @@ export function createForgeControlService({
   readinessCheck = null,
   serviceMode = "development",
   publicOrigin = null,
+  smokeScreenObserver = null,
+  durableState = null,
 }) {
   if (!root) throw new TypeError("root is required");
   if (typeof token !== "string" || token.length < 16) {
@@ -170,7 +189,10 @@ export function createForgeControlService({
 
   const store = new ForgeWorkspaceStore(root);
   const releases = new ForgeLocalReleaseAdapter(root);
-  const previews = new ForgePreviewManager(root, {runtimeDataMaxBytes});
+  const previews = new ForgePreviewManager(root, {
+    runtimeDataMaxBytes,
+    onRuntimeMutation: durableState ? () => durableState.flush() : null,
+  });
   const runtimeData = new ForgeLocalRuntimeDataAdapter(root, {
     maxProjectBytes: runtimeDataMaxBytes,
   });
@@ -179,6 +201,29 @@ export function createForgeControlService({
   const artifactRoot = join(root, "artifacts");
 
   const server = http.createServer(async (req, res) => {
+    if (smokeScreenObserver) {
+      let smokePath = "/";
+      try {
+        smokePath = new URL(req.url ?? "/", "http://localhost").pathname;
+      } catch {
+        smokePath = String(req.url ?? "/").slice(0, 2048);
+      }
+      res.once("finish", () => {
+        const observation = smokeScreenObserver.observe({
+          method: req.method ?? "GET",
+          pathname: smokePath,
+          statusCode: res.statusCode,
+          sessionId: parseCookies(req).forge_session ?? "",
+          remoteAddress: req.socket?.remoteAddress ?? "",
+          userAgent: req.headers["user-agent"] ?? "",
+          hasAuthorizationHeader: typeof req.headers.authorization === "string",
+        });
+        if (observation && typeof observation.catch === "function") {
+          void observation.catch(() => {});
+        }
+      });
+    }
+
     // Defense-in-depth headers apply to every Forge response. TLS terminators
     // may add stricter edge policy, but the application should fail safe when
     // deployed behind a transparent proxy.
@@ -194,6 +239,23 @@ export function createForgeControlService({
     try {
       const url = new URL(req.url, "http://localhost");
       const parts = routeParts(url);
+      const shouldPersist = Boolean(
+        durableState &&
+        (
+          !["GET", "HEAD", "OPTIONS"].includes(req.method ?? "GET") ||
+          url.pathname === "/v1/session/csrf"
+        )
+      );
+      const reply = async (status, body, headers = {}) => {
+        if (shouldPersist) {
+          try {
+            await durableState.flush();
+          } catch (error) {
+            throw withInternalStage(error, "forge_durable_flush_failed");
+          }
+        }
+        return send(res, status, body, headers);
+      };
 
       if (req.method === "GET") {
         const asset = customerConsoleAsset(url.pathname) ?? builderConsoleAsset(url.pathname);
@@ -209,7 +271,7 @@ export function createForgeControlService({
       }
 
       if (req.method === "GET" && url.pathname === "/health") {
-        return send(res, 200, {
+        return await reply(200, {
           ok: true,
           service: "hercules-forge-control-api",
           version: "1.6",
@@ -221,14 +283,29 @@ export function createForgeControlService({
           runtimeDataControl: true,
           auditEvents: true,
           identityLifecycle: Boolean(notificationAdapter && publicOrigin),
+          durableState: Boolean(durableState),
           runtimeDataMaxBytes,
+          smokeScreen: smokeScreenObserver?.publicStatus?.() ?? {
+            enabled: false,
+            mode: "OFF",
+            enforcement: false,
+          },
         });
+      }
+
+      if (req.method === "GET" && url.pathname === "/v1/security/smokescreen") {
+        requireToken(req, token);
+        if (!smokeScreenObserver || typeof smokeScreenObserver.snapshot !== "function") {
+          return await reply(503, {error: "smokescreen_not_configured"});
+        }
+        return await reply(200, smokeScreenObserver.snapshot());
       }
 
       if (req.method === "GET" && url.pathname === "/ready") {
         const integrity = await audit.verify();
         const storage = readinessCheck ? await readinessCheck() : null;
-        return send(res, 200, {
+        const durable = durableState ? await durableState.status() : null;
+        return await reply(200, {
           ready: true,
           service: "hercules-forge-control-api",
           version: "1.6",
@@ -236,6 +313,7 @@ export function createForgeControlService({
           publicOrigin,
           auditVerified: integrity.verified === true,
           storage,
+          durableState: durable,
         });
       }
 
@@ -254,7 +332,7 @@ export function createForgeControlService({
             role: accepted.membership.role,
           },
         });
-        return send(res, 201, {
+        return await reply(201, {
           accepted: true,
           user: accepted.user,
           membership: accepted.membership,
@@ -302,7 +380,7 @@ export function createForgeControlService({
           actor: {kind: "system"},
           details: {emailHash, accepted: true},
         });
-        return send(res, 202, {accepted: true});
+        return await reply(202, {accepted: true});
       }
 
       if (req.method === "POST" && url.pathname === "/v1/recovery/complete") {
@@ -319,7 +397,7 @@ export function createForgeControlService({
             revokedSessions: completed.revokedSessions,
           },
         });
-        return send(res, 200, {
+        return await reply(200, {
           reset: true,
           user: completed.user,
           revokedSessions: completed.revokedSessions,
@@ -355,7 +433,7 @@ export function createForgeControlService({
             actor: {kind: "user", userId: result.user.userId},
             details: {emailHash},
           });
-          return send(res, 201, {
+          return await reply(201, {
             user: result.user,
             session: {
               sessionId: result.session.sessionId,
@@ -380,7 +458,7 @@ export function createForgeControlService({
       if (req.method === "GET" && url.pathname === "/v1/session/csrf") {
         const sessionToken = parseCookies(req).forge_session;
         const rotated = await identities.rotateCsrf(sessionToken);
-        return send(res, 200, {
+        return await reply(200, {
           csrfToken: rotated.csrfToken,
           session: {
             sessionId: rotated.session.sessionId,
@@ -393,7 +471,7 @@ export function createForgeControlService({
         const sessionToken = parseCookies(req).forge_session;
         const auth = await identities.getSession(sessionToken);
         if (req.method === "GET") {
-          return send(res, 200, {
+          return await reply(200, {
             user: auth.user,
             workspaces: await identities.listUserWorkspaces(auth.user.userId),
           });
@@ -408,7 +486,7 @@ export function createForgeControlService({
           type: "session.logout",
           actor: {kind: "user", userId: auth.user.userId},
         });
-        return send(res, 200, {revoked: true}, {
+        return await reply(200, {revoked: true}, {
           "set-cookie": clearSessionCookie(secureSessionCookies),
         });
       }
@@ -460,7 +538,7 @@ export function createForgeControlService({
               role: issued.invite.role,
             },
           });
-          return send(res, 201, {
+          return await reply(201, {
             invite: {
               inviteId: issued.invite.inviteId,
               email: issued.invite.email,
@@ -474,7 +552,7 @@ export function createForgeControlService({
           await identities.requireWorkspace(sessionToken, workspaceId, ["owner", "admin"]);
           const integrity = await audit.verify();
           const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 100;
-          return send(res, 200, {
+          return await reply(200, {
             integrity: {verified: integrity.verified},
             events: await audit.list({
               limit,
@@ -487,7 +565,7 @@ export function createForgeControlService({
 
         if (req.method === "GET" && parts.length === 3) {
           const auth = await identities.requireWorkspace(sessionToken, workspaceId);
-          return send(res, 200, {
+          return await reply(200, {
             workspace: auth.workspace,
             membership: auth.membership,
           });
@@ -495,7 +573,7 @@ export function createForgeControlService({
 
         if (req.method === "GET" && parts[3] === "projects" && parts.length === 4) {
           const auth = await identities.requireWorkspace(sessionToken, workspaceId);
-          return send(res, 200, {
+          return await reply(200, {
             workspace: auth.workspace,
             membership: auth.membership,
             projects: await store.listProjects({workspaceId}),
@@ -523,7 +601,7 @@ export function createForgeControlService({
             projectId: result.project.projectId,
             details: {revisionId: result.revision.revisionId, source: "prompt"},
           });
-          return send(res, 201, result);
+          return await reply(201, result);
         }
 
         if (parts[3] === "projects" && parts[4]) {
@@ -531,13 +609,31 @@ export function createForgeControlService({
 
           if (req.method === "GET" && parts.length === 5) {
             await identities.requireWorkspace(sessionToken, workspaceId);
-            return send(res, 200, await requireProjectWorkspace(store, projectId, workspaceId));
+            return await reply(200, await requireProjectWorkspace(store, projectId, workspaceId));
           }
 
           if (req.method === "GET" && parts[5] === "revisions" && parts.length === 6) {
             await identities.requireWorkspace(sessionToken, workspaceId);
             await requireProjectWorkspace(store, projectId, workspaceId);
-            return send(res, 200, {revisions: await store.listRevisions(projectId)});
+            return await reply(200, {revisions: await store.listRevisions(projectId)});
+          }
+
+          if (
+            req.method === "GET" &&
+            parts[5] === "revisions" &&
+            parts[6] &&
+            parts[7] === "source" &&
+            parts.length === 8
+          ) {
+            await identities.requireWorkspace(sessionToken, workspaceId);
+            await requireProjectWorkspace(store, projectId, workspaceId);
+            const sourcePath = url.searchParams.get("path");
+            if (!sourcePath) {
+              throw Object.assign(new Error("source path is required"), {statusCode: 400});
+            }
+            return await reply(200, {
+              source: await store.readRevisionSource(projectId, parts[6], sourcePath),
+            });
           }
 
           if (req.method === "POST" && parts[5] === "revisions" && parts[6] === "from-prompt" && parts.length === 7) {
@@ -558,7 +654,7 @@ export function createForgeControlService({
               projectId,
               details: {revisionId: revision.revisionId, source: "prompt"},
             });
-            return send(res, 201, revision);
+            return await reply(201, revision);
           }
 
           if (req.method === "POST" && parts[5] === "revisions" && parts[6] && parts[7] === "preview" && parts.length === 8) {
@@ -574,14 +670,14 @@ export function createForgeControlService({
               projectId,
               details: {revisionId: parts[6]},
             });
-            return send(res, 201, {preview});
+            return await reply(201, {preview});
           }
 
           if (req.method === "GET" && parts[5] === "preview" && parts.length === 6) {
             await identities.requireWorkspace(sessionToken, workspaceId);
             await requireProjectWorkspace(store, projectId, workspaceId);
             const preview = previews.get(projectId);
-            return preview ? send(res, 200, {preview}) : send(res, 404, {error: "preview_not_running"});
+            return preview ? reply(200, {preview}) : reply(404, {error: "preview_not_running"});
           }
 
           if (req.method === "DELETE" && parts[5] === "preview" && parts.length === 6) {
@@ -597,19 +693,19 @@ export function createForgeControlService({
                 projectId,
               });
             }
-            return send(res, stopped ? 200 : 404, {stopped});
+            return await reply(stopped ? 200 : 404, {stopped});
           }
 
           if (req.method === "GET" && parts[5] === "data" && parts[6] === "usage" && parts.length === 7) {
             await identities.requireWorkspace(sessionToken, workspaceId);
             await requireProjectWorkspace(store, projectId, workspaceId);
-            return send(res, 200, {usage: await runtimeData.usage(projectId)});
+            return await reply(200, {usage: await runtimeData.usage(projectId)});
           }
 
           if (req.method === "GET" && parts[5] === "data" && parts[6] === "snapshots" && parts.length === 7) {
             await identities.requireWorkspace(sessionToken, workspaceId);
             await requireProjectWorkspace(store, projectId, workspaceId);
-            return send(res, 200, {snapshots: await runtimeData.listSnapshots(projectId)});
+            return await reply(200, {snapshots: await runtimeData.listSnapshots(projectId)});
           }
 
           if (
@@ -621,7 +717,7 @@ export function createForgeControlService({
           ) {
             await identities.requireWorkspace(sessionToken, workspaceId);
             await requireProjectWorkspace(store, projectId, workspaceId);
-            return send(res, 200, {
+            return await reply(200, {
               snapshot: await runtimeData.verifySnapshot(projectId, parts[7]),
             });
           }
@@ -639,7 +735,7 @@ export function createForgeControlService({
               projectId,
               details: {snapshotId: snapshot.snapshotId, totalBytes: snapshot.totalBytes},
             });
-            return send(res, 201, {snapshot});
+            return await reply(201, {snapshot});
           }
 
           if (
@@ -662,7 +758,7 @@ export function createForgeControlService({
               projectId,
               details: {snapshotId: parts[7]},
             });
-            return send(res, 200, {restore});
+            return await reply(200, {restore});
           }
 
           if (req.method === "POST" && parts[5] === "publish" && parts.length === 6) {
@@ -694,7 +790,7 @@ export function createForgeControlService({
                 releaseId: release.releaseId ?? null,
               },
             });
-            return send(res, 201, {release, artifact: artifact.manifest});
+            return await reply(201, {release, artifact: artifact.manifest});
           }
 
           if (req.method === "POST" && parts[5] === "rollback" && parts.length === 6) {
@@ -713,7 +809,7 @@ export function createForgeControlService({
               projectId,
               details: {revisionId: body.revisionId},
             });
-            return send(res, 200, rollback);
+            return await reply(200, rollback);
           }
         }
       }
@@ -721,12 +817,12 @@ export function createForgeControlService({
       requireToken(req, token);
 
       if (req.method === "GET" && url.pathname === "/v1/audit/verify") {
-        return send(res, 200, {integrity: await audit.verify()});
+        return await reply(200, {integrity: await audit.verify()});
       }
 
       if (req.method === "GET" && url.pathname === "/v1/audit") {
         const limit = url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : 100;
-        return send(res, 200, {
+        return await reply(200, {
           events: await audit.list({
             limit,
             workspaceId: url.searchParams.get("workspaceId"),
@@ -785,7 +881,7 @@ export function createForgeControlService({
             role: issued.invite.role,
           },
         });
-        return send(res, 201, {
+        return await reply(201, {
           invite: {
             inviteId: issued.invite.inviteId,
             email: issued.invite.email,
@@ -803,7 +899,7 @@ export function createForgeControlService({
           actor: {kind: "control"},
           details: {userId: user.userId},
         });
-        return send(res, 201, {user});
+        return await reply(201, {user});
       }
 
       if (req.method === "POST" && url.pathname === "/v1/admin/workspaces") {
@@ -815,7 +911,7 @@ export function createForgeControlService({
           workspaceId: workspace.workspaceId,
           details: {ownerUserId: workspace.ownerUserId},
         });
-        return send(res, 201, {workspace});
+        return await reply(201, {workspace});
       }
 
       if (
@@ -839,31 +935,45 @@ export function createForgeControlService({
           workspaceId: parts[3],
           details: {userId: membership.userId, role: membership.role},
         });
-        return send(res, 201, {membership});
+        return await reply(201, {membership});
       }
 
       if (req.method === "GET" && url.pathname === "/v1/projects") {
-        return send(res, 200, {projects: await store.listProjects()});
+        return await reply(200, {projects: await store.listProjects()});
       }
 
       if (req.method === "POST" && url.pathname === "/v1/projects/from-prompt") {
         requireInterpreter(interpreter);
         const body = await readBody(req);
         const prompt = requirePrompt(body);
-        const spec = await interpreter.interpret(prompt);
+        let spec;
+        try {
+          spec = await interpreter.interpret(prompt);
+        } catch (error) {
+          throw withInternalStage(error, "forge_interpreter_failed");
+        }
         const metadata = {
           ...(body.metadata ?? {}),
           source: "prompt",
           promptSha256: promptHash(prompt),
         };
-        const result = await store.createProject(spec, metadata);
-        await audit.append({
-          type: "project.create",
-          actor: {kind: "control"},
-          projectId: result.project.projectId,
-          details: {revisionId: result.revision.revisionId, source: "prompt"},
-        });
-        return send(res, 201, result);
+        let result;
+        try {
+          result = await store.createProject(spec, metadata);
+        } catch (error) {
+          throw withInternalStage(error, "forge_project_create_failed");
+        }
+        try {
+          await audit.append({
+            type: "project.create",
+            actor: {kind: "control"},
+            projectId: result.project.projectId,
+            details: {revisionId: result.revision.revisionId, source: "prompt"},
+          });
+        } catch (error) {
+          throw withInternalStage(error, "forge_audit_failed");
+        }
+        return await reply(201, result);
       }
 
       if (req.method === "POST" && url.pathname === "/v1/projects") {
@@ -875,14 +985,14 @@ export function createForgeControlService({
           projectId: result.project.projectId,
           details: {revisionId: result.revision.revisionId, source: "spec"},
         });
-        return send(res, 201, result);
+        return await reply(201, result);
       }
 
       if (parts[0] === "v1" && parts[1] === "projects" && parts[2]) {
         const projectId = parts[2];
 
         if (req.method === "GET" && parts.length === 3) {
-          return send(res, 200, await store.getProject(projectId));
+          return await reply(200, await store.getProject(projectId));
         }
 
         if (
@@ -904,11 +1014,11 @@ export function createForgeControlService({
             projectId,
             details: {revisionId: revision.revisionId, source: "prompt"},
           });
-          return send(res, 201, revision);
+          return await reply(201, revision);
         }
 
         if (req.method === "GET" && parts[3] === "revisions" && parts.length === 4) {
-          return send(res, 200, {revisions: await store.listRevisions(projectId)});
+          return await reply(200, {revisions: await store.listRevisions(projectId)});
         }
 
         if (req.method === "POST" && parts[3] === "revisions" && parts.length === 4) {
@@ -920,7 +1030,7 @@ export function createForgeControlService({
             projectId,
             details: {revisionId: revision.revisionId, source: "spec"},
           });
-          return send(res, 201, revision);
+          return await reply(201, revision);
         }
 
         if (
@@ -929,7 +1039,23 @@ export function createForgeControlService({
           parts[4] &&
           parts.length === 5
         ) {
-          return send(res, 200, await store.getRevision(projectId, parts[4]));
+          return await reply(200, await store.getRevision(projectId, parts[4]));
+        }
+
+        if (
+          req.method === "GET" &&
+          parts[3] === "revisions" &&
+          parts[4] &&
+          parts[5] === "source" &&
+          parts.length === 6
+        ) {
+          const sourcePath = url.searchParams.get("path");
+          if (!sourcePath) {
+            throw Object.assign(new Error("source path is required"), {statusCode: 400});
+          }
+          return await reply(200, {
+            source: await store.readRevisionSource(projectId, parts[4], sourcePath),
+          });
         }
 
         if (
@@ -956,7 +1082,7 @@ export function createForgeControlService({
               artifactFingerprint: artifact.manifest.artifactFingerprint,
             },
           });
-          return send(res, 201, {artifact: artifact.manifest});
+          return await reply(201, {artifact: artifact.manifest});
         }
 
         if (
@@ -974,14 +1100,14 @@ export function createForgeControlService({
             projectId,
             details: {revisionId: parts[4]},
           });
-          return send(res, 201, {preview});
+          return await reply(201, {preview});
         }
 
         if (req.method === "GET" && parts[3] === "preview" && parts.length === 4) {
           const preview = previews.get(projectId);
           return preview
-            ? send(res, 200, {preview})
-            : send(res, 404, {error: "preview_not_running"});
+            ? reply(200, {preview})
+            : reply(404, {error: "preview_not_running"});
         }
 
         if (req.method === "DELETE" && parts[3] === "preview" && parts.length === 4) {
@@ -993,17 +1119,17 @@ export function createForgeControlService({
               projectId,
             });
           }
-          return send(res, stopped ? 200 : 404, {stopped});
+          return await reply(stopped ? 200 : 404, {stopped});
         }
 
         if (req.method === "GET" && parts[3] === "data" && parts[4] === "usage" && parts.length === 5) {
           await store.getProject(projectId);
-          return send(res, 200, {usage: await runtimeData.usage(projectId)});
+          return await reply(200, {usage: await runtimeData.usage(projectId)});
         }
 
         if (req.method === "GET" && parts[3] === "data" && parts[4] === "snapshots" && parts.length === 5) {
           await store.getProject(projectId);
-          return send(res, 200, {snapshots: await runtimeData.listSnapshots(projectId)});
+          return await reply(200, {snapshots: await runtimeData.listSnapshots(projectId)});
         }
 
         if (
@@ -1014,7 +1140,7 @@ export function createForgeControlService({
           parts.length === 6
         ) {
           await store.getProject(projectId);
-          return send(res, 200, {
+          return await reply(200, {
             snapshot: await runtimeData.verifySnapshot(projectId, parts[5]),
           });
         }
@@ -1029,7 +1155,7 @@ export function createForgeControlService({
             projectId,
             details: {snapshotId: snapshot.snapshotId, totalBytes: snapshot.totalBytes},
           });
-          return send(res, 201, {snapshot});
+          return await reply(201, {snapshot});
         }
 
         if (
@@ -1049,7 +1175,7 @@ export function createForgeControlService({
             projectId,
             details: {snapshotId: parts[5]},
           });
-          return send(res, 200, {restore});
+          return await reply(200, {restore});
         }
 
         if (req.method === "POST" && parts[3] === "publish" && parts.length === 4) {
@@ -1080,7 +1206,7 @@ export function createForgeControlService({
             },
           });
 
-          return send(res, 201, {release, artifact: artifact.manifest});
+          return await reply(201, {release, artifact: artifact.manifest});
         }
 
         if (
@@ -1089,7 +1215,7 @@ export function createForgeControlService({
           parts[4] === "active" &&
           parts.length === 5
         ) {
-          return send(res, 200, await releases.getActive(projectId));
+          return await reply(200, await releases.getActive(projectId));
         }
 
         if (req.method === "POST" && parts[3] === "rollback" && parts.length === 4) {
@@ -1107,19 +1233,23 @@ export function createForgeControlService({
             projectId,
             details: {revisionId: body.revisionId},
           });
-          return send(res, 200, rollback);
+          return await reply(200, rollback);
         }
       }
 
-      return send(res, 404, {error: "not_found"});
+      return await reply(404, {error: "not_found"});
     } catch (error) {
       const status = errorStatus(error);
       const headers = error?.retryAfterSeconds
         ? {"retry-after": String(error.retryAfterSeconds)}
         : {};
-      return send(res, status, {
+      const body = {
         error: status >= 500 ? "internal_error" : error.message,
-      }, headers);
+      };
+      if (status >= 500 && SAFE_INTERNAL_CODES.has(error?.forgeCode)) {
+        body.code = error.forgeCode;
+      }
+      return send(res, status, body, headers);
     }
   });
 
@@ -1142,6 +1272,8 @@ export function listenForgeControlService({
   readinessCheck = null,
   serviceMode = "development",
   publicOrigin = null,
+  smokeScreenObserver = null,
+  durableState = null,
   host = "127.0.0.1",
   port = 38700,
 }) {
@@ -1157,6 +1289,8 @@ export function listenForgeControlService({
     readinessCheck,
     serviceMode,
     publicOrigin,
+    smokeScreenObserver,
+    durableState,
   });
   server.listen(port, host);
   return server;

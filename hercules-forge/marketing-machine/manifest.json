@@ -1,0 +1,10 @@
+{
+  "schema":"sauceapproved.marketing-machine.manifest",
+  "version":1,
+  "owner":"SauceApproved enterprise LLC",
+  "shopify":{"surface":"connected-admin","defaultMode":"read-only","writes":"approval-gated"},
+  "guardrails":{"failClosed":true,"killSwitch":true,"noAutonomousSpend":true,"noAutonomousDiscountPublication":true},
+  "data":{"rawBuyerEmailStored":false,"customerFeedback":"legitimate-first-party-or-authorized-only"},
+  "competitiveIntelligence":{"sources":"public-pages-only","bypassAccessControls":false},
+  "differentiators":["profit-aware creative feedback loop","experiment-to-memory learning chain"]
+}

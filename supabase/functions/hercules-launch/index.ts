@@ -1,5 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import {pilotAdmissionGet,pilotAdmissionPost} from "./pilot-admission.ts";
+import {isStudioAccessPage,studioAccessPage,studioAccessRequest,studioAccessClaim} from "./studio-access.ts";
+import {isTitanAccessPage,titanAccessPage,titanAccessRequest,titanAccessClaim} from "./titan-access.ts";
+import {isSoundWorldGiftAccessPage,soundWorldGiftAccessPage,soundWorldGiftAccessRequest} from "./soundworld-gift-access.ts";
 
 const U = Deno.env.get("SUPABASE_URL") || "https://xbwuablxhhwsaoomsoco.supabase.co";
 const P = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
@@ -174,6 +177,39 @@ function safeMarketingProperties(value:unknown){
   };
 }
 
+async function softwareAccessRequest(req:Request,body:any){
+  if(!S)throw new Error("service_role_unavailable");
+  const product=cleanText(body?.p_product_code,80),plan=cleanText(body?.p_plan_code,80),email=cleanText(body?.p_email,254).toLowerCase();
+  if(!product||!plan||!validEmail(email))return {status:400,body:{ok:false,error:"invalid_access_request"}};
+  const forwarded=cleanText(req.headers.get("x-forwarded-for")||"",256).split(",")[0].trim();
+  const headers:Record<string,string>={apikey:S,authorization:"Bearer "+S,"content-type":"application/json"};
+  if(forwarded)headers["x-forwarded-for"]=forwarded;
+  const response=await fetch(U+"/rest/v1/rpc/hercules_request_software_access",{
+    method:"POST",
+    headers,
+    body:JSON.stringify({
+      p_product_code:product,
+      p_plan_code:plan,
+      p_email:email,
+      p_full_name:cleanText(body?.p_full_name,100)||null,
+      p_company:cleanText(body?.p_company,160)||null,
+      p_role:cleanText(body?.p_role,100)||null,
+      p_message:cleanText(body?.p_message,1200)||null,
+      p_website:cleanText(body?.p_website,120)||null,
+      p_attribution:body?.p_attribution&&typeof body.p_attribution==="object"?body.p_attribution:{}
+    }),
+    signal:AbortSignal.timeout(15000)
+  });
+  const text=await response.text();
+  let payload:any=null;
+  try{payload=text?JSON.parse(text):null}catch{payload=text}
+  if(!response.ok){
+    const detail=String(payload?.message||payload?.error||payload||"software_access_request_failed").slice(0,200);
+    throw new Error(detail);
+  }
+  return {status:200,body:payload};
+}
+
 const html = String.raw`<!doctype html>
 <html lang="en">
 <head>
@@ -197,6 +233,41 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
 .appgrid{display:grid;grid-template-columns:226px minmax(0,1fr);gap:18px;padding-top:22px}.sidebar{position:sticky;top:78px;align-self:start;padding:13px}.sidebtn{width:100%;justify-content:flex-start;margin:4px 0;background:transparent}.sidebtn.active{background:#f1f3f6;color:#070809;border-color:#f1f3f6}.workspace{min-width:0}.adstudio-frame{display:block;width:100%;min-height:78vh;border:1px solid var(--line);border-radius:18px;background:#0c0f13}.view{display:none}.view.active{display:block}.viewhead{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:16px}.viewhead h1{font-size:clamp(32px,5vw,52px);letter-spacing:-.04em;margin:5px 0}.muted{color:var(--muted)}
 .chat{display:grid;grid-template-rows:minmax(320px,1fr) auto;min-height:72vh}.messages{display:flex;flex-direction:column;gap:12px;overflow:auto;padding:8px 2px 20px;max-height:62vh}.msg{max-width:min(820px,90%);padding:13px 15px;border-radius:16px;line-height:1.58;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid var(--line)}.msg.user{align-self:flex-end;background:#eceff3;color:#090a0c;border-color:#eceff3}.msg.ai{align-self:flex-start;background:#121318}.msg.meta{font-size:12px;color:var(--muted);background:transparent;border-style:dashed}.composer{border-top:1px solid var(--line);padding-top:14px}.composer textarea{min-height:100px}
 .results{display:grid;gap:10px;margin-top:14px}.result{border:1px solid var(--line);border-radius:13px;padding:13px;background:#0e0f12}.result h3{margin:0 0 6px}.result p{margin:0;color:var(--muted);line-height:1.5}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.kpi b{font-size:26px;display:block;margin-top:6px}.statusline{display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid #25272c;padding:11px 0}.statusline:last-child{border-bottom:0}.deployrow{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center}.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}.progress{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:12px}.progress div{padding:9px;border:1px solid var(--line);border-radius:10px;text-align:center;font-size:12px;color:var(--muted)}.progress .active{border-color:#776126;color:var(--warn)}.progress .done{border-color:#2d6040;color:var(--good)}
+
+/* HERCULES HUB VISUAL OVERHAUL — presentation only */
+#app{position:relative;isolation:isolate;min-height:calc(100vh - 72px)}
+#app:before{content:"";position:fixed;inset:64px 0 0;z-index:-2;pointer-events:none;background:
+radial-gradient(circle at 18% 18%,rgba(231,184,92,.16),transparent 28%),
+radial-gradient(circle at 82% 8%,rgba(98,112,158,.18),transparent 30%),
+linear-gradient(135deg,#050506 0%,#0b0c10 46%,#070707 100%)}
+#app:after{content:"";position:fixed;inset:64px 0 0;z-index:-1;pointer-events:none;opacity:.22;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,#000,transparent 82%)}
+#app .appgrid{grid-template-columns:250px minmax(0,1fr);gap:24px;padding-top:28px}
+#app .sidebar{overflow:hidden;border-color:#3a3328;background:linear-gradient(180deg,rgba(24,21,17,.97),rgba(10,11,14,.98));box-shadow:0 24px 70px rgba(0,0,0,.38),inset 0 1px rgba(255,255,255,.04)}
+#app .sidebar:before{content:"HERCULES / CONTROL DECK";display:block;padding:8px 10px 14px;color:#d9b86d;font-size:10px;font-weight:900;letter-spacing:.18em;border-bottom:1px solid rgba(217,184,109,.18);margin-bottom:9px}
+#app .sidebtn{border-color:transparent;color:#c7c9cf;border-radius:11px;transition:transform .16s ease,border-color .16s ease,background .16s ease}
+#app .sidebtn:hover{transform:translateX(3px);border-color:#51452f;background:#181712;color:#fff}
+#app .sidebtn.active{background:linear-gradient(135deg,#f3d18a,#c79a45);color:#100d08;border-color:#f3d18a;box-shadow:0 10px 30px rgba(199,154,69,.18)}
+#app .workspace{position:relative;padding:4px 2px 40px}
+#app .workspace:before{content:"SAUCEAPPROVED // PRIVATE OPERATIONS";display:block;margin:0 0 14px;color:#8d8067;font-size:10px;font-weight:900;letter-spacing:.2em}
+#app .viewhead{padding:22px 24px;margin-bottom:18px;border:1px solid #383127;border-radius:22px;background:linear-gradient(135deg,rgba(30,25,18,.94),rgba(14,16,21,.96));box-shadow:0 24px 60px rgba(0,0,0,.24),inset 0 1px rgba(255,255,255,.035)}
+#app .viewhead h1{color:#fff;text-shadow:0 2px 30px rgba(232,190,104,.12)}
+#app .viewhead .tag{color:#d8b66d}
+#app .panel,#app .card{border-color:#343036;background:linear-gradient(160deg,rgba(24,24,27,.97),rgba(12,13,16,.98));box-shadow:0 18px 48px rgba(0,0,0,.22),inset 0 1px rgba(255,255,255,.025)}
+#app .panel:hover,#app .card:hover{border-color:#4a4132}
+#app .pill{border-color:#40382b;background:rgba(215,177,99,.06)}
+#app .input{background:#090a0d;border-color:#3a3530;box-shadow:inset 0 1px 8px rgba(0,0,0,.32)}
+#app .input:focus{border-color:#d2ab5f;outline-color:#d2ab5f}
+#app .btn.primary{background:linear-gradient(135deg,#f2d18a,#c99843);color:#110e09;border-color:#e6bf70;box-shadow:0 10px 26px rgba(201,152,67,.16)}
+#app .result,#app .step,#app .feature{background:linear-gradient(145deg,#111217,#0b0c0f);border-color:#302d2b}
+#app .notice{background:rgba(8,9,11,.62)}
+#app .adstudio-frame{border-color:#4b3d27;background:#090a0d;box-shadow:0 28px 70px rgba(0,0,0,.36)}
+#app .chat{background:linear-gradient(160deg,rgba(19,20,24,.98),rgba(9,10,12,.98))}
+#app .msg.ai{background:#111318;border-color:#343138}
+#app .msg.user{background:linear-gradient(135deg,#f1d391,#d0a04b);color:#120f09;border-color:#e7c271}
+@media(max-width:900px){#app .appgrid{grid-template-columns:1fr;gap:14px}#app .sidebar{position:static;display:flex;overflow:auto;gap:7px;padding:9px}#app .sidebar:before{display:none}#app .sidebtn:hover{transform:none}#app .workspace:before{margin:4px 2px 10px}}
+@media(max-width:620px){#app .viewhead{padding:18px;border-radius:18px}#app .workspace{padding-bottom:24px}#app:after{background-size:30px 30px}}
+@media(prefers-reduced-motion:reduce){#app .sidebtn{transition:none}}
+
 @media(max-width:900px){.hero,.proof,.appgrid,.two{grid-template-columns:1fr}.grid4,.three{grid-template-columns:1fr 1fr}.pipeline{grid-template-columns:1fr}.sidebar{position:static;display:flex;overflow:auto;gap:7px;padding:9px}.sidebtn{min-width:max-content;margin:0}.chat{min-height:64vh}}
 @media(max-width:620px){.shell{padding:10px 14px 32px}.top{margin:0 -14px;padding:12px 14px}.navlinks a:not(.primary){display:none}.hero{padding:44px 0 24px}.hero h1{font-size:58px}.grid4,.three{grid-template-columns:1fr}.commandbox,.panel,.card{border-radius:16px}.progress{grid-template-columns:1fr}.msg{max-width:96%}}
 </style>
@@ -510,7 +581,7 @@ button,input,select,textarea{font:inherit;font-size:16px}button:focus-visible,in
               <option value="google_drive">Google Drive</option>
             </select>
             <label class="tag" style="display:block;margin-top:12px">Account key</label>
-            <input class="input" id="domainAgentAccountKey" maxlength="512" value="azymhc-x0.myshopify.com">
+            <input class="input" id="domainAgentAccountKey" maxlength="512" value="sauceapproved-2.myshopify.com">
             <button class="btn" id="domainAgentCheckGrant" style="margin-top:12px">Check authorization</button>
             <div class="notice hidden" id="domainAgentProviders"></div>
           </div>
@@ -815,6 +886,51 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 
 Deno.serve(async(req:Request)=>{
   const url=new URL(req.url);
+  if(url.searchParams.get("storefront")==="1"){
+    try{
+      const route=await serviceRpc("hercules_storefront_route",{});
+      if(!route?.url)return Response.json({ok:false,error:"storefront_route_unavailable"},{status:503,headers:{"cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
+      const redirect=Response.redirect(String(route.url),302);
+      redirect.headers.set("cache-control","no-store");
+      redirect.headers.set("x-content-type-options","nosniff");
+      redirect.headers.set("referrer-policy","no-referrer");
+      return redirect;
+    }catch(error){
+      return Response.json({ok:false,error:"storefront_route_failed",detail:error instanceof Error?error.message:"unknown"},{status:503,headers:{"cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer"}});
+    }
+  }
+  if(isStudioAccessPage(url)){
+    if(req.method==="GET")return studioAccessPage({U,K});
+    if(req.method==="POST"){
+      const body=await req.clone().json().catch(()=>({}));
+      const action=String(body?.action||"");
+      if(action==="studio_access_request")return studioAccessRequest(body,{U,K,S});
+      if(action==="studio_purchase_claim")return studioAccessClaim(req,{U,K,S});
+      return Response.json({ok:false,error:"unknown_studio_access_action"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
+  }
+  if(isTitanAccessPage(url)){
+    if(req.method==="GET")return titanAccessPage({U,K});
+    if(req.method==="POST"){
+      const body=await req.clone().json().catch(()=>({}));
+      const action=String(body?.action||"");
+      if(action==="titan_access_request")return titanAccessRequest(body,{U,K,S});
+      if(action==="titan_purchase_claim")return titanAccessClaim(req,{U,K,S});
+      return Response.json({ok:false,error:"unknown_titan_access_action"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
+  }
+  if(isSoundWorldGiftAccessPage(url)){
+    if(req.method==="GET")return soundWorldGiftAccessPage({U,K});
+    if(req.method==="POST"){
+      const body=await req.clone().json().catch(()=>({}));
+      const action=String(body?.action||"");
+      if(action==="soundworld_gift_access_request")return soundWorldGiftAccessRequest(body,{U,K,S});
+      return Response.json({ok:false,error:"unknown_soundworld_gift_action"},{status:400,headers:{"cache-control":"no-store"}});
+    }
+    return Response.json({error:"method_not_allowed"},{status:405,headers:{"cache-control":"no-store"}});
+  }
   if(url.searchParams.has("pilot_admission")){
     if(req.method==="GET")return pilotAdmissionGet(req,url,{U,K,S});
     if(req.method==="POST")return pilotAdmissionPost(req,url,{U,K,S});
@@ -840,6 +956,10 @@ Deno.serve(async(req:Request)=>{
     if(!body||typeof body!=="object")return Response.json({ok:false,error:"invalid_json"},{status:400,headers:{"cache-control":"no-store"}});
     const action=cleanText((body as any).action,64);
     try{
+      if(action==="software_access_request"){
+        try{const result=await softwareAccessRequest(req,body);return Response.json(result.body,{status:result.status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+        catch(error){const detail=error instanceof Error?error.message:"software_access_request_failed";const status=detail==="request_rate_limited"?429:detail==="invalid_email"||detail==="product_unavailable"||detail==="plan_unavailable"?400:503;return Response.json({ok:false,error:detail},{status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+      }
       if(action==="password_breach_check"){
         const password=typeof (body as any).password==="string"?(body as any).password:"";
         if(password.length<12||password.length>256)return Response.json({ok:false,error:"weak_password_length"},{status:400,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});

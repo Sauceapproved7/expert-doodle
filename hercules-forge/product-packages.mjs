@@ -1,4 +1,4 @@
-export const FORGE_PRODUCT_PACKAGE_VERSION = "1.0";
+export const FORGE_PRODUCT_PACKAGE_VERSION = "1.2";
 
 const COMMON_PRICING = Object.freeze({
   status: "owner_approval_required",
@@ -28,6 +28,15 @@ const COMMON_OWNERSHIP = Object.freeze({
   rule: "Preserve the SauceApproved-owned product core and keep replaceable infrastructure behind explicit adapters.",
 });
 
+const COMMON_DEPLOYMENT = Object.freeze({
+  controlPlane: "hercules-forge-builder",
+  releaseRuntime: "hercules-deploy",
+  archiveRuntime: "supabase",
+  presentationRuntime: "render",
+  appDeployRequired: false,
+  providerCreditsMayBlockRelease: false,
+});
+
 const PACKAGES = Object.freeze([
   Object.freeze({
     version: FORGE_PRODUCT_PACKAGE_VERSION,
@@ -46,6 +55,7 @@ const PACKAGES = Object.freeze([
       "docs/HERCULES-VIDEO-V1.5-RUN-STATUS.md",
     ]),
     ownership: COMMON_OWNERSHIP,
+    deployment: COMMON_DEPLOYMENT,
     pricing: COMMON_PRICING,
     commerce: COMMON_COMMERCE,
     plans: Object.freeze({
@@ -105,6 +115,7 @@ const PACKAGES = Object.freeze([
       "tests/hercules-ad-studio.test.mjs",
     ]),
     ownership: COMMON_OWNERSHIP,
+    deployment: COMMON_DEPLOYMENT,
     pricing: COMMON_PRICING,
     commerce: COMMON_COMMERCE,
     plans: Object.freeze({
@@ -154,6 +165,70 @@ const PACKAGES = Object.freeze([
       "launch evidence and rollback-safe release metadata",
     ]),
   }),
+  Object.freeze({
+    version: FORGE_PRODUCT_PACKAGE_VERSION,
+    id: "hercules-cleaner",
+    publicName: "Hercules Cleaner",
+    descriptor: "Recoverable Computer Maintenance",
+    projectId: "hercules-cleaner",
+    deliveryMode: "local_agent_with_web_commerce",
+    sourceRoots: Object.freeze([
+      "hercules-cleaner/",
+      "docs/HERCULES-CLEANER-V1.md",
+      "tests/hercules-cleaner.test.mjs",
+      "tests/hercules-cleaner-agent.test.mjs",
+      "tests/hercules-cleaner-command.test.mjs",
+      "releases/hercules-cleaner-v1.0.0/",
+    ]),
+    ownership: COMMON_OWNERSHIP,
+    deployment: COMMON_DEPLOYMENT,
+    pricing: COMMON_PRICING,
+    commerce: COMMON_COMMERCE,
+    plans: Object.freeze({
+      starter: Object.freeze({
+        label: "Starter",
+        audience: "Personal computers and solo operators",
+        entitlements: Object.freeze([
+          "manual_clean",
+          "quick_safe_profile",
+          "recovery_capsules",
+          "cleanup_receipts",
+        ]),
+      }),
+      pro: Object.freeze({
+        label: "Pro",
+        audience: "Power users, creators and developers",
+        entitlements: Object.freeze([
+          "starter_features",
+          "session_clean",
+          "custom_schedules",
+          "low_storage_guard",
+          "extended_recovery_retention",
+        ]),
+      }),
+      agency: Object.freeze({
+        label: "Agency",
+        audience: "Teams and managed-device operators",
+        entitlements: Object.freeze([
+          "pro_features",
+          "multi_device_policy",
+          "centralized_receipts",
+          "policy_templates",
+          "higher_device_limits",
+        ]),
+      }),
+    }),
+    packagingGoals: Object.freeze([
+      "preserve local-first filesystem authority and keep cleanup execution on the customer device",
+      "ship exact-commit release artifacts with SHA-256 file manifests and provenance evidence",
+      "provide Windows, macOS and Linux installation and startup paths without bypassing OS permissions",
+      "keep Session Clean and Recovery Capsules intact as first-class product capabilities",
+      "provide a public product and access-request surface without exposing local file metadata",
+      "enforce plan entitlements server-side for commercial access while local cleanup policy remains fail-closed",
+      "keep checkout disabled until pricing, terms, privacy, provider readiness and paid-checkout verification are approved",
+      "support safe updates, rollback evidence, uninstall, accessibility, error and empty states",
+    ]),
+  }),
 ]);
 
 function clone(value) {
@@ -179,13 +254,15 @@ export function buildForgeProductPrompt(id) {
     .join("\n");
 
   return [
-    "Package " + item.publicName + " (" + item.descriptor + ") as a sellable SauceApproved SaaS product inside Hercules Forge.",
+    "Package " + item.publicName + " (" + item.descriptor + ") as a sellable SauceApproved software product inside Hercules Forge.",
     "",
     "Canonical owned source:",
     roots,
     "",
     "Preserve the existing owned product core. Extend it; do not replace it with a duplicate or a hosted-builder implementation.",
     "Do not replace the owned core with a hosted builder. Keep external infrastructure replaceable and behind explicit adapters.",
+    "AppDeploy is not required for build, release, deployment, or verification. Provider credit ceilings must not block the owned Hercules release path.",
+    "Use Hercules Forge Builder as the control plane and Hercules Deploy as the release runtime. Use Supabase for the owned archive/origin layer and the verified Render presentation runtime for browser delivery.",
     "",
     "Required productization:",
     goals,

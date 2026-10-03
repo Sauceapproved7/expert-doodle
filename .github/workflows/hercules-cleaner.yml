@@ -1,0 +1,47 @@
+name: Hercules Cleaner
+
+on:
+  pull_request:
+    paths:
+      - "hercules-cleaner/**"
+      - "tests/hercules-cleaner*.test.mjs"
+      - "hercules-runtime/command-surface.mjs"
+      - "governance/owner-code-policy.json"
+      - "docs/HERCULES-CLEANER-V1.md"
+      - "docs/HERCULES-THREAT-MODEL.md"
+      - "SECURITY.md"
+      - "IP_PROVENANCE.md"
+      - ".github/workflows/hercules-cleaner.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-cleaner/**"
+      - "tests/hercules-cleaner*.test.mjs"
+      - "hercules-runtime/command-surface.mjs"
+      - "governance/owner-code-policy.json"
+      - "docs/HERCULES-CLEANER-V1.md"
+      - "docs/HERCULES-THREAT-MODEL.md"
+      - "SECURITY.md"
+      - "IP_PROVENANCE.md"
+      - ".github/workflows/hercules-cleaner.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  cleaner:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Hercules Cleaner tests
+        run: node --test tests/hercules-cleaner.test.mjs tests/hercules-cleaner-agent.test.mjs tests/hercules-cleaner-command.test.mjs tests/hercules-cleaner-update-policy.test.mjs tests/hercules-cleaner-installer.test.mjs tests/hercules-cleaner-windows-package.test.mjs tests/hercules-cleaner-device-activation.test.mjs tests/hercules-cleaner-device-server.test.mjs tests/hercules-cleaner-onboarding-control.test.mjs
+      - name: Owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Security baseline
+        run: node scripts/security-baseline.mjs
+      - name: Hercules execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs

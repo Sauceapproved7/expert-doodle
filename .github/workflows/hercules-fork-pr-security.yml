@@ -1,0 +1,31 @@
+name: Hercules Fork PR Security Gate
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fork-pr-security-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  policy:
+    name: Secretless disposable PR policy
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Check out PR merge commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      - name: Run fork PR security policy tests
+        run: node --test tests/hercules-fork-pr-security.test.mjs
+
+      - name: Validate patch formatting
+        run: git diff --check

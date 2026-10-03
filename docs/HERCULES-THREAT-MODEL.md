@@ -108,3 +108,27 @@ These non-claims are security boundaries, not documentation omissions.
 ### Adaptive deception and false-positive containment
 
 Controls: bounded input fields, explicit signal allowlist, deterministic risk scoring, fail-closed signal validation, maximum 1500 ms tarpit delay, no outbound counterattack path, HMAC-derived session/route/decoy fingerprints, no raw session identifiers in decision output, isolated decoy-only routing at high risk, honeytoken-triggered critical containment, tamper-evident HMAC audit chaining, bounded retained audit windows with checkpoint anchors, and staged rollout from observe-only through containment. SmokeScreen must never place real secrets or customer records in a decoy surface and must preserve an immediate path back to normal routing for false-positive remediation.
+
+
+### SmokeScreen Mirage Fabric v2
+
+Controls: every Mirage Fabric is derived only from an already-decoy-classified SmokeScreen decision; topology generation uses HMAC-bound synthetic identifiers; arbitrary attacker-controlled labels are reduced to a fixed focus allowlist; all Mirage data is synthetic; real asset access is false; network policy is isolated with no egress; production credentials, customer data, payment keys, and signing authority are forbidden; execution authority remains false; outbound counterattack remains false; topology generations may mutate only within the same synthetic containment boundary; and enforcement must fail closed to denial when isolation controls cannot be proven.
+
+
+### Forge -> SmokeScreen observe-only ingress
+
+Controls: Forge attaches observation only after an HTTP response completes; observation failure cannot alter the already-determined customer response; raw remote addresses and user-agent strings are reduced to a one-way client fingerprint before appearing in SmokeScreen results; request-window state is bounded by time, per-client entry count, and total client count; only normalized defensive signals are passed to the Sentinel; public health reveals only enabled/mode/enforcement booleans; aggregate metrics require the existing Forge bearer control credential; production starts in `OBSERVE_ONLY` with `enforcementApplied=false`; and any later transition to friction, deception, or containment requires a distinct reviewed change with false-positive evidence.
+
+
+### Hercules Cleaner local filesystem boundary
+
+23. **User filesystem -> Cleaner policy engine -> Recovery Vault**: local file metadata crosses an allowlisted-root, protected-path, disposable-rule and freshness boundary before any cleanup plan is produced. Cleanup execution is local only and moves approved files into a per-run Recovery Capsule before any later purge.
+
+Controls: loopback-only dashboard binding, per-process control token, origin checks, bounded request bodies, symlink non-following, explicit protected paths, user-scoped defaults, scan depth/file-count caps, time-of-check revalidation before moving a file, SHA-256 capsule integrity, fail-closed restore when a destination already exists, a single-operation lock, retained manifests, and no automatic cleaning of Documents/Desktop/Pictures/Videos/Music/SSH/GnuPG defaults. Native startup uses user-level OS facilities only; system scheduler/launch infrastructure remains outside owned Hercules code.
+
+
+### SmokeScreen ATT&CK enrichment boundary
+
+24. **Normalized SmokeScreen telemetry -> ATT&CK candidate enrichment -> operator evidence**: normalized request/authentication evidence crosses a taxonomy boundary where behavioral indicators are mapped to candidate MITRE ATT&CK techniques. ATT&CK metadata must not be treated as proof of actor identity, campaign identity, compromise success, or authorization for enforcement.
+
+Controls: candidate-only output; explicit confidence and corroboration fields; fixed technique allowlist reviewed against MITRE public documentation; bounded route categories instead of raw route disclosure; no inference of `T1046 Network Service Discovery` without network-service telemetry; no inference of `T1078 Valid Accounts` without successful-account-use evidence; `actorAttribution=false`; `campaignAttribution=false`; `automaticResponseAuthority=false`; `outboundCounterattack=false`; and Forge remains `OBSERVE_ONLY` during this stage.

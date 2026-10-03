@@ -1,0 +1,34 @@
+{
+  "schema": "sauceapproved.hercules-cleaner.release",
+  "version": "1.0.0",
+  "releaseClass": "early_access",
+  "product": "Hercules Cleaner",
+  "descriptor": "Recoverable Computer Maintenance",
+  "canonicalRepository": "Sauceapproved7/expert-doodle",
+  "canonicalRuntimeCommit": "77093aceae5d5df5a3ae4d3947b607473ff15db9",
+  "checkoutEnabled": false,
+  "pricingStatus": "owner_approval_required",
+  "deliveryMode": "local_agent_with_web_commerce",
+  "supportedPlatforms": [
+    "windows",
+    "macos",
+    "linux"
+  ],
+  "differentiators": [
+    "session_clean",
+    "recovery_capsules"
+  ],
+  "sourceRoots": [
+    "hercules-cleaner/",
+    "docs/HERCULES-CLEANER-V1.md",
+    "tests/hercules-cleaner.test.mjs",
+    "tests/hercules-cleaner-agent.test.mjs",
+    "tests/hercules-cleaner-command.test.mjs"
+  ],
+  "nonClaims": [
+    "no_native_installer_claim",
+    "no_antivirus_claim",
+    "no_registry_optimizer_claim",
+    "no_permission_bypass_claim"
+  ]
+}

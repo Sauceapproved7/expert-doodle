@@ -164,6 +164,27 @@ test("control API owns create, inspect, revise, artifact, publish, active releas
     assert.equal(inspected.status, 200);
     assert.equal(inspected.body.revisionId, firstRevisionId);
 
+    const source = await request(
+      base,
+      "/v1/projects/control-app/revisions/" +
+        firstRevisionId +
+        "/source?path=" +
+        encodeURIComponent("public/index.html"),
+    );
+    assert.equal(source.status, 200);
+    assert.equal(source.body.source.path, "public/index.html");
+    assert.match(source.body.source.content, /ControlApp/);
+    assert.match(source.body.source.sha256, /^[a-f0-9]{64}$/);
+
+    const sourceTraversal = await request(
+      base,
+      "/v1/projects/control-app/revisions/" +
+        firstRevisionId +
+        "/source?path=" +
+        encodeURIComponent("../project.json"),
+    );
+    assert.equal(sourceTraversal.status, 400);
+
     const built = await request(
       base,
       "/v1/projects/control-app/revisions/" + firstRevisionId + "/artifact",
@@ -304,5 +325,116 @@ test("control API fails closed on malformed cookie and path encoding", async () 
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(root, {recursive: true, force: true});
+  }
+});
+
+
+test("control API acknowledges mutating requests only after durable state flush", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-durable-"));
+  const calls = [];
+  const durableState = {
+    async flush() {
+      calls.push({kind:"flush",at:Date.now()});
+      return {verified:true};
+    },
+    async status() {
+      calls.push({kind:"status",at:Date.now()});
+      return {ok:true,objectCount:0};
+    },
+  };
+  const server = createForgeControlService({root, token, durableState});
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = "http://127.0.0.1:" + server.address().port;
+
+  try {
+    const response = await fetch(base + "/v1/projects", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        authorization:"Bearer " + token,
+      },
+      body:JSON.stringify({spec,metadata:{projectId:"durable-control-app"}}),
+    });
+    assert.equal(response.status, 201);
+    assert.equal(calls.filter((call) => call.kind === "flush").length, 1);
+
+    const health = await fetch(base + "/health");
+    assert.equal(health.status, 200);
+    assert.equal((await health.json()).durableState, true);
+
+    const ready = await fetch(base + "/ready");
+    assert.equal(ready.status, 200);
+    const readyBody = await ready.json();
+    assert.equal(readyBody.durableState.ok, true);
+    assert.equal(calls.some((call) => call.kind === "status"), true);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive:true, force:true});
+  }
+});
+
+
+test("control API returns only safe stage codes for internal prompt-create failures", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-stage-code-"));
+  const interpreter = {
+    async interpret() {
+      throw new Error("model output contained private diagnostic detail");
+    },
+  };
+  const server = createForgeControlService({root, token, interpreter});
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = "http://127.0.0.1:" + server.address().port;
+
+  try {
+    const response = await fetch(base + "/v1/projects/from-prompt", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        authorization:"Bearer " + token,
+      },
+      body:JSON.stringify({prompt:"build a canary",metadata:{projectId:"safe-stage-canary"}}),
+    });
+    assert.equal(response.status, 500);
+    const body = await response.json();
+    assert.equal(body.error, "internal_error");
+    assert.equal(body.code, "forge_interpreter_failed");
+    assert.equal(JSON.stringify(body).includes("private diagnostic detail"), false);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive:true, force:true});
+  }
+});
+
+test("control API identifies durable flush failure without exposing the underlying error", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-control-durable-stage-"));
+  const durableState = {
+    async flush() {
+      throw new Error("private durable backend failure detail");
+    },
+    async status() {
+      return {ok:true,objectCount:0};
+    },
+  };
+  const server = createForgeControlService({root, token, durableState});
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const base = "http://127.0.0.1:" + server.address().port;
+
+  try {
+    const response = await fetch(base + "/v1/projects", {
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        authorization:"Bearer " + token,
+      },
+      body:JSON.stringify({spec,metadata:{projectId:"durable-stage-canary"}}),
+    });
+    assert.equal(response.status, 500);
+    const body = await response.json();
+    assert.equal(body.error, "internal_error");
+    assert.equal(body.code, "forge_durable_flush_failed");
+    assert.equal(JSON.stringify(body).includes("private durable backend failure detail"), false);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive:true, force:true});
   }
 });

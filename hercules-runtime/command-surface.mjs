@@ -7,7 +7,10 @@ const ROUTES=Object.freeze({
   "recovery.route":"hercules-recovery",
   "video.render":"hercules-video",
   "deploy.release":"hercules-deploy",
-  "security.smokescreen":"hercules-runtime"
+  "security.smokescreen":"hercules-runtime",
+  "cleaner.scan":"hercules-cleaner",
+  "cleaner.clean":"hercules-cleaner",
+  "cleaner.session":"hercules-cleaner"
 });
 const SHA=/^[a-f0-9]{64}$/i;
 function stable(v){if(Array.isArray(v))return v.map(stable);if(v&&typeof v==="object")return Object.fromEntries(Object.keys(v).sort().map(k=>[k,stable(v[k])]));return v}

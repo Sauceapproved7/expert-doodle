@@ -4,12 +4,13 @@ import {randomBytes} from "node:crypto";
 import {mkdtemp, rm} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
-import {createForgeControlService} from "../hercules-forge/control-api.mjs";
+import {createForgeControlService, listenForgeControlService} from "../hercules-forge/control-api.mjs";
 import {ForgeIdentityStore} from "../hercules-forge/identity.mjs";
 import {ForgeLoginRateLimiter} from "../hercules-forge/rate-limit.mjs";
 import {
   readForgeProductionConfig,
   safeForgeProductionSummary,
+  createForgeProductionSmokeScreenObserver,
 } from "../hercules-forge/production.mjs";
 
 function fixtureCredential() {
@@ -53,14 +54,92 @@ test("production config is fail-closed and safe summary omits credentials", () =
   assert.equal(config.minFreeBytes, 1048576);
   assert.equal(config.notificationUrl, "https://notify.example.test/send");
 
+  const herculesAiConfig = readForgeProductionConfig({
+    ...env,
+    FORGE_INTERPRETER_MODE: "hercules-ai",
+    FORGE_INTERPRETER_URL: "https://models.example.test/functions/v1/hercules-ai",
+    FORGE_INTERPRETER_TOKEN: "i".repeat(48),
+  });
+  assert.equal(herculesAiConfig.interpreterMode, "hercules-ai");
+  assert.equal(
+    herculesAiConfig.interpreterUrl,
+    "https://models.example.test/functions/v1/hercules-ai",
+  );
+  assert.equal(herculesAiConfig.interpreterToken, "i".repeat(48));
+
+  const canaryConfig = readForgeProductionConfig({
+    ...env,
+    FORGE_INTERPRETER_MODE: "hercules-ai",
+    FORGE_INTERPRETER_URL: "https://models.example.test/functions/v1/hercules-ai",
+    FORGE_INTERPRETER_TOKEN: "i".repeat(48),
+    FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
+    FORGE_DURABLE_STATE_TOKEN: "d".repeat(48),
+    FORGE_STARTUP_PROMPT_CANARY_ID: "forge-prompt-canary-ai-v1",
+  });
+  assert.equal(canaryConfig.startupPromptCanaryId, "forge-prompt-canary-ai-v1");
+  const canarySummary = safeForgeProductionSummary(canaryConfig);
+  assert.equal(canarySummary.startupPromptCanaryId, "forge-prompt-canary-ai-v1");
+  assert.equal(JSON.stringify(canarySummary).includes(env.FORGE_CONTROL_TOKEN), false);
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_STARTUP_PROMPT_CANARY_ID: "forge-prompt-canary-ai-v1",
+    }),
+    /requires prompt ingress/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_STARTUP_PROMPT_CANARY_ID: "../escape",
+    }),
+    /FORGE_STARTUP_PROMPT_CANARY_ID/,
+  );
+
+  const durableConfig = readForgeProductionConfig({
+    ...env,
+    FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
+    FORGE_DURABLE_STATE_TOKEN: "d".repeat(48),
+  });
+  assert.equal(
+    durableConfig.durableStateUrl,
+    "https://state.example.test/functions/v1/hercules-private-bridge",
+  );
+  assert.equal(durableConfig.durableStateToken, "d".repeat(48));
+
   const summary = safeForgeProductionSummary(config);
+  const herculesAiSummary = safeForgeProductionSummary(herculesAiConfig);
+  assert.equal(herculesAiSummary.promptIngress, true);
+  assert.equal(herculesAiSummary.interpreterMode, "hercules-ai");
+  assert.equal("interpreterToken" in herculesAiSummary, false);
+  assert.equal(JSON.stringify(herculesAiSummary).includes(herculesAiConfig.interpreterToken), false);
   assert.equal(summary.secureSessionCookies, true);
   assert.equal(summary.identityLifecycle, true);
+  assert.equal(summary.durableState, false);
+  assert.equal(summary.stateDurability, "host-filesystem");
+  const durableSummary = safeForgeProductionSummary(durableConfig);
+  assert.equal(durableSummary.durableState, true);
+  assert.equal(durableSummary.stateDurability, "remote-mirror");
+  assert.equal("durableStateToken" in durableSummary, false);
+  assert.equal(JSON.stringify(durableSummary).includes(durableConfig.durableStateToken), false);
   assert.equal(summary.minFreeBytes, 1048576);
   assert.equal("token" in summary, false);
   assert.equal("interpreterToken" in summary, false);
   assert.equal("notificationToken" in summary, false);
   assert.equal(JSON.stringify(summary).includes(env.FORGE_CONTROL_TOKEN), false);
+  assert.deepEqual(summary.smokeScreen,{
+    enabled:true,
+    mode:"OBSERVE_ONLY",
+    enforcement:false,
+  });
+
+  const observer=createForgeProductionSmokeScreenObserver(config.token,{
+    now:()=>1_790_000_000_000,
+  });
+  assert.deepEqual(observer.publicStatus(),{
+    enabled:true,
+    mode:"OBSERVE_ONLY",
+    enforcement:false,
+  });
 
   assert.throws(
     () => readForgeProductionConfig({...env, FORGE_CONTROL_TOKEN: "short"}),
@@ -88,6 +167,63 @@ test("production config is fail-closed and safe summary omits credentials", () =
     }).interpreterUrl,
     "http://127.0.0.1:39000/interpret",
   );
+  assert.equal(
+    readForgeProductionConfig({
+      ...env,
+      FORGE_INTERPRETER_URL: "http://127.0.0.1:39000/interpret",
+    }).interpreterMode,
+    "http",
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_INTERPRETER_MODE: "hercules-ai",
+      FORGE_INTERPRETER_URL: "https://models.example.test/functions/v1/hercules-ai",
+    }),
+    /FORGE_INTERPRETER_TOKEN is required/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_INTERPRETER_MODE: "hercules-ai",
+      FORGE_INTERPRETER_URL: "https://models.example.test/functions/v1/hercules-ai",
+      FORGE_INTERPRETER_TOKEN: "short",
+    }),
+    /at least 32 characters/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_INTERPRETER_MODE: "unknown",
+      FORGE_INTERPRETER_URL: "https://models.example.test/interpret",
+      FORGE_INTERPRETER_TOKEN: "i".repeat(48),
+    }),
+    /FORGE_INTERPRETER_MODE must be one of/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
+    }),
+    /FORGE_DURABLE_STATE_TOKEN is required/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_DURABLE_STATE_URL: "https://state.example.test/functions/v1/hercules-private-bridge",
+      FORGE_DURABLE_STATE_TOKEN: "short",
+    }),
+    /at least 32 characters/,
+  );
+  assert.throws(
+    () => readForgeProductionConfig({
+      ...env,
+      FORGE_DURABLE_STATE_URL: "http://state.example.test/functions/v1/hercules-private-bridge",
+      FORGE_DURABLE_STATE_TOKEN: "d".repeat(48),
+    }),
+    /must use https unless it is loopback/,
+  );
+
   assert.throws(
     () => readForgeProductionConfig({
       ...env,
@@ -206,5 +342,48 @@ test("production session cookies are Secure and failed login throttling returns 
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await rm(root, {recursive: true, force: true});
+  }
+});
+
+
+test("production listener forwards durable state into readiness", async () => {
+  const root = await mkdtemp(join(tmpdir(), "forge-production-durable-ready-"));
+  const controlToken = fixtureCredential("control", "durable", "listener", "fixture");
+  const durableState = {
+    async flush() { return {verified:true}; },
+    async status() {
+      return {
+        ok:true,
+        schema:"sauceapproved.hercules.forge.durable-state.v1",
+        carriesCredentials:false,
+        objectCount:1,
+      };
+    },
+  };
+  const server = listenForgeControlService({
+    root,
+    token:controlToken,
+    durableState,
+    readinessCheck:async () => ({writable:true}),
+    serviceMode:"production",
+    host:"127.0.0.1",
+    port:0,
+  });
+  await new Promise((resolve, reject) => {
+    if (server.listening) return resolve();
+    server.once("listening", resolve);
+    server.once("error", reject);
+  });
+  const base = "http://127.0.0.1:" + server.address().port;
+  try {
+    const response = await fetch(base + "/ready");
+    assert.equal(response.status, 200);
+    const body = await response.json();
+    assert.equal(body.ready, true);
+    assert.equal(body.durableState?.ok, true);
+    assert.equal(body.durableState?.objectCount, 1);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+    await rm(root, {recursive:true, force:true});
   }
 });

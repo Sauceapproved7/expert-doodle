@@ -124,3 +124,13 @@ test("browser runtime monitor uses PostgreSQL-valid bounded regexes",async()=>{
   assert.doesNotMatch(latest,/\.\{0,400\}/);
   assert.match(latest,/connectovercdp\.\{0,200\}/i);
 });
+
+
+test("browser agent recovers from planner locator timeouts without crashing the run",async()=>{
+  const agent=await readFile(new URL("../supabase/functions/hercules-browser-agent/index.ts",import.meta.url),"utf8");
+  assert.match(agent,/function recoverablePlannerLocatorFailure\(error:unknown,decision:string\)/);
+  assert.match(agent,/decision==="click"\|\|decision==="extract"/);
+  assert.match(agent,/Timeout\\s\+\\d\+ms\\s\+exceeded/i);
+  assert.match(agent,/decision:"action_failed"/);
+  assert.match(agent,/Do not repeat a selector whose recent history records action_failed/);
+});

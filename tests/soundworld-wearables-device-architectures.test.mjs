@@ -1,0 +1,8 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {evaluatePodsArchitecture} from '../hardware/soundworld/wearables/pods-architecture-v1.mjs';
+import {evaluateMaxArchitecture} from '../hardware/soundworld/wearables/max-architecture-v1.mjs';
+const common={ancMicPaths:2,callMicPath:true,signedFirmware:true,soundDna:true,continuity:true,thermalTelemetry:true,hearingProtection:true};
+test('Pods architecture requires owned case and independent bud identity',()=>assert.equal(evaluatePodsArchitecture({...common,independentBudIdentity:true,ownedChargingCase:true,wearDetection:true}).architectureReady,true));
+test('Pods fails without independent identities',()=>assert.equal(evaluatePodsArchitecture({...common,independentBudIdentity:false,ownedChargingCase:true,wearDetection:true}).architectureReady,false));
+test('Max architecture requires serviceable wear parts and wired fallback study',()=>assert.equal(evaluateMaxArchitecture({...common,serviceableCushions:true,serviceableBattery:true,wiredFallback:true,tactileControls:true}).architectureReady,true));
+test('neither architecture grants production readiness',()=>{assert.equal(evaluatePodsArchitecture({...common,independentBudIdentity:true,ownedChargingCase:true,wearDetection:true}).productionReady,false);assert.equal(evaluateMaxArchitecture({...common,serviceableCushions:true,serviceableBattery:true,wiredFallback:true,tactileControls:true}).productionReady,false);});

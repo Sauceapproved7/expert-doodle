@@ -1,0 +1,69 @@
+{
+  "activation": {
+    "checkout_enabled": false,
+    "public_paid_launch_open": false,
+    "requires_payment_path_verified": true,
+    "requires_storefront_offer_reconciled": true
+  },
+  "billing": {
+    "candidate_price_cents": 4900,
+    "currency": "USD",
+    "model": "one_time",
+    "owner_approval_required": true,
+    "recurring": false
+  },
+  "candidate_entitlements": [
+    "titan_workspace_access",
+    "ai_business_copilot",
+    "saved_projects",
+    "future_upgrade_eligibility"
+  ],
+  "delivery": {
+    "automated_billing_to_entitlement_sync_verified": false,
+    "candidate_mode": "protected_account_entitlement_handoff",
+    "verified": false
+  },
+  "display_name": "Source Approved Hercules Titan Founding Access",
+  "launch_promotion": {
+    "packet_version": "hercules-soundworld-launch-gift-v1",
+    "packet_path": "governance/hercules-soundworld-launch-gift-v1.json",
+    "applies_during_first_14_days_of_public_paid_launch": true,
+    "gift_customer_price_cents": 0,
+    "one_choice_per_qualifying_purchase": true,
+    "choices": [
+      "soundworld-pods",
+      "soundworld-max",
+      "soundworld-portable-speaker"
+    ],
+    "fulfillment_mode": "reservation_then_fulfillment_after_production_availability"
+  },
+  "legal": {
+    "cancellation_behavior_approved": false,
+    "privacy_approved": false,
+    "refund_policy_approved": false,
+    "terms_approved": false
+  },
+  "owner_decisions": {
+    "delivery": "pending",
+    "entitlement": "pending",
+    "price_and_cadence": "pending",
+    "privacy": "pending",
+    "product_identity": "separate_one_time_titan_offer_selected",
+    "refund_and_cancellation": "pending",
+    "terms": "pending"
+  },
+  "packet_version": "hercules-titan-founding-access-offer-v1",
+  "product_code": "hercules-titan-founding-access",
+  "relationships": {
+    "revenue_recovery_pricing_catalog_applies": false,
+    "revenue_recovery_subscription_included": false
+  },
+  "schema_version": 1,
+  "separate_from_revenue_recovery": true,
+  "shopify": {
+    "product_id": "gid://shopify/Product/10261114782016",
+    "shop_domain": "sauceapproved-2.myshopify.com",
+    "sku": "HERCULES-TITAN-FOUNDING"
+  },
+  "status": "owner_approval_required"
+}

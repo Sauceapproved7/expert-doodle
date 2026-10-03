@@ -1,8 +1,9 @@
-# Hercules SmokeScreen Sentinel v1
+# Hercules SmokeScreen Sentinel v2 — Mirage Fabric
 
-Status: implementation candidate  
+Status: v2 implementation candidate  
 Scope: defensive deception and containment inside authorized Hercules infrastructure  
-Runtime: `hercules-runtime/smokescreen-agent.mjs`
+Runtime: `hercules-runtime/smokescreen-agent.mjs`  
+Document path retained for continuity with v1.
 
 ## Purpose
 
@@ -97,3 +98,88 @@ The runtime core can support all four modes, but deployment adapters must be ena
 ## Ownership and provenance
 
 The SmokeScreen Sentinel runtime, tests, command-surface integration, and this specification are project-authored Hercules source created for SauceApproved on 2026-09-28. The implementation uses only Node.js built-ins and repository-owned source. Node.js and GitHub Actions remain third-party infrastructure and are not claimed as SauceApproved-owned code.
+
+
+## Mirage Fabric v2
+
+v2 upgrades the decoy plane from a static destination into an adaptive synthetic environment.
+
+For every high-confidence decoy decision, SmokeScreen can generate a short-lived Mirage Fabric with:
+
+- a deterministic but rotating synthetic namespace;
+- synthetic-only API, operations, and storage routes;
+- session-scoped honeytokens that are never valid credentials;
+- bounded synthetic record counts;
+- explicit `ISOLATED_NO_EGRESS` network policy;
+- explicit `SYNTHETIC_ONLY` data policy;
+- `realAssetAccess=false`;
+- `executionAuthority=false`;
+- `outboundCounterattack=false`; and
+- a fail-closed `DENY` fallback if required isolation cannot be proven.
+
+The topology can evolve across generations as the hostile session changes behavior. Attacker-controlled labels are not reflected directly into route names or namespaces; unrecognized focus values collapse to a bounded `generic` profile.
+
+### v2 local enforcement contract
+
+`createSmokeScreenEnforcementPlan(decision)` converts a decision into a bounded local plan. A decoy plan requires:
+
+- `NO_EGRESS`
+- `NO_PRODUCTION_CREDENTIALS`
+- `NO_CUSTOMER_DATA`
+- `NO_PAYMENT_KEYS`
+- `NO_SIGNING_AUTHORITY`
+
+If an enforcement adapter cannot prove those controls, it must deny the hostile session rather than route it back to real assets.
+
+### v2 runtime API
+
+- `createMirageFabric(decision, context, options)`
+- `evolveMirageFabric(fabric, observation, options)`
+- `createSmokeScreenEnforcementPlan(decision)`
+
+The agent instance also exposes `plan()`, `mirage()`, and `evolveMirage()` helpers bound to its server-side HMAC key and clock.
+
+
+## Forge production observe-only ingress
+
+Forge production now boots SmokeScreen Sentinel automatically in `OBSERVE_ONLY` mode at the HTTP control boundary.
+
+The ingress adapter:
+
+- observes completed Forge responses without changing status, body, routing, or session behavior;
+- hashes network/client identity before exposing observation results;
+- accumulates bounded per-client request-window signals for auth failures, denied privileged paths, route probes, velocity, and signature mismatch indicators;
+- feeds only normalized signals into the existing SmokeScreen Sentinel;
+- applies no rate limit, tarpit, decoy route, or containment action in this phase;
+- keeps `outboundCounterattack=false`;
+- exposes public capability status only through `/health`;
+- exposes aggregate observation evidence only through the bearer-protected `GET /v1/security/smokescreen` operator route.
+
+Production derives the SmokeScreen HMAC key from the existing Forge control-secret boundary using a namespaced HMAC derivation. No new secret is committed or returned by health/metrics surfaces.
+
+Promotion beyond observe-only requires separate false-positive evidence and a new reviewed enforcement change.
+
+
+## ATT&CK candidate enrichment v2.2
+
+Forge observe-only observations now include a bounded `attackEnrichment` object from `hercules-runtime/smokescreen-attack-enrichment.mjs`.
+
+The enrichment layer is descriptive evidence only:
+
+- framework: MITRE ATT&CK Enterprise;
+- scope: `CANDIDATE_BEHAVIOR_MAPPING_ONLY`;
+- no actor attribution;
+- no campaign attribution;
+- no automatic response authority;
+- no outbound counterattack;
+- raw routes are reduced to a bounded category and are not emitted.
+
+Current candidate mappings:
+
+- `T1110.004 Credential Stuffing` from the explicit normalized credential-stuffing signal;
+- `T1110.001 Password Guessing` from repeated authentication failures when credential stuffing is absent;
+- `T1595.003 Wordlist Scanning` from repeated route probing/enumeration;
+- `T1087 Account Discovery` only when enumeration is corroborated by an identity-category route;
+- `T1190 Exploit Public-Facing Application` only as a low-confidence candidate when repeated signature mismatches and a privilege-boundary probe corroborate each other.
+
+Anti-overmapping is part of the contract: web-route probing alone does not become `T1046 Network Service Discovery`, and credential attempts do not become `T1078 Valid Accounts` without successful-account-use evidence.

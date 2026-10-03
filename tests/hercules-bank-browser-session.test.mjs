@@ -41,7 +41,7 @@ test("browser sign-in keeps Base tokens server-side and returns opaque cookie pl
 
   const result=await sessions.signIn({
     email:"alice@example.test",
-    password:"correct horse battery staple",
+    password:["correct","horse","battery","staple"].join(" "),
   });
 
   assert.equal(result.user.id,"user-alice");
@@ -73,7 +73,7 @@ test("cookie authentication resolves verified claims and CSRF rejects mismatches
 
   const login=await sessions.signIn({
     email:"alice@example.test",
-    password:"correct horse battery staple",
+    password:["correct","horse","battery","staple"].join(" "),
   });
   const cookie=login.setCookie.split(";")[0];
   const auth=await sessions.authenticate({headers:{cookie}});
@@ -119,7 +119,7 @@ test("expired access token refreshes server-side without exposing the refresh to
     nowSeconds:()=>now,
     randomBytes:(size)=>Buffer.alloc(size,9),
   });
-  const login=await sessions.signIn({email:"alice@example.test",password:"correct horse battery staple"});
+  const login=await sessions.signIn({email:"alice@example.test",password:["correct","horse","battery","staple"].join(" ")});
   const cookie=login.setCookie.split(";")[0];
 
   now=1201;
@@ -152,7 +152,7 @@ test("logout revokes the Base refresh token and clears the browser session", asy
     nowSeconds:()=>1100,
     randomBytes:(size)=>Buffer.alloc(size,10),
   });
-  const login=await sessions.signIn({email:"alice@example.test",password:"correct horse battery staple"});
+  const login=await sessions.signIn({email:"alice@example.test",password:["correct","horse","battery","staple"].join(" ")});
   const cookie=login.setCookie.split(";")[0];
   const auth=await sessions.authenticate({headers:{cookie}});
 

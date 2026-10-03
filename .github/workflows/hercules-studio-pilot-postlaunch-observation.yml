@@ -1,0 +1,29 @@
+name: Hercules Studio Pilot Postlaunch Observation
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/*studio_pilot_postlaunch_observation*"
+      - "tests/hercules-studio-pilot-postlaunch-observation.test.mjs"
+      - ".github/workflows/hercules-studio-pilot-postlaunch-observation.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/*studio_pilot_postlaunch_observation*"
+      - "tests/hercules-studio-pilot-postlaunch-observation.test.mjs"
+      - ".github/workflows/hercules-studio-pilot-postlaunch-observation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - run: node --test tests/hercules-studio-pilot-postlaunch-observation.test.mjs

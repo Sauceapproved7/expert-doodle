@@ -6,6 +6,22 @@ import {compileForgeProject} from "./compiler.mjs";
 const json = (value) => JSON.stringify(value, null, 2) + "\n";
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
+const SOURCE_MAX_BYTES = 512 * 1024;
+
+function normalizeSourcePath(value) {
+  if (typeof value !== "string") throw new Error("invalid source path");
+  const path = value.trim();
+  if (
+    !path ||
+    path.startsWith("/") ||
+    path.includes("\\") ||
+    path.includes("\0") ||
+    path.split("/").some((segment) => !segment || segment === "." || segment === "..")
+  ) {
+    throw new Error("invalid source path");
+  }
+  return path;
+}
 
 function assertId(label, value) {
   if (!ID.test(String(value ?? ""))) {
@@ -151,6 +167,43 @@ export class ForgeWorkspaceStore {
       revisions.push(await this.getRevision(projectId, entry.name));
     }
     return revisions.sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async readRevisionSource(projectId, revisionId, relativePath) {
+    projectId = assertId("projectId", projectId);
+    revisionId = assertId("revisionId", revisionId);
+    const path = normalizeSourcePath(relativePath);
+    const revision = await this.getRevision(projectId, revisionId);
+    const indexed = revision.files?.[path];
+    if (!indexed) {
+      throw Object.assign(new Error("source file not found"), {code: "ENOENT"});
+    }
+    if (!Number.isInteger(indexed.bytes) || indexed.bytes < 0 || indexed.bytes > SOURCE_MAX_BYTES) {
+      throw Object.assign(new Error("source file exceeds browser limit"), {statusCode: 413});
+    }
+
+    const content = await readFile(
+      join(
+        this.projectPath(projectId),
+        "revisions",
+        revisionId,
+        "source",
+        ...path.split("/"),
+      ),
+      "utf8",
+    );
+    const observedBytes = Buffer.byteLength(content);
+    const observedSha256 = sha256(content);
+    if (observedBytes !== indexed.bytes || observedSha256 !== indexed.sha256) {
+      throw Object.assign(new Error("source integrity mismatch"), {statusCode: 409});
+    }
+
+    return {
+      path,
+      content,
+      bytes: observedBytes,
+      sha256: observedSha256,
+    };
   }
 
   async diffRevisions(projectId, fromRevisionId, toRevisionId) {

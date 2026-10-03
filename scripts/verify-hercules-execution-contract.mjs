@@ -120,7 +120,17 @@ export async function verifyExecutionContract() {
     ["authorizationRouting.bypassCaptchaOrAntiBot", policy.authorizationRouting?.bypassCaptchaOrAntiBot, false],
     ["authorizationRouting.bypass2FA", policy.authorizationRouting?.bypass2FA, false],
     ["authorizationRouting.treatMissingConsentAsGranted", policy.authorizationRouting?.treatMissingConsentAsGranted, false],
-    ["authorizationRouting.evadeProviderRestrictions", policy.authorizationRouting?.evadeProviderRestrictions, false]
+    ["authorizationRouting.evadeProviderRestrictions", policy.authorizationRouting?.evadeProviderRestrictions, false],
+    ["founderDirectives.strengthAndNameStandard.enabled", policy.founderDirectives?.strengthAndNameStandard?.enabled, true],
+    ["founderDirectives.outsideTheBoxBuildRule.enabled", policy.founderDirectives?.outsideTheBoxBuildRule?.enabled, true],
+    ["founderDirectives.billionDollarOperatingStandard.enabled", policy.founderDirectives?.billionDollarOperatingStandard?.enabled, true],
+    ["founderDirectives.marketLeadershipMindset.enabled", policy.founderDirectives?.marketLeadershipMindset?.enabled, true],
+    ["founderDirectives.differentiatorRequirement.minimumPerBuild", policy.founderDirectives?.differentiatorRequirement?.minimumPerBuild, 2],
+    ["founderDirectives.doYouExecutionCommand.enabled", policy.founderDirectives?.doYouExecutionCommand?.enabled, true],
+    ["founderDirectives.doYouExecutionCommand.useBestProfessionalJudgment", policy.founderDirectives?.doYouExecutionCommand?.useBestProfessionalJudgment, true],
+    ["founderDirectives.doYouExecutionCommand.doNotRequireFounderToDirectRoutineTechnicalWork", policy.founderDirectives?.doYouExecutionCommand?.doNotRequireFounderToDirectRoutineTechnicalWork, true],
+    ["founderDirectives.doYouExecutionCommand.preserveOwnerOnlySecurityAndAuthorizationBoundaries", policy.founderDirectives?.doYouExecutionCommand?.preserveOwnerOnlySecurityAndAuthorizationBoundaries, true],
+    ["founderDirectives.nightlyWholeHerculesAudit.requiredOperatingTarget", policy.founderDirectives?.nightlyWholeHerculesAudit?.requiredOperatingTarget, true]
   ];
 
   for (const [name, actual, expected] of exact) {
@@ -145,7 +155,9 @@ export async function verifyExecutionContract() {
     "HANDS-OFF EXECUTION DEFAULT",
     "Hercules Browser is the default browser execution path",
     "Revenue → Customers → Repeat customers → Recurring revenue → Scalable software/products → Durable company assets",
-    "What changed → What was verified → What remains → Next highest-value action"
+    "What changed → What was verified → What remains → Next highest-value action",
+    '### "DO YOU" EXECUTION COMMAND',
+    'When the founder says "do you," Hercules should handle the work using its best professional judgment'
   ];
 
   for (const required of masterRequiredText) {

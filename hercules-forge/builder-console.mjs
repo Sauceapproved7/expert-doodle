@@ -33,7 +33,7 @@ export function builderConsoleHtml() {
 <div class="panel"><h1>Build from a prompt</h1>
 <p class="muted">Owned Forge projects remain canonical. External infrastructure stays behind replaceable adapters.</p>
 <h2>Product packages</h2>
-<p class="muted">SauceApproved Studio · AI Video Maker<br>SauceApproved Ads · AI Ad Maker</p>
+<p class="muted">SauceApproved Studio · AI Video Maker<br>SauceApproved Ads · AI Ad Maker<br>Hercules Cleaner · Recoverable Computer Maintenance</p>
 <div id="packageStarts" class="package-grid"></div>
 <input id="projectId" placeholder="Project ID (optional)">
 <textarea id="prompt" placeholder="Describe the app Hercules Forge should build..."></textarea>

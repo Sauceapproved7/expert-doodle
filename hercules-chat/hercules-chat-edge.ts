@@ -10,12 +10,34 @@ declare const Supabase: {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const DPOP_ENFORCED = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "false").toLowerCase() === "true";
+
+async function authenticateChat(req: Request, token: string): Promise<string> {
+  if (!SUPABASE_URL || !ANON_KEY) throw new Error("SERVER_NOT_CONFIGURED");
+  const response = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+    method: "GET",
+    headers: {
+      apikey: ANON_KEY,
+      Authorization: "Bearer " + token,
+    },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error("UNAUTHORIZED");
+  const user = await response.json().catch(() => null) as { id?: unknown } | null;
+  if (!user || typeof user.id !== "string" || !user.id) throw new Error("UNAUTHORIZED");
+  return user.id;
+}
+
+
+
+import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+import { verifyDpopRequest } from "./dpop.ts";
 
 const embeddingModel = new Supabase.ai.Session("gte-small");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Headers": "authorization, dpop, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -45,23 +67,13 @@ async function monitorAuthorized(req: Request): Promise<boolean> {
   return Boolean(rows?.[0]?.enabled && expected && expected === await sha256Hex(key));
 }
 
-function decodeJwtSub(req: Request): string {
+function rawAccessToken(req: Request): string {
   const auth = req.headers.get("Authorization") ?? "";
-  if (!auth.startsWith("Bearer ")) throw new Error("UNAUTHORIZED");
-
-  const token = auth.slice(7);
-  const parts = token.split(".");
-  if (parts.length !== 3) throw new Error("UNAUTHORIZED");
-
-  let raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-  raw += "=".repeat((4 - (raw.length % 4)) % 4);
-  const payload = JSON.parse(atob(raw));
-
-  if (typeof payload.sub !== "string" || payload.sub.length < 1) {
-    throw new Error("UNAUTHORIZED");
-  }
-  return payload.sub;
+  if (auth.startsWith("Bearer ")) return auth.slice(7);
+  if (auth.startsWith("DPoP ")) return auth.slice(5);
+  throw new Error("UNAUTHORIZED");
 }
+
 
 function knownDbError(body: unknown): string | null {
   const text =
@@ -143,7 +155,8 @@ function contentText(content: unknown): string {
         if (typeof p.text === "string") return p.text;
       }
       return "";
-    }).filter(Boolean).join("\n");
+    }).filter(Boolean).join("
+");
   }
   if (content && typeof content === "object") {
     const obj = content as Record<string, unknown>;
@@ -212,6 +225,11 @@ async function routeAi(req: Request, system: string, prompt: string) {
     provider: String(payload.provider ?? "hercules-ai"),
     model: String(payload.model ?? "routed"),
     attempts: Array.isArray(payload.attempts) ? payload.attempts : [],
+    usage: payload.usage && typeof payload.usage === "object" ? {
+      inputTokens: Math.max(0, Number((payload.usage as Record<string, unknown>).input_tokens ?? (payload.usage as Record<string, unknown>).prompt_tokens ?? 0) || 0),
+      outputTokens: Math.max(0, Number((payload.usage as Record<string, unknown>).output_tokens ?? (payload.usage as Record<string, unknown>).completion_tokens ?? 0) || 0),
+      totalTokens: Math.max(0, Number((payload.usage as Record<string, unknown>).total_tokens ?? 0) || 0),
+    } : null,
   };
 }
 
@@ -221,6 +239,8 @@ async function finalize(
   status: "completed" | "failed" | "cancelled",
   responseMessageId: number | null = null,
   errorCode: string | null = null,
+  inputTokens = 0,
+  outputTokens = 0,
 ) {
   try {
     await rest(
@@ -231,9 +251,9 @@ async function finalize(
         body: JSON.stringify({
           p_request_id: requestId,
           p_status: status,
-          p_input_tokens: 0,
+          p_input_tokens: inputTokens,
           p_cached_input_tokens: 0,
-          p_output_tokens: 0,
+          p_output_tokens: outputTokens,
           p_actual_cost_microusd: 0,
           p_response_message_id: responseMessageId,
           p_error_code: errorCode,
@@ -268,7 +288,22 @@ Deno.serve(async (req: Request) => {
   let reservedRequestId: string | null = null;
 
   try {
-    const userId = decodeJwtSub(req);
+    const token = rawAccessToken(req);
+    const userId = await authenticateChat(req, token);
+    if (DPOP_ENFORCED) {
+      const jkt = await rest(req, "rpc/hercules_get_dpop_key", {
+        method: "POST",
+        body: JSON.stringify({ p_user_id: userId }),
+      }, true);
+      if (typeof jkt !== "string" || !jkt) throw new Error("DPOP_KEY_NOT_ENROLLED");
+      await verifyDpopRequest(req, token, jkt, async (replayKey, ttlSeconds) => {
+        const claimed = await rest(req, "rpc/hercules_claim_dpop_replay", {
+          method: "POST",
+          body: JSON.stringify({ p_replay_key: replayKey, p_ttl_seconds: ttlSeconds }),
+        }, true);
+        return claimed === true;
+      });
+    }
     const body = await req.json();
     const action = body?.action;
 
@@ -565,11 +600,14 @@ Deno.serve(async (req: Request) => {
       const conversation = recent.map((m) => {
         const role = String(m.role ?? "user");
         return `${role.toUpperCase()}: ${contentText(m.content).slice(0, 3000)}`;
-      }).join("\n\n").slice(-12000);
+      }).join("
+
+").slice(-12000);
 
       const memoryText = memories.map((m, i) =>
         `Memory ${i + 1}: ${String(m.content ?? "").slice(0, 1500)}`
-      ).join("\n").slice(0, 6000);
+      ).join("
+").slice(0, 6000);
 
       const system = [
         "You are Hercules, the SauceApproved AI execution assistant.",
@@ -580,10 +618,40 @@ Deno.serve(async (req: Request) => {
       ].join(" ");
 
       const routedPrompt = [
-        memoryText ? `Relevant stored memory:\n${memoryText}` : "",
-        conversation ? `Conversation:\n${conversation}` : "",
-        `Current request:\n${prompt}`
-      ].filter(Boolean).join("\n\n").slice(0, 16000);
+        memoryText ? `Relevant stored memory:
+${memoryText}` : "",
+        conversation ? `Conversation:
+${conversation}` : "",
+        `Current request:
+${prompt}`
+      ].filter(Boolean).join("
+
+").slice(0, 16000);
+
+      if (Deno.env.get("HERCULES_TOKEN_BUCKET_ENFORCED") === "true") {
+        const capacity = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_CAPACITY"), 120_000, 1, 10_000_000);
+        const refillPerMinute = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_TPM"), 120_000, 1, 10_000_000);
+        const burst = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_BURST"), capacity, 1, capacity);
+        const refillPerMs = refillPerMinute / 60_000;
+        const estimatedInputTokens = Math.max(1, Math.ceil(new TextEncoder().encode(system + routedPrompt).length / 4));
+        const reservedOutputTokens = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_MAX_OUTPUT"), 4_096, 1, 128_000);
+        const tokenReservation = estimatedInputTokens + reservedOutputTokens;
+        if (tokenReservation > burst) throw new Error("TOKEN_BUDGET_EXCEEDED");
+
+        const decision = await reserveWeightedTokens(
+          `hercules:ai:tpm:${userId}`,
+          burst,
+          refillPerMs,
+          tokenReservation,
+          boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_TTL_MS"), 120_000, 1_000, 86_400_000),
+        );
+
+        if (!decision.allowed) {
+          const error = new Error("TOKEN_BUDGET_EXCEEDED");
+          (error as Error & { retryAfterMs?: number }).retryAfterMs = decision.retryAfterMs;
+          throw error;
+        }
+      }
 
       const ai = await routeAi(req, system, routedPrompt);
 
@@ -615,12 +683,15 @@ Deno.serve(async (req: Request) => {
       const assistantMessage = assistantRows?.[0];
       if (!assistantMessage?.id) throw new Error("ASSISTANT_MESSAGE_INSERT_FAILED");
 
+      const estimatedOutputTokens = Math.max(1, Math.ceil(new TextEncoder().encode(ai.text).length / 4));
       await finalize(
         req,
         requestId,
         "completed",
         Number(assistantMessage.id),
         null,
+        ai.usage?.inputTokens || estimatedInputTokens,
+        ai.usage?.outputTokens || estimatedOutputTokens,
       );
       reservedRequestId = null;
 
@@ -644,7 +715,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const status =
-      message === "UNAUTHORIZED" ? 401 :
+      message === "UNAUTHORIZED" || message.startsWith("DPOP_") ? 401 :
       message.startsWith("RATE_LIMIT_") || message === "MONTHLY_AI_BUDGET_EXCEEDED" ? 429 :
       message === "NOT_FOUND" ? 404 :
       message === "AI_ROUTER_NOT_CONFIGURED" || message === "AI_PROVIDER_CHAIN_FAILED" ? 503 :

@@ -10,10 +10,17 @@ const sql=await readFile(
   new URL("../supabase/migrations/20260927061500_hercules_shopify_domain_monitor_v1.sql",import.meta.url),
   "utf8"
 );
+const liveDomainPatch=await readFile(
+  new URL("../supabase/migrations/20260930172000_hercules_shopify_live_store_domain_v1.sql",import.meta.url),
+  "utf8"
+);
 
-test("provider monitor is locked to the verified production shop",()=>{
+test("provider monitor is locked to immutable Shop GID while allowing verified store aliases",()=>{
   assert.match(edge,/gid:\/\/shopify\/Shop\/100002726208/);
+  assert.match(edge,/sauceapproved-2\.myshopify\.com/);
   assert.match(edge,/azymhc-x0\.myshopify\.com/);
+  assert.match(edge,/SHOP_ALIASES|shopDomainAllowed/);
+  assert.ok(liveDomainPatch.includes("account_key='sauceapproved-2.myshopify.com'"));
   assert.match(edge,/shopify_production_shop_mismatch/);
 });
 

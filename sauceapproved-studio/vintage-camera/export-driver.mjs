@@ -1,0 +1,2 @@
+import {createExportClock} from './export-clock.mjs';
+export function createExportDriver({fps=30,render}={}){if(typeof render!=='function')throw new TypeError('render must be a function');const clock=createExportClock({fps});let renderedFrames=0;return{get fps(){return clock.fps;},get frameDurationMs(){return clock.frameDurationMs;},get renderedFrames(){return renderedFrames;},advance(elapsedMs){const due=clock.framesDue(elapsedMs);while(renderedFrames<due){render();renderedFrames++;}return renderedFrames;}};}

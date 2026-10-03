@@ -1,0 +1,6 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {passiveRadiatorRisk,limiterCeiling,assessLowFrequencyProtection} from '../hardware/soundworld/low-frequency-protection-v1.mjs';
+test('PR fails when predicted excursion exceeds Xmax',()=>{assert.equal(passiveRadiatorRisk({predictedMm:13,xmaxMm:12}).pass,false);});
+test('limiter ceiling tightens below tuning',()=>{const low=limiterCeiling({frequencyHz:35,tuningHz:53,baseVrms:10});const high=limiterCeiling({frequencyHz:80,tuningHz:53,baseVrms:10});assert.ok(low<high);});
+test('protection rejects unsafe driver or radiator state',()=>{const r=assessLowFrequencyProtection({driverPredictedMm:7,driverXmaxMm:8,prPredictedMm:13,prXmaxMm:12,frequencyHz:45,tuningHz:53,baseVrms:10});assert.equal(r.pass,false);assert.equal(r.executionReady,false);});
+test('safe state remains evidence gated',()=>{const r=assessLowFrequencyProtection({driverPredictedMm:5,driverXmaxMm:8,prPredictedMm:8,prXmaxMm:12,frequencyHz:60,tuningHz:53,baseVrms:10});assert.equal(r.pass,true);assert.equal(r.claimReady,false);});

@@ -76,6 +76,15 @@ export async function verifyForgePublicDeployment({
   if (readiness.publicOrigin !== normalizedOrigin) throw new Error("Forge readiness public origin mismatch");
   if (readiness.auditVerified !== true) throw new Error("Forge audit chain is not verified");
   if (!readiness.storage?.writable) throw new Error("Forge storage is not writable");
+  if (health.promptIngress !== true) throw new Error("Forge prompt ingress is not enabled");
+  if (health.durableState !== true) throw new Error("Forge durable state is not enabled");
+  if (
+    readiness.durableState?.ok !== true ||
+    readiness.durableState?.schema !== "sauceapproved.hercules.forge.durable-state.v1" ||
+    readiness.durableState?.carriesCredentials !== false
+  ) {
+    throw new Error("Forge durable state is not verified");
+  }
 
   return {
     schema: "sauceapproved.hercules.forge.public-deployment-evidence",
@@ -88,6 +97,9 @@ export async function verifyForgePublicDeployment({
     ready: true,
     auditVerified: true,
     storageWritable: true,
+    promptIngressVerified: true,
+    durableStateVerified: true,
+    durableStateSchema: readiness.durableState.schema,
     storageFreeBytes: readiness.storage.freeBytes,
     storageMinFreeBytes: readiness.storage.minFreeBytes,
   };
