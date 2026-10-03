@@ -34,3 +34,6 @@ jobs:
 
       - name: Run Abyss policy security tests
         run: node --test tests/evil-bot-abyss-policy.test.mjs
+
+      - name: Run Abyss orchestration security tests
+        run: node --test tests/evil-bot-abyss-orchestrator.test.mjs
