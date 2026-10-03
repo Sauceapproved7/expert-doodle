@@ -1,4 +1,15 @@
-import {createHash} from 'node:crypto';
+import {createHash, createHmac, timingSafeEqual} from 'node:crypto';
+
+export function verifyShopifyWebhookHmac(rawBody, hmacHeader, appClientSecret) {
+  if (!(rawBody instanceof Uint8Array) || !hmacHeader?.trim() || !appClientSecret) return false;
+  try {
+    const text = hmacHeader.trim();
+    const received = Buffer.from(text, 'base64');
+    if (received.length !== 32 || received.toString('base64') !== text) return false;
+    const expected = createHmac('sha256', appClientSecret).update(rawBody).digest();
+    return timingSafeEqual(received, expected);
+  } catch { return false; }
+}
 
 export function stableStringify(value) {
   if (value === null || typeof value !== 'object') return JSON.stringify(value);
