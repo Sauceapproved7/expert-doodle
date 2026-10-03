@@ -1,5 +1,5 @@
 const sensitiveKey=/(token|password|secret|api.?key|authorization|credential|service.?role|private.?key)/i;
-const credentialValue=/(\\bbearer\\s+\\S+|\\bgh[pousr]_[A-Za-z0-9_]{20,}|\\bgithub_pat_[A-Za-z0-9_]{20,}|\\bsk-[A-Za-z0-9_-]{20,}|\\bAKIA[0-9A-Z]{16}\\b|-----BEGIN [A-Z ]*PRIVATE KEY-----)/i;
+const credentialValue=/(\bbearer\s+\S+|\bgh[pousr]_[A-Za-z0-9_]{20,}|\bgithub_pat_[A-Za-z0-9_]{20,}|\bsk-[A-Za-z0-9_-]{20,}|\bAKIA[0-9A-Z]{16}\b|-----BEGIN [A-Z ]*PRIVATE KEY-----)/i;
 function clean(value){
  const seen=new Set();
  function visit(v){
