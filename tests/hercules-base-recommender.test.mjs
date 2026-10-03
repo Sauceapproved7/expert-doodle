@@ -5,6 +5,11 @@ import {
   normalizeRecommendationRequest,
   recommendResources,
 } from "../hercules-base/recommender.mjs";
+import {routeBaseRequest} from "../hercules-base/router.mjs";
+
+function controlCredential(){
+  return "fixture-recommender-control-token";
+}
 
 test("recommendation engine ranks relevant resources deterministically with explanations", () => {
   const request=normalizeRecommendationRequest({
@@ -140,4 +145,56 @@ test("recommendation results do not echo arbitrary source metadata or credential
     Object.keys(result[0]).sort(),
     ["id","kind","reason","score","title"].sort(),
   );
+});
+
+test("control API protects recommendation execution and returns only bounded recommendation output", async () => {
+  const body={
+    request:{
+      query:"secure webhook",
+      signals:["shopify","security"],
+      allowedScopes:["owner"],
+      limit:2,
+    },
+    resources:[
+      {
+        id:"webhook",
+        title:"Webhook verifier",
+        kind:"security-control",
+        scope:"owner",
+        tags:["shopify","security"],
+        capabilities:["api"],
+        trust:"owned",
+        token:"never-return-this",
+      },
+    ],
+  };
+
+  const unauthorized=await routeBaseRequest(
+    new Request("https://base.local/v1/recommendations",{
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      body:JSON.stringify(body),
+    }),
+    {controlToken:controlCredential()},
+  );
+  assert.equal(unauthorized.status,401);
+
+  const authorized=await routeBaseRequest(
+    new Request("https://base.local/v1/recommendations",{
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        authorization:"Bearer "+controlCredential(),
+      },
+      body:JSON.stringify(body),
+    }),
+    {controlToken:controlCredential()},
+  );
+
+  assert.equal(authorized.status,200);
+  const text=await authorized.text();
+  assert.equal(text.includes("never-return-this"),false);
+  const parsed=JSON.parse(text);
+  assert.equal(parsed.ok,true);
+  assert.deepEqual(parsed.recommendations.map((item)=>item.id),["webhook"]);
 });
