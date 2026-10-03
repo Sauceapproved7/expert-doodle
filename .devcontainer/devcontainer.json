@@ -1,0 +1,20 @@
+{
+  "name": "Hercules Node.js development",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:5.2.1-22-bookworm@sha256:ec12180252047b3400ffffe008789cb8462bfff6f0703e285c2fb9986d47dae7",
+  "remoteUser": "node",
+  "updateRemoteUserUID": true,
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "redhat.vscode-yaml",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "redhat.vscode-openshift-connector",
+        "redhat.ansible",
+        "Tim-Koehler.helm-intellisense",
+        "42Crunch.vscode-openapi",
+        "humao.rest-client",
+        "timonwong.shellcheck"
+      ]
+    }
+  }
+}
