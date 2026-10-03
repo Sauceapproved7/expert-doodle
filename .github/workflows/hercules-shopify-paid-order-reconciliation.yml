@@ -12,6 +12,7 @@ on:
       - "supabase/functions/_shared/shopify-bulk-jsonl.mjs"
       - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/shopify-bulk-jsonl.test.mjs"
+      - "tests/hercules-shopify-bulk-reconciliation-contract.test.mjs"
       - "tests/shopify-bulk-reconciliation-contract.test.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
       - "hercules-runtime/shopify-paid-order-runner-policy.json"
