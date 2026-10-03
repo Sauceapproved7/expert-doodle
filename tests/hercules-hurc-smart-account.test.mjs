@@ -73,6 +73,15 @@ test("rejects secret-bearing deployment input", () => {
     }),
     /secret/i,
   );
+  assert.throws(
+    () => buildSmartAccountPlan({
+      network: "ethereum-sepolia",
+      ownerAddress: OWNER,
+      salt: 0n,
+      unexpected: "not allowed",
+    }),
+    /unsupported smart-account input field/i,
+  );
 });
 
 test("factory createAccount calldata is ABI-shaped and secret-free", () => {
@@ -97,4 +106,6 @@ test("Solidity source has no third-party imports or dangerous execution primitiv
   assert.match(source, /validateUserOp/);
   assert.match(source, /HerculesSmartAccountFactory/);
   assert.match(source, /SECP256K1_HALF_N/);
+  assert.match(source, /senderCreator\(\)/);
+  assert.match(source, /msg\.sender\s*!=\s*IHerculesEntryPoint\(entryPoint\)\.senderCreator\(\)/);
 });
