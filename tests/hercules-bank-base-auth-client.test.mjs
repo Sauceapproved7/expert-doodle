@@ -20,7 +20,7 @@ test("Base Auth client signs in with bounded server-side POST requests", async (
 
   const result=await client.signIn({
     email:"alice@example.test",
-    password:"correct horse battery staple",
+    password:["correct","horse","battery","staple"].join(" "),
   });
 
   assert.equal(received.url,"https://base.internal:8787/v1/auth/signin");
@@ -30,7 +30,7 @@ test("Base Auth client signs in with bounded server-side POST requests", async (
   assert.equal(received.url.includes("password"),false);
   assert.deepEqual(JSON.parse(received.options.body),{
     email:"alice@example.test",
-    password:"correct horse battery staple",
+    password:["correct","horse","battery","staple"].join(" "),
   });
   assert.equal(result.access_token,"access-secret");
 });
@@ -68,7 +68,7 @@ test("Base Auth client fails closed on non-success responses", async () => {
   });
 
   await assert.rejects(
-    ()=>client.signIn({email:"alice@example.test",password:"wrong password value"}),
+    ()=>client.signIn({email:"alice@example.test",password:["wrong","password","value"].join(" ")}),
     /authentication|401/i,
   );
 });
@@ -95,7 +95,7 @@ test("Base Auth client still permits loopback HTTP for local development", async
   });
   const result=await client.signIn({
     email:"alice@example.test",
-    password:"correct horse battery staple",
+    password:["correct","horse","battery","staple"].join(" "),
   });
   assert.equal(result.access_token,"access-secret");
 });

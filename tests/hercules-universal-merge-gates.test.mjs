@@ -19,3 +19,5 @@ for (const path of workflows) {
     assert.doesNotMatch(source, /^\s+paths:\s*$/m);
   });
 }
+
+await import("./hercules-integrations-shopify-embed.test.mjs");

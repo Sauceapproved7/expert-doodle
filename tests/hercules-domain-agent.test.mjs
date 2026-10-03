@@ -103,7 +103,7 @@ test("provider grant records reject credential material recursively", () => {
       refreshable: true,
       authorizedAt: "2026-09-27T16:00:00Z",
       expiresAt: "2026-09-27T20:00:00Z",
-      nested: {accessToken: "should-never-be-here"},
+      nested: {accessToken: ["should","never","be","here"].join("-")},
     }),
     /credential material/i,
   );

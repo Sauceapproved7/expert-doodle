@@ -28,14 +28,30 @@ export function studioAccessPage(ctx:{U:string;K:string}){
   const cfg=JSON.stringify({url:ctx.U,key:ctx.K,studioUrl:STUDIO_URL}).replace(/</g,'\\u003c');
   const html=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>SauceApproved Studio Access</title>
-<style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#090909;color:#f5f5f5;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:620px;margin:auto;padding:38px 18px}.brand{font-weight:900;letter-spacing:.1em}.card{margin-top:18px;border:1px solid #333;border-radius:18px;background:#151515;padding:24px}h1{font-size:28px;margin:.2em 0}.muted{color:#bbb}input,button,a.cta{width:100%;padding:14px;border-radius:11px;font:inherit}input{border:1px solid #444;background:#0d0d0d;color:#fff;margin:12px 0}button,a.cta{border:0;background:#fff;color:#111;font-weight:800;text-align:center;text-decoration:none;display:block}.ok{color:#bdf7ca}.err{color:#ffd0d0}.hidden{display:none}</style></head>
-<body><main class="wrap"><div class="brand">SAUCEAPPROVED STUDIO</div><section class="card">
-<h1>Activate your Founding Pilot</h1>
-<p class="muted">Use the same email address used for your Shopify purchase. Hercules stores only an email hash in the entitlement ledger.</p>
-<form id="request"><input id="email" type="email" autocomplete="email" required placeholder="Checkout email"><button type="submit">Send secure access link</button></form>
-<p id="state" class="muted">A paid Studio purchase is required.</p>
-<a id="open" class="cta hidden" href="#">Open SauceApproved Studio</a>
-</section></main>
+<style>
+:root{color-scheme:dark;--ink:#f7f4ee;--muted:#a6a29a;--line:#2d2b28;--gold:#e7b85b;--ember:#d8663b;--panel:#11110f}
+*{box-sizing:border-box}html{background:#050505}body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:radial-gradient(circle at 78% -10%,#43210f 0,transparent 34%),radial-gradient(circle at 10% 20%,#24200f 0,transparent 30%),linear-gradient(145deg,#050505,#0b0a08 56%,#050505);overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:linear-gradient(#fff 1px,transparent 1px),linear-gradient(90deg,#fff 1px,transparent 1px);background-size:64px 64px;mask-image:linear-gradient(to bottom,#000,transparent 75%)}
+.wrap{width:min(1120px,100%);margin:auto;padding:clamp(24px,5vw,64px) clamp(18px,4vw,42px);position:relative}
+.top{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:clamp(42px,7vw,86px)}
+.brand{font-weight:950;letter-spacing:.14em;font-size:13px}.brand b{color:var(--gold)}.statuschip{display:flex;align-items:center;gap:8px;border:1px solid #34312c;background:#0c0c0bcf;border-radius:999px;padding:8px 12px;color:#c7c1b6;font-size:11px;font-weight:800;letter-spacing:.08em}.statuschip i{width:7px;height:7px;border-radius:50%;background:#80d69a;box-shadow:0 0 16px #80d69a}
+.shell{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(340px,.85fr);gap:clamp(24px,5vw,70px);align-items:center}
+.eyebrow{color:var(--gold);font-size:11px;font-weight:900;letter-spacing:.2em;text-transform:uppercase;margin-bottom:16px}.hero h1{font-size:clamp(52px,8vw,92px);line-height:.9;letter-spacing:-.06em;margin:0;max-width:700px}.hero h1 em{display:block;font-style:normal;color:transparent;-webkit-text-stroke:1px #b9b2a6}.lead{max-width:650px;color:#b9b4aa;font-size:clamp(17px,2vw,21px);line-height:1.65;margin:28px 0 0}.rail{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}.rail span{border:1px solid #2c2a26;border-radius:999px;padding:8px 11px;color:#918c83;font-size:11px;font-weight:800;letter-spacing:.04em}
+.card{position:relative;border:1px solid #38342e;border-radius:30px;background:linear-gradient(160deg,#171612ed,#0b0b0aed);padding:clamp(24px,4vw,38px);box-shadow:0 36px 100px #000b,inset 0 1px #ffffff0d;overflow:hidden}.card:before{content:"";position:absolute;width:180px;height:180px;border-radius:50%;right:-80px;top:-90px;background:#d96a3030;filter:blur(12px)}.cardnum{font-size:11px;letter-spacing:.18em;color:#777168;font-weight:900}.card h2{font-size:clamp(27px,4vw,38px);line-height:1.05;letter-spacing:-.035em;margin:34px 0 12px}.muted{color:var(--muted)}
+form{margin-top:24px}label{display:block;color:#d4cfc5;font-size:12px;font-weight:850;letter-spacing:.06em;margin-bottom:8px}input,button,a.cta{width:100%;padding:15px 16px;border-radius:13px;font:inherit}input{border:1px solid #3a3731;background:#080807;color:#fff;outline:0;margin:0 0 11px;box-shadow:inset 0 1px 8px #0008}input:focus{border-color:#b68b43;box-shadow:0 0 0 3px #e7b85b16}button,a.cta{border:1px solid #f2c56e;background:linear-gradient(135deg,#f2c56e,#d9773e);color:#171009;font-weight:950;text-align:center;text-decoration:none;display:block;cursor:pointer;box-shadow:0 12px 32px #d8663b20}button:hover,a.cta:hover{filter:brightness(1.06);transform:translateY(-1px)}
+.statebox{margin:16px 0 0;border-top:1px solid #2a2824;padding-top:16px;font-size:13px}.ok{color:#a7efbb}.err{color:#ffb9b0}.hidden{display:none}.foot{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-top:clamp(48px,8vw,90px);padding-top:18px;border-top:1px solid #211f1c;color:#6f6b64;font-size:11px;letter-spacing:.05em}
+@media(max-width:820px){.top{margin-bottom:44px}.shell{grid-template-columns:1fr}.hero h1{font-size:clamp(50px,16vw,76px)}.card{border-radius:24px}.lead{font-size:17px}.statuschip{display:none}}
+@media(prefers-reduced-motion:no-preference){.card{animation:rise .65s ease-out both}.hero{animation:rise .55s ease-out both}@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}}
+</style></head>
+<body><main class="wrap">
+<header class="top"><div class="brand">SAUCEAPPROVED <b>/ HERCULES</b></div><div class="statuschip"><i></i> SECURE STUDIO GATE</div></header>
+<div class="shell">
+<section class="hero"><div class="eyebrow">Private production system</div><h1>Build different.<em>Move different.</em></h1><p class="lead">Your SauceApproved Studio workspace is protected behind verified Founding Pilot entitlement. One secure gate into the Hercules production floor.</p><div class="rail"><span>ISOLATED WORKSPACE</span><span>ENTITLEMENT VERIFIED</span><span>HERCULES OWNED</span></div></section>
+<section class="card"><div class="cardnum">ACCESS / 01</div><h2>Activate your Founding Pilot</h2><p class="muted">Use the same email address used for your Shopify purchase. Hercules stores only an email hash in the entitlement ledger.</p>
+<form id="request"><label for="email">CHECKOUT EMAIL</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com"><button type="submit">Send secure access link →</button></form>
+<p id="state" class="muted statebox">A paid Studio purchase is required.</p>
+<a id="open" class="cta hidden" href="#">Open SauceApproved Studio →</a></section>
+</div><footer class="foot"><span>SAUCEAPPROVED STUDIO</span><span>SECURE ACCESS • FAIL-CLOSED • PRIVATE BY DEFAULT</span></footer></main>
 <script type="module">
 import{createClient}from"https://esm.sh/@supabase/supabase-js@2";
 const cfg=${cfg},sb=createClient(cfg.url,cfg.key,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}),state=document.getElementById("state"),form=document.getElementById("request"),open=document.getElementById("open");

@@ -521,3 +521,59 @@ test("Studio public surfaces advertise Studio Director",async()=>{
   assert.equal(onboarding.status,200);
   assert.ok(JSON.parse(onboarding.body).publicRoutes.includes("/studio-director"));
 });
+
+test("Studio exposes complete Hercules system registry and fail-closed status",async()=>{
+  const handle=createStudioHttpHandler();
+  const manifestResponse=await handle({method:"GET",pathname:"/api/studio/systems/manifest"});
+  assert.equal(manifestResponse.status,200);
+  const manifest=JSON.parse(manifestResponse.body);
+  assert.equal(manifest.implementationOwner,"SauceApproved enterprise LLC");
+  assert.ok(manifest.systems.some(system=>system.id==="studio-global-closure"));
+  assert.ok(manifest.systems.some(system=>system.id==="studio-memory-grid"));
+  const statusResponse=await handle({method:"GET",pathname:"/api/studio/systems/status"});
+  assert.equal(statusResponse.status,200);
+  const status=JSON.parse(statusResponse.body);
+  assert.equal(status.ready,false);
+  assert.equal(status.failClosed,true);
+  assert.ok(status.blockedSystemIds.includes("hardware-engineering-program"));
+});
+
+
+test("Studio exposes Guardian Watchtower as read-only evidence only",async()=>{
+  const handle=createStudioHttpHandler({
+    guardianWatchtowerReader:async()=>({
+      status:"HEALTHY",
+      results:[{id:"studio",status:"HEALTHY",executionAuthority:false}],
+      executionAuthority:false
+    })
+  });
+  const response=await handle({method:"GET",pathname:"/api/studio/guardian/status"});
+  assert.equal(response.status,200);
+  const body=JSON.parse(response.body);
+  assert.equal(body.mode,"read-only");
+  assert.equal(body.executionAuthority,false);
+  assert.equal(body.watchtower.status,"HEALTHY");
+});
+
+test("Studio Guardian status fails closed when Watchtower evidence is unavailable",async()=>{
+  const handle=createStudioHttpHandler({
+    guardianWatchtowerReader:async()=>{throw new Error("watchtower unavailable")}
+  });
+  const response=await handle({method:"GET",pathname:"/api/studio/guardian/status"});
+  assert.equal(response.status,503);
+  const body=JSON.parse(response.body);
+  assert.equal(body.ok,false);
+  assert.equal(body.error,"guardian_watchtower_unavailable");
+  assert.equal(body.executionAuthority,false);
+});
+
+
+test("Studio default runtime Guardian reader emits real read-only Watchtower evidence",async()=>{
+  const {createStudioGuardianWatchtowerReader}=await import("../hercules-video/studio-guardian-watchtower.mjs");
+  const reader=createStudioGuardianWatchtowerReader();
+  const result=await reader();
+  assert.equal(result.executionAuthority,false);
+  assert.equal(result.results[0].id,"studio");
+  assert.equal(result.results[0].status,"HEALTHY");
+  assert.match(result.results[0].guardian.proof.id,/^guardian-proof-[a-f0-9]{24}$/);
+});

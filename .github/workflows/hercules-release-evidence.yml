@@ -1,7 +1,6 @@
 name: Hercules Release Evidence
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - "v*"

@@ -7,6 +7,7 @@ import {createContentMultiplierManifest} from "../sauceapproved-studio/content-m
 import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/core.mjs";
 import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core.mjs";
 import {createCampaignForgeManifest,renderCampaignForge} from "../sauceapproved-studio/campaign-forge/core.mjs";
+import {createPerformanceBrainManifest,renderPerformanceBrain,buildCampaignPerformanceInput,evaluateCampaignPerformance} from "../sauceapproved-studio/performance-brain/core.mjs";
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
 import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
@@ -20,9 +21,16 @@ import {createSceneForgeManifest,renderSceneForge} from "../sauceapproved-studio
 import {createSoundWorldManifest,renderSoundWorld} from "../sauceapproved-studio/sound-world/core.mjs";
 import {createActorLabManifest,renderActorLab} from "../sauceapproved-studio/actor-lab/core.mjs";
 import {createIntegrationsManifest,renderIntegrationsHub} from "../sauceapproved-studio/integrations/core.mjs";
+import {createCreationFloorManifest} from "../sauceapproved-studio/creation-floor/core.mjs";
+import {renderCreationFloor} from "../sauceapproved-studio/creation-floor/render.mjs";
 import {createStudioCompletionManifest} from "../sauceapproved-studio/completion/core.mjs";
+import {createStudioSystemRegistry,evaluateStudioSystemRegistry} from "../sauceapproved-studio/system-registry/core.mjs";
+import {createReleaseTruthEvidenceStore} from "../sauceapproved-studio/release-truth/evidence-store.mjs";
+import {createReleaseTruthEvidenceLedger} from "../sauceapproved-studio/release-truth/evidence-ledger.mjs";
 import {createStudioCommercialManifest,createStudioOnboardingManifest,createStudioDemoManifest,renderStudioPricingShell,renderStudioLegalShell,renderStudioGettingStartedShell,renderStudioSupportShell,renderStudioLandingShell,renderStudioDemoShell} from "./studio-commercial.mjs";
 import {createSoundWorldLaunchGiftManifest,reserveSoundWorldLaunchGift,renderSoundWorldLaunchGiftPage} from "./soundworld-launch-gift.mjs";
+import {createStudioGuardianWatchtowerReader} from "./studio-guardian-watchtower.mjs";
+import {createProductionGuardianRuntime} from "../hercules-guardian/production-watchtower-runtime.mjs";
 
 const JSON_HEADERS=Object.freeze({
   "content-type":"application/json; charset=utf-8",
@@ -401,9 +409,12 @@ export function createStudioHttpHandler({
     list:async()=>[],
     create:async()=>null
   }),
-  actions={}
+  actions={},
+  releaseTruthBacking=[],
+  guardianWatchtowerReader=async()=>null
 }={}) {
   const manifest=createStudioManifest();
+  const releaseTruthLedger=createReleaseTruthEvidenceLedger({backing:releaseTruthBacking});
 
   async function readContext() {
     const [runStatus,bridge]=await Promise.all([statusReader(),executionBridgeProvider()]);
@@ -424,6 +435,18 @@ export function createStudioHttpHandler({
         version:"1.0.0",
         executionPolicy:"fail-closed"
       });
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/guardian/status") {
+      try {
+        const watchtower=await guardianWatchtowerReader();
+        if (!watchtower || watchtower.executionAuthority!==false) {
+          return json({ok:false,error:"guardian_watchtower_unavailable",mode:"read-only",executionAuthority:false},503);
+        }
+        return json({ok:true,mode:"read-only",executionAuthority:false,watchtower});
+      } catch {
+        return json({ok:false,error:"guardian_watchtower_unavailable",mode:"read-only",executionAuthority:false},503);
+      }
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/manifest") {
@@ -456,6 +479,29 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/campaign-forge/manifest") {
       return json(createCampaignForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/performance-brain/manifest") {
+      return json(createPerformanceBrainManifest());
+    }
+
+    if (normalizedMethod==="POST" && normalizedPath==="/api/studio/performance-brain/evaluate") {
+      let payload={};
+      try{
+        payload=typeof request.body==="string" ? JSON.parse(request.body||"{}") : (request.body||{});
+      }catch{
+        return json({ok:false,error:"invalid_json_body"},400);
+      }
+      try{
+        const input=buildCampaignPerformanceInput(payload.pack,{objective:payload.objective,metrics:payload.metrics});
+        return json(evaluateCampaignPerformance(input));
+      }catch(error){
+        return json({ok:false,error:String(error?.message||"performance_brain_evaluation_failed")},400);
+      }
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/performance-brain") {
+      return {status:200,headers:HTML_HEADERS,body:renderPerformanceBrain()};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/campaign-forge") {
@@ -534,6 +580,14 @@ export function createStudioHttpHandler({
       return {status:200,headers:HTML_HEADERS,body:renderActorLab()};
     }
 
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/creation-floor/manifest") {
+      return json(createCreationFloorManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/creation-floor") {
+      return {status:200,headers:HTML_HEADERS,body:renderCreationFloor()};
+    }
+
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/integrations/manifest") {
       return json(createIntegrationsManifest());
     }
@@ -556,6 +610,24 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/completion/manifest") {
       return json(createStudioCompletionManifest({commercial:createStudioCommercialManifest()}));
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/systems/manifest") {
+      return json(createStudioSystemRegistry());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/systems/status") {
+      return json(evaluateStudioSystemRegistry(createStudioSystemRegistry(),{}));
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/release-truth/status") {
+      return json(createReleaseTruthEvidenceStore({initialEvidence:releaseTruthLedger.currentEvidence()}).status());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/release-truth") {
+      const truth=createReleaseTruthEvidenceStore({initialEvidence:releaseTruthLedger.currentEvidence()}).status();
+      const blocked=truth.blockedSystemIds.map(id=>`<li><code>${id}</code></li>`).join("");
+      return {status:200,headers:HTML_HEADERS,body:`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Release Truth Room · SauceApproved Studio</title></head><body><main><h1>Release Truth Room</h1><p><strong>Release blocked</strong> until every required Studio system has genuine, current, verified evidence.</p><p>Synthetic evidence is not allowed. Software presence alone is not physical proof.</p><p>Final authority: <strong>owner-controlled release</strong>.</p><h2>Blocked systems</h2><ul>${blocked}</ul></main></body></html>`};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/launch-gift/manifest") {
@@ -757,7 +829,8 @@ export async function startStudioServer({
   launchGiftClockProvider,
   verifyGiftPurchase,
   giftReservationStore,
-  actions
+  actions,
+  guardianWatchtowerReader=createStudioGuardianWatchtowerReader()
 }={}) {
   const statusReader=statePath
     ? async()=>inspectLaunchRunStateFile(statePath).catch(error=>{
@@ -773,7 +846,8 @@ export async function startStudioServer({
     launchGiftClockProvider,
     verifyGiftPurchase,
     giftReservationStore,
-    actions
+    actions,
+    guardianWatchtowerReader
   });
   const server=createServer(async(req,res)=>{
     try {
@@ -804,8 +878,17 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   const statePath=process.env.HERCULES_VIDEO_STATE_PATH || null;
   const publicPaidLaunchOpenedAt=process.env.HERCULES_PUBLIC_PAID_LAUNCH_OPENED_AT || null;
   const launchGiftClockProvider=async()=>publicPaidLaunchOpenedAt;
-  const {server}=await startStudioServer({host,port,statePath,launchGiftClockProvider});
-  const shutdown=()=>server.close(()=>process.exit(0));
+  const guardianRuntime=await createProductionGuardianRuntime();
+  await guardianRuntime.tick();
+  guardianRuntime.start();
+  const {server}=await startStudioServer({
+    host,port,statePath,launchGiftClockProvider,
+    guardianWatchtowerReader:guardianRuntime.readStatus
+  });
+  const shutdown=()=>{
+    guardianRuntime.stop();
+    server.close(()=>process.exit(0));
+  };
   process.once("SIGINT",shutdown);
   process.once("SIGTERM",shutdown);
 }

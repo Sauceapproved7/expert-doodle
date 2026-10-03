@@ -1,2 +1,7 @@
 # Canonical Hercules repository owner review
 * @Sauceapproved7
+.github/workflows/ @Sauceapproved7
+.github/workflows/hercules-fork-pr-security.yml @Sauceapproved7
+.github/workflows/hercules-*-release-*.yml @Sauceapproved7
+tests/hercules-fork-pr-security.test.mjs @Sauceapproved7
+governance/ @Sauceapproved7
