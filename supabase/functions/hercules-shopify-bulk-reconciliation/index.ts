@@ -35,7 +35,12 @@ async function connection(organizationId?: string) {
   if (organizationId) q = q.eq('organization_id', organizationId);
   const { data, error } = await q.limit(2);
   if (error) throw new Error('shopify_connection_lookup_failed');
-  if (!data?.length || data.length > 1) throw new Error('shopify_connection_ambiguous_or_missing');
+  if (!data?.length) throw new Error('shopify_connection_missing');
+  if (organizationId && data.length !== 1) throw new Error('shopify_connection_ambiguous_or_missing');
+  if (!organizationId) {
+    const identities = new Set(data.map((item: any) => String(item.client_id) + ':' + String(item.signing_secret_ref)));
+    if (identities.size !== 1) throw new Error('shopify_signing_identity_ambiguous');
+  }
   return data[0];
 }
 
@@ -88,13 +93,14 @@ async function hashText(value: string) {
   return Array.from(new Uint8Array(bytes)).map(x => x.toString(16).padStart(2, '0')).join('');
 }
 
-async function startRun(tenantId: string, mode: string) {
+async function startRun(tenantId: string) {
   const started = new Date();
   const { data: watermark } = await DB.from('hercules_shopify_bulk_reconciliation_watermarks')
     .select('last_successful_updated_at').eq('tenant_id', tenantId).eq('resource_type', 'orders').maybeSingle();
   const floor = new Date(started.getTime() - 60 * 24 * 60 * 60 * 1000);
   const previous = watermark?.last_successful_updated_at ? new Date(watermark.last_successful_updated_at) : floor;
   const cursorStart = new Date(Math.max(floor.getTime(), previous.getTime() - 30 * 60 * 1000));
+  const mode = watermark?.last_successful_updated_at ? 'incremental' : 'backfill';
   const queryFilter = 'updated_at:>=' + cursorStart.toISOString();
   const queryText = '{ orders(query: "' + queryFilter + '") { edges { node { id updatedAt displayFinancialStatus displayFulfillmentStatus cancelledAt test } } } }';
   const runId = crypto.randomUUID();
@@ -245,10 +251,40 @@ async function handleCompletion(req: Request, raw: Uint8Array) {
   return json({ received: true, queued: true });
 }
 
+async function readBoundedBody(req: Request, limit: number) {
+  if (!req.body) return new Uint8Array();
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > limit) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const body = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return body;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
-  const raw = new Uint8Array(await req.arrayBuffer());
-  if (req.headers.has('x-shopify-hmac-sha256')) {
+  const isWebhook = req.headers.has('x-shopify-hmac-sha256');
+  const raw = await readBoundedBody(req, isWebhook ? 1024 * 1024 : 16 * 1024);
+  if (!raw) return json({ error: 'request_body_too_large' }, 413);
+  if (isWebhook) {
     try { return await handleCompletion(req, raw); }
     catch { return json({ error: 'webhook_processing_unavailable' }, 503); }
   }
@@ -260,8 +296,7 @@ Deno.serve(async (req: Request) => {
     if (body.action === 'start_orders') {
       const org = String(body.organization_id || '');
       if (!auth.organizations.has(org)) return json({ error: 'organization_forbidden' }, 403);
-      const mode = ['backfill','incremental','full'].includes(body.mode) ? body.mode : 'incremental';
-      return json({ ok: true, ...(await startRun(org, mode)) }, 202);
+      return json({ ok: true, ...(await startRun(org)) }, 202);
     }
     if (body.action === 'resume') {
       const { data: run } = await DB.from('hercules_shopify_bulk_reconciliation_runs')
