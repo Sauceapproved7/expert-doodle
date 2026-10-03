@@ -16,6 +16,7 @@ export function createOperatorSession({console}={}) {
       }
       return {mode:"planned",command:plan.command};
     },
+    pending() { return pending ? {command: pending.plan.command, input: pending.input} : null; },
     async approve() {
       if(stopped) return {status:"stopped",reason:"emergency-stop-active"};
       if(!pending) return {status:"no-pending-command"};
