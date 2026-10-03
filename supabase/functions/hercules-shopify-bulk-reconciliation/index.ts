@@ -95,8 +95,9 @@ async function hashText(value: string) {
 
 async function startRun(tenantId: string) {
   const started = new Date();
-  const { data: watermark } = await DB.from('hercules_shopify_bulk_reconciliation_watermarks')
+  const { data: watermark, error: watermarkError } = await DB.from('hercules_shopify_bulk_reconciliation_watermarks')
     .select('last_successful_updated_at').eq('tenant_id', tenantId).eq('resource_type', 'orders').maybeSingle();
+  if (watermarkError) throw new Error('bulk_watermark_lookup_failed');
   const floor = new Date(started.getTime() - 60 * 24 * 60 * 60 * 1000);
   const previous = watermark?.last_successful_updated_at ? new Date(watermark.last_successful_updated_at) : floor;
   const cursorStart = new Date(Math.max(floor.getTime(), previous.getTime() - 30 * 60 * 1000));
