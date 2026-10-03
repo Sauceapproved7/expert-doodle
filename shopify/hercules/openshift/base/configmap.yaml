@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hercules-shopify-config
+data:
+  SHOPIFY_API_VERSION: "2026-10"
+  COMMERCE_ENABLED: "false"

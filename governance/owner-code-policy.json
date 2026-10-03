@@ -157,7 +157,8 @@
   "allowedContainerImages": [
     "postgres:16.4-alpine",
     "postgrest/postgrest:v12.2.3",
-    "node:22.12.0-alpine"
+    "node:22.12.0-alpine",
+    "image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest"
   ],
   "childProcessBoundaries": [
     {
