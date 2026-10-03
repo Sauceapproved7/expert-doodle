@@ -37,3 +37,6 @@ jobs:
 
       - name: Run Abyss orchestration security tests
         run: node --test tests/evil-bot-abyss-orchestrator.test.mjs
+
+      - name: Run bounded Hercules adapter security tests
+        run: node --test tests/evil-bot-hercules-adapters.test.mjs
