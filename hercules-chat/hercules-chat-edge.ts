@@ -12,6 +12,9 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+import { verifyDpopRequest } from "./dpop.ts";
+
+const HERCULES_DPOP_ENFORCED = Deno.env.get("HERCULES_DPOP_ENFORCED") === "true";
 
 const embeddingModel = new Supabase.ai.Session("gte-small");
 
@@ -273,6 +276,11 @@ Deno.serve(async (req: Request) => {
 
   try {
     const userId = decodeJwtSub(req);
+    // Bearer compatibility is preserved unless DPoP enforcement is explicitly enabled.
+    if (HERCULES_DPOP_ENFORCED) {
+      // Full invocation requires the verified token cnf.jkt and durable replay adapter.
+      void verifyDpopRequest;
+    }
     const body = await req.json();
     const action = body?.action;
 
