@@ -1,4 +1,10 @@
 
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
+import { verifyDpopRequest } from "./dpop.ts";
+import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
+
+const HERCULES_DPOP_ENFORCED = Deno.env.get("HERCULES_DPOP_ENFORCED") === "true";
+
 declare const Supabase: {
   ai: {
     Session: new (model: string) => {
@@ -11,13 +17,11 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
-
 const embeddingModel = new Supabase.ai.Session("gte-small");
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Headers": "authorization, dpop, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -45,6 +49,53 @@ async function monitorAuthorized(req: Request): Promise<boolean> {
   ) as Array<{ enabled?: boolean; key_sha256?: string }>;
   const expected = rows?.[0]?.key_sha256 ?? "";
   return Boolean(rows?.[0]?.enabled && expected && expected === await sha256Hex(key));
+}
+
+function accessToken(req: Request): string {
+  const auth = req.headers.get("Authorization") ?? "";
+  if (!auth.startsWith("Bearer ") && !auth.startsWith("DPoP ")) throw new Error("UNAUTHORIZED");
+  const token = auth.slice(auth.indexOf(" ") + 1).trim();
+  if (!token) throw new Error("UNAUTHORIZED");
+  return token;
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  const parts = token.split(".");
+  if (parts.length !== 3) throw new Error("UNAUTHORIZED");
+  let raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+  raw += "=".repeat((4 - (raw.length % 4)) % 4);
+  const payload = JSON.parse(atob(raw));
+  if (!payload || typeof payload !== "object") throw new Error("UNAUTHORIZED");
+  return payload as Record<string, unknown>;
+}
+
+async function authenticateChat(req: Request): Promise<string> {
+  const token = accessToken(req);
+  const auth = createClient(SUPABASE_URL, ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: "Bearer " + token } },
+  });
+  const { data, error } = await auth.auth.getUser(token);
+  if (error || !data.user?.id) throw new Error("UNAUTHORIZED");
+
+  if (HERCULES_DPOP_ENFORCED) {
+    const payload = decodeJwtPayload(token);
+    const cnf = payload.cnf;
+    const expectedJkt = cnf && typeof cnf === "object" && typeof (cnf as Record<string, unknown>).jkt === "string"
+      ? String((cnf as Record<string, unknown>).jkt)
+      : "";
+    if (!expectedJkt) throw new Error("DPOP_TOKEN_BINDING_REQUIRED");
+    await verifyDpopRequest(req, token, expectedJkt, async (key, ttl) => {
+      try {
+        const decision = await reserveWeightedTokens(key, 1, 0, 1, ttl * 1000);
+        return decision.allowed;
+      } catch {
+        throw new Error("DPOP_REPLAY_STORE_UNAVAILABLE");
+      }
+    });
+  }
+
+  return data.user.id;
 }
 
 function decodeJwtSub(req: Request): string {
@@ -272,7 +323,7 @@ Deno.serve(async (req: Request) => {
   let reservedRequestId: string | null = null;
 
   try {
-    const userId = decodeJwtSub(req);
+    const userId = await authenticateChat(req);
     const body = await req.json();
     const action = body?.action;
 
