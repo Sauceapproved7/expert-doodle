@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { verifyShopifyWebhook, parseShopifyHeaders } from "../shopify/hercules/backend/webhook-security.mjs";
 import { buildAdminGraphqlEndpoint } from "../shopify/hercules/backend/admin-graphql.mjs";
 import { reconciliationWindow, advanceWatermark } from "../shopify/hercules/backend/reconciliation.mjs";
+import { acceptWebhook } from "../shopify/hercules/backend/webhook-ingress.mjs";
 
 test("raw Shopify webhook HMAC verifies before parsing", async () => {
   const raw = Buffer.from(JSON.stringify({ id: 123, note: "raw-bytes" }), "utf8");
@@ -58,4 +59,27 @@ test("OpenShift base separates API, worker, and reconciler and keeps secrets out
   assert.match(joined, /secretKeyRef:/);
   assert.doesNotMatch(joined, /SHOPIFY_CLIENT_SECRET:\s*["\']?[^\n$]/);
   assert.doesNotMatch(joined, /COMMERCE_ENABLED\s*[:=]\s*["\']?true/i);
+});
+
+test("webhook ingress persists before enqueue and fails closed on persistence errors", async () => {
+  const raw = Buffer.from(JSON.stringify({ id: 42 }), "utf8");
+  const secret = "test-secret";
+  const hmac = createHmac("sha256", secret).update(raw).digest("base64");
+  const headers = new Headers({
+    "X-Shopify-Hmac-Sha256": hmac,
+    "X-Shopify-Shop-Domain": "sauceapproved-2.myshopify.com",
+    "X-Shopify-Topic": "orders/paid",
+    "X-Shopify-Webhook-Id": "delivery-42",
+    "X-Shopify-Event-Id": "event-42",
+    "X-Shopify-Api-Version": "2026-10"
+  });
+  const order = [];
+  const ok = await acceptWebhook({ rawBody: raw, headers, secret, persist: async (envelope) => { order.push("persist"); return { id: "inbox-1", envelope }; }, enqueue: async () => { order.push("enqueue"); } });
+  assert.equal(ok.status, 204);
+  assert.deepEqual(order, ["persist", "enqueue"]);
+
+  let enqueued = false;
+  const failed = await acceptWebhook({ rawBody: raw, headers, secret, persist: async () => { throw new Error("db_down"); }, enqueue: async () => { enqueued = true; } });
+  assert.equal(failed.status, 503);
+  assert.equal(enqueued, false);
 });
