@@ -183,41 +183,39 @@ export class RedisAiAdmissionController {
   }
 
   async admit(input) {
-    const keys = buildAdmissionKeys(input.tenantId, input.requestId);
+    const keys = buildAdmissionKeys(input.tenantId, input.requestId, input);
     const tenantFingerprint = fingerprint(input.tenantId);
+    const [tpmNum, tpmPeriod] = refillRatio(input.tpmRefillNumerator, input.tpmRefillPeriodMs, input.tpmRefillMicrocreditsPerMs, "TPM");
+    const [rpmNum, rpmPeriod] = refillRatio(input.rpmRefillNumerator, input.rpmRefillPeriodMs, input.rpmRefillRequestsPerMs, "RPM");
     const result = await this.evalWithReload("admission", Object.values(keys), [
-      input.tpmCapacityMicrocredits,
-      input.tpmRefillMicrocreditsPerMs,
-      input.requestCostMicrocredits,
-      input.rpmCapacity,
-      input.rpmRefillRequestsPerMs,
-      input.maxConcurrent,
-      input.reservationTtlMs,
-      input.dailyBudgetMicrousd ?? 0,
-      input.monthlyBudgetMicrousd ?? 0,
-      input.dailyPeriod,
-      input.monthlyPeriod,
-      input.reservedCostMicrousd ?? 0,
-      requestKey(input.requestId),
-      tenantFingerprint,
+      input.tpmCapacityMicrocredits, tpmNum, tpmPeriod, input.requestCostMicrocredits,
+      input.rpmCapacity, rpmNum, rpmPeriod, input.maxConcurrent, input.reservationTtlMs,
+      input.dailyBudgetMicrousd ?? 0, input.monthlyBudgetMicrousd ?? 0,
+      input.dailyPeriod, input.monthlyPeriod, input.reservedCostMicrousd ?? 0,
+      requestKey(input.requestId), tenantFingerprint,
     ]);
     return decodeAdmissionResult(result);
   }
 
   async settle(input) {
-    const keys = buildSettlementKeys(input.tenantId, input.requestId);
+    const keys = buildSettlementKeys(input.tenantId, input.requestId, input);
+    const [num, period] = refillRatio(input.tpmRefillNumerator, input.tpmRefillPeriodMs, input.tpmRefillMicrocreditsPerMs, "TPM");
     const result = await this.evalWithReload("settlement", Object.values(keys), [
-      input.tpmCapacityMicrocredits,
-      input.tpmRefillMicrocreditsPerMs,
-      input.actualCostMicrocredits,
-      input.actualCostMicrousd ?? 0,
-      input.reservationTtlMs,
+      input.tpmCapacityMicrocredits, num, period, input.actualCostMicrocredits,
+      input.actualCostMicrousd ?? 0, input.reservationTtlMs,
     ]);
     return decodeSettlementResult(result);
   }
-}
 
-export const scripts = Object.freeze({
-  admission: ADMISSION_LUA,
-  settlement: SETTLEMENT_LUA,
-});
+  async reap(input) {
+    const keys = buildSettlementKeys(input.tenantId, input.requestId, input);
+    const [num, period] = refillRatio(input.tpmRefillNumerator, input.tpmRefillPeriodMs, input.tpmRefillMicrocreditsPerMs, "TPM");
+    const result = await this.evalWithReload("reap", Object.values(keys), [
+      input.tpmCapacityMicrocredits, num, period, input.minimumAgeMs, input.reservationTtlMs,
+    ]);
+    if (!Array.isArray(result) || result.length < 3) throw new Error("invalid reap result");
+    const code = Number(result[0]), reason = String(result[2]);
+    if (code === 1 && reason === "expired") return {status:"expired", refundMicrocredits:Number(result[1])};
+    if (code === 0 || code === 2) return {status:reason, refundMicrocredits:Number(result[1])};
+    throw new Error(\`reap failed closed: ${reason}\`);
+  }
