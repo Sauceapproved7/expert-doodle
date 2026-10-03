@@ -168,6 +168,12 @@ test("Storage rejects traversal and oversized objects before persistence", async
 });
 
 
+test("Storage is requestable through Hercules Base backend intent", async () => {
+  const {normalizeBackendIntent}=await import("../hercules-base/core.mjs");
+  const intent=normalizeBackendIntent({name:"Storage App",slug:"storage-app",capabilities:["database","api","storage"]});
+  assert.deepEqual(intent.capabilities,["api","database","storage"]);
+});
+
 test("self-hosted Storage uses a persistent blob volume and is reported implemented", async () => {
   const {readFile}=await import("node:fs/promises");
   const {BASE_CAPABILITIES}=await import("../hercules-base/core.mjs");
