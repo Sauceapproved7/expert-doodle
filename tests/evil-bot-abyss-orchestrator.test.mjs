@@ -1,30 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createAbyssOrchestrator} from "../hercules-bot/abyss-orchestrator.mjs";
-
-test("mission planning freezes mutation during blackout",()=>{
- const o=createAbyssOrchestrator();
- const r=o.plan({goal:"diagnose deploy",identityTrusted:false,auditTrusted:true});
- assert.equal(r.mode,"blackout"); assert.equal(r.mutationAllowed,false); assert.equal(r.diagnostics,"read-only");
-});
-test("adversarial missions are forced into disposable sandbox",()=>{
- const o=createAbyssOrchestrator();
- const r=o.plan({goal:"chaos test recovery",identityTrusted:true,auditTrusted:true,capability:"chaos-engine"});
- assert.equal(r.environment,"sandbox"); assert.equal(r.disposable,true); assert.equal(r.productionMutation,false);
-});
-test("containment can be invoked independently of bot authority",()=>{
- const o=createAbyssOrchestrator();
- const r=o.contain({reason:"bot-compromise"});
- assert.deepEqual(r.actions,["revoke-identities","kill-sessions","quarantine-workers","freeze-deployments","preserve-evidence"]);
- assert.equal(r.requiresBotApproval,false);
-});
-test("recovery rejects unsigned artifacts and compromised running state",()=>{
- const o=createAbyssOrchestrator();
- assert.throws(()=>o.recover({signed:false,knownGood:true}),/signed known-good artifact required/);
- assert.throws(()=>o.recover({signed:true,knownGood:false}),/signed known-good artifact required/);
- assert.equal(o.recover({signed:true,knownGood:true}).eligible,true);
-});
-test("mission cannot self-grant authority",()=>{
- const o=createAbyssOrchestrator();
- assert.throws(()=>o.plan({goal:"grant myself admin",identityTrusted:true,auditTrusted:true,selfGrant:true}),/self-grant denied/);
-});
+const trusted={emergencyStopClear:()=>true,assessTrust:()=>({identityTrusted:true,auditTrusted:true}),authorizeMutation:()=>true,verifySandboxPlan:()=>true,verifyRecoveryArtifact:()=>true};
+test("missing or active external emergency stop enters read-only blackout",()=>{for(const b of [{}, {...trusted,emergencyStopClear:()=>false}]){const r=createAbyssOrchestrator(b).plan({capability:"builder-mode",identityTrusted:true,auditTrusted:true});assert.equal(r.mode,"blackout");assert.equal(r.mutationAllowed,false)}});
+test("unknown capability and unverified sandbox fail closed",()=>{assert.equal(createAbyssOrchestrator(trusted).plan({capability:"admin"}).mutationAllowed,false);const b={...trusted,verifySandboxPlan:()=>false};assert.equal(createAbyssOrchestrator(b).plan({capability:"chaos-engine"}).mode,"deny")});
+test("caller trust flags cannot replace external trust assessment",()=>{const b={...trusted,assessTrust:()=>({identityTrusted:false,auditTrusted:true})};assert.equal(createAbyssOrchestrator(b).plan({capability:"builder-mode",identityTrusted:true,auditTrusted:true}).mode,"blackout")});
+test("external authorization is required for production mutation plans",()=>{const r=createAbyssOrchestrator(trusted).plan({capability:"builder-mode"});assert.equal(r.mutationAllowed,true);assert.equal(r.executionAuthority,false);assert.equal(r.productionMutation,"separate-executor-required");const d=createAbyssOrchestrator({...trusted,authorizeMutation:()=>false}).plan({capability:"builder-mode"});assert.equal(d.mutationAllowed,false)});
+test("containment proposals carry no execution authority",()=>{const r=createAbyssOrchestrator().contain({reason:"compromise"});assert.equal(r.executionAuthority,false);assert.equal(r.requiresSeparateExecutor,true)});
+test("recovery requires an external verifier, never caller booleans",()=>{assert.throws(()=>createAbyssOrchestrator().recover({signed:true,knownGood:true}),/verified signed known-good/);assert.equal(createAbyssOrchestrator(trusted).recover({artifact:"digest"}).eligible,true)});
+test("mission cannot self-grant",()=>assert.throws(()=>createAbyssOrchestrator(trusted).plan({capability:"builder-mode",selfGrant:true}),/self-grant denied/));
