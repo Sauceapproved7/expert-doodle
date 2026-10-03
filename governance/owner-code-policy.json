@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 11,
+  "version": 18,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -31,6 +31,10 @@
     {
       "path": "hercules-video",
       "role": "video-runtime"
+    },
+    {
+      "path": "hercules-guardian",
+      "role": "defensive-observability-runtime"
     },
     {
       "path": "hercules-hurc",
@@ -79,6 +83,14 @@
     {
       "path": "sauceapproved-studio",
       "role": "studio-product-runtime"
+    },
+    {
+      "path": "soundworld",
+      "role": "studio-audio-product-runtime"
+    },
+    {
+      "path": "hardware",
+      "role": "studio-hardware-engineering-runtime"
     }
   ],
   "allowedModuleSpecifierPrefixes": [
@@ -143,9 +155,11 @@
     "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
   ],
   "allowedContainerImages": [
-    "postgres:16.4-alpine",
-    "postgrest/postgrest:v12.2.3",
-    "node:22.12.0-alpine"
+    "image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest",
+    "mcr.microsoft.com/devcontainers/javascript-node:5.2.1-22-bookworm@sha256:ec12180252047b3400ffffe008789cb8462bfff6f0703e285c2fb9986d47dae7",
+    "node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402",
+    "postgres:16.15-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685",
+    "postgrest/postgrest:v12.2.12@sha256:5f4ce744539bbba786b4e24dbbd95bdb2a956dcf568c5374995a0ff4a68f5bd2"
   ],
   "childProcessBoundaries": [
     {
@@ -212,6 +226,20 @@
         "windows-task-scheduler",
         "launchd",
         "systemd"
+      ]
+    },
+    {
+      "path": "hercules-cleaner/installer.mjs",
+      "kind": "owned-internal-process",
+      "dependencies": [
+        "nodejs"
+      ]
+    },
+    {
+      "path": "scripts/hercules-preflight.mjs",
+      "kind": "owned-internal-process",
+      "dependencies": [
+        "nodejs"
       ]
     }
   ],
@@ -326,6 +354,42 @@
       "id": "launchd",
       "name": "Apple launchd / LaunchAgents",
       "ownership": "third-party-operating-system-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainers-node",
+      "name": "Microsoft Dev Containers JavaScript and Node.js development image",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainer-python-feature",
+      "name": "Microsoft Dev Containers Python feature",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainer-ansible-feature",
+      "name": "Dev Containers Extra Ansible feature and ansible-core CLI",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainer-helm-feature",
+      "name": "Microsoft Dev Containers Helm feature and Helm CLI",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "openshift-cli",
+      "name": "Red Hat OpenShift oc and kubectl client binaries",
+      "ownership": "third-party-development-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "devcontainer-cli",
+      "name": "Microsoft Dev Containers CLI used only for CI image validation",
+      "ownership": "third-party-ci-infrastructure",
       "packagedAsHerculesCode": false
     }
   ]

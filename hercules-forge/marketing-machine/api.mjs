@@ -1,0 +1,5 @@
+import {buildMarketingMachineState} from "./index.mjs";import {buildCommandCenter,calculateEconomics,profitSniper,evaluateGuardrails} from "./engines.mjs";import * as modules from "./modules.mjs";
+export function handleMarketingMachineRequest({action,payload={}}={}){
+ const actions={state:()=>buildMarketingMachineState(),dashboard:()=>buildCommandCenter(payload),economics:()=>calculateEconomics(payload),profit:()=>profitSniper(payload),guardrails:()=>evaluateGuardrails(payload),product:()=>modules.productIntelligence(payload),creative:()=>modules.creativeLab(payload),offer:()=>modules.offerArchitect(payload),landing:()=>modules.landingPageKiller(payload),retention:()=>modules.retentionEngine(payload),performance:()=>modules.creativePerformanceBrain(payload.rows||[]),blackbox:()=>modules.blackbox(payload.events||[]),radar:()=>modules.shadowRadar(payload.pages||[]),dna:()=>modules.creativeDNA(payload.items||[]),customer:()=>modules.customerXRay(payload.feedback||[])};
+ if(!actions[action])return {ok:false,error:"unknown_action"};return {ok:true,data:actions[action]()};
+}

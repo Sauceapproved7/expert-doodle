@@ -2,6 +2,10 @@ import {createServer} from "node:http";
 import {routeBaseRequest} from "./router.mjs";
 import {routeAuthRequest} from "./auth-router.mjs";
 import {createPostgrestAuthStore} from "./auth-store.mjs";
+import {routeStorageRequest} from "./storage-router.mjs";
+import {createPostgrestStorageStore} from "./storage-store.mjs";
+import {createFilesystemBlobStore} from "./storage-core.mjs";
+import {createSmokeScreenIngressObserver} from "../hercules-runtime/smokescreen-ingress.mjs";
 
 const host=process.env.HERCULES_BASE_HOST||"0.0.0.0";
 const port=Number(process.env.HERCULES_BASE_PORT||38800);
@@ -9,6 +13,9 @@ const controlToken=process.env.HERCULES_BASE_CONTROL_TOKEN||"";
 const jwtSecret=process.env.HERCULES_BASE_JWT_SECRET||"";
 const postgrestUrl=process.env.HERCULES_BASE_POSTGREST_URL||"http://postgrest:3000";
 const fixtureOnly=process.env.HERCULES_BASE_FIXTURE_ONLY==="true";
+const storageRoot=process.env.HERCULES_BASE_STORAGE_ROOT||"/base-storage";
+const smokeScreenKey=process.env.HERCULES_SMOKESCREEN_HMAC_KEY||"";
+const smokeScreenObserver=smokeScreenKey?createSmokeScreenIngressObserver({hmacKey:smokeScreenKey,mode:"OBSERVE_ONLY",sink:(event)=>console.log("hercules_smokescreen_observation:"+JSON.stringify(event))}):null;
 
 if(!controlToken){
   throw new Error("HERCULES_BASE_CONTROL_TOKEN is required");
@@ -17,6 +24,8 @@ if(!jwtSecret||Buffer.byteLength(jwtSecret)<32){
   throw new Error("HERCULES_BASE_JWT_SECRET must be at least 32 bytes");
 }
 const authStore=createPostgrestAuthStore({postgrestUrl,jwtSecret});
+const storageStore=createPostgrestStorageStore({postgrestUrl,jwtSecret});
+const blobs=createFilesystemBlobStore({root:storageRoot});
 
 function nodeRequestToFetch(request){
   const origin="http://hercules-base.local";
@@ -53,9 +62,14 @@ createServer(async(request,response)=>{
   try{
     const fetchRequest=nodeRequestToFetch(request);
     const pathname=new URL(fetchRequest.url).pathname;
+    if(smokeScreenObserver){
+      await smokeScreenObserver.observe({sessionId:String(request.socket?.remoteAddress||"network-session"),method:fetchRequest.method,route:pathname,signals:{}});
+    }
     const routed=pathname.startsWith("/v1/auth/")
       ?await routeAuthRequest(fetchRequest,{store:authStore,jwtSecret,fixtureOnly})
-      :await routeBaseRequest(fetchRequest,{controlToken});
+      :pathname.startsWith("/v1/storage/")
+        ?await routeStorageRequest(fetchRequest,{store:storageStore,blobs,jwtSecret})
+        :await routeBaseRequest(fetchRequest,{controlToken});
     response.statusCode=routed.status;
     for(const [name,value] of routed.headers){
       response.setHeader(name,value);

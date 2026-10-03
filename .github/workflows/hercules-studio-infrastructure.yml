@@ -1,0 +1,23 @@
+name: Hercules Studio Infrastructure
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "sauceapproved-studio/infrastructure/**"
+      - ".github/workflows/hercules-studio-infrastructure.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  studio-infrastructure:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Run owned Studio infrastructure contracts
+        run: node --test sauceapproved-studio/infrastructure/*.test.mjs tests/studio-global-ownership.test.mjs

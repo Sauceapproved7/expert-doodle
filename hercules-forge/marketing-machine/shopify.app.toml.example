@@ -1,0 +1,10 @@
+# Copy values into the deployed Shopify app configuration. Do not commit secrets.
+name = "SauceApproved Marketing Machine"
+embedded = true
+
+[access_scopes]
+scopes = "read_products,read_orders,read_customers"
+
+[access.admin]
+embedded_app_direct_api_access = true
+direct_api_mode = "online"

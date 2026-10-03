@@ -1,0 +1,60 @@
+{
+  "schema": "sauceapproved.hercules.shopify-paid-order-reconciliation",
+  "version": 1,
+  "status": "active_fallback",
+  "sourceOfTruth": "connected_shopify_admin_api",
+  "canonicalShopDomain": "sauceapproved-2.myshopify.com",
+  "purpose": "Prevent a legitimate Studio or Titan Shopify buyer from being stranded while native ORDERS_PAID webhook registration is unavailable.",
+  "allowCustomerSuppliedPaymentClaims": false,
+  "allowLegalApprovalChanges": false,
+  "allowPriceChanges": false,
+  "allowCheckoutPublication": false,
+  "allowProductStatusChanges": false,
+  "allowedProducts": [
+    {
+      "productCode": "sauceapproved-studio",
+      "productId": "15397259477312",
+      "variantId": "67601341153600",
+      "sku": "SA-STUDIO-PILOT-001"
+    },
+    {
+      "productCode": "hercules-titan-founding-access",
+      "productId": "10261114782016",
+      "variantId": "53144447811904",
+      "sku": "HERCULES-TITAN-FOUNDING"
+    }
+  ],
+  "requiredOrderFacts": [
+    "shop_domain",
+    "order_id",
+    "line_item_id",
+    "product_id",
+    "variant_id",
+    "sku",
+    "quantity",
+    "buyer_email_sha256",
+    "processed_at",
+    "amount_cents",
+    "currency",
+    "payment_settled",
+    "test",
+    "cancelled"
+  ],
+  "acceptanceRules": {
+    "financialStatus": "paid",
+    "paymentSettled": true,
+    "test": false,
+    "cancelled": false,
+    "exactProductIdentityRequired": true,
+    "buyerIdentity": "sha256(normalized checkout email)",
+    "rawEmailStored": false
+  },
+  "runner": {
+    "enabledWhenNativeOrdersPaidWebhookUnavailable": true,
+    "lookbackHours": 48,
+    "maxOrdersPerRun": 50,
+    "idempotent": true,
+    "action": "For each connected-Shopify paid order in the lookback window, ignore unrelated products. For exact Studio/Titan line items, compute SHA-256 of the normalized checkout email locally, then invoke public.hercules_reconcile_verified_shopify_paid_order_v1 with only verified Shopify facts. Never infer payment state. Never alter pricing, legal approvals, checkout status, product status, or publication."
+  },
+  "stopCondition": "Disable this fallback after a verified native Shopify ORDERS_PAID webhook is registered and end-to-end entitlement delivery is proven."
+}

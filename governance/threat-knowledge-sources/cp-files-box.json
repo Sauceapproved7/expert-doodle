@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0.0",
+  "id": "cp-files-box",
+  "source": {
+    "repository": "Rihan444/Files_Box",
+    "path": "CP.txt",
+    "trust": "untrusted_external",
+    "execution_allowed": false,
+    "automatic_ingestion_allowed": false
+  },
+  "purpose": "defensive_security_knowledge_classification",
+  "admit": [
+    "linux_shell_fundamentals",
+    "networking_fundamentals",
+    "cryptography_fundamentals",
+    "secure_configuration",
+    "vulnerability_concepts",
+    "authorized_testing_methodology",
+    "logging_monitoring_incident_response",
+    "defensive_detection_and_mitigation"
+  ],
+  "threat_intel_only": [
+    "phishing",
+    "credential_attacks",
+    "persistence",
+    "malware_payloads",
+    "remote_access_malware",
+    "keylogging",
+    "wireless_attacks",
+    "account_compromise"
+  ],
+  "reject": [
+    "stolen_credentials_or_payment_data",
+    "fraud_carding_refund_abuse",
+    "credential_theft_workflows",
+    "deployable_malware",
+    "real_service_bruteforce_or_cracking",
+    "auth_license_or_payment_bypass",
+    "pirated_or_rights_unknown_payloads",
+    "opaque_binaries",
+    "secrets_or_tokens"
+  ],
+  "controls": {
+    "external_links_followed_automatically": false,
+    "payloads_executed": false,
+    "runtime_authority_expanded": false,
+    "fail_closed_on_unknown": true,
+    "provenance_required": true,
+    "rights_review_required": true,
+    "sensitive_data_removal_required": true
+  }
+}

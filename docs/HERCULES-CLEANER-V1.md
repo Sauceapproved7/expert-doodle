@@ -67,6 +67,8 @@ node hercules-cleaner/cli.mjs scan
 node hercules-cleaner/cli.mjs clean
 node hercules-cleaner/cli.mjs "clean my computer"
 node hercules-cleaner/cli.mjs dashboard
+node hercules-cleaner/cli.mjs device-init --version 1.0.0
+node hercules-cleaner/cli.mjs device-status
 
 node hercules-cleaner/cli.mjs schedule --profile quick-safe --type daily
 node hercules-cleaner/cli.mjs schedule --profile quick-safe --type everyNDays --days 2
@@ -129,8 +131,9 @@ v1 does not claim:
 - registry optimization;
 - secure forensic erasure;
 - autonomous deletion of arbitrary personal folders;
-- standalone native binaries that require no Node.js runtime;
-- installation on a customer device until that device has been explicitly connected/authorized.
+- a bundled third-party Node.js runtime or standalone native executable;
+- silent permission/elevation bypass;
+- installation on a customer device without that device user's explicit action and operating-system permissions.
 
 The design favors recoverability and explicit policy over aggressive deletion.
 
@@ -150,4 +153,51 @@ Cleaner updates are fail-closed against immutable release identity. An update ca
 
 The update policy cannot enable checkout or change the release out of Early Access. A verified update retains the currently installed version as the explicit rollback version. Recovery Capsule data and local Cleaner state are not update payloads and must not be deleted or migrated implicitly by update eligibility checks.
 
-This v1 certification defines update eligibility and rollback identity; it does not claim a silent auto-updater or native installer. Installation or replacement on a customer device remains subject to that device's explicit authorization and operating-system permissions.
+The Windows Early Access distribution uses a customer-invoked, per-user setup path under `%LOCALAPPDATA%\\SauceApproved\\Hercules Cleaner`. It requires Node.js 22+, rejects mutable or malformed source identity, recomputes the declared aggregate SHA-256 from the manifest-listed file identities, verifies each listed file SHA-256 before copy/activation, keeps `~/.hercules-cleaner/` outside the application tree, and does not bypass UAC or execution-policy controls. Main-branch Windows ZIP builds receive GitHub artifact provenance attestation; that is build provenance rather than a claim of Windows Authenticode publisher signing.
+
+A successful version activation retains the previous exact version/commit/artifact identity as the rollback identity. Rollback activation must match that retained identity and pass a health check before the active pointer changes. Windows uninstall removes scheduled-task integration before deleting application files; if task cleanup fails unexpectedly, uninstall fails closed and leaves the app/state intact rather than reporting a false clean removal. Recovery Capsules and local Cleaner state remain preserved unless the user separately and explicitly requests user-data removal.
+
+This remains Early Access installer support, not a claim of a bundled native runtime or silent auto-update. Installation or replacement on a customer device remains subject to that device user's explicit action and operating-system permissions.
+
+
+## Device activation
+
+Cleaner device activation is privacy-preserving and separate from filesystem authority. In production it is routed through the existing `hercules-private-bridge` Edge Function so the activation path does not consume an additional Supabase Edge Function slot.
+
+An installed Cleaner creates:
+- a random opaque device UUID;
+- an Ed25519 public/private keypair stored locally;
+- a pending local device identity before activation.
+
+Activation uses a one-time owner-issued code and a two-step server challenge. Cleaner signs the challenge locally with its private key. The private key never leaves the device.
+
+The activation service accepts only:
+- product code (`hercules-cleaner`);
+- opaque device UUID;
+- platform family (`windows`, `macos`, or `linux`);
+- Cleaner semantic version;
+- Ed25519 public key;
+- one-time activation code;
+- challenge/signature proof.
+
+It does **not** accept or require hostname, hardware serial, MAC address, username, filenames, file paths, cleanup inventory, or Recovery Capsule contents.
+
+Server-side activation codes and device credentials are stored only as SHA-256 hashes. Device tables are RLS-protected and are not directly granted to anonymous or authenticated clients. The Edge Function uses the service-role boundary for the protected transaction. Activation does not enable checkout or change any commercial approval.
+
+CLI:
+
+```sh
+node hercules-cleaner/cli.mjs device-init --version 1.0.0
+node hercules-cleaner/cli.mjs device-activate --code HC-XXXX-XXXX --endpoint https://<project>.supabase.co/functions/v1/hercules-private-bridge
+node hercules-cleaner/cli.mjs device-status
+```
+
+Local device state:
+
+```text
+~/.hercules-cleaner/
+  device-pending.json
+  device.json
+```
+
+`device.json` contains the local private key and returned opaque device credential, so it must remain local and protected by the user's operating-system permissions.

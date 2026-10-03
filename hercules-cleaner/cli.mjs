@@ -1,10 +1,11 @@
 #!/usr/bin/env node
-import {homedir} from "node:os";
+import {homedir, platform} from "node:os";
 import {cleanComputer, getCleanerStatus, runDaemon, scanComputer, startWorkSession, stopWorkSession, restoreCapsule, setProfileSchedule} from "./agent.mjs";
 import {installAutostart, uninstallAutostart} from "./autostart.mjs";
 import {listRecoveryCapsules} from "./engine.mjs";
 import {listenCleanerServer} from "./server.mjs";
 import {statePaths} from "./state.mjs";
+import {activateCleanerDevice, createDeviceIdentity, loadDeviceCredential, loadDeviceIdentity, saveDeviceCredential, saveDeviceIdentity} from "./device-identity.mjs";
 
 function parse(argv) {
   const args = [...argv];
@@ -50,11 +51,44 @@ try {
     if (type === "hourly") schedule.hours = Number(option(rest, "--hours", 1));
     if (type === "lowStorage") schedule.freePercentBelow = Number(option(rest, "--below", 15));
     print(await setProfileSchedule({...common, profileId: profileId || "quick-safe", schedule}));
+  } else if (command === "device-init") {
+    const paths=statePaths(common);
+    const identity=createDeviceIdentity({platform:platform(),version:option(rest,"--version","1.0.0")});
+    await saveDeviceIdentity({stateRoot:paths.root,identity});
+    print({deviceId:identity.deviceId,platform:identity.platform,version:identity.version,status:"pending_activation"});
+  } else if (command === "device-activate") {
+    const paths=statePaths(common);
+    const identity=await loadDeviceIdentity({stateRoot:paths.root});
+    const activationCode=option(rest,"--code",rest.find((value)=>!value.startsWith("--")));
+    const endpoint=option(rest,"--endpoint",process.env.HERCULES_CLEANER_DEVICE_ENDPOINT);
+    if(!endpoint)throw new Error("HERCULES_CLEANER_DEVICE_ENDPOINT or --endpoint is required");
+    const activated=await activateCleanerDevice({endpoint,identity,activationCode});
+    await saveDeviceCredential({
+      stateRoot:paths.root,
+      identity,
+      credential:{deviceCredential:activated.deviceCredential,activatedAt:activated.activatedAt},
+    });
+    print({deviceId:activated.deviceId||identity.deviceId,status:"activated",activatedAt:activated.activatedAt});
+  } else if (command === "device-status") {
+    const paths=statePaths(common);
+    try {
+      const saved=await loadDeviceCredential({stateRoot:paths.root});
+      print({deviceId:saved.identity.deviceId,platform:saved.identity.platform,version:saved.identity.version,status:"activated",activatedAt:saved.credential.activatedAt});
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+      try {
+        const pending=await loadDeviceIdentity({stateRoot:paths.root});
+        print({deviceId:pending.deviceId,platform:pending.platform,version:pending.version,status:"pending_activation"});
+      } catch (pendingError) {
+        if (pendingError?.code !== "ENOENT") throw pendingError;
+        print({status:"uninitialized"});
+      }
+    }
   } else if (command === "install-autostart") print(await installAutostart());
   else if (command === "uninstall-autostart") print(await uninstallAutostart());
   else if (command === "daemon") await runDaemon(common);
   else {
-    process.stderr.write("Usage: hercules-cleaner [status|scan|clean|dashboard|daemon|schedule|install-autostart|uninstall-autostart|session-start|session-stop|capsules|restore]\n");
+    process.stderr.write("Usage: hercules-cleaner [status|scan|clean|dashboard|daemon|schedule|device-init|device-activate|device-status|install-autostart|uninstall-autostart|session-start|session-stop|capsules|restore]\n");
     process.exitCode = 2;
   }
 } catch (error) {

@@ -1,3 +1,4 @@
+import {createHash} from "node:crypto";
 const PROJECT_ID = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const DEFAULT_TIMEOUT_MS = 90_000;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
@@ -65,6 +66,22 @@ async function requestJson(fetchImpl, url, {controlToken = null, method = "GET",
   return {response, payload:await readBoundedJson(response)};
 }
 
+function reservedCanaryProjectId(projectId, attempt = 0) {
+  const suffix=createHash("sha256")
+    .update(CANARY_MARKER+":"+String(projectId)+":"+String(attempt))
+    .digest("hex")
+    .slice(0,20);
+  return "ForgeCanary_"+suffix;
+}
+
+// The control API returns GET /v1/projects/:id as a raw project object.
+function projectFromPayload(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  return payload.project && typeof payload.project === "object"
+    ? payload.project
+    : payload;
+}
+
 function assertCertifiedProject(project, projectId) {
   if (
     project?.projectId !== projectId ||
@@ -99,6 +116,8 @@ export async function runForgeStartupPromptCanary({
   projectId,
   fetchImpl = globalThis.fetch,
   timeoutMs = DEFAULT_TIMEOUT_MS,
+  collisionFallback = true,
+  collisionAttempt = 0,
 } = {}) {
   if (typeof fetchImpl !== "function") throw new TypeError("fetch implementation is required");
   validateInputs({controlToken, projectId, timeoutMs});
@@ -111,15 +130,35 @@ export async function runForgeStartupPromptCanary({
   });
 
   if (existing.response.status === 200) {
-    assertCertifiedProject(existing.payload?.project, projectId);
-    const ready = await requestJson(fetchImpl, base + "/ready", {timeoutMs});
-    if (!ready.response.ok) throw new Error("startup canary readiness request failed");
-    return {
-      ok:true,
-      status:"already_verified",
-      projectId,
-      durableObjectCount:assertDurableReady(ready.payload),
-    };
+    try {
+      assertCertifiedProject(projectFromPayload(existing.payload), projectId);
+      const ready = await requestJson(fetchImpl, base + "/ready", {timeoutMs});
+      if (!ready.response.ok) throw new Error("startup canary readiness request failed");
+      return {
+        ok:true,
+        status:"already_verified",
+        projectId,
+        durableObjectCount:assertDurableReady(ready.payload),
+      };
+    } catch (error) {
+      if (!/collides with non-canary project/i.test(String(error?.message ?? ""))) throw error;
+      if (!collisionFallback || collisionAttempt >= 8) throw error;
+      const fallbackId=reservedCanaryProjectId(projectId, collisionAttempt);
+      const fallback=await runForgeStartupPromptCanary({
+        origin:base,
+        controlToken,
+        projectId:fallbackId,
+        fetchImpl,
+        timeoutMs,
+        collisionFallback:true,
+        collisionAttempt:collisionAttempt + 1,
+      });
+      return {
+        ...fallback,
+        collisionAvoided:true,
+        configuredProjectId:projectId,
+      };
+    }
   }
   if (existing.response.status !== 404) {
     throw new Error("startup canary project lookup failed with status " + existing.response.status);
@@ -139,6 +178,25 @@ export async function runForgeStartupPromptCanary({
     },
   });
   if (created.response.status !== 201) {
+    const creationError=String(created.payload?.error ?? "");
+    const isSafeExistCollision=created.response.status === 409 && /\bEEXIST\b/i.test(creationError);
+    if (isSafeExistCollision && collisionFallback && collisionAttempt < 8) {
+      const fallbackId=reservedCanaryProjectId(projectId, collisionAttempt);
+      const fallback=await runForgeStartupPromptCanary({
+        origin:base,
+        controlToken,
+        projectId:fallbackId,
+        fetchImpl,
+        timeoutMs,
+        collisionFallback:true,
+        collisionAttempt:collisionAttempt + 1,
+      });
+      return {
+        ...fallback,
+        collisionAvoided:true,
+        configuredProjectId:projectId,
+      };
+    }
     const safeCode = typeof created.payload?.code === "string" &&
       /^forge_[a-z0-9_]{1,80}$/.test(created.payload.code)
       ? created.payload.code
@@ -146,7 +204,7 @@ export async function runForgeStartupPromptCanary({
     throw new Error(
       "startup canary project creation failed with status " +
       created.response.status +
-      (created.payload?.error ? ": " + created.payload.error : "") +
+      (creationError ? ": " + creationError : "") +
       (safeCode ? " [" + safeCode + "]" : ""),
     );
   }
@@ -160,7 +218,7 @@ export async function runForgeStartupPromptCanary({
     timeoutMs,
   });
   if (!reread.response.ok) throw new Error("startup canary project reread failed");
-  assertCertifiedProject(reread.payload?.project, projectId);
+  assertCertifiedProject(projectFromPayload(reread.payload), projectId);
 
   const ready = await requestJson(fetchImpl, base + "/ready", {timeoutMs});
   if (!ready.response.ok) throw new Error("startup canary readiness request failed");

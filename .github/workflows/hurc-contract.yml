@@ -33,6 +33,9 @@ jobs:
       - name: Generate deterministic solc input
         run: node scripts/hurc-solc-input.mjs > /tmp/hurc-solc-input.json
 
+      - name: Generate smart account solc input
+        run: node scripts/hurc-smart-account-solc-input.mjs > /tmp/hurc-smart-account-solc-input.json
+
       - name: Fetch pinned Solidity compiler
         run: |
           set -euo pipefail
@@ -44,8 +47,14 @@ jobs:
       - name: Compile HURC
         run: /tmp/solc --standard-json < /tmp/hurc-solc-input.json > /tmp/hurc-solc-output.json
 
+      - name: Compile Hercules smart account
+        run: /tmp/solc --standard-json < /tmp/hurc-smart-account-solc-input.json > /tmp/hurc-smart-account-solc-output.json
+
       - name: Verify compiled contract surface
         run: node scripts/hurc-check-solc-output.mjs /tmp/hurc-solc-output.json
 
+      - name: Verify compiled smart account surface
+        run: node scripts/hurc-smart-account-check-solc-output.mjs /tmp/hurc-smart-account-solc-output.json
+
       - name: Run HURC tests
-        run: node --test tests/hercules-hurc-source.test.mjs tests/hercules-hurc-deployment-plan.test.mjs tests/hercules-hurc-browser.test.mjs tests/hercules-hurc-rpc.test.mjs tests/hercules-hurc-testnet-crypto.test.mjs tests/hercules-hurc-testnet-signer-edge.test.mjs
+        run: node --test tests/hercules-hurc-source.test.mjs tests/hercules-hurc-deployment-plan.test.mjs tests/hercules-hurc-browser.test.mjs tests/hercules-hurc-rpc.test.mjs tests/hercules-hurc-testnet-crypto.test.mjs tests/hercules-hurc-testnet-signer-edge.test.mjs tests/hercules-hurc-smart-account.test.mjs

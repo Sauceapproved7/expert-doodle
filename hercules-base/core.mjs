@@ -10,7 +10,7 @@ const DATA_CLASSES=new Set([
   "credentials",
   "regulated",
 ]);
-const REQUESTABLE_CAPABILITIES=new Set(["database","api"]);
+const REQUESTABLE_CAPABILITIES=new Set(["database","api","storage"]);
 
 export const BASE_CAPABILITIES=Object.freeze({
   database:Object.freeze({
@@ -43,7 +43,16 @@ export const BASE_CAPABILITIES=Object.freeze({
     substrate:"hercules-owned-over-postgres",
     evidence:"hercules-base/auth-router.mjs",
   }),
-  storage:Object.freeze({status:"planned"}),
+  recommendation:Object.freeze({
+    status:"implemented",
+    substrate:"hercules-owned",
+    evidence:"hercules-base/recommender.mjs",
+  }),
+  storage:Object.freeze({
+    status:"implemented",
+    substrate:"hercules-owned-filesystem-over-postgres-metadata",
+    evidence:"hercules-base/storage-router.mjs",
+  }),
   realtime:Object.freeze({status:"planned"}),
   functions:Object.freeze({status:"planned"}),
 });

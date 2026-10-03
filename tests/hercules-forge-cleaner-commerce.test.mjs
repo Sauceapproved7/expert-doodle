@@ -26,7 +26,9 @@ test("Cleaner offer page is access-request only and explains local-first recover
   assert.match(html, /Recovery Capsules/);
   assert.match(html, /local-first/i);
   assert.match(html, /Request Early Access/);
-  assert.match(html, /hercules_request_software_access/);
+  assert.match(html, /\/functions\/v1\/hercules-launch/);
+  assert.match(html, /software_access_request/);
+  assert.doesNotMatch(html, /\/rest\/v1\/rpc\/hercules_request_software_access/);
   assert.match(html, /PRODUCT="hercules-cleaner"/);
   assert.match(html, /No payment is collected/i);
   assert.doesNotMatch(html, /checkout_session|create-checkout|payment_intent/i);

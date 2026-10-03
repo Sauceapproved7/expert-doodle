@@ -1,0 +1,3 @@
+import assert from 'node:assert/strict';import test from 'node:test';import {createExportClock} from '../sauceapproved-studio/vintage-camera/export-clock.mjs';
+test('export clock advances independently of sparse preview callbacks',()=>{const clock=createExportClock({fps:30});assert.equal(clock.frameDurationMs,1000/30);assert.equal(clock.framesDue(0),0);assert.equal(clock.framesDue(100),3);assert.equal(clock.framesDue(1000),30);});
+test('export clock never invents frames when time does not advance',()=>{const clock=createExportClock({fps:30});assert.equal(clock.framesDue(500),15);assert.equal(clock.framesDue(500),15);assert.equal(clock.framesDue(499),15);});

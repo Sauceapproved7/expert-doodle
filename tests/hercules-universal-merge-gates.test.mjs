@@ -1,4 +1,10 @@
+import "./hercules-owner-code-container-images.test.mjs";
+import "./hercules-staging-runtime-patch-levels.test.mjs";
 import "./hercules-founding-pilot-admission.test.mjs";
+import "./hercules-soundworld-launch-gift.test.mjs";
+import "./hercules-soundworld-gift-backend-ledger.test.mjs";
+import "./hercules-launch-gate-freshness.test.mjs";
+import "./hercules-paid-launch-payment-gate.test.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";

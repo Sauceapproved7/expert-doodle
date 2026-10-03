@@ -1,0 +1,108 @@
+{% assign event_state = block.settings.event_state | default: 'scheduled' %}
+{% assign featured_product = block.settings.product %}
+{% assign stream_link = block.settings.stream_url | strip %}
+{% assign stream_scheme = stream_link | split: ':' | first | downcase %}
+
+<section class="hercules-live-event" {{ block.shopify_attributes }}>
+  <div class="hercules-live-event__content">
+    <p class="hercules-live-event__status" role="status">
+      {% case event_state %}
+        {% when 'live' %}Live now
+        {% when 'ended' %}Event ended
+        {% else %}Upcoming
+      {% endcase %}
+    </p>
+
+    {% if block.settings.event_title != blank %}
+      <h2 class="hercules-live-event__title">{{ block.settings.event_title | escape }}</h2>
+    {% endif %}
+
+    {% if block.settings.event_time != blank %}
+      <p class="hercules-live-event__time">{{ block.settings.event_time | escape }}</p>
+    {% endif %}
+
+    {% if event_state == 'live' and stream_scheme == 'https' and stream_link contains '://' %}
+      <a class="hercules-live-event__watch" href="{{ stream_link | escape }}" target="_blank" rel="noopener noreferrer">
+        {{ block.settings.watch_label | default: 'Watch the live stream' | escape }}
+      </a>
+    {% endif %}
+  </div>
+
+  {% if featured_product != blank %}
+    {% assign live_variant = featured_product.selected_or_first_available_variant %}
+    <div class="hercules-live-event__product">
+      {% if featured_product.featured_image != blank %}
+        {{ featured_product.featured_image | image_url: width: 720 | image_tag: loading: 'lazy', alt: featured_product.title }}
+      {% endif %}
+      <div class="hercules-live-event__product-details">
+        <h3>{{ featured_product.title | escape }}</h3>
+        {% if live_variant != blank %}
+          <p>{{ live_variant.price | money }}</p>
+          {% if live_variant.available %}
+            <a class="hercules-live-event__product-link" href="{{ live_variant.url }}">
+              {{ block.settings.product_label | default: 'Shop featured product' | escape }}
+            </a>
+          {% else %}
+            <span class="hercules-live-event__unavailable">Sold out</span>
+          {% endif %}
+        {% endif %}
+      </div>
+    </div>
+  {% endif %}
+</section>
+
+{% schema %}
+{
+  "name": "Live event",
+  "target": "section",
+  "stylesheet": "live-event.css",
+  "settings": [
+    {
+      "type": "text",
+      "id": "event_title",
+      "label": "Event title",
+      "default": "Join us live"
+    },
+    {
+      "type": "select",
+      "id": "event_state",
+      "label": "Event state",
+      "default": "scheduled",
+      "options": [
+        { "value": "scheduled", "label": "Upcoming" },
+        { "value": "live", "label": "Live now" },
+        { "value": "ended", "label": "Ended" }
+      ]
+    },
+    {
+      "type": "text",
+      "id": "event_time",
+      "label": "Event time",
+      "info": "Enter the time and timezone shown to customers."
+    },
+    {
+      "type": "url",
+      "id": "stream_url",
+      "label": "Stream URL",
+      "info": "Only HTTPS links are shown, and only while the event state is Live now."
+    },
+    {
+      "type": "text",
+      "id": "watch_label",
+      "label": "Watch link label",
+      "default": "Watch the live stream"
+    },
+    {
+      "type": "product",
+      "id": "product",
+      "label": "Featured product"
+    },
+    {
+      "type": "text",
+      "id": "product_label",
+      "label": "Product link label",
+      "default": "Shop featured product"
+    }
+  ]
+}
+{% endschema %}

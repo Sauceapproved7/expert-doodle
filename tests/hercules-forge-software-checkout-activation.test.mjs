@@ -42,7 +42,7 @@ test("software legal candidates are specific to Studio and Ads and remain owner-
   }
   assert.match(terms, /Starter.*\$29/s);
   assert.match(terms, /Pro.*\$79/s);
-  assert.match(terms, /Agency.*\$199/s);
+  assert.match(terms, /Business.*\$199/s);
   assert.match(privacy, /Stripe/);
   assert.match(privacy, /Supabase/);
   assert.match(privacy, /Render/);

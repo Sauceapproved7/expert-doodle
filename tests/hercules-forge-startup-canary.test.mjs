@@ -153,25 +153,48 @@ test("startup prompt canary is idempotent only for a previously certified synthe
     await new Promise((resolve) => certified.close(resolve));
   }
 
-  const collision = http.createServer((req, res) => {
-    res.writeHead(200, {"content-type":"application/json"});
-    res.end(JSON.stringify({
-      project:{
-        projectId:"forge-prompt-canary-ai-v1",
-        metadata:{source:"manual"},
-      },
-    }));
+  let fallbackCreated=false;
+  let fallbackId=null;
+  const collision = http.createServer(async (req, res) => {
+    if (req.method==="GET" && req.url==="/v1/projects/forge-prompt-canary-ai-v1") {
+      res.writeHead(200, {"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:"forge-prompt-canary-ai-v1",metadata:{source:"manual"}}}));
+    }
+    if (req.method==="GET" && req.url?.startsWith("/v1/projects/ForgeCanary_")) {
+      fallbackId=decodeURIComponent(req.url.split("/").at(-1));
+      if(!fallbackCreated){
+        res.writeHead(404, {"content-type":"application/json"});
+        return res.end(JSON.stringify({error:"not_found"}));
+      }
+      res.writeHead(200, {"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:fallbackId,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"d".repeat(64)}}}));
+    }
+    if(req.method==="POST" && req.url==="/v1/projects/from-prompt"){
+      let text=""; for await(const chunk of req) text+=chunk; const body=JSON.parse(text);
+      fallbackId=body.metadata.projectId;
+      assert.match(fallbackId,/^ForgeCanary_[a-f0-9]{20}$/);
+      fallbackCreated=true;
+      res.writeHead(201, {"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:fallbackId,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"d".repeat(64)}},revision:{revisionId:"collision-safe-r1"}}));
+    }
+    if(req.url==="/ready"){
+      res.writeHead(200, {"content-type":"application/json"});
+      return res.end(JSON.stringify({ready:true,durableState:{ok:true,schema:"sauceapproved.hercules.forge.durable-state.v1",carriesCredentials:false,objectCount:5}}));
+    }
+    res.writeHead(404, {"content-type":"application/json"}); res.end(JSON.stringify({error:"not_found"}));
   });
   const collisionOrigin = await listen(collision);
   try {
-    await assert.rejects(
-      runForgeStartupPromptCanary({
-        origin:collisionOrigin,
-        controlToken,
-        projectId:"forge-prompt-canary-ai-v1",
-      }),
-      /collides with non-canary project/i,
-    );
+    const result=await runForgeStartupPromptCanary({
+      origin:collisionOrigin,
+      controlToken,
+      projectId:"forge-prompt-canary-ai-v1",
+    });
+    assert.equal(result.ok,true);
+    assert.equal(result.collisionAvoided,true);
+    assert.equal(result.configuredProjectId,"forge-prompt-canary-ai-v1");
+    assert.equal(result.projectId,fallbackId);
+    assert.equal(result.status,"created_and_verified");
   } finally {
     await new Promise((resolve) => collision.close(resolve));
   }
@@ -239,4 +262,209 @@ test("startup canary reports safe internal stage code without leaking private er
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+
+test("startup prompt canary fails closed after bounded reserved collision fallbacks", async () => {
+  let postCount=0;
+  const server=http.createServer((req,res)=>{
+    if(req.method==="GET" && req.url?.startsWith("/v1/projects/")){
+      const projectId=decodeURIComponent(req.url.split("/").at(-1));
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId,metadata:{source:"manual"}}}));
+    }
+    if(req.method==="POST" && req.url==="/v1/projects/from-prompt") postCount+=1;
+    res.writeHead(404,{"content-type":"application/json"});
+    res.end(JSON.stringify({error:"not_found"}));
+  });
+  const origin=await listen(server);
+  try{
+    await assert.rejects(
+      runForgeStartupPromptCanary({origin,controlToken,projectId:"forge-prompt-canary-ai-v1"}),
+      /collides with non-canary project/i,
+    );
+    assert.equal(postCount,0);
+  }finally{
+    await new Promise(resolve=>server.close(resolve));
+  }
+});
+
+
+test("startup canary accepts the raw project payload returned by the real control API", async () => {
+  const certifiedProject={
+    projectId:"forge-prompt-canary-ai-v2",
+    metadata:{
+      source:"prompt",
+      canary:"forge-startup-prompt-v1",
+      purpose:"synthetic-production-certification",
+      promptSha256:"e".repeat(64),
+    },
+  };
+  const server=http.createServer((req,res)=>{
+    if(req.method==="GET" && req.url==="/v1/projects/forge-prompt-canary-ai-v2"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify(certifiedProject));
+    }
+    if(req.method==="GET" && req.url==="/ready"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({
+        ready:true,
+        durableState:{
+          ok:true,
+          schema:"sauceapproved.hercules.forge.durable-state.v1",
+          carriesCredentials:false,
+          objectCount:9,
+        },
+      }));
+    }
+    res.writeHead(500,{"content-type":"application/json"});
+    res.end(JSON.stringify({error:"unexpected_fallback"}));
+  });
+  const origin=await listen(server);
+  try{
+    const result=await runForgeStartupPromptCanary({
+      origin,
+      controlToken,
+      projectId:"forge-prompt-canary-ai-v2",
+    });
+    assert.equal(result.ok,true);
+    assert.equal(result.status,"already_verified");
+    assert.equal(result.projectId,"forge-prompt-canary-ai-v2");
+    assert.equal(result.durableObjectCount,9);
+  } finally {
+    await new Promise(resolve=>server.close(resolve));
+  }
+});
+
+
+test("startup canary rotates to a fresh reserved identifier while preserving raw project response support", async () => {
+  let reservedLookups=0;
+  let createdId=null;
+  const server=http.createServer(async (req,res)=>{
+    if(req.method==="GET" && req.url==="/v1/projects/forge-prompt-canary-ai-v1"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({projectId:"forge-prompt-canary-ai-v1",metadata:{source:"manual"}}));
+    }
+    if(req.method==="GET" && req.url?.startsWith("/v1/projects/ForgeCanary_")){
+      const id=decodeURIComponent(req.url.split("/").at(-1));
+      reservedLookups+=1;
+      if(reservedLookups===1){
+        res.writeHead(200,{"content-type":"application/json"});
+        return res.end(JSON.stringify({projectId:id,metadata:{source:"manual"}}));
+      }
+      if(createdId===id){
+        res.writeHead(200,{"content-type":"application/json"});
+        return res.end(JSON.stringify({projectId:id,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"f".repeat(64)}}));
+      }
+      res.writeHead(404,{"content-type":"application/json"});
+      return res.end(JSON.stringify({error:"not_found"}));
+    }
+    if(req.method==="POST" && req.url==="/v1/projects/from-prompt"){
+      let raw=""; for await(const chunk of req) raw+=chunk; const body=JSON.parse(raw);
+      createdId=body.metadata.projectId;
+      res.writeHead(201,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:createdId,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"f".repeat(64)}},revision:{revisionId:"rotated-r1"}}));
+    }
+    if(req.url==="/ready"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({ready:true,durableState:{ok:true,schema:"sauceapproved.hercules.forge.durable-state.v1",carriesCredentials:false,objectCount:6}}));
+    }
+    res.writeHead(404,{"content-type":"application/json"}); res.end(JSON.stringify({error:"not_found"}));
+  });
+  const origin=await listen(server);
+  try{
+    const result=await runForgeStartupPromptCanary({origin,controlToken,projectId:"forge-prompt-canary-ai-v1"});
+    assert.equal(result.ok,true);
+    assert.equal(result.collisionAvoided,true);
+    assert.equal(result.status,"created_and_verified");
+    assert.equal(result.projectId,createdId);
+    assert.ok(reservedLookups>=2);
+  }finally{await new Promise(resolve=>server.close(resolve));}
+});
+
+
+test("startup canary rotates when creation races with an EEXIST collision", async () => {
+  let firstCreate=true;
+  let createdId=null;
+  const server=http.createServer(async (req,res)=>{
+    if(req.method==="GET" && req.url?.startsWith("/v1/projects/")){
+      const id=decodeURIComponent(req.url.split("/").at(-1));
+      if(createdId===id){
+        res.writeHead(200,{"content-type":"application/json"});
+        return res.end(JSON.stringify({projectId:id,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"a".repeat(64)}}));
+      }
+      res.writeHead(404,{"content-type":"application/json"});
+      return res.end(JSON.stringify({error:"not_found"}));
+    }
+    if(req.method==="POST" && req.url==="/v1/projects/from-prompt"){
+      let raw=""; for await(const chunk of req) raw+=chunk; const body=JSON.parse(raw);
+      if(firstCreate){
+        firstCreate=false;
+        res.writeHead(409,{"content-type":"application/json"});
+        return res.end(JSON.stringify({error:"EEXIST: file already exists, mkdir '/tmp/hercules-forge/projects/"+body.metadata.projectId+"'"}));
+      }
+      createdId=body.metadata.projectId;
+      res.writeHead(201,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:createdId,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"a".repeat(64)}},revision:{revisionId:"post409-r1"}}));
+    }
+    if(req.url==="/ready"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({ready:true,durableState:{ok:true,schema:"sauceapproved.hercules.forge.durable-state.v1",carriesCredentials:false,objectCount:6}}));
+    }
+    res.writeHead(404,{"content-type":"application/json"}); res.end();
+  });
+  const origin=await listen(server);
+  try{
+    const result=await runForgeStartupPromptCanary({origin,controlToken,projectId:"forge-prompt-canary-ai-v3"});
+    assert.equal(result.ok,true);
+    assert.equal(result.collisionAvoided,true);
+    assert.equal(result.status,"created_and_verified");
+    assert.equal(result.projectId,createdId);
+  }finally{await new Promise(resolve=>server.close(resolve));}
+});
+
+
+test("startup canary uses a fresh reserved identifier when the deterministic fallback is already occupied", async () => {
+  let createdId=null;
+  const occupied="ForgeCanary_a914b994697be8285386";
+  const server=http.createServer(async (req,res)=>{
+    if(req.method==="GET" && req.url==="/v1/projects/forge-prompt-canary-ai-v1"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:"forge-prompt-canary-ai-v1",metadata:{source:"manual"}}}));
+    }
+    if(req.method==="GET" && req.url==="/v1/projects/"+occupied){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:occupied,metadata:{source:"manual"}}}));
+    }
+    if(req.method==="GET" && req.url?.startsWith("/v1/projects/ForgeCanary_")){
+      const id=decodeURIComponent(req.url.split("/").at(-1));
+      if(createdId===id){
+        res.writeHead(200,{"content-type":"application/json"});
+        return res.end(JSON.stringify({project:{projectId:id,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"e".repeat(64)}}}));
+      }
+      res.writeHead(404,{"content-type":"application/json"});
+      return res.end(JSON.stringify({error:"not_found"}));
+    }
+    if(req.method==="POST" && req.url==="/v1/projects/from-prompt"){
+      let text=""; for await(const chunk of req) text+=chunk; const body=JSON.parse(text);
+      createdId=body.metadata.projectId;
+      assert.match(createdId,/^ForgeCanary_[a-f0-9]{20}$/);
+      assert.notEqual(createdId,occupied);
+      res.writeHead(201,{"content-type":"application/json"});
+      return res.end(JSON.stringify({project:{projectId:createdId,metadata:{source:"prompt",canary:"forge-startup-prompt-v1",purpose:"synthetic-production-certification",promptSha256:"e".repeat(64)}},revision:{revisionId:"fresh-r1"}}));
+    }
+    if(req.url==="/ready"){
+      res.writeHead(200,{"content-type":"application/json"});
+      return res.end(JSON.stringify({ready:true,durableState:{ok:true,schema:"sauceapproved.hercules.forge.durable-state.v1",carriesCredentials:false,objectCount:6}}));
+    }
+    res.writeHead(404,{"content-type":"application/json"}); res.end(JSON.stringify({error:"not_found"}));
+  });
+  const origin=await listen(server);
+  try{
+    const result=await runForgeStartupPromptCanary({origin,controlToken,projectId:"forge-prompt-canary-ai-v1"});
+    assert.equal(result.ok,true);
+    assert.equal(result.collisionAvoided,true);
+    assert.equal(result.status,"created_and_verified");
+    assert.equal(result.projectId,createdId);
+  }finally{await new Promise(resolve=>server.close(resolve));}
 });

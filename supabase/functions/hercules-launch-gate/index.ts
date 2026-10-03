@@ -5,11 +5,17 @@ const S=JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS')||'{}').default||Deno.env
 const db=createClient(U,S,{auth:{persistSession:false}});
 const ORG='ea5fb196-67f9-42fa-b592-49eeb3b84346';
 const APPDEPLOY_STRIPE_APP_ID='sauceapproved-hercules-titan-dhakbi';
+const APPDEPLOY_STRIPE_ATTESTATION_URL='https://sauceapproved-hercules-titan-dhakbi.v2.appdeploy.ai/api/provider-attestation';
 const SHOPIFY_TITAN_PRODUCT_ID='gid://shopify/Product/10261114782016';
 const TITAN_PRODUCT_CODE='hercules-titan-founding-access';
 const SHOPIFY_STORE_DOMAIN='sauceapproved-2.myshopify.com';
 const TITAN_OFFER_PACKET_VERSION='hercules-titan-founding-access-offer-v1';
 const TITAN_OFFER_PACKET_DIGEST='8e9330f7cf70103e8fd8691cdd14a22d70eb466849c1b5a5fc98bc45c378a00f';
+const STUDIO_PILOT_PRODUCT_CODE='sauceapproved-studio-founding-pilot';
+const STUDIO_PILOT_SHOPIFY_PRODUCT_ID='gid://shopify/Product/15397259477312';
+const STUDIO_PILOT_SHOPIFY_VARIANT_ID='gid://shopify/ProductVariant/67601341153600';
+const STUDIO_PILOT_SHOPIFY_SKU='SA-STUDIO-PILOT-001';
+const STUDIO_PILOT_CANONICAL_DOMAIN='sauceapproved-2.myshopify.com';
 const H={'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'};
 const out=(b:unknown,s=200)=>new Response(JSON.stringify(b),{status:s,headers:H});
 const hex=(a:ArrayBuffer)=>[...new Uint8Array(a)].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -35,7 +41,7 @@ async function publicRegistrationOpen(){
 
 async function run(){
   const started=Date.now();
-  const [launch,passwordProbe]=await Promise.all([
+  const [launch,passwordProbe,liveAppDeployProvider]=await Promise.all([
     fetch(U+'/functions/v1/hercules-launch?health=1',{signal:AbortSignal.timeout(10_000)})
       .then(async r=>({ok:r.ok&&(await r.json()).ok===true,status:r.status}))
       .catch(()=>({ok:false,status:0})),
@@ -49,10 +55,13 @@ async function run(){
           probe:body?.probe||null
         };
       })
-      .catch(()=>({ok:false,status:0,control:null,probe:null}))
+      .catch(()=>({ok:false,status:0,control:null,probe:null})),
+    fetch(APPDEPLOY_STRIPE_ATTESTATION_URL,{headers:{'accept':'application/json','cache-control':'no-cache'},signal:AbortSignal.timeout(10_000)})
+      .then(async r=>({ok:r.ok,status:r.status,body:await r.json().catch(()=>({}))}))
+      .catch(()=>({ok:false,status:0,body:{}}))
   ]);
 
-  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:appDeployProviderEvidence},{data:paymentEvidence},{data:shopifyOfferEvidence},{data:titanOwnerApprovals},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
+  const [{data:devbrain},{data:release},{data:recovery},{count:critical},{data:approvals},{data:stripe},{data:appDeployProviderEvidence},{data:paymentEvidence},{data:shopifyOfferEvidence},{data:titanOwnerApprovals},{data:studioPilotProduct},{data:studioPilotApprovals},{data:passwordDefenseDb,error:passwordDefenseError}]=await Promise.all([
     db.from('hercules_devbrain_fabric_checks').select('overall_ok,checked_at').eq('organization_id',ORG).order('checked_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_release_queue').select('release_id,status,environment,admission_decision,flight_record_hash,updated_at').eq('organization_id',ORG).eq('environment','production').eq('status','verified').eq('admission_decision','allow').order('updated_at',{ascending:false}).limit(1).maybeSingle(),
     db.from('hercules_recovery_snapshots').select('snapshot_id,status,verified_at,recovery_region').eq('organization_id',ORG).eq('status','verified').order('verified_at',{ascending:false}).limit(1).maybeSingle(),
@@ -85,6 +94,15 @@ async function run(){
       .eq('product_code',TITAN_PRODUCT_CODE)
       .in('approval_type',['pricing','terms','privacy','payment_path_verified'])
       .order('approval_type'),
+    db.from('hercules_software_products')
+      .select('code,status,checkout_enabled,metadata,updated_at')
+      .eq('code',STUDIO_PILOT_PRODUCT_CODE)
+      .maybeSingle(),
+    db.from('hercules_software_commercial_approvals')
+      .select('approval_type,status,approved_at,document_ref,evidence,updated_at')
+      .eq('product_code',STUDIO_PILOT_PRODUCT_CODE)
+      .in('approval_type',['pricing','terms','privacy','payment_provider_ready','payment_launch_capability','payment_path_verified'])
+      .order('approval_type'),
     db.rpc('hercules_password_defense_status')
   ]);
   const passwordDefense={
@@ -110,14 +128,37 @@ async function run(){
     stripe?.metadata?.livemode===true &&
     stripe?.metadata?.webhook_endpoint_id
   );
+  const liveAppDeployProviderValue=liveAppDeployProvider?.body||{};
+  const liveAppDeployProviderFresh=Boolean(
+    liveAppDeployProvider?.ok===true &&
+    liveAppDeployProviderValue?.observedAt &&
+    Math.abs(Date.now()-new Date(liveAppDeployProviderValue.observedAt).getTime())<5*60*1000
+  );
+  const appDeployAttestationHasNoPricingAuthority=(value:any)=>{
+    if(!value||typeof value!=='object')return true;
+    const forbidden=['price','price_cents','priceCents','amount','amount_cents','amountCents','catalog','catalog_ready','catalogReady','productPrice','planPrice'];
+    return !forbidden.some(key=>Object.prototype.hasOwnProperty.call(value,key));
+  };
+  const liveAppDeployStripeReady=Boolean(
+    liveAppDeployProviderFresh &&
+    appDeployAttestationHasNoPricingAuthority(liveAppDeployProviderValue) &&
+    liveAppDeployProviderValue?.provider==='stripe' &&
+    liveAppDeployProviderValue?.custody==='appdeploy' &&
+    liveAppDeployProviderValue?.appId===APPDEPLOY_STRIPE_APP_ID &&
+    liveAppDeployProviderValue?.credentialMode==='live' &&
+    liveAppDeployProviderValue?.stripeReachable===true &&
+    liveAppDeployProviderValue?.webhookConfigured===true
+  );
+
   const appDeployProviderValue=appDeployProviderEvidence?.value||{};
-  const appDeployProviderFresh=Boolean(
+  const ledgerAppDeployProviderFresh=Boolean(
     appDeployProviderEvidence?.verified_at &&
     Date.now()-new Date(appDeployProviderEvidence.verified_at).getTime()<24*60*60*1000
   );
-  const appDeployStripeReady=Boolean(
+  const ledgerAppDeployStripeReady=Boolean(
     appDeployProviderEvidence?.status==='active' &&
-    appDeployProviderFresh &&
+    appDeployAttestationHasNoPricingAuthority(appDeployProviderValue) &&
+    ledgerAppDeployProviderFresh &&
     appDeployProviderValue?.provider==='stripe' &&
     appDeployProviderValue?.custody==='appdeploy' &&
     appDeployProviderValue?.appId===APPDEPLOY_STRIPE_APP_ID &&
@@ -125,7 +166,36 @@ async function run(){
     appDeployProviderValue?.stripeReachable===true &&
     appDeployProviderValue?.webhookConfigured===true
   );
+  const appDeployStripeReady=Boolean(liveAppDeployStripeReady||ledgerAppDeployStripeReady);
   const paymentProviderReady=Boolean(vaultStripeReady||appDeployStripeReady);
+
+  const {error:providerGateSyncError}=await db.rpc('hercules_software_record_payment_gate',{
+    p_product_code:TITAN_PRODUCT_CODE,
+    p_gate:'payment_provider_ready',
+    p_verified:paymentProviderReady,
+    p_evidence:{
+      provider:'stripe',
+      owner_approval_required:false,
+      custody:vaultStripeReady?'supabase-vault':appDeployStripeReady?'appdeploy':null,
+      accountKey:vaultStripeReady?String(stripe?.account_key||''):null,
+      appId:appDeployStripeReady?APPDEPLOY_STRIPE_APP_ID:null,
+      livemode:paymentProviderReady,
+      webhookConfigured:Boolean(
+        vaultStripeReady?stripe?.metadata?.webhook_endpoint_id:
+        appDeployStripeReady?(
+          liveAppDeployStripeReady
+            ? liveAppDeployProviderValue?.webhookConfigured===true
+            : appDeployProviderValue?.webhookConfigured===true
+        ):false
+      ),
+      verifiedAt:new Date().toISOString(),
+      evidenceSource:vaultStripeReady?'supabase-vault':
+        liveAppDeployStripeReady?'live-appdeploy-attestation':
+        ledgerAppDeployStripeReady?'appdeploy-ledger-attestation':'none'
+    }
+  });
+  if(providerGateSyncError)throw providerGateSyncError;
+
   const paymentEvidenceValue=paymentEvidence?.value||{};
   const paymentEvidenceBound=Boolean(
     vaultStripeReady
@@ -189,14 +259,49 @@ async function run(){
   );
   const shopifyOfferReconciled=Boolean(shopifyOfferAligned||shopifyOfferExcluded);
 
+  const legacyTitanPaidLaunchReady=Boolean(paymentProviderReady&&paymentPathVerified&&shopifyOfferReconciled);
+
+  const studioPilotByType=Object.fromEntries((studioPilotApprovals||[]).map((row:any)=>[row.approval_type,row]));
+  const studioPilotOwnerApprovalsComplete=Boolean(
+    ['pricing','terms','privacy'].every(type=>studioPilotByType?.[type]?.status==='approved')
+  );
+  const studioPilotProviderReady=studioPilotByType?.payment_provider_ready?.status==='approved';
+  const studioPilotLaunchCapabilityReady=studioPilotByType?.payment_launch_capability?.status==='approved';
+  const studioPilotPaymentPathObserved=studioPilotByType?.payment_path_verified?.status==='approved';
+  const postLaunchObservationRequired=!studioPilotPaymentPathObserved;
+  const studioPublicationVerifiedAt=studioPilotProduct?.metadata?.publication_verified_at||null;
+  const studioPublicationFresh=Boolean(
+    studioPublicationVerifiedAt &&
+    Date.now()-new Date(studioPublicationVerifiedAt).getTime()<24*60*60*1000
+  );
+  const studioPilotStorefrontPublished=Boolean(
+    studioPilotProduct?.checkout_enabled===true &&
+    studioPilotProduct?.metadata?.shopify_product_status==='ACTIVE' &&
+    studioPilotProduct?.metadata?.online_store_published===true &&
+    studioPilotProduct?.metadata?.shopify_product_id===STUDIO_PILOT_SHOPIFY_PRODUCT_ID &&
+    studioPilotProduct?.metadata?.shopify_variant_id===STUDIO_PILOT_SHOPIFY_VARIANT_ID &&
+    studioPilotProduct?.metadata?.shopify_sku===STUDIO_PILOT_SHOPIFY_SKU &&
+    studioPilotProduct?.metadata?.shop_domain===STUDIO_PILOT_CANONICAL_DOMAIN &&
+    studioPublicationFresh
+  );
+  const studioPilotPaidLaunchReady=Boolean(
+    studioPilotOwnerApprovalsComplete &&
+    studioPilotProviderReady &&
+    studioPilotLaunchCapabilityReady &&
+    studioPilotStorefrontPublished
+  );
+
   const commercial=Object.fromEntries((approvals||[]).map((x:any)=>[x.approval_type,x.status==='approved']));
   commercial.auth_hardening=passwordDefense.ok;
-  commercial.payment_provider_ready=paymentProviderReady;
-  commercial.payment_path_verified=paymentPathVerified;
+  commercial.payment_provider_ready=Boolean(paymentProviderReady||studioPilotProviderReady);
+  commercial.payment_launch_capability=studioPilotLaunchCapabilityReady;
+  commercial.payment_path_verified=Boolean(paymentPathVerified||studioPilotPaymentPathObserved);
   commercial.storefront_offer_reconciled=shopifyOfferReconciled;
+  commercial.legacy_titan_paid_launch_ready=legacyTitanPaidLaunchReady;
+  commercial.studio_pilot_paid_launch_ready=studioPilotPaidLaunchReady;
   const requiredOwnerCommercial=['pricing','privacy','terms'];
   const technicalOk=Object.values(technical).every(Boolean);
-  const commercialOk=passwordDefense.ok&&paymentProviderReady&&paymentPathVerified&&shopifyOfferReconciled&&requiredOwnerCommercial.every(k=>commercial[k]===true);
+  const commercialOk=passwordDefense.ok&&requiredOwnerCommercial.every(k=>commercial[k]===true)&&(legacyTitanPaidLaunchReady||studioPilotPaidLaunchReady);
 
   const checks={
     technical,
@@ -222,6 +327,27 @@ async function run(){
         pathVerified:paymentPathVerified,
         pathVerifiedAt:paymentEvidence?.verified_at||null,
         pathProvenance:paymentEvidence?.provenance||null
+      },
+      paidLaunchLane:{
+        selected:studioPilotPaidLaunchReady?'studio-shopify-first-sale':legacyTitanPaidLaunchReady?'titan-legacy':null,
+        legacyTitanPaidLaunchReady,
+        studioPilotPaidLaunchReady,
+        studioPilot:{
+          productCode:STUDIO_PILOT_PRODUCT_CODE,
+          paymentProvider:'shopify',
+          directStripeRequired:false,
+          readyForFirstSale:studioPilotPaidLaunchReady,
+          paymentPathStage:postLaunchObservationRequired?'post_launch_observation':'verified',
+          ownerApprovalsComplete:studioPilotOwnerApprovalsComplete,
+          providerReady:studioPilotProviderReady,
+          launchCapabilityReady:studioPilotLaunchCapabilityReady,
+          storefrontPublished:studioPilotStorefrontPublished,
+          publicationVerifiedAt:studioPublicationVerifiedAt,
+          publicationFresh:studioPublicationFresh,
+          postLaunchObservationRequired,
+          paymentPathVerified:studioPilotPaymentPathObserved,
+          first_real_customer_order:postLaunchObservationRequired
+        }
       },
       storefrontOffer:{
         provider:'shopify',
@@ -258,6 +384,26 @@ async function run(){
 
 Deno.serve(async req=>{
   if(req.method==='GET'){
+    const url=new URL(req.url);
+    if(url.searchParams.get('titan_verification_authorization')==='1'){
+      const {data:rows,error}=await db.from('hercules_software_commercial_approvals')
+        .select('approval_type,status,approved_at')
+        .eq('product_code',TITAN_PRODUCT_CODE)
+        .in('approval_type',['pricing','terms','privacy'])
+        .order('approval_type');
+      if(error)return out({ok:false,error:'titan_verification_authorization_unavailable'},500);
+      const required=['pricing','terms','privacy'];
+      const commercialApproved=Boolean(
+        (rows||[]).length===3 &&
+        required.every(type=>(rows||[]).some((row:any)=>row.approval_type===type&&row.status==='approved'))
+      );
+      return out({
+        ok:true,
+        commercialApproved,
+        packetFingerprint:'33C0F4567B6C',
+        productCode:TITAN_PRODUCT_CODE
+      });
+    }
     const [{data},registration]=await Promise.all([
       db.from('hercules_launch_gate_checks')
         .select('technical_ok,commercial_ok,launch_ready,checks,checked_at')
@@ -270,7 +416,7 @@ Deno.serve(async req=>{
     return out({
       ok:true,
       service:'hercules-launch-gate',
-      version:'1.9.0',
+      version:'2.2.0',
       lastCheck:data||null,
       publicRegistrationOpen:registration.open,
       publicRegistrationVerifiedAt:registration.verifiedAt

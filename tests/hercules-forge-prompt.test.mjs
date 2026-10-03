@@ -354,3 +354,32 @@ test("Hercules AI interpreter remains fail closed after one bounded repair attem
     await new Promise((resolve) => adapter.close(resolve));
   }
 });
+
+test("Hercules AI interpreter safely normalizes omitted top-level metadata before model repair", async () => {
+  let calls=0;
+  const adapter=http.createServer((req,res)=>{
+    calls+=1;
+    res.writeHead(200,{"content-type":"application/json"});
+    res.end(JSON.stringify({
+      ok:true,
+      result:"\`\`\`json\n"+JSON.stringify({
+        entities:[{name:"Check",fields:[{name:"label",type:"string",required:true}]}],
+        pages:[{name:"CheckList",kind:"list",entity:"Check",fields:["label"]}],
+        actions:[{name:"CreateCheck",kind:"create",entity:"Check",fields:["label"]}]
+      })+"\n\`\`\`"
+    }));
+  });
+  const base=await listen(adapter);
+  try{
+    const interpreter=new HerculesAiForgeInterpreter({endpoint:base+"/route",internalKey:"k".repeat(48)});
+    const result=await interpreter.interpret("build the production canary");
+    assert.equal(result.version,"0.1");
+    assert.equal(result.name,"CheckApp");
+    assert.match(result.description,/Forge prompt/i);
+    assert.equal(result.pages[0].kind,"list");
+    assert.equal(result.actions[0].kind,"create");
+    assert.equal(calls,1);
+  } finally {
+    await new Promise((resolve)=>adapter.close(resolve));
+  }
+});

@@ -39,7 +39,7 @@ test("studio manifest exposes the operator surfaces required by SauceApproved St
   assert.equal(manifest.version,1);
   assert.deepEqual(
     manifest.surfaces.map(surface=>surface.id),
-    ["dashboard","project-brief","storyboard","run-status","shot-timeline","quality-evidence","recovery","output-review","content-multiplier","ai-sales-agent","brand-brain","market","vintage-camera","kids","integrations"]
+    ["dashboard","project-brief","storyboard","run-status","shot-timeline","quality-evidence","recovery","output-review","content-multiplier","ai-sales-agent","brand-brain","campaign-forge","movie-machine","holostage","legacy-vault","studio-director","reality-forge","performance-lab","scene-forge","sound-world","actor-lab","market","vintage-camera","kids","integrations","creation-floor"]
   );
   assert.equal(manifest.executionPolicy,"fail-closed");
 });
