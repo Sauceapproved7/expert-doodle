@@ -176,7 +176,8 @@ test("controller reloads both scripts after NOSCRIPT", async () => {
 
 test("settlement source refreshes the bucket timestamp before returning refunded credits", async () => {
   const settlement = await import("../hercules-chat/redis/admission.mjs").then((m) => m.scripts.settlement);
-  assert.equal(settlement.includes('redis.call("HSET",KEYS[1]'), true);\n  assert.equal(settlement.includes('"last_refill_ms",now'), true);
+  assert.equal(settlement.includes('redis.call("HSET",KEYS[1]'), true);
+  assert.equal(settlement.includes('"last_refill_ms",now'), true);
   assert.match(settlement, /status\", \"settled\"/);
 });
 
