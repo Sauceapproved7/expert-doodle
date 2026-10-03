@@ -18,7 +18,7 @@ function bearer(value){
 function baseUrl(value,label){
   let u;
   try{u=new URL(String(value??""))}catch{throw new Error(label+" not configured")}
-  if(u.protocol!=="https:"&&u.hostname!=="127.0.0.1"&&u.hostname!=="localhost")throw new Error(label+" must use HTTPS");
+  if(u.protocol!=="https:"&&!(u.protocol==="http:"&&(u.hostname==="127.0.0.1"||u.hostname==="localhost")))throw new Error(label+" must use HTTPS");
   return u;
 }
 
