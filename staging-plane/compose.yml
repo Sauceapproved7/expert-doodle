@@ -58,6 +58,7 @@ services:
     command: ["node", "/repo/hercules-base/server.mjs"]
     volumes:
       - ../hercules-base:/repo/hercules-base:ro
+      - ../hercules-runtime:/repo/hercules-runtime:ro
     ports:
       - "127.0.0.1:38800:38800"
     healthcheck:
