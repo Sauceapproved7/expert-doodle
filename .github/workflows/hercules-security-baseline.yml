@@ -40,3 +40,6 @@ jobs:
 
       - name: Run bounded Hercules adapter security tests
         run: node --test tests/evil-bot-hercules-adapters.test.mjs
+
+      - name: Run Abyss runtime boundary tests
+        run: node --test tests/evil-bot-abyss-runtime-boundary.test.mjs
