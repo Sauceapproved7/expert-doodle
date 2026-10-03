@@ -10,7 +10,7 @@ The repository recommends:
 - GitHub CodeQL for security-query inspection and triage.
 - GitLens for history, blame, branch, and change context.
 - Red Hat YAML for schema-aware YAML validation.
-- Red Hat OpenShift Extension Pack for OpenShift workflows.
+- Red Hat OpenShift Toolkit for OpenShift workflows.
 - Kubernetes Tools for cluster and manifest workflows.
 - Microsoft Container Tools for Docker/Podman workflows.
 - ESLint for JavaScript/TypeScript diagnostics when a project config is present.
