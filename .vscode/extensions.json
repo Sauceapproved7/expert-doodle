@@ -17,7 +17,7 @@
     "esbenp.prettier-vscode",
     "humao.rest-client",
     "timonwong.shellcheck",
-    "foxundoon.shell-format",
+    "foxundermoon.shell-format",
     "SonarSource.sonarlint-vscode",
     "semgrep.semgrep"
   ]
