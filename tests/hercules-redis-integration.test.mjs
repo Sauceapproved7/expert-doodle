@@ -30,9 +30,22 @@ test("real Redis cleanup releases only an expired active concurrency lease",{ski
  redis("FLUSHDB"); const ctl=new RedisAiAdmissionController(client);
  const input={...base,requestId:"req-expire",requestCostMicrocredits:1000,reservationTtlMs:50};
  await ctl.admit(input); const keys=buildAdmissionKeys(input.tenantId,input.requestId,input.dailyPeriod,input.monthlyPeriod);
- assert.equal(Number(redis("GET",keys.concurrency)), 1);
+ assert.equal(Number(redis("ZCARD",keys.leases)), 1);
  await new Promise(r=>setTimeout(r,80));
  const cleaned=await ctl.cleanupExpired({...input,reservationTtlMs:2000});
- assert.equal(cleaned.status,"expired"); assert.equal(Number(redis("GET",keys.concurrency)), 0);
+ assert.equal(cleaned.status,"expired"); assert.equal(Number(redis("ZCARD",keys.leases)), 0);
  const again=await ctl.cleanupExpired({...input,reservationTtlMs:2000}); assert.equal(again.status,"already_final");
+});
+
+
+test("one expired lease never erases another active concurrency lease",{skip:!enabled},async()=>{
+ redis("FLUSHDB"); const ctl=new RedisAiAdmissionController(client);
+ const a={...base,requestId:"req-short",requestCostMicrocredits:1000,reservationTtlMs:50};
+ const b={...base,requestId:"req-long",requestCostMicrocredits:1000,reservationTtlMs:2000};
+ await ctl.admit(a); await ctl.admit(b); const keys=buildAdmissionKeys(b.tenantId,b.requestId,b.dailyPeriod,b.monthlyPeriod);
+ assert.equal(Number(redis("ZCARD",keys.leases)),2);
+ await new Promise(r=>setTimeout(r,80));
+ const c={...base,requestId:"req-third",requestCostMicrocredits:1000,reservationTtlMs:2000};
+ const admitted=await ctl.admit(c); assert.equal(admitted.status,"allowed");
+ assert.equal(Number(redis("ZCARD",keys.leases)),2);
 });
