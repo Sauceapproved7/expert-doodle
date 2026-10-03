@@ -9,9 +9,9 @@ declare const Supabase: {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";\nconst dpopEnforced = (Deno.env.get("HERCULES_DPOP_ENFORCED") ?? "").toLowerCase() === "true";
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";\nimport { verifyDpopRequest } from "./dpop.ts";
+import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
 
 const embeddingModel = new Supabase.ai.Session("gte-small");
 

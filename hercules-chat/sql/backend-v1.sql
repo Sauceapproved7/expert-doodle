@@ -1198,31 +1198,3 @@ comment on table public.hercules_chat_memories is
   'User-owned semantic chat memory using 384-dimensional gte-small embeddings.';
 comment on table private.hercules_usage_ledger is
   'Server-only idempotent AI request usage ledger and reservation state.';
-
-
--- DPoP proof replay claims. Server-only, fail-closed single-use window.
-create table if not exists private.hercules_dpop_replay (
-  replay_hash text primary key,
-  expires_at timestamptz not null
-);
-
-create or replace function public.hercules_dpop_claim_replay(p_replay_hash text, p_ttl_seconds integer)
-returns boolean
-language plpgsql
-security definer
-set search_path = ''
-as $$
-begin
-  if p_replay_hash is null or length(p_replay_hash) <> 64 or p_ttl_seconds < 1 or p_ttl_seconds > 600 then
-    return false;
-  end if;
-  delete from private.hercules_dpop_replay where expires_at <= now();
-  insert into private.hercules_dpop_replay(replay_hash, expires_at)
-  values (p_replay_hash, now() + make_interval(secs => p_ttl_seconds))
-  on conflict (replay_hash) do nothing;
-  return found;
-end;
-$$;
-
-revoke all on function public.hercules_dpop_claim_replay(text, integer) from public, anon, authenticated;
-grant execute on function public.hercules_dpop_claim_replay(text, integer) to service_role;
