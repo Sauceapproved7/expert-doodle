@@ -12,7 +12,6 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 import { reserveWeightedTokens } from "./ratelimit/redis-token-bucket.ts";
-import { verifyDpopRequest } from "./dpop.ts";
 
 const embeddingModel = new Supabase.ai.Session("gte-small");
 
@@ -274,13 +273,6 @@ Deno.serve(async (req: Request) => {
 
   try {
     const userId = decodeJwtSub(req);
-    if (Deno.env.get("HERCULES_DPOP_ENFORCED") === "true") {
-      const auth = req.headers.get("Authorization") ?? "";
-      const rawToken = auth.startsWith("Bearer ") ? auth.slice(7) : "";
-      const expectedJkt = req.headers.get("x-hercules-dpop-jkt") ?? "";
-      if (!rawToken || !expectedJkt) throw new Error("DPOP_BINDING_REQUIRED");
-      await verifyDpopRequest(req, rawToken, expectedJkt, async () => { throw new Error("DPOP_REPLAY_STORE_NOT_CONFIGURED"); });
-    }
     const body = await req.json();
     const action = body?.action;
 
