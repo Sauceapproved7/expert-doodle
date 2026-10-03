@@ -39,6 +39,21 @@ test("admission decoder distinguishes a new reservation from an idempotent repla
   );
 });
 
+test("admission decoder classifies permanent policy rejection without treating it as a transient 429", () => {
+  assert.deepEqual(
+    decodeAdmissionResult([-1, 0, 0, 0, "request_exceeds_burst_capacity"]),
+    {
+      status: "permanent_rejection",
+      reason: "request_exceeds_burst_capacity",
+      remainingMicrocredits: 0,
+      retryAfterMs: 0,
+      resetAfterMs: 0,
+      concurrency: 0,
+      isNewReservation: false,
+    },
+  );
+});
+
 test("admission decoder fails closed on unknown or malformed results", () => {
   assert.throws(
     () => decodeAdmissionResult([0, 0, 0, 0, "not_a_known_reason"]),
@@ -121,6 +136,39 @@ test("controller loads scripts once and uses EVALSHA for admission and settlemen
   assert.equal(settlement.status, "settled");
   assert.equal(calls.filter((call) => call[0] === "load").length, 2);
   assert.equal(calls.filter((call) => call[0] === "evalsha").length, 2);
+});
+
+test("controller reloads both scripts after NOSCRIPT", async () => {
+  let loadCount = 0;
+  let evalCount = 0;
+  const client = {
+    async scriptLoad(script) {
+      loadCount += 1;
+      return script.includes("weighted AI admission gate") ? "a-" + loadCount : "s-" + loadCount;
+    },
+    async evalsha() {
+      evalCount += 1;
+      if (evalCount === 1) throw new Error("NOSCRIPT No matching script");
+      return [1, 1000, 0, 10, "allowed", 1];
+    },
+  };
+  const controller = new RedisAiAdmissionController(client);
+  const result = await controller.admit({
+    tenantId: "tenant",
+    requestId: "request",
+    tpmCapacityMicrocredits: 60000,
+    tpmRefillMicrocreditsPerMs: 2,
+    requestCostMicrocredits: 1000,
+    rpmCapacity: 60,
+    rpmRefillRequestsPerMs: 0.001,
+    maxConcurrent: 4,
+    reservationTtlMs: 120000,
+    dailyPeriod: "2026-10-03",
+    monthlyPeriod: "2026-10",
+  });
+  assert.equal(result.status, "allowed");
+  assert.equal(loadCount, 4);
+  assert.equal(evalCount, 2);
 });
 
 
