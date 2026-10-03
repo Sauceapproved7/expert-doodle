@@ -11,3 +11,9 @@ test("Smallz console establishes Supabase owner session and forwards bearer only
  assert.doesNotMatch(html,/body\s*:\s*JSON\.stringify\([^)]*access_token/si);
  assert.match(html,/signInWithOtp/);
 });
+
+
+test("Smallz module keeps inline owner controls callable",async()=>{
+ const html=await readFile(new URL("../hercules-bot/index.html",import.meta.url),"utf8");
+ for(const name of ["post","send","signin"]) assert.match(html,new RegExp(`window\\.${name}\\s*=\\s*${name}`));
+});
