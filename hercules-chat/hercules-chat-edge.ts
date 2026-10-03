@@ -223,6 +223,8 @@ async function finalize(
   status: "completed" | "failed" | "cancelled",
   responseMessageId: number | null = null,
   errorCode: string | null = null,
+  inputTokens = 0,
+  outputTokens = 0,
 ) {
   try {
     await rest(
@@ -233,9 +235,9 @@ async function finalize(
         body: JSON.stringify({
           p_request_id: requestId,
           p_status: status,
-          p_input_tokens: 0,
+          p_input_tokens: inputTokens,
           p_cached_input_tokens: 0,
-          p_output_tokens: 0,
+          p_output_tokens: outputTokens,
           p_actual_cost_microusd: 0,
           p_response_message_id: responseMessageId,
           p_error_code: errorCode,
@@ -642,12 +644,15 @@ Deno.serve(async (req: Request) => {
       const assistantMessage = assistantRows?.[0];
       if (!assistantMessage?.id) throw new Error("ASSISTANT_MESSAGE_INSERT_FAILED");
 
+      const estimatedOutputTokens = Math.max(1, Math.ceil(new TextEncoder().encode(ai.text).length / 4));
       await finalize(
         req,
         requestId,
         "completed",
         Number(assistantMessage.id),
         null,
+        estimatedInputTokens,
+        estimatedOutputTokens,
       );
       reservedRequestId = null;
 
