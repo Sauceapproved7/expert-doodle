@@ -61,7 +61,7 @@ test("OpenShift base separates API, worker, and reconciler and keeps secrets out
   assert.doesNotMatch(joined, /COMMERCE_ENABLED\s*[:=]\s*["\']?true/i);
 });
 
-test("webhook ingress persists before enqueue and fails closed on persistence errors", async () => {
+test("webhook ingress atomically admits before success and fails closed on admission errors", async () => {
   const raw = Buffer.from(JSON.stringify({ id: 42 }), "utf8");
   const secret = "test-secret";
   const hmac = createHmac("sha256", secret).update(raw).digest("base64");
@@ -73,13 +73,24 @@ test("webhook ingress persists before enqueue and fails closed on persistence er
     "X-Shopify-Event-Id": "event-42",
     "X-Shopify-Api-Version": "2026-10"
   });
-  const order = [];
-  const ok = await acceptWebhook({ rawBody: raw, headers, secret, persist: async (envelope) => { order.push("persist"); return { id: "inbox-1", envelope }; }, enqueue: async () => { order.push("enqueue"); } });
+  const admitted = [];
+  const ok = await acceptWebhook({
+    rawBody: raw,
+    headers,
+    secret,
+    admit: async (envelope) => {
+      admitted.push(envelope.webhookId);
+      return { accepted: true, duplicate: false };
+    }
+  });
   assert.equal(ok.status, 204);
-  assert.deepEqual(order, ["persist", "enqueue"]);
+  assert.deepEqual(admitted, ["delivery-42"]);
 
-  let enqueued = false;
-  const failed = await acceptWebhook({ rawBody: raw, headers, secret, persist: async () => { throw new Error("db_down"); }, enqueue: async () => { enqueued = true; } });
+  const failed = await acceptWebhook({
+    rawBody: raw,
+    headers,
+    secret,
+    admit: async () => { throw new Error("db_down"); }
+  });
   assert.equal(failed.status, 503);
-  assert.equal(enqueued, false);
 });
