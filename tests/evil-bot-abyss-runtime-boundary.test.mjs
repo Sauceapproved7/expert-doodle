@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {generateKeyPairSync,sign} from "node:crypto";
-import {createAbyssRuntimeBoundary} from "../hercules-bot/abyss-runtime-boundary.mjs";
+import {createAbyssRuntimeBoundary} from "./abyss-runtime-boundary.mjs";
 
 const ownerId="owner-123";
 function response(status,body){return {ok:status>=200&&status<300,status,json:async()=>body};}
@@ -63,6 +63,7 @@ test("recovery verifier checks configured Ed25519 key, digest, signer, and valid
   const b=createAbyssRuntimeBoundary({recoveryPublicKey:publicKeyPem,recoveryKeyId:"recovery-key-1",now:()=>now});
   assert.equal(b.verifyRecoveryArtifact(artifact),true);
   assert.equal(b.verifyRecoveryArtifact({...artifact,digest:"b".repeat(64)}),false);
+  assert.equal(b.verifyRecoveryArtifact({...artifact,digest:"A".repeat(64)}),false);
   assert.equal(b.verifyRecoveryArtifact({...artifact,keyId:"wrong"}),false);
   assert.equal(b.verifyRecoveryArtifact({...artifact,expiresAt:"2026-10-03T14:01:00.000Z"}),false);
   assert.equal(createAbyssRuntimeBoundary().verifyRecoveryArtifact(artifact),false);
