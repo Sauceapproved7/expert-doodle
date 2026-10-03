@@ -1,4 +1,4 @@
-import {resolve} from "node:path";
+import {isAbsolute, relative, resolve} from "node:path";
 import {listenHerculesDeployService} from "./control-api.mjs";
 import {createSupabaseEdgeFunctionAdapterFromEnv} from "./supabase-management.mjs";
 import {createMarketing16DeployBridge} from "./marketing-16-bridge.mjs";
@@ -12,6 +12,11 @@ function required(env, name) {
   return value.trim();
 }
 
+function nestedOrSame(parent, child) {
+  const path = relative(parent, child);
+  return path === "" || (!path.startsWith("..") && !isAbsolute(path));
+}
+
 function integer(name, value, min, max) {
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
@@ -22,12 +27,17 @@ function integer(name, value, min, max) {
 
 export function readHerculesDeployConfig(env = process.env) {
   const root = resolve(required(env, "HERCULES_DEPLOY_ROOT"));
+  const recoveryRoot = resolve(required(env, "HERCULES_DEPLOY_RECOVERY_ROOT"));
+  if (nestedOrSame(root, recoveryRoot) || nestedOrSame(recoveryRoot, root)) {
+    throw new Error("HERCULES_DEPLOY_RECOVERY_ROOT must be independent from HERCULES_DEPLOY_ROOT");
+  }
   const token = required(env, "HERCULES_DEPLOY_CONTROL_TOKEN");
   if (token.length < 32) {
     throw new Error("HERCULES_DEPLOY_CONTROL_TOKEN must be at least 32 characters");
   }
   return {
     root,
+    recoveryRoot,
     token,
     host: String(env.HERCULES_DEPLOY_HOST ?? "127.0.0.1").trim(),
     port: integer("HERCULES_DEPLOY_PORT", env.HERCULES_DEPLOY_PORT ?? 38800, 1, 65535),
@@ -43,6 +53,7 @@ export function readHerculesDeployConfig(env = process.env) {
 export function safeHerculesDeployConfig(config) {
   return {
     root: config.root,
+    recoveryRoot: config.recoveryRoot,
     host: config.host,
     port: config.port,
     pollIntervalMs: config.pollIntervalMs,
@@ -133,6 +144,7 @@ export async function startHerculesDeployService({
   const resolvedAdapters = adapters ?? createHerculesDeployAdaptersFromEnv(env, {fetchImpl});
   const service = listenHerculesDeployService({
     root: config.root,
+    recoveryRoot: config.recoveryRoot,
     token: config.token,
     adapters: resolvedAdapters,
     pollIntervalMs: config.pollIntervalMs,
