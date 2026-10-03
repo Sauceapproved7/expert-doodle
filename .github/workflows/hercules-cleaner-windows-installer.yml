@@ -1,15 +1,6 @@
 name: Hercules Cleaner Windows Installer
 
 on:
-  workflow_dispatch:
-  pull_request:
-    paths:
-      - "hercules-cleaner/**"
-      - "scripts/package-hercules-cleaner-windows.mjs"
-      - "tests/hercules-cleaner-installer.test.mjs"
-      - "tests/hercules-cleaner-windows-package.test.mjs"
-      - "releases/hercules-cleaner-v1.0.0/windows/**"
-      - ".github/workflows/hercules-cleaner-windows-installer.yml"
   push:
     branches: [main]
     paths:

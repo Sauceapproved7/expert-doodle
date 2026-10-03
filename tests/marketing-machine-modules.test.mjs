@@ -1,0 +1,2 @@
+import test from "node:test";import assert from "node:assert/strict";import * as m from "../hercules-forge/marketing-machine/modules.mjs";
+test("marketing modules expose safe outputs",()=>{assert.equal(m.retentionEngine().flows.length,8);assert.equal(m.shadowRadar([]).bypassAccessControls,false);assert.equal(m.customerXRay([{authorized:false,text:"x"},{authorized:true,text:"y"}]).insights.length,1);assert.equal(m.offerArchitect({price:100,cost:50}).approvalRequired,true);assert.equal(m.landingPageKiller({}).issues.length,3)});

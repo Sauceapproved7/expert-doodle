@@ -5,9 +5,12 @@ on:
     paths:
       - "governance/hercules-founding-pilot-offer-v1.json"
       - "docs/launch/HERCULES-FOUNDING-PILOT-OFFER-V1.md"
-      - "supabase/functions/hercules-launch/**"\n      - "supabase/functions/hercules-private-bridge/pilot-admission.ts"\n      - "supabase/functions/hercules-private-bridge/index.ts"
+      - "supabase/functions/hercules-launch/**"
+      - "supabase/functions/hercules-private-bridge/pilot-admission.ts"
+      - "supabase/functions/hercules-private-bridge/index.ts"
       - "supabase/migrations/*hercules_controlled_founding_pilot_launch*"
-      - "tests/hercules-founding-pilot-offer.test.mjs"\n      - "tests/hercules-founding-pilot-admission.test.mjs"
+      - "tests/hercules-founding-pilot-offer.test.mjs"
+      - "tests/hercules-founding-pilot-admission.test.mjs"
       - ".github/workflows/hercules-founding-pilot-offer.yml"
   workflow_dispatch:
 

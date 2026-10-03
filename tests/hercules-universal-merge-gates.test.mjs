@@ -1,6 +1,7 @@
 import "./hercules-founding-pilot-admission.test.mjs";
 import "./hercules-soundworld-launch-gift.test.mjs";
 import "./hercules-soundworld-gift-backend-ledger.test.mjs";
+import "./hercules-launch-gate-freshness.test.mjs";
 import "./hercules-paid-launch-payment-gate.test.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";

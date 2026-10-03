@@ -1,0 +1,13 @@
+client_id = "1ed12710f0b797a7a3328c1cf4e8b1f9"
+name = "Hercules"
+application_url = "https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-integrations"
+embedded = true
+
+[access_scopes]
+scopes = "read_orders"
+
+[auth]
+redirect_urls = []
+
+[webhooks]
+api_version = "2026-10"

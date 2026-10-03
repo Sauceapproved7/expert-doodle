@@ -1,0 +1,11 @@
+{
+  "schema":"sauceapproved.hercules.shopify-paid-order-runner-runtime",
+  "version":1,
+  "canonicalShopDomain":"sauceapproved-2.myshopify.com",
+  "lookbackHours":48,
+  "maxOrdersPerRun":50,
+  "allowedProducts":[
+    {"productCode":"sauceapproved-studio","productId":"15397259477312","variantId":"67601341153600","sku":"SA-STUDIO-PILOT-001"},
+    {"productCode":"hercules-titan-founding-access","productId":"10261114782016","variantId":"53144447811904","sku":"HERCULES-TITAN-FOUNDING"}
+  ]
+}
