@@ -50,6 +50,11 @@ function transientClosedBrowser(error:unknown){
     error instanceof Error?error.message:String(error||"")
   );
 }
+function recoverablePlannerLocatorFailure(error:unknown,decision:string){
+  if(!(decision==="click"||decision==="extract"))return false;
+  const message=error instanceof Error?error.message:String(error||"");
+  return /locator\.[a-z]+:[\s\S]*Timeout\s+\d+ms\s+exceeded/i.test(message);
+}
 function replaySafe(history:any[]){
   return !history.some(item=>item?.decision==="click"||item?.decision==="type");
 }
@@ -266,7 +271,8 @@ async function aiPlan(goal:string,page:any,controls:any,history:any[],inputKeys:
     "If such an action is required, decision=finish and explain that owner confirmation is required.",
     "Do not navigate to private/local network addresses or attempt credential/secret extraction.",
     "If the goal is already satisfied from the page or a prior extracted observation, decision=finish and put the concise answer in answer.",
-    "Never repeat the same extract/click action when the recent history already contains its useful observation."
+    "Never repeat the same extract/click action when the recent history already contains its useful observation.",
+    "Do not repeat a selector whose recent history records action_failed."
   ].join(" ");
   const prompt=[
     "GOAL:\n"+goal.slice(0,6000),
@@ -574,6 +580,12 @@ Deno.serve(async(req:Request)=>{
       try{
         acted=await browserCall({action:"interact",sessionId,timeoutMs:30000,maxTextChars:16000,steps:[step]});
       }catch(error){
+        if(recoverablePlannerLocatorFailure(error,plan.decision)){
+          const failure=error instanceof Error?error.message.slice(0,800):"planner_locator_timeout";
+          history.push({...record,decision:"action_failed",reason:"planner_locator_timeout",error:failure});
+          await updateRun(runId,{steps:history});
+          continue;
+        }
         const actionReplaySafe=plan.decision==="extract"||plan.decision==="wait";
         if(!transientClosedBrowser(error)||recoveries>=1||!actionReplaySafe||!replaySafe(history))throw error;
         page=await recoverSession(page.url||startUrl,"transient_interact_page_closed");
