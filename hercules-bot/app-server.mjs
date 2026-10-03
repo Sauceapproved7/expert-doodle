@@ -24,7 +24,7 @@ export function createHerculesBotApp({port=Number(process.env.PORT||38801),mcpWo
  const console=createOperatorConsole({controller}),session=createOperatorSession({console});
  async function handle(req={}){
   const method=String(req.method??"GET").toUpperCase(),url=String(req.url??"/").split("?")[0];
-  if(method==="GET"&&url==="/health")return json(200,{ok:true,service:"smallz",hardware:"disconnected",browserBridge:!!ownerBridge});
+  if(method==="GET"&&url==="/health")return json(200,{ok:true,service:"smallz",hardware:"disconnected",browserBridge:!!ownerBridge});\n  if(method==="GET"&&url==="/api/auth-config"){const authUrl=process.env.SUPABASE_PUBLIC_URL,authKey=process.env.SUPABASE_PUBLISHABLE_KEY;if(!authUrl||!authKey)return json(503,{error:"owner-auth-not-configured"});return json(200,{url:authUrl,key:authKey});}
   if(method==="GET"&&url==="/app")return {status:200,headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store"},body:await readFile(join(fileURLToPath(new URL(".",import.meta.url)),"index.html"),"utf8")};
   if(method==="GET"&&url==="/api/state")return json(200,{body:await body.status(),pending:session.pending?.()??null,ownerControl:true,controls:["approve","emergency-stop","resume"]});
   if(method==="POST"&&url==="/api/browser"){
