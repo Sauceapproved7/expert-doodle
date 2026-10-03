@@ -31,7 +31,11 @@ if existing then
   return {-1,0,0,0,"reservation_already_settled"}
 end
 local rt=redis.call("TIME"); local now=tonumber(rt[1])*1000+math.floor(tonumber(rt[2])/1000)
-local function safe_refill(elapsed,rate)\n  local whole=math.floor(elapsed/60000); local rem=elapsed-whole*60000\n  return whole*rate+math.floor(rem*rate/60000)\nend\nlocal function bucket(key,capacity,rate)
+local function safe_refill(elapsed,rate)
+  local whole=math.floor(elapsed/60000); local rem=elapsed-whole*60000
+  return whole*rate+math.floor(rem*rate/60000)
+end
+local function bucket(key,capacity,rate)
   local v=redis.call("HMGET",key,"credits","last_refill_ms"); local credits=tonumber(v[1]); local last=tonumber(v[2])
   if not credits or not last then credits=capacity; last=now end
   local elapsed=math.max(0,now-last)
@@ -41,7 +45,8 @@ local function safe_refill(elapsed,rate)\n  local whole=math.floor(elapsed/60000
   return math.min(capacity,credits+refill)
 end
 local tpm=bucket(KEYS[1],tpm_capacity,tpm_rate); local rpm=bucket(KEYS[2],rpm_capacity,rpm_rate)
-redis.call("ZREMRANGEBYSCORE",KEYS[7],"-inf",now)\nlocal concurrency=tonumber(redis.call("ZCARD",KEYS[7])) or 0
+redis.call("ZREMRANGEBYSCORE",KEYS[7],"-inf",now)
+local concurrency=tonumber(redis.call("ZCARD",KEYS[7])) or 0
 local daily_used=tonumber(redis.call("GET",KEYS[4])) or 0; local monthly_used=tonumber(redis.call("GET",KEYS[5])) or 0
 if tpm<cost then return {0,tpm,math.ceil((cost-tpm)*60000/tpm_rate),0,"token_rate_limited"} end
 if rpm<1 then return {0,tpm,math.ceil(60000/rpm_rate),0,"request_rate_limited"} end
