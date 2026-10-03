@@ -73,8 +73,11 @@ test("controller loads scripts once and uses EVALSHA for admission and settlemen
   const calls = [];
   const client = {
     async scriptLoad(script) {
-      calls.push(["load", script]);
-      return calls.length === 1 ? "admission-sha" : "settlement-sha";
+      const sha = script.includes("weighted AI admission gate")
+        ? "admission-sha"
+        : "settlement-sha";
+      calls.push(["load", sha]);
+      return sha;
     },
     async evalsha(...args) {
       calls.push(["evalsha", ...args]);
@@ -118,4 +121,11 @@ test("controller loads scripts once and uses EVALSHA for admission and settlemen
   assert.equal(settlement.status, "settled");
   assert.equal(calls.filter((call) => call[0] === "load").length, 2);
   assert.equal(calls.filter((call) => call[0] === "evalsha").length, 2);
+});
+
+
+test("settlement source refreshes the bucket timestamp before returning refunded credits", async () => {
+  const settlement = await import("../hercules-chat/redis/admission.mjs").then((m) => m.scripts.settlement);
+  assert.match(settlement, /HSET"?,? KEYS\[1\][\s\S]*last_refill_ms/);
+  assert.match(settlement, /status\", \"settled\"/);
 });
