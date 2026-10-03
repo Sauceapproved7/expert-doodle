@@ -75,9 +75,7 @@ test("webhook ingress atomically admits before success and fails closed on admis
   });
   const admitted = [];
   const ok = await acceptWebhook({
-    rawBody: raw,
-    headers,
-    secret,
+    rawBody: raw, headers, secret,
     admit: async (envelope) => {
       admitted.push(envelope.webhookId);
       return { accepted: true, duplicate: false };
@@ -87,10 +85,75 @@ test("webhook ingress atomically admits before success and fails closed on admis
   assert.deepEqual(admitted, ["delivery-42"]);
 
   const failed = await acceptWebhook({
-    rawBody: raw,
-    headers,
-    secret,
+    rawBody: raw, headers, secret,
     admit: async () => { throw new Error("db_down"); }
   });
   assert.equal(failed.status, 503);
+});
+
+test("webhook ingress acknowledges unsupported topics without persistence", async () => {
+  const raw = Buffer.from(JSON.stringify({ id: 77 }), "utf8");
+  const secret = "test-secret";
+  const hmac = createHmac("sha256", secret).update(raw).digest("base64");
+  const headers = new Headers({
+    "X-Shopify-Hmac-Sha256": hmac,
+    "X-Shopify-Shop-Domain": "sauceapproved-2.myshopify.com",
+    "X-Shopify-Topic": "themes/publish",
+    "X-Shopify-Webhook-Id": "delivery-77",
+    "X-Shopify-Api-Version": "2026-10"
+  });
+  let persisted = false;
+  const result = await acceptWebhook({
+    rawBody: raw, headers, secret,
+    allowedTopics: new Set(["orders/paid"]),
+    findActiveInstallation: async () => ({ id: "installation-1" }),
+    admit: async () => { persisted = true; return { accepted: true, duplicate: false }; }
+  });
+  assert.equal(result.status, 204);
+  assert.equal(persisted, false);
+});
+
+test("webhook ingress rejects a signed delivery for an inactive shop", async () => {
+  const raw = Buffer.from(JSON.stringify({ id: 88 }), "utf8");
+  const secret = "test-secret";
+  const hmac = createHmac("sha256", secret).update(raw).digest("base64");
+  const headers = new Headers({
+    "X-Shopify-Hmac-Sha256": hmac,
+    "X-Shopify-Shop-Domain": "sauceapproved-2.myshopify.com",
+    "X-Shopify-Topic": "orders/paid",
+    "X-Shopify-Webhook-Id": "delivery-88",
+    "X-Shopify-Api-Version": "2026-10"
+  });
+  let persisted = false;
+  const result = await acceptWebhook({
+    rawBody: raw, headers, secret,
+    allowedTopics: new Set(["orders/paid"]),
+    findActiveInstallation: async () => null,
+    admit: async () => { persisted = true; return { accepted: true, duplicate: false }; }
+  });
+  assert.equal(result.status, 401);
+  assert.equal(result.code, "inactive_installation");
+  assert.equal(persisted, false);
+});
+
+test("webhook ingress passes installation identity into the durable envelope", async () => {
+  const raw = Buffer.from(JSON.stringify({ id: 99 }), "utf8");
+  const secret = "test-secret";
+  const hmac = createHmac("sha256", secret).update(raw).digest("base64");
+  const headers = new Headers({
+    "X-Shopify-Hmac-Sha256": hmac,
+    "X-Shopify-Shop-Domain": "sauceapproved-2.myshopify.com",
+    "X-Shopify-Topic": "orders/paid",
+    "X-Shopify-Webhook-Id": "delivery-99",
+    "X-Shopify-Api-Version": "2026-10"
+  });
+  let envelope;
+  const result = await acceptWebhook({
+    rawBody: raw, headers, secret,
+    allowedTopics: new Set(["orders/paid"]),
+    findActiveInstallation: async () => ({ id: "installation-99" }),
+    admit: async (value) => { envelope = value; return { accepted: true, duplicate: false }; }
+  });
+  assert.equal(result.status, 204);
+  assert.equal(envelope.installationId, "installation-99");
 });
