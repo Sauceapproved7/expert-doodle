@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 add_library(hercules_native STATIC
   src/hercules_native.c
   src/hercules_adapters.c
+  src/hercules_runtime.c
 )
 target_include_directories(hercules_native PUBLIC include)
 
@@ -23,3 +24,7 @@ add_test(NAME hercules_native_tests COMMAND hercules_native_tests)
 add_executable(hercules_adapter_tests tests/test_adapters.c)
 target_link_libraries(hercules_adapter_tests PRIVATE hercules_native)
 add_test(NAME hercules_adapter_tests COMMAND hercules_adapter_tests)
+
+add_executable(hercules_runtime_tests tests/test_runtime.c)
+target_link_libraries(hercules_runtime_tests PRIVATE hercules_native)
+add_test(NAME hercules_runtime_tests COMMAND hercules_runtime_tests)
