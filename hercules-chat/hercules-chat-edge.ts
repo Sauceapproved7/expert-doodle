@@ -491,6 +491,10 @@ Deno.serve(async (req: Request) => {
 
       const requestId = crypto.randomUUID();
       reservedRequestId = requestId;
+      const estimatedInputTokens = Math.max(1, Math.ceil(new TextEncoder().encode(prompt).length / 4));
+      const reservedOutputTokens = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_MAX_OUTPUT"), 4_096, 1, 128_000);
+      const tokenReservation = estimatedInputTokens + reservedOutputTokens;
+
 
       await rest(
         req,
@@ -504,6 +508,7 @@ Deno.serve(async (req: Request) => {
             p_provider: "hercules-ai",
             p_model: "routed",
             p_reserved_cost_microusd: 0,
+            p_reserved_tokens: tokenReservation,
           }),
         },
         true,
@@ -592,9 +597,6 @@ Deno.serve(async (req: Request) => {
         const refillPerMinute = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_TPM"), 120_000, 1, 10_000_000);
         const burst = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_BURST"), capacity, 1, capacity);
         const refillPerMs = refillPerMinute / 60_000;
-        const estimatedInputTokens = Math.max(1, Math.ceil(new TextEncoder().encode(system + routedPrompt).length / 4));
-        const reservedOutputTokens = boundedInt(Deno.env.get("HERCULES_TOKEN_BUCKET_MAX_OUTPUT"), 4_096, 1, 128_000);
-        const tokenReservation = estimatedInputTokens + reservedOutputTokens;
         if (tokenReservation > burst) throw new Error("TOKEN_BUDGET_EXCEEDED");
 
         const decision = await reserveWeightedTokens(
