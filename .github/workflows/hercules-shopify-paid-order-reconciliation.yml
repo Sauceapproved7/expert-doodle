@@ -5,14 +5,16 @@ on:
     paths:
       - "AGENTS.md"
       - "governance/hercules-shopify-paid-order-reconciliation-v1.json"
-      - "supabase/migrations/*shopify_paid_order_reconciliation*"\n      - "supabase/migrations/*shopify_webhook_inbox_outbox*"
+      - "supabase/migrations/*shopify_paid_order_reconciliation*"
+      - "supabase/migrations/*shopify_webhook_inbox_outbox*"
       - "supabase/functions/hercules-shopify-webhook/index.ts"
       - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
       - "hercules-runtime/shopify-paid-order-runner-policy.json"
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
-      - "tests/hercules-shopify-owned-control-plane.test.mjs"\n      - "tests/hercules-shopify-openshift-hardening.test.mjs"
+      - "tests/hercules-shopify-owned-control-plane.test.mjs"
+      - "tests/hercules-shopify-openshift-*.test.mjs"
       - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   push:
@@ -22,6 +24,7 @@ on:
       - "AGENTS.md"
       - "governance/hercules-shopify-paid-order-reconciliation-v1.json"
       - "supabase/migrations/*shopify_paid_order_reconciliation*"
+      - "supabase/migrations/*shopify_webhook_inbox_outbox*"
       - "supabase/functions/hercules-shopify-webhook/index.ts"
       - "hercules-runtime/shopify-paid-order-runner.mjs"
       - "tests/hercules-shopify-paid-order-reconciliation.test.mjs"
@@ -29,6 +32,7 @@ on:
       - "tests/hercules-shopify-paid-order-runner.test.mjs"
       - "tests/hercules-shopify-flow-paid-order-bridge.test.mjs"
       - "tests/hercules-shopify-owned-control-plane.test.mjs"
+      - "tests/hercules-shopify-openshift-*.test.mjs"
       - "shopify/hercules/**"
       - ".github/workflows/hercules-shopify-paid-order-reconciliation.yml"
   workflow_dispatch:
@@ -45,7 +49,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-      - name: Verify bounded reconciliation contract and runner
+      - name: Verify bounded reconciliation contract and OpenShift hardening
         run: node --test tests/hercules-shopify-paid-order-reconciliation.test.mjs tests/hercules-shopify-paid-order-runner.test.mjs tests/hercules-shopify-flow-paid-order-bridge.test.mjs tests/hercules-shopify-owned-control-plane.test.mjs tests/hercules-shopify-openshift-foundation.test.mjs tests/hercules-shopify-openshift-runtime.test.mjs tests/hercules-shopify-openshift-hardening.test.mjs
       - name: Verify Hercules execution contract
         run: node scripts/verify-hercules-execution-contract.mjs
