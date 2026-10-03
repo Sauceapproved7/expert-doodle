@@ -37,7 +37,7 @@ export function parseShopifyHeaders(headers) {
   const apiVersion = String(headers.get("x-shopify-api-version") || "").trim();
   const triggeredAt = String(headers.get("x-shopify-triggered-at") || "").trim();
   if (shopDomain !== CANONICAL_SHOP) throw new Error("invalid_shop_domain");
-  if (!ALLOWED_TOPICS.has(topic)) throw new Error("topic_not_allowed");
+  if (!topic) throw new Error("topic_required");
   if (!webhookId) throw new Error("webhook_id_required");
   if (!/^\d{4}-\d{2}$/.test(apiVersion)) throw new Error("api_version_required");
   if (triggeredAt && Number.isNaN(new Date(triggeredAt).getTime())) throw new Error("triggered_at_invalid");
