@@ -672,7 +672,7 @@ Deno.serve(async (req: Request) => {
 
     const status =
       message === "UNAUTHORIZED" ? 401 :
-      message.startsWith("RATE_LIMIT_") || message === "MONTHLY_AI_BUDGET_EXCEEDED" || message === "TOKEN_BUDGET_EXCEEDED" ? 429 :
+      message.startsWith("RATE_LIMIT_") || message === "MONTHLY_AI_BUDGET_EXCEEDED" ? 429 :
       message === "NOT_FOUND" ? 404 :
       message === "AI_ROUTER_NOT_CONFIGURED" || message === "AI_PROVIDER_CHAIN_FAILED" ? 503 :
       message === "DATABASE_ERROR" ? 409 :
