@@ -35,3 +35,31 @@ export function buildInventoryQuery({variantId}={}){
 export function buildMutationPreview({operation,variables={}}={}){
   return {dryRun:true,blocked:true,operation:required(operation,"operation"),variables,reason:"write_scope_not_authorized"};
 }
+
+
+function assertReadOnlyDocument(query){
+  const document=String(query??"").replace(/#[^\n]*/g," ").trim();
+  if(!document||/\bmutation\b/i.test(document))throw new Error("read_only_graphql_required");
+}
+
+export async function executeAdminGraphqlRead({shop,apiVersion,accessToken,query,variables={},fetchImpl=globalThis.fetch,sleep=(ms)=>new Promise(r=>setTimeout(r,ms)),maxRetries=3}={}){
+  assertReadOnlyDocument(query);
+  if(typeof fetchImpl!=="function")throw new Error("fetch_required");
+  const retries=Number(maxRetries);if(!Number.isInteger(retries)||retries<1||retries>5)throw new Error("invalid_max_retries");
+  const request=buildAdminGraphqlRequest({shop,apiVersion,accessToken,query,variables});
+  for(let attempt=0;attempt<retries;attempt++){
+    let response;
+    try{response=await fetchImpl(request.url,{method:request.method,headers:request.headers,body:request.body});}
+    catch(error){if(attempt+1>=retries)throw new Error("shopify_transport_failed",{cause:error});await sleep(Math.min(250*(2**attempt),2000));continue;}
+    if(response.status===429||response.status>=500){if(attempt+1>=retries)throw new Error("shopify_http_"+response.status);await sleep(Math.min(250*(2**attempt),2000));continue;}
+    if(!response.ok)throw new Error("shopify_http_"+response.status);
+    let body;try{body=await response.json();}catch{throw new Error("invalid_shopify_json");}
+    const errors=Array.isArray(body?.errors)?body.errors:[];
+    const throttled=errors.some(e=>e?.extensions?.code==="THROTTLED");
+    if(throttled&&attempt+1<retries){await sleep(Math.min(250*(2**attempt),2000));continue;}
+    if(errors.length)throw new Error("shopify_graphql_error");
+    if(body?.data==null)throw new Error("shopify_data_missing");
+    return body.data;
+  }
+  throw new Error("shopify_retry_exhausted");
+}
