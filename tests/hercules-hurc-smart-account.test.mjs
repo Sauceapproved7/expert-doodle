@@ -106,6 +106,7 @@ test("Solidity source has no third-party imports or dangerous execution primitiv
   assert.match(source, /validateUserOp/);
   assert.match(source, /HerculesSmartAccountFactory/);
   assert.match(source, /SECP256K1_HALF_N/);
+  assert.match(source, /MAX_BATCH_CALLS\s*=\s*32/);
   assert.match(source, /senderCreator\(\)/);
   assert.match(source, /msg\.sender\s*!=\s*IHerculesEntryPoint\(entryPoint\)\.senderCreator\(\)/);
 });
