@@ -12,6 +12,14 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 const embeddingModel = new Supabase.ai.Session("gte-small");
+const { createRedisTokenLimiter, estimateReservedTokens, limiterConfig } =
+  await import("./redis-token-limiter.mjs");
+const redisTokenLimiter = (() => {
+  const url = Deno.env.get("UPSTASH_REDIS_REST_URL") ?? "";
+  const token = Deno.env.get("UPSTASH_REDIS_REST_TOKEN") ?? "";
+  if (!url || !token) return null;
+  return createRedisTokenLimiter({ url, token, config: limiterConfig(Deno.env.toObject()) });
+})();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,10 +27,15 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function json(data: unknown, status = 200) {
+function json(data: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json", "Cache-Control": "no-store" },
+    headers: {
+      ...corsHeaders,
+      ...extraHeaders,
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+    },
   });
 }
 
@@ -207,11 +220,21 @@ async function routeAi(req: Request, system: string, prompt: string) {
   const result = String(payload.result ?? "").trim();
   if (!result) throw new Error("AI_EMPTY_RESPONSE");
 
+  const usage = payload.usage && typeof payload.usage === "object"
+    ? payload.usage as Record<string, unknown>
+    : null;
   return {
     text: result,
     provider: String(payload.provider ?? "hercules-ai"),
     model: String(payload.model ?? "routed"),
     attempts: Array.isArray(payload.attempts) ? payload.attempts : [],
+    usage: usage
+      ? {
+          inputTokens: Number(usage.input_tokens ?? usage.prompt_tokens ?? 0) || 0,
+          outputTokens: Number(usage.output_tokens ?? usage.completion_tokens ?? 0) || 0,
+          totalTokens: Number(usage.total_tokens ?? 0) || 0,
+        }
+      : null,
   };
 }
 
@@ -221,6 +244,7 @@ async function finalize(
   status: "completed" | "failed" | "cancelled",
   responseMessageId: number | null = null,
   errorCode: string | null = null,
+  usage: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | null = null,
 ) {
   try {
     await rest(
@@ -231,9 +255,9 @@ async function finalize(
         body: JSON.stringify({
           p_request_id: requestId,
           p_status: status,
-          p_input_tokens: 0,
+          p_input_tokens: Math.max(0, Math.trunc(Number(usage?.inputTokens ?? 0))),
           p_cached_input_tokens: 0,
-          p_output_tokens: 0,
+          p_output_tokens: Math.max(0, Math.trunc(Number(usage?.outputTokens ?? 0))),
           p_actual_cost_microusd: 0,
           p_response_message_id: responseMessageId,
           p_error_code: errorCode,
@@ -266,6 +290,7 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return json({ error: "METHOD_NOT_ALLOWED" }, 405);
 
   let reservedRequestId: string | null = null;
+  let limiterReservation: { tenantId: string; requestId: string; reservedTokens: number } | null = null;
 
   try {
     const userId = decodeJwtSub(req);
@@ -585,7 +610,47 @@ Deno.serve(async (req: Request) => {
         `Current request:\n${prompt}`
       ].filter(Boolean).join("\n\n").slice(0, 16000);
 
+      const tokenPlan = estimateReservedTokens({
+        system,
+        prompt: routedPrompt,
+        requestedMaxOutput: body.max_output_tokens ?? 0,
+        outputCap: limiterConfig(Deno.env.toObject()).outputCap,
+      });
+      if (!redisTokenLimiter) throw new Error("REDIS_RATE_LIMITER_NOT_CONFIGURED");
+
+      const admission = await redisTokenLimiter.admit({
+        tenantId: userId,
+        requestId,
+        reservedTokens: tokenPlan.reservedTokens,
+        modelClass: "general",
+      });
+
+      if (!admission.allowed) {
+        const err = new Error(
+          admission.reason === "request_exceeds_burst_capacity"
+            ? "TOKEN_REQUEST_EXCEEDS_BURST_CAPACITY"
+            : "TOKEN_RATE_LIMIT_EXCEEDED",
+        );
+        (err as any).retryAfterMs = admission.retryAfterMs;
+        throw err;
+      }
+
+      limiterReservation = {
+        tenantId: userId,
+        requestId,
+        reservedTokens: tokenPlan.reservedTokens,
+      };
+
       const ai = await routeAi(req, system, routedPrompt);
+      const actualTokens = ai.usage?.totalTokens > 0
+        ? ai.usage.totalTokens
+        : tokenPlan.reservedTokens;
+      await redisTokenLimiter.settle({
+        tenantId: userId,
+        requestId,
+        actualTokens,
+      });
+      limiterReservation = null;
 
       const assistantRows = await rest(
         req,
@@ -621,6 +686,7 @@ Deno.serve(async (req: Request) => {
         "completed",
         Number(assistantMessage.id),
         null,
+        ai.usage,
       );
       reservedRequestId = null;
 
@@ -638,13 +704,28 @@ Deno.serve(async (req: Request) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : "UNKNOWN_ERROR";
 
+    if (limiterReservation && redisTokenLimiter) {
+      try {
+        await redisTokenLimiter.settle({
+          tenantId: limiterReservation.tenantId,
+          requestId: limiterReservation.requestId,
+          actualTokens: limiterReservation.reservedTokens,
+        });
+      } catch (settlementError) {
+        console.error("token limiter settlement failed", settlementError);
+      }
+      limiterReservation = null;
+    }
+
     if (reservedRequestId) {
       await finalize(req, reservedRequestId, "failed", null, message);
       reservedRequestId = null;
     }
 
+    const retryAfterMs = Number((error as any)?.retryAfterMs ?? 0);
     const status =
       message === "UNAUTHORIZED" ? 401 :
+      message.startsWith("TOKEN_RATE_LIMIT_") || message === "TOKEN_REQUEST_EXCEEDS_BURST_CAPACITY" ||
       message.startsWith("RATE_LIMIT_") || message === "MONTHLY_AI_BUDGET_EXCEEDED" ? 429 :
       message === "NOT_FOUND" ? 404 :
       message === "AI_ROUTER_NOT_CONFIGURED" || message === "AI_PROVIDER_CHAIN_FAILED" ? 503 :
@@ -652,6 +733,12 @@ Deno.serve(async (req: Request) => {
       message === "SERVER_NOT_CONFIGURED" ? 503 :
       400;
 
-    return json({ error: message }, status);
+    return json(
+      { error: message },
+      status,
+      retryAfterMs > 0
+        ? { "Retry-After": String(Math.max(1, Math.ceil(retryAfterMs / 1000))) }
+        : {},
+    );
   }
 });
