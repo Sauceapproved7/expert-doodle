@@ -30,7 +30,11 @@ Deno.serve(async(req:Request)=>{
       if(state?.emergency_stop_active!==true&&state?.emergency_stop_active!==false)return json(503,{error:"control-state-invalid"});
       return json(200,{emergencyStopActive:state.emergency_stop_active,identityTrusted:true,auditTrusted:state.audit_trusted===true});
     }
-    const input=await req.json();
+    const contentLength=Number(req.headers.get("content-length")||0);
+    if(contentLength>4096)return json(413,{error:"request-too-large"});
+    const raw=await req.text();
+    if(raw.length>4096)return json(413,{error:"request-too-large"});
+    const input=raw?JSON.parse(raw):{};
     if(input?.action!=="stop"&&input?.action!=="resume")return json(400,{error:"unsupported-control-action"});
     const state=await rpc("hercules_abyss_set_stop",{p_action:input.action,p_actor:user.id});
     if(state?.emergency_stop_active!==true&&state?.emergency_stop_active!==false)return json(503,{error:"control-state-invalid"});
