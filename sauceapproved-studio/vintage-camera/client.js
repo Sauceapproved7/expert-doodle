@@ -3,6 +3,7 @@ import {createCaptureReceipt} from './capture-receipt.mjs';
 import {scheduleVideoFrame,cancelScheduledVideoFrame} from './frame-scheduler.mjs';
 import {createDeviceProofReceipt,describeMissingDeviceProof} from './device-proof.mjs';
 import {planExportDimensions} from './export-dimensions.mjs';
+import {createExportDriver} from './export-driver.mjs';
 
 const $=id=>document.getElementById(id);
 const source=$('source'),view=$('view'),preview=view.getContext('2d',{alpha:false});
@@ -24,7 +25,7 @@ const grainTextures=Array.from({length:16},()=>{
   context.putImageData(pixels,0,0);return texture;
 });
 let cameraStream=null,sourceUrl=null,sourceName=null,originalUrl=null,processedUrl=null,recorder=null,rawRecorder=null;
-let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,scheduledFrame=null,mode='idle',captureMode='idle',captureLook=null,captureReceipt=null,chunks=[],rawChunks=[];
+let recordingStarted=0,recordingEnded=0,renderedFrames=0,captureInterrupted=false,recordingFinalizing=false,grainIndex=0,scheduledFrame=null,exportTimer=null,exportDriver=null,mode='idle',captureMode='idle',captureLook=null,captureReceipt=null,chunks=[],rawChunks=[];
 const deviceProof={cameraOpened:false,looksUsed:new Set(),cameraReceipt:null,clipReceipt:null};
 const setStatus=message=>{$('status').textContent=message;};
 const setButtonState=()=>{
@@ -60,10 +61,13 @@ function grainOverlay(ctx,amount){
   ctx.drawImage(grainTextures[grainIndex++%grainTextures.length],0,0,ctx.canvas.width,ctx.canvas.height);
   ctx.restore();
 }
-function draw(){
-  const settings=recipe();
+function renderOutput(){
+  const settings=captureLook||recipe();
   imageTo(frame,filterFor(settings.stock,settings.strength));
   grainOverlay(frame,settings.grain);
+}
+function draw(){
+  if(mode!=='recording')renderOutput();
   preview.fillStyle='#090909';preview.fillRect(0,0,view.width,view.height);
   if(source.readyState>=2){
     preview.save();preview.beginPath();preview.rect(0,0,view.width/2,view.height);preview.clip();imageTo(preview);preview.restore();
@@ -74,7 +78,6 @@ function draw(){
     preview.fillText('A STORY IS WAITING.',view.width/2,view.height/2);
   }
   if(mode==='recording'){
-    if(source.readyState>=2)renderedFrames++;
     const seconds=Math.floor((Date.now()-recordingStarted)/1000);
     $('timecode').textContent=`${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
   }
@@ -151,13 +154,17 @@ $('record').addEventListener('click',async()=>{
       rawRecorder.start(1000);
     }
     captureMode=mode;captureLook=recipe();captureReceipt=null;
-    recorder.start(1000);mode='recording';recordingStarted=Date.now();recordingEnded=0;renderedFrames=0;captureInterrupted=false;setButtonState();
+    recorder.start(1000);mode='recording';recordingStarted=Date.now();recordingEnded=0;renderedFrames=0;captureInterrupted=false;
+    exportDriver=createExportDriver({fps:30,render:()=>{if(source.readyState>=2)renderOutput();else throw new Error('source frame unavailable');}});
+    exportTimer=setInterval(()=>{if(mode!=='recording'||document.hidden)return;try{renderedFrames=exportDriver.advance(Date.now()-recordingStarted);}catch{captureInterrupted=true;$('stop').click();}},Math.max(8,Math.floor(exportDriver.frameDurationMs/2)));
+    setButtonState();
     setStatus(`Recording locally at ${exportPlan.width}×${exportPlan.height} without upscaling. Stop to finish and download.`);
   }catch{if(rawRecorder?.state==='recording')rawRecorder.stop();setStatus('Recording could not start on this browser.');}
 });
 $('stop').addEventListener('click',()=>{
   if(mode==='recording'){
     recordingEnded=Date.now();
+    if(exportTimer){clearInterval(exportTimer);exportTimer=null;}
     recordingFinalizing=true;
     if(recorder?.state==='recording')recorder.stop();
     if(rawRecorder?.state==='recording')rawRecorder.stop();
@@ -191,5 +198,5 @@ $('device-proof').addEventListener('click',()=>{
   const missing=describeMissingDeviceProof(proof);
   setStatus(proof.ok?'Device proof passed. Save this receipt with your launch evidence.':`Device proof incomplete: ${missing.join('; ')}.`);
 });
-window.addEventListener('pagehide',()=>{cancelScheduledVideoFrame(source,scheduledFrame);releaseSource();releaseDownloads();});
+window.addEventListener('pagehide',()=>{if(exportTimer){clearInterval(exportTimer);exportTimer=null;}cancelScheduledVideoFrame(source,scheduledFrame);releaseSource();releaseDownloads();});
 setButtonState();draw();

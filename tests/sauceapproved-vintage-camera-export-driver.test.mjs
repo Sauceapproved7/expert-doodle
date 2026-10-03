@@ -1,0 +1,3 @@
+import assert from 'node:assert/strict';import test from 'node:test';import {createExportDriver} from '../sauceapproved-studio/vintage-camera/export-driver.mjs';
+test('counts only frames whose render callback actually ran',()=>{let renders=0;const driver=createExportDriver({fps:30,render:()=>{renders++;}});assert.equal(driver.advance(100),3);assert.equal(renders,3);assert.equal(driver.renderedFrames,3);assert.equal(driver.advance(100),3);assert.equal(renders,3);});
+test('does not count a frame when rendering throws',()=>{let attempts=0;const driver=createExportDriver({fps:30,render:()=>{attempts++;if(attempts===2)throw new Error('render failed');}});assert.throws(()=>driver.advance(100),/render failed/);assert.equal(driver.renderedFrames,1);});
