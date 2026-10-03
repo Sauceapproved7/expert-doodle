@@ -134,8 +134,14 @@ async function run(){
     liveAppDeployProviderValue?.observedAt &&
     Math.abs(Date.now()-new Date(liveAppDeployProviderValue.observedAt).getTime())<5*60*1000
   );
+  const appDeployAttestationHasNoPricingAuthority=(value:any)=>{
+    if(!value||typeof value!=='object')return true;
+    const forbidden=['price','price_cents','priceCents','amount','amount_cents','amountCents','catalog','catalog_ready','catalogReady','productPrice','planPrice'];
+    return !forbidden.some(key=>Object.prototype.hasOwnProperty.call(value,key));
+  };
   const liveAppDeployStripeReady=Boolean(
     liveAppDeployProviderFresh &&
+    appDeployAttestationHasNoPricingAuthority(liveAppDeployProviderValue) &&
     liveAppDeployProviderValue?.provider==='stripe' &&
     liveAppDeployProviderValue?.custody==='appdeploy' &&
     liveAppDeployProviderValue?.appId===APPDEPLOY_STRIPE_APP_ID &&
@@ -151,6 +157,7 @@ async function run(){
   );
   const ledgerAppDeployStripeReady=Boolean(
     appDeployProviderEvidence?.status==='active' &&
+    appDeployAttestationHasNoPricingAuthority(appDeployProviderValue) &&
     ledgerAppDeployProviderFresh &&
     appDeployProviderValue?.provider==='stripe' &&
     appDeployProviderValue?.custody==='appdeploy' &&
