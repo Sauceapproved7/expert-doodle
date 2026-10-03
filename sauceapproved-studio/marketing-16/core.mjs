@@ -13,7 +13,7 @@ const MODULES = Object.freeze([
   ["Creative DNA","creative-memory","Extracts repeatable winning creative attributes."],
   ["Profit Sniper","profit","Ranks actions by verified contribution-profit opportunity."],
   ["Customer X-Ray","customer","Builds privacy-bounded customer insight from permitted evidence."],
-  ["Kill Switch","safety","Stops actions when evidence, economics, policy, or authorization fails."],
+  ["Growth Signal Router","routing","Routes verified cross-module growth signals into bounded channel-specific action queues."],
   ["THE LAB","experimentation","Runs bounded experiment planning and evidence-based winner logic."]
 ]);
 

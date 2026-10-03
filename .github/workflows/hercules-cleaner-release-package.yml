@@ -1,15 +1,6 @@
 name: Hercules Cleaner Release Package
 
 on:
-  workflow_dispatch:
-  pull_request:
-    paths:
-      - "hercules-cleaner/**"
-      - "scripts/package-hercules-cleaner-release.mjs"
-      - "tests/hercules-cleaner*.test.mjs"
-      - "releases/hercules-cleaner-v1.0.0/**"
-      - "docs/HERCULES-CLEANER-V1.md"
-      - ".github/workflows/hercules-cleaner-release-package.yml"
   push:
     branches: [main]
     paths:
@@ -31,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SOURCE_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020

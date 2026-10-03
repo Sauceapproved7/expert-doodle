@@ -4,6 +4,10 @@ import {
   compileBackendIntent,
   normalizeBackendIntent,
 } from "./core.mjs";
+import {
+  normalizeRecommendationRequest,
+  recommendResources,
+} from "./recommender.mjs";
 
 const MAX_BODY_BYTES=32*1024;
 
@@ -88,6 +92,33 @@ export async function routeBaseRequest(request,{controlToken}={}){
         ok:false,
         error:"invalid_backend_intent",
         message:error instanceof Error?error.message:"invalid backend intent",
+      },400);
+    }
+  }
+
+  if(request.method==="POST"&&url.pathname==="/v1/recommendations"){
+    if(!bearerMatches(request.headers.get("authorization"),controlToken)){
+      return json({ok:false,error:"unauthorized"},401);
+    }
+
+    const body=await readJsonBounded(request);
+    if(body.error)return body.error;
+
+    try{
+      if(!body.value||typeof body.value!=="object"||Array.isArray(body.value)){
+        throw new TypeError("recommendation payload must be an object");
+      }
+      const recommendationRequest=normalizeRecommendationRequest(body.value.request);
+      const recommendations=recommendResources(
+        recommendationRequest,
+        body.value.resources,
+      );
+      return json({ok:true,recommendations});
+    }catch(error){
+      return json({
+        ok:false,
+        error:"invalid_recommendation_request",
+        message:error instanceof Error?error.message:"invalid recommendation request",
       },400);
     }
   }

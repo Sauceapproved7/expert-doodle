@@ -7,6 +7,7 @@ import {createContentMultiplierManifest} from "../sauceapproved-studio/content-m
 import {createSalesAgentManifest} from "../sauceapproved-studio/ai-sales-agent/core.mjs";
 import {createBrandBrainManifest} from "../sauceapproved-studio/brand-brain/core.mjs";
 import {createCampaignForgeManifest,renderCampaignForge} from "../sauceapproved-studio/campaign-forge/core.mjs";
+import {createPerformanceBrainManifest,renderPerformanceBrain,buildCampaignPerformanceInput,evaluateCampaignPerformance} from "../sauceapproved-studio/performance-brain/core.mjs";
 import {createStudiosMarketManifest} from "../sauceapproved-studio/market/core.mjs";
 import {createVintageCameraManifest,renderVintageCamera} from "../sauceapproved-studio/vintage-camera/core.mjs";
 import {createKidsStudioManifest,renderKidsStudio} from "../sauceapproved-studio/kids/core.mjs";
@@ -478,6 +479,29 @@ export function createStudioHttpHandler({
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/campaign-forge/manifest") {
       return json(createCampaignForgeManifest());
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/performance-brain/manifest") {
+      return json(createPerformanceBrainManifest());
+    }
+
+    if (normalizedMethod==="POST" && normalizedPath==="/api/studio/performance-brain/evaluate") {
+      let payload={};
+      try{
+        payload=typeof request.body==="string" ? JSON.parse(request.body||"{}") : (request.body||{});
+      }catch{
+        return json({ok:false,error:"invalid_json_body"},400);
+      }
+      try{
+        const input=buildCampaignPerformanceInput(payload.pack,{objective:payload.objective,metrics:payload.metrics});
+        return json(evaluateCampaignPerformance(input));
+      }catch(error){
+        return json({ok:false,error:String(error?.message||"performance_brain_evaluation_failed")},400);
+      }
+    }
+
+    if (normalizedMethod==="GET" && normalizedPath==="/performance-brain") {
+      return {status:200,headers:HTML_HEADERS,body:renderPerformanceBrain()};
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/campaign-forge") {

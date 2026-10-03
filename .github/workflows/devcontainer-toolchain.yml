@@ -1,0 +1,40 @@
+name: devcontainer-toolchain
+
+on:
+  pull_request:
+    paths:
+      - ".devcontainer/**"
+      - ".github/workflows/devcontainer-toolchain.yml"
+      - "governance/owner-code-policy.json"
+  push:
+    branches: [main]
+    paths:
+      - ".devcontainer/**"
+      - ".github/workflows/devcontainer-toolchain.yml"
+      - "governance/owner-code-policy.json"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      - name: Install pinned Dev Containers CLI
+        run: npm install --global --ignore-scripts @devcontainers/cli@0.89.0
+
+      - name: Build the checked-in Dev Container
+        run: devcontainer build --workspace-folder . --image-name sauceapproved-devcontainer:ci
+
+      - name: Verify installed tool versions
+        run: |
+          docker run --rm \
+            --volume "${GITHUB_WORKSPACE}:/workspace:ro" \
+            --workdir /workspace \
+            --entrypoint /bin/bash \
+            sauceapproved-devcontainer:ci \
+            .devcontainer/verify-tools.sh

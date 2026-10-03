@@ -1,0 +1,14 @@
+{
+  "id": "openshift-cli",
+  "version": "1.0.0",
+  "name": "OpenShift CLI",
+  "description": "Installs pinned oc and kubectl binaries from the official Red Hat OpenShift client archive.",
+  "options": {
+    "version": {
+      "type": "string",
+      "default": "4.20.0",
+      "proposals": ["4.20.0"],
+      "description": "Exact OpenShift client release."
+    }
+  }
+}
