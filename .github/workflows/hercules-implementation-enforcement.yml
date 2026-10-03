@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
-      - name: Contract tests
-        run: node --test tests/hercules-implementation-enforcement.test.mjs
+      - name: Contract and verification-router tests
+        run: node --test tests/hercules-implementation-enforcement.test.mjs tests/verification-evidence-router.test.mjs tests/verification-checkpoint-collector.test.mjs tests/hercules-preflight.test.mjs
       - name: Contract verifier
         run: node scripts/verify-hercules-execution-contract.mjs

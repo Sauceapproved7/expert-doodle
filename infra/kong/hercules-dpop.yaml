@@ -1,0 +1,16 @@
+_format_version: "3.0"
+
+# Hercules public-edge DPoP policy.
+# Secrets/issuer/client values are injected at deploy time; never commit them.
+plugins:
+  - name: openid-connect
+    config:
+      issuer: ${{ env "HERCULES_OIDC_ISSUER" }}
+      client_id:
+        - ${{ env "HERCULES_OIDC_CLIENT_ID" }}
+      client_secret:
+        - ${{ env "HERCULES_OIDC_CLIENT_SECRET" }}
+      auth_methods:
+        - bearer
+      proof_of_possession_dpop: strict
+      # Keep upstreams private and apply route/service authorization separately.

@@ -18,3 +18,4 @@ export {scoreEvaluation} from "./evaluation.mjs";
 export {decideActivation} from "./activation.mjs";
 export {HerculesTrainingRunner, HttpTrainingRunner} from "./runner.mjs";
 export {createTrainingControlService, listenTrainingControlService} from "./service.mjs";
+export {validateExperience, scoreExperience, evaluateCandidateAction} from "./offline-learning.mjs";

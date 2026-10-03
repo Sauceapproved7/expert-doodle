@@ -45,7 +45,7 @@ async function routeInternal(system:string,prompt:string){
       let data:any;
       try{data=JSON.parse(raw)}catch{attempts.push({provider:candidate.provider,error:'invalid_ai_response'});continue;}
       const text=String(data?.choices?.[0]?.message?.content||'').trim();
-      if(text)return {text,provider:candidate.provider,model:String(data?.model||candidate.model),attempts};
+      if(text){const usage=data?.usage&&typeof data.usage==='object'?{input_tokens:Math.max(0,Number(data.usage.input_tokens??data.usage.prompt_tokens??0)||0),output_tokens:Math.max(0,Number(data.usage.output_tokens??data.usage.completion_tokens??0)||0),total_tokens:Math.max(0,Number(data.usage.total_tokens??0)||0)}:null;return {text,provider:candidate.provider,model:String(data?.model||candidate.model),attempts,usage};}
       attempts.push({provider:candidate.provider,error:'empty_ai_response'});
     }catch(e){
       attempts.push({provider:candidate.provider,error:e instanceof Error?e.name:'ai_provider_unreachable'});
@@ -64,7 +64,7 @@ Deno.serve(async(req)=>{if(req.method==='OPTIONS')return new Response('ok',{head
    if(!prompt)return out({error:'prompt_required'},400);
    try{
      const routed=await routeInternal(system,prompt);
-     return out({ok:true,result:routed.text,provider:routed.provider,model:routed.model,attempts:routed.attempts});
+     return out({ok:true,result:routed.text,provider:routed.provider,model:routed.model,attempts:routed.attempts,usage:routed.usage});
    }catch(e){
      return out({error:e instanceof Error?e.message:'ai_provider_chain_failed',attempts:(e as any)?.attempts||[]},502);
    }

@@ -1,0 +1,13 @@
+{
+  "yaml.validate": true,
+  "yaml.format.enable": true,
+  "yaml.schemaStore.enable": true,
+  "yaml.schemas": {
+    "kubernetes": [
+      "shopify/hercules/openshift/**/*.yaml",
+      "shopify/hercules/openshift/**/*.yml",
+      "k8s/**/*.yaml",
+      "k8s/**/*.yml"
+    ]
+  }
+}

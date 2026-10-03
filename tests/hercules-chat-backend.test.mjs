@@ -40,7 +40,9 @@ test("semantic memory is owner-scoped and vector indexed", () => {
 
 test("edge ingress requires JWT and keeps privileged credentials server-side", () => {
   assert.match(edge, /Authorization/);
-  assert.match(edge, /decodeJwtSub/);
+  assert.match(edge, /authenticateChat/);
+  assert.match(edge, /\/auth\/v1\/user/);
+  assert.doesNotMatch(edge, /const userId = decodeJwtSub\(req\)/);
   assert.match(edge, /SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(edge, /action === "run_chat"/);
   assert.match(edge, /hercules_chat_reserve_ai_request/);
@@ -54,4 +56,15 @@ test("chat API bounds user-controlled payloads and metadata", () => {
   assert.match(edge, /12_000/);
   assert.match(edge, /32_000/);
   assert.match(edge, /boundedInt/);
+});
+
+
+test("internal AI router provider usage is propagated into chat accounting", async () => {
+  const router = await readFile(new URL("../supabase/functions/hercules-ai/index.ts", import.meta.url), "utf8");
+  assert.match(router, /input_tokens/);
+  assert.match(router, /output_tokens/);
+  assert.match(router, /usage:routed\.usage/);
+  assert.match(edge, /payload\.usage/);
+  assert.match(edge, /ai\.usage\?\.inputTokens/);
+  assert.match(edge, /ai\.usage\?\.outputTokens/);
 });
