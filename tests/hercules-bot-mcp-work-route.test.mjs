@@ -25,3 +25,13 @@ test("Smallz verification lane is fixed to the production health canary",()=>{
  });
  assert.throws(()=>normalizeBotWorkCommand({action:"smallz.verify.browser",url:"https://example.com"}),/verification target is fixed/);
 });
+
+
+test("Smallz Shopify validation gate accepts only bounded Admin GraphQL validation requests",()=>{
+ assert.deepEqual(normalizeBotWorkCommand({action:"smallz.validate.shopify",api:"admin",code:"query ShopName { shop { name } }",version:"2026-10"}),{
+  action:"smallz.validate.shopify",api:"admin",code:"query ShopName { shop { name } }",version:"2026-10",validationRequired:true,validator:"shopify-ai-toolkit"
+ });
+ assert.throws(()=>normalizeBotWorkCommand({action:"smallz.validate.shopify",api:"unknown",code:"query { shop { name } }"}),/unsupported Shopify validator/);
+ assert.throws(()=>normalizeBotWorkCommand({action:"smallz.validate.shopify",api:"admin",code:""}),/Shopify code required/);
+ assert.throws(()=>normalizeBotWorkCommand({action:"smallz.validate.shopify",api:"admin",code:"query { shop { name } }",version:"latest"}),/invalid Shopify API version/);
+});
