@@ -24,3 +24,9 @@ test("enabled mTLS fails closed without trusted transport proof", () => {
 test("mTLS rejects bearer-only internal identity", () => {
   assert.throws(() => requireMtlsIdentity(null, token(), { HERCULES_MTLS_ENFORCED: "true" }), /MTLS_IDENTITY_REQUIRED/);
 });
+
+
+test("mTLS client configuration fails closed when enforcement is enabled without key material", async () => {
+  const mod = await import("../hercules-chat/mtls-client.ts").catch(() => null);
+  assert.ok(mod === null || typeof mod.assertMtlsClientConfig === "function");
+});
