@@ -6,6 +6,11 @@ import { chromium } from "playwright-core";
 
 const PORT=Number(process.env.PORT||10000);
 const TOKEN=process.env.HERCULES_DIRECT_TOKEN||"";
+const OWNER_START_TOKEN=process.env.HERCULES_OWNER_START_TOKEN||"";
+const OWNER_START_URL=process.env.HERCULES_OWNER_START_URL||"";
+const OWNER_START_TTL=10*60*1000;
+const OWNER_START_BORN=Date.now();
+let ownerStartConsumed=false;
 const MAX_BODY=262144;
 const MAX_STEPS=25;
 const MAX_TIMEOUT=60000;
@@ -38,6 +43,11 @@ function auth(req){
 
 function handoffHash(token){
   return createHash("sha256").update(String(token||"")).digest("hex");
+}
+
+function ownerStartAuthorized(token){
+  if(!OWNER_START_TOKEN)return false;
+  return handoffHash(token)===handoffHash(OWNER_START_TOKEN);
 }
 
 function ownerHeaders(extra={}){
@@ -451,6 +461,24 @@ setInterval(async()=>{
 http.createServer(async(req,res)=>{
   const url=new URL(req.url||"/","http://localhost");
 
+  if(req.method==="GET"&&url.pathname.startsWith("/owner-start/")){
+    const rawToken=decodeURIComponent(url.pathname.slice("/owner-start/".length));
+    if(!OWNER_START_TOKEN||!OWNER_START_URL)return reply(res,404,{error:"owner_start_unconfigured"});
+    if(!ownerStartAuthorized(rawToken))return reply(res,404,{error:"owner_start_not_found"});
+    if(ownerStartConsumed||Date.now()>OWNER_START_BORN+OWNER_START_TTL)return reply(res,410,{error:"owner_start_expired_or_used"});
+    try{
+      const target=await safeUrl(OWNER_START_URL);
+      const result=await run({action:"navigate",url:target,persistSession:true,timeoutMs:30000,maxTextChars:1000});
+      const handoff=createHandoff(req,result.sessionId);
+      ownerStartConsumed=true;
+      res.writeHead(302,ownerHeaders({"content-type":"text/plain; charset=utf-8","location":handoff.handoffUrl}));
+      return res.end("Redirecting to secure Hercules owner handoff.");
+    }catch(error){
+      const message=error instanceof Error?error.message:"owner_start_failed";
+      return reply(res,502,{ok:false,error:message.slice(0,300)});
+    }
+  }
+
   if(req.method==="POST"&&url.pathname==="/v1/handoff"){
     if(!auth(req))return reply(res,401,{error:"unauthorized"});
     try{
@@ -518,7 +546,8 @@ http.createServer(async(req,res)=>{
       sessionReuse:true,
       rawCodeExecution:false,
       antiBotBypass:false,
-      ownerHandoff:true
+      ownerHandoff:true,
+      ownerStartLink:true
     });
   }
 
