@@ -19,6 +19,8 @@ const ADMISSION_REASONS = new Set([
   "daily_budget_exceeded",
   "monthly_budget_exceeded",
   "request_exceeds_burst_capacity",
+  "reservation_tenant_mismatch",
+  "reservation_already_settled",
 ]);
 
 const SETTLEMENT_REASONS = new Set([
@@ -96,6 +98,17 @@ export function decodeAdmissionResult(result) {
       remainingMicrocredits: 0,
       retryAfterMs: 0,
       resetAfterMs: 0,
+      concurrency: 0,
+      isNewReservation: false,
+    };
+  }
+  if (code === -1) {
+    return {
+      status: "permanent_rejection",
+      reason,
+      remainingMicrocredits: Number(result[1]),
+      retryAfterMs: Number(result[2]),
+      resetAfterMs: Number(result[3]),
       concurrency: 0,
       isNewReservation: false,
     };
