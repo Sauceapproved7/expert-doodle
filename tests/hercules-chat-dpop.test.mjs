@@ -32,7 +32,7 @@ test("chat DPoP rollout is feature-gated and disabled unless explicitly true",()
 
 
 test("chat verifies OAuth token before accepting DPoP binding",()=>{
-  assert.match(edge,/auth\\.getUser\\(token\\)/);
+  assert.match(edge,/\\/auth\\/v1\\/user/);\n  assert.match(edge,/if \\(!response\\.ok\\) throw new Error\\("UNAUTHORIZED"\\)/);
   assert.match(edge,/await authenticateChat\\(req, token\\)/);
   assert.match(edge,/DPOP_TOKEN_BINDING_REQUIRED/);
 });
