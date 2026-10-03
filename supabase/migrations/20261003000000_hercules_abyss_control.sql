@@ -74,7 +74,7 @@ declare
   current_state jsonb;
   next_hash text;
 begin
-  if p_action not in ('stop', 'resume') or p_actor is null then
+  if p_action is null or p_action not in ('stop', 'resume') or p_actor is null then
     raise exception 'invalid_control_request';
   end if;
   select * into state_row from public.hercules_abyss_control_state where id = 'primary' for update;
