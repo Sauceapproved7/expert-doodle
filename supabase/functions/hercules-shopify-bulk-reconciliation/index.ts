@@ -157,7 +157,7 @@ async function processRun(runId: string) {
   const conn = await connection(run.tenant_id);
   const token = await accessToken(conn);
   const data = await graphql(token,
-    'query BulkStatus($id: ID!) { bulkOperation(id: $id) { id status type url errorCode objectCount completedAt } }',
+    'query BulkStatus($id: ID!) { bulkOperation(id: $id) { id status type url errorCode objectCount rootObjectCount completedAt } }',
     { id: run.bulk_operation_gid });
   const operation = data?.bulkOperation;
   if (!operation || operation.id !== run.bulk_operation_gid || operation.type !== 'QUERY' || operation.status !== 'COMPLETED' || !operation.url) {
@@ -175,6 +175,7 @@ async function processRun(runId: string) {
   });
   const seen = streamed.recordsSeen;
   const resultHash = streamed.sha256;
+  if (Number(operation.rootObjectCount) !== seen) throw new Error('bulk_result_count_mismatch');
   const { error: finalizeError } = await DB.rpc('hercules_shopify_complete_bulk_reconciliation_v1', {
     p_run_id: runId, p_candidate_at: run.cursor_candidate_at, p_records_seen: seen,
     p_records_inserted: inserted, p_records_updated: updated, p_records_skipped: skipped,
@@ -189,8 +190,9 @@ async function handleCompletion(req: Request, raw: Uint8Array) {
   const deliveryId = req.headers.get('x-shopify-webhook-id') || '';
   const eventId = req.headers.get('x-shopify-event-id');
   if (shop !== STORE || !deliveryId) return json({ error: 'invalid_webhook_identity' }, 401);
-  const conn = await connection();
-  const signingSecret = Deno.env.get('SHOPIFY_CLIENT_SECRET') || await secret(conn.signing_secret_ref);
+  const configuredSecret = Deno.env.get('SHOPIFY_CLIENT_SECRET');
+  const conn = configuredSecret ? null : await connection();
+  const signingSecret = configuredSecret || await secret(conn.signing_secret_ref);
   if (!await verifyWebhook(raw, req.headers.get('x-shopify-hmac-sha256') || '', signingSecret)) {
     return json({ error: 'invalid_hmac' }, 401);
   }
@@ -203,18 +205,21 @@ async function handleCompletion(req: Request, raw: Uint8Array) {
   });
   if (receiptError && String(receiptError.code) === '23505') return json({ received: true, duplicate: true });
   if (receiptError) return json({ error: 'webhook_persist_failed' }, 503);
-  const { data: run } = await DB.from('hercules_shopify_bulk_reconciliation_runs')
+  const { data: run, error: runLookupError } = await DB.from('hercules_shopify_bulk_reconciliation_runs')
     .select('id,status').eq('bulk_operation_gid', operationId).maybeSingle();
+  if (runLookupError) return json({ error: 'run_lookup_failed' }, 503);
   if (!run) return json({ received: true, unmatched: true });
   if (String(payload.status).toUpperCase() !== 'COMPLETED' || String(payload.type).toUpperCase() !== 'QUERY') {
-    await DB.from('hercules_shopify_bulk_reconciliation_runs').update({
+    const { error: failError } = await DB.from('hercules_shopify_bulk_reconciliation_runs').update({
       status: 'failed', error_code: String(payload.error_code || 'BULK_NOT_COMPLETED').slice(0, 80),
       error_message: 'Shopify bulk query did not complete successfully.'
     }).eq('id', run.id);
+    if (failError) return json({ error: 'run_update_failed' }, 503);
     return json({ received: true, failed: true });
   }
-  const { data: queued } = await DB.from('hercules_shopify_bulk_reconciliation_runs')
+  const { data: queued, error: queueError } = await DB.from('hercules_shopify_bulk_reconciliation_runs')
     .update({ status: 'queued' }).eq('id', run.id).eq('status', 'running').select('id').maybeSingle();
+  if (queueError) return json({ error: 'queue_persist_failed' }, 503);
   if (!queued) return json({ received: true, alreadyQueuedOrProcessing: true });
   const task = processRun(run.id).catch(async () => {
     await DB.from('hercules_shopify_bulk_reconciliation_runs').update({
