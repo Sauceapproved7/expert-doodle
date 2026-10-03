@@ -8,6 +8,7 @@ The repository recommends:
 
 - GitHub Pull Requests and Issues for PR/review context.
 - GitHub CodeQL for security-query inspection and triage.
+- GitHub Actions for workflow editing and CI feedback.
 - GitLens for history, blame, branch, and change context.
 - Red Hat YAML for schema-aware YAML validation.
 - Red Hat OpenShift Toolkit for OpenShift workflows.
@@ -17,6 +18,8 @@ The repository recommends:
 - Prettier for formatting when a project config is present.
 - REST Client for checked-in, credential-free HTTP request examples.
 - EditorConfig support for repository formatting defaults.
+- Error Lens for high-visibility inline diagnostics.
+- Terraform tooling when Hercules infrastructure is authored in HCL.
 
 These are recommendations, not a substitute for repository policy.
 
@@ -46,3 +49,25 @@ Never weaken a required CI/security gate to make an editor plugin happy.
 Review the recommendation list periodically. Remove extensions that are deprecated, duplicate built-in capabilities, create unacceptable data-handling risk, or no longer improve defect detection, review quality, deployment safety, or incident diagnosis.
 
 Workspace recommendations must not introduce runtime dependencies into Hercules.
+
+
+## Workload-specific OpenShift additions
+
+Do not install every Red Hat extension by default. Add these only when the corresponding workload exists:
+
+- `redhat.vscode-openshift-java-pack` for Java services targeting OpenShift.
+- `redhat.java`, `vscjava.vscode-java-debug`, `vscjava.vscode-java-test`, and `vscjava.vscode-maven` for Java-specific repositories.
+- `redhat.vscode-quarkus` for Quarkus services.
+- `redhat.devspaces-remote-ssh` only when using OpenShift Dev Spaces.
+- `redhat.vscode-knative` only for Knative/serverless workloads; prefer the current OpenShift Toolkit workflow where it covers the use case.
+- `redhat.vscode-kaoto` and `redhat.apache-camel-extension-pack` only for Apache Camel/Fuse integration workloads.
+
+The deprecated `redhat.project-initializer` and generic `formulahendry.code-runner` are explicitly discouraged for this repository.
+
+## OpenShift safety rules
+
+- Keep `oc`, `kubectl`, `helm`, Ansible, manifest validation, and deployment checks scriptable and represented in CI.
+- Do not commit kubeconfigs, OpenShift login tokens, pull secrets, registry credentials, private keys, Ansible Vault passwords, or cloud credentials.
+- Do not use privileged workloads or cluster-admin access to paper over SCC/RBAC failures.
+- Do not treat valid YAML as proof of a safe deployment. Validate RBAC, SCC compatibility, resource limits, network policy, image provenance, and rendered manifests.
+- Prefer least-privilege development kubeconfigs and never mount an entire production `~/.kube` directory into a development container.

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hercules-shopify-api
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: hercules-shopify-api
+  template:
+    metadata:
+      labels:
+        app: hercules-shopify-api
+    spec:
+      serviceAccountName: hercules-shopify-api
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: image-registry.openshift-image-registry.svc:5000/hercules-shopify/hercules-shopify:latest
+          args: ["node", "shopify/hercules/backend/api.mjs"]
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: hercules-shopify-config
+          env:
+            - name: SHOPIFY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hercules-shopify-secrets
+                  key: client-secret
+            - name: SHOPIFY_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: hercules-shopify-secrets
+                  key: webhook-secret
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

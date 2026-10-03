@@ -19,6 +19,13 @@
     "timonwong.shellcheck",
     "foxundermoon.shell-format",
     "SonarSource.sonarlint-vscode",
-    "semgrep.semgrep"
+    "semgrep.semgrep",
+    "github.vscode-github-actions",
+    "usernamehw.errorlens",
+    "hashicorp.terraform"
+  ],
+  "unwantedRecommendations": [
+    "redhat.project-initializer",
+    "formulahendry.code-runner"
   ]
 }
