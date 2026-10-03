@@ -17,8 +17,8 @@ Status: proposed dependency allowlist. This document does not vendor, download, 
 | --- | --- | --- | --- |
 | libsodium | authenticated encryption, signatures, password hashing and secure primitives | ISC | VERIFIED TARGET: 1.0.22-stable |
 | SQLite | embedded durable local state and indexes | Public Domain core | VERIFIED TARGET: 3.53.4 |
-| libuv | cross-platform event loop, async I/O, IPC and worker/thread primitives | MIT + documented bundled exceptions | HOLD: exact release/hash verification required |
-| zlib | DEFLATE/gzip-compatible compression where interoperability requires it | zlib license | HOLD: exact release/hash verification required |
+| libuv | cross-platform event loop, async I/O, IPC and worker/thread primitives | MIT + documented bundled exceptions | VERIFIED TARGET: v1.53.0; verify signed release artifact during acquisition |
+| zlib | DEFLATE/gzip-compatible compression where interoperability requires it | zlib license | VERIFIED TARGET: v1.3.2; core zlib only; contrib/minizip excluded pending separate review |
 
 ## Integration boundaries
 
@@ -55,4 +55,6 @@ Everything else in the referenced Awesome C catalog remains unapproved until ind
 - libsodium: upstream documentation identifies 1.0.22-stable as the latest version.
 - SQLite: upstream release history identifies 3.53.4 (2026-07-24) as the current released version. SQLite 3.54.0 is draft/unreleased as of this review and MUST NOT be treated as an approved release.
 - SQLite 3.53.4 canonical source/amalgamation hashes must be checked against the official SQLite download/release metadata during acquisition.
-- libuv and zlib remain HOLD until their exact upstream release and immutable source hash are independently recorded.
+- libuv: upstream release v1.53.0 (2026-09-24) is the current stable target; upstream publishes signed tags/distribution artifacts. Verify the release signature and immutable artifact hash during acquisition.
+- zlib: upstream release v1.3.2 (2026-02-17) is the current release target and includes fixes following a security audit. Hercules approval is limited to core zlib compression APIs; contrib/minizip is excluded pending a separate security review.
+- Exact immutable artifact hashes are recorded at acquisition time after signature/source verification; version labels alone are not sufficient for production activation.
