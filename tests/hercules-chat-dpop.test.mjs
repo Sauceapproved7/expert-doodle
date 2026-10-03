@@ -32,7 +32,7 @@ test("chat DPoP rollout is feature-gated and disabled unless explicitly true",()
 
 
 test("chat verifies OAuth token before accepting DPoP binding",()=>{
-  assert.match(edge,/auth\\.getUser\\(token\\)/);
+  assert.match(edge,/\\/auth\\/v1\\/user/);\n  assert.doesNotMatch(edge,/npm:@supabase\\/supabase-js/);
   assert.match(edge,/const token = rawAccessToken\\(req\\);[\\s\\S]*const userId = await authenticateChat\\(req, token\\);/);
   assert.doesNotMatch(edge,/const userId = decodeJwtSub\\(req\\);/);
   assert.match(edge,/hercules_get_dpop_key/);
