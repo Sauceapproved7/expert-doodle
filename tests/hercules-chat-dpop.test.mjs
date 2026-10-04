@@ -40,3 +40,10 @@ test("chat verifies OAuth token before accepting DPoP binding",()=>{
   assert.match(edge,/verifyDpopRequest/);
   assert.match(edge,/authorization, dpop, apikey/);
 });
+
+
+test("canonical DPoP migration explicitly removes production-only authenticated SECURITY DEFINER RPC drift",()=>{
+  assert.match(migration,/drop function if exists public\.hercules_create_dpop_challenge\(\)/i);
+  assert.match(migration,/drop function if exists public\.hercules_revoke_dpop_key\(text\)/i);
+  assert.doesNotMatch(migration,/grant execute[\s\S]*hercules_(?:create_dpop_challenge|revoke_dpop_key)[\s\S]*to authenticated/i);
+});
