@@ -44,7 +44,7 @@ test("offline evaluator rejects non-local media and out-of-range scores",async()
   const base={evaluatorId:"local",command:"python",args:["/worker.py"],readiness:async()=>({modelId:"m",revision:"r",manifestFingerprint:"a".repeat(64)}),statImpl:async()=>({isFile:()=>true,size:1})};
   const evaluator=createOfflineSemanticEvaluator({...base,spawnImpl:fakeSpawn({ok:true,scores:{promptAdherence:2,temporalConsistency:.8,visualQuality:.8,brandConsistency:.8,artifactFreedom:.8,reliability:.8}},()=>{})});
   await assert.rejects(()=>evaluator({shot:{id:"x"},artifact:{uri:"https://example.com/x.mp4"}}),/offline_evaluator_local_media_required/);
-  await assert.rejects(()=>evaluator({shot:{id:"x"},artifact:{uri:"file:///tmp/x.mp4"}}),/offline_evaluator_score_invalid:promptAdherence/);
+  await assert.rejects(()=>evaluator({shot:{id:"x"},artifact:{uri:"file:///tmp/x.mp4",sha256:"b".repeat(64)}}),/offline_evaluator_score_invalid:promptAdherence/);
 });
 
 test("offline evaluator isolates secrets from the worker environment",async()=>{
@@ -90,6 +90,7 @@ test("offline evaluator terminates workers that exceed the output budget",async(
     const child=new EventEmitter();
     child.stdin=new PassThrough(); child.stdout=new PassThrough(); child.stderr=new PassThrough();
     child.kill=()=>{killed=true;};
+    child.stdin.resume();
     child.stdin.on("end",()=>child.stdout.write(Buffer.alloc(1024*1024+1,97)));
     return child;
   };
