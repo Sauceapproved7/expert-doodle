@@ -2,6 +2,7 @@ import os
 
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
+from mcp.types import ToolAnnotations
 
 from .mcp_server import call_tool
 
@@ -10,6 +11,13 @@ hercules_mcp = MCPServer(
     "hercules-mcp",
     version="1.1.0",
     instructions="Bounded read-only Hercules status, planning, model, and Vault verification tools.",
+)
+
+READ_ONLY_CLOSED_WORLD = ToolAnnotations(
+    read_only_hint=True,
+    destructive_hint=False,
+    idempotent_hint=True,
+    open_world_hint=False,
 )
 
 
@@ -42,6 +50,7 @@ def _text(name: str, arguments: dict) -> str:
 @hercules_mcp.tool(
     name="hercules.command.status",
     description="Read-only Hercules runtime status.",
+    annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_status() -> str:
     return _text("hercules.command.status", {})
@@ -50,6 +59,7 @@ def command_status() -> str:
 @hercules_mcp.tool(
     name="hercules.command.mission",
     description="Create a non-executing Hercules mission plan.",
+    annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_mission(goal: str) -> str:
     return _text("hercules.command.mission", {"goal": goal})
@@ -58,6 +68,7 @@ def command_mission(goal: str) -> str:
 @hercules_mcp.tool(
     name="hercules.command.vault",
     description="Read-only Hercules Vault status and recent events.",
+    annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_vault(limit: int = 25) -> str:
     return _text("hercules.command.vault", {"limit": limit})
@@ -66,6 +77,7 @@ def command_vault(limit: int = 25) -> str:
 @hercules_mcp.tool(
     name="hercules.command.models",
     description="Read-only inventory of installed Hercules models.",
+    annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_models() -> str:
     return _text("hercules.command.models", {})
@@ -74,6 +86,7 @@ def command_models() -> str:
 @hercules_mcp.tool(
     name="hercules.command.verify",
     description="Verify the Hercules Vault hash chain without mutation.",
+    annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_verify() -> str:
     return _text("hercules.command.verify", {})
