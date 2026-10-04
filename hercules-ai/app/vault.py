@@ -5,6 +5,10 @@ def _db(path):
     c.execute("""create table if not exists vault_events(
       id text primary key, created_at integer not null, action text not null,
       commit_ref text not null, rollback_ref text not null, details text not null)""")
+    c.execute("""create trigger if not exists vault_events_no_update
+      before update on vault_events begin select raise(abort,'vault_events is append-only'); end""")
+    c.execute("""create trigger if not exists vault_events_no_delete
+      before delete on vault_events begin select raise(abort,'vault_events is append-only'); end""")
     c.commit(); return c
 
 def append_event(path,action,commit,details=None):
