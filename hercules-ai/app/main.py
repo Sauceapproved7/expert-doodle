@@ -30,6 +30,7 @@ class ChatRequest(BaseModel):
     conversation_id:str|None=None
     stream:bool=False
     speed_mode:str|None="balanced"
+    stream:bool=False
 class HardwareRequest(BaseModel):
     ram_gb:float=0
     vram_gb:float=0
