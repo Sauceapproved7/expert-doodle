@@ -245,6 +245,13 @@
       "dependencies": [
         "nodejs"
       ]
+    },
+    {
+      "path": "hercules-video/evaluators/offline-semantic-evaluator.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "python"
+      ]
     }
   ],
   "shellCommandBoundaries": [
