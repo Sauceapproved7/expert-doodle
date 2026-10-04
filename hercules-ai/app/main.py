@@ -19,7 +19,7 @@ MCP_TOKEN=os.getenv("HERCULES_MCP_TOKEN","")
 PUBLIC_HOSTED=os.getenv("HERCULES_PUBLIC_HOSTED","0").lower() in {"1","true","yes"}
 OPENAI_APPS_CHALLENGE=os.getenv("OPENAI_APPS_CHALLENGE","").strip()
 MCP_RESOURCE=os.getenv("HERCULES_MCP_RESOURCE","").strip()
-MCP_AUTHORIZATION_SERVER=os.getenv("HERCULES_MCP_AUTHORIZATION_SERVER","").strip()
+MCP_AUTHORIZATION_SERVER=os.getenv("HERCULES_MCP_AUTHORIZATION_SERVER","").strip()\nMCP_OAUTH_INTROSPECTION_URL=os.getenv("HERCULES_MCP_OAUTH_INTROSPECTION_URL","").strip()\nMCP_OAUTH_CLIENT_ID=os.getenv("HERCULES_MCP_OAUTH_CLIENT_ID","").strip()\nMCP_OAUTH_CLIENT_SECRET=os.getenv("HERCULES_MCP_OAUTH_CLIENT_SECRET","").strip()\nMCP_OAUTH_REQUIRED_SCOPES={value for value in os.getenv("HERCULES_MCP_OAUTH_REQUIRED_SCOPES","").split() if value}
 mcp_asgi=hercules_mcp.streamable_http_app(
     streamable_http_path="/",
     stateless_http=True,
@@ -34,6 +34,35 @@ async def lifespan(_app:FastAPI):
 
 app=FastAPI(title="Hercules AI Core",version="1.1.0",lifespan=lifespan)
 
+async def validate_public_mcp_token(token:str)->bool:
+    if not (
+        MCP_OAUTH_INTROSPECTION_URL
+        and MCP_OAUTH_CLIENT_ID
+        and MCP_OAUTH_CLIENT_SECRET
+        and MCP_RESOURCE
+    ):
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response=await client.post(
+                MCP_OAUTH_INTROSPECTION_URL,
+                data={"token":token},
+                auth=(MCP_OAUTH_CLIENT_ID,MCP_OAUTH_CLIENT_SECRET),
+            )
+        if response.status_code != 200:
+            return False
+        payload=response.json()
+    except (httpx.HTTPError, ValueError):
+        return False
+    if payload.get("active") is not True:
+        return False
+    audience=payload.get("aud")
+    audiences={audience} if isinstance(audience,str) else set(audience or [])
+    if MCP_RESOURCE not in audiences:
+        return False
+    scopes=set(str(payload.get("scope","")).split())
+    return MCP_OAUTH_REQUIRED_SCOPES.issubset(scopes)
+
 @app.middleware("http")
 async def protect_mcp(request, call_next):
     if request.url.path.startswith("/mcp"):
@@ -43,16 +72,19 @@ async def protect_mcp(request, call_next):
                 status_code=503,
                 media_type="application/json",
             )
-        if MCP_TOKEN:
-            supplied=request.headers.get("Authorization","")
-            expected=f"Bearer {MCP_TOKEN}"
-            if not secrets.compare_digest(supplied,expected):
-                return Response(
-                    content='{"detail":"Unauthorized"}',
-                    status_code=401,
-                    media_type="application/json",
-                    headers={"WWW-Authenticate":f'Bearer resource_metadata="{str(request.base_url).rstrip("/")}.well-known/oauth-protected-resource"'},
-                )
+        supplied=request.headers.get("Authorization","")
+        expected=f"Bearer {MCP_TOKEN}" if MCP_TOKEN else ""
+        owner_authorized=bool(expected) and secrets.compare_digest(supplied,expected)
+        public_authorized=False
+        if not owner_authorized and supplied.startswith("Bearer "):
+            public_authorized=await validate_public_mcp_token(supplied[7:])
+        if not owner_authorized and not public_authorized:
+            return Response(
+                content='{"detail":"Unauthorized"}',
+                status_code=401,
+                media_type="application/json",
+                headers={"WWW-Authenticate":f'Bearer resource_metadata="{str(request.base_url).rstrip("/")}.well-known/oauth-protected-resource"'},
+            )
     return await call_next(request)
 
 app.mount("/mcp",mcp_asgi)
