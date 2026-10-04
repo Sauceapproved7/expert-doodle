@@ -2,7 +2,7 @@
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "hercules-community",
   "version": "0.1.0",
-  "description": "Use Hercules read-only command capabilities from ChatGPT and Codex with explicit security boundaries.",
+  "description": "Use five bounded read-only Hercules tools from ChatGPT and Codex with explicit security boundaries.",
   "author": {
     "name": "SauceApproved",
     "url": "https://github.com/Sauceapproved7/expert-doodle"
@@ -22,7 +22,7 @@
       "interface": {
         "displayName": "Hercules",
         "shortDescription": "Hercules status and planning",
-        "longDescription": "Inspect Hercules status, available models, mission plans, and verification evidence through a deliberately bounded read-only command surface.",
+        "longDescription": "Inspect Hercules service status, installed models, non-executing mission plans, minimized Vault activity summaries, and Vault verification results through a deliberately bounded read-only tool surface.",
         "developerName": "SauceApproved",
         "category": "Developer Tools",
         "capabilities": [
@@ -47,31 +47,31 @@
             {
               "description": "Read Hercules runtime status",
               "prompt": "Show the current Hercules runtime status.",
-              "tools_triggered": "hercules.command.status",
+              "tools_triggered": "hercules.get_status",
               "expected_behavior": "Return the read-only Hercules status reported by the tool and distinguish unavailable runtime evidence from assumptions."
             },
             {
               "description": "Create a non-executing mission plan",
               "prompt": "Plan a Hercules mission to review system readiness without executing changes.",
-              "tools_triggered": "hercules.command.mission",
+              "tools_triggered": "hercules.plan_mission",
               "expected_behavior": "Return a mission plan only; do not claim that any step was executed or authorized."
             },
             {
               "description": "Inspect Vault status",
               "prompt": "Show the latest Hercules Vault status and recent events.",
-              "tools_triggered": "hercules.command.vault",
+              "tools_triggered": "hercules.get_vault_summary",
               "expected_behavior": "Return only the read-only Vault status and recent events exposed by Hercules."
             },
             {
               "description": "List installed models",
               "prompt": "Which models does Hercules currently report as installed?",
-              "tools_triggered": "hercules.command.models",
+              "tools_triggered": "hercules.list_models",
               "expected_behavior": "Return only the installed model inventory reported by Hercules without inventing unavailable models."
             },
             {
               "description": "Verify Vault evidence",
               "prompt": "Verify the Hercules Vault evidence chain.",
-              "tools_triggered": "hercules.command.verify",
+              "tools_triggered": "hercules.verify_vault",
               "expected_behavior": "Report the read-only verification result and any explicit limitations without mutating Vault state."
             }
           ],
@@ -94,7 +94,7 @@
         "commerce_description": "This read-only Hercules community plugin does not sell products or process payments."
       },
       "publication": {
-        "release_notes": "Initial Hercules community plugin package with five bounded read-only tools for runtime status, non-executing mission planning, Vault inspection, model inventory, and Vault evidence verification."
+        "release_notes": "Initial Hercules community plugin package with five bounded read-only tools for service status, non-executing mission planning, minimized Vault activity summaries, model inventory, and Vault evidence verification."
       }
     }
   }
