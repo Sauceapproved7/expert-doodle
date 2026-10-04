@@ -1,0 +1,29 @@
+name: Hercules security registry reader
+on:
+  pull_request:
+    paths:
+      - 'hercules-runtime/security-registry/**'
+      - 'hercules-forge/control-api.mjs'
+      - 'tests/hercules-security-registry*.test.mjs'
+      - '.github/workflows/hercules-security-registry.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'hercules-runtime/security-registry/**'
+      - 'hercules-forge/control-api.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  registry:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - run: node scripts/verify-hercules-execution-contract.mjs
+      - run: node scripts/verify-owner-code-only.mjs
+      - run: node --test tests/hercules-security-registry-reader.test.mjs tests/hercules-security-registry-api.test.mjs tests/hercules-forge-control-api.test.mjs tests/hercules-implementation-enforcement.test.mjs
+      - run: node scripts/security-baseline.mjs

@@ -230,3 +230,11 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Secret boundary: the Hercules-owned broker control key is generated server-side inside Supabase Vault; the external Render credential remains owner-authorized and server-side in Vault. Neither secret enters deployment request bodies, persisted deploy evidence, GitHub source, or broker responses.
 - Verification boundary: successful deployment evidence requires exact-commit `live` status plus Hercules `/health` and protected unauthenticated `/mcp` behavior.
 - Differentiators: Vault-isolated provider custody and evidence-bound exact-commit deployment verification. These are Hercules differentiators, not claims that competitors lack equivalent capabilities.
+
+## Hercules security registry reader v1 provenance — 2026-10-04
+
+- Component paths: `hercules-runtime/security-registry/`, Forge operator API integration, reader/API tests, documentation, and CI workflow.
+- Origin: original Hercules implementation created with AI assistance; reused the previously validated Hercules Registry Reader v1.0.0 and normalized security registry v1.3.3 metadata.
+- Dependencies: Node.js built-ins and existing repository-owned modules only; no vendored dependencies, third-party executable code, archives, exploit artifacts, or malware samples.
+- Metadata provenance: source names, public URLs, original Hercules classifications, and verification observations; third-party documents and datasets are not copied or claimed as project-owned content.
+- Boundary: authenticated, checksum-gated local catalog search only; no remote retrieval, source mutation, execution, or authority expansion. Production connection requires separate exact-commit deployment evidence.
