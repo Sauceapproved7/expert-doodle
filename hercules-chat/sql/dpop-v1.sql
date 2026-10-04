@@ -66,3 +66,10 @@ $$;
 
 revoke all on function public.hercules_claim_dpop_replay(text, integer) from public, anon, authenticated;
 grant execute on function public.hercules_claim_dpop_replay(text, integer) to service_role;
+
+
+-- Reconcile legacy production-only authenticated SECURITY DEFINER RPC drift.
+-- Canonical DPoP persistence is server-owned; authenticated clients must not
+-- receive direct privileged database mutation authority.
+drop function if exists public.hercules_create_dpop_challenge();
+drop function if exists public.hercules_revoke_dpop_key(text);
