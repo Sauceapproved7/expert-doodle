@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.identity-policy",
-  "version": "1.0",
+  "version": "1.1",
   "mode": "github-organization-compatible",
   "defaultDecision": "deny",
   "principles": ["least-privilege","explicit-grants","separation-of-duties","revocation-first","auditable-changes"],
@@ -32,10 +32,16 @@
     "agentsMayChangeIdentityPolicy": false,
     "inactiveIdentityAccess": "deny",
     "unknownIdentityAccess": "deny",
-    "emergencyRevocation": "owner-only"
+    "emergencyRevocation": "owner-only",
+    "expiringGrantsSupported": true,
+    "malformedExpiryAccess": "deny",
+    "emergencyLockdownOwnerRecoveryOnly": true,
+    "authorizationEvidenceSha256": true,
+    "policyDriftDetection": true
   },
   "futureEnterpriseManagedUsers": {
     "required": false,
     "adapterBoundary": "IdP authentication/provisioning may replace identity source without changing Hercules authorization semantics"
-  }
+  },
+  "emergencyLockdown": false
 }
