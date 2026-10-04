@@ -92,6 +92,19 @@ test("HTTPS container target verification fails closed on unhealthy or exposed M
   await assert.rejects(exposed.verify({request: request()}), /MCP endpoint is not protected/);
 });
 
+test("HTTPS container target verification rejects unconfigured MCP authentication", async () => {
+  const adapter = new HttpsContainerTargetAdapter({
+    deployRelease: async () => ({}),
+    fetchImpl: async (url) => String(url).endsWith("/health")
+      ? new Response(JSON.stringify({ok: true, service: "hercules-ai", mcp: "/mcp"}), {
+          status: 200,
+          headers: {"content-type": "application/json"},
+        })
+      : new Response(JSON.stringify({detail: "MCP authentication is not configured"}), {status: 503}),
+  });
+  await assert.rejects(adapter.verify({request: request()}), /MCP endpoint is not protected/);
+});
+
 test("HTTPS container target rollback delegates by provider deployment id", async () => {
   let rolledBack = null;
   const adapter = new HttpsContainerTargetAdapter({
