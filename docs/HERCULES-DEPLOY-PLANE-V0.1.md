@@ -228,10 +228,20 @@ Optional:
 
 The command prints deployment identity/status but never the Deploy Plane control token.
 
-## Current boundary
+## Production provider boundary
 
-v0.1 creates the owned background deployment control plane and adapter contract.
+The Deploy Plane now includes a bounded Render provider adapter plus a Vault-backed cloud broker.
 
-It does not yet include a production target adapter for a specific public host/provider. Therefore v0.1 can queue/process deployments with configured adapters, but it does not by itself provision a new public server.
+The direct runtime adapter path remains available when a trusted Hercules runtime is present. The cloud broker adds an alternative execution surface for cases where no authorized desktop/runtime machine is attached:
 
-The next increment should add the first real target adapter while preserving this contract.
+- provider credentials remain in Supabase Vault and are retrieved only server-side;
+- deployment requests carry only target code, exact commit SHA, and provider deployment identity;
+- production targets are resolved through the service-role-only `hercules_deploy_targets` allowlist;
+- Render deploys are triggered only for exact 40-character commit SHAs;
+- verification requires Render to report the same exact commit as `live`, then requires `/health` to satisfy the Hercules health contract and unauthenticated `/mcp` to remain protected with 401/403;
+- rollback accepts only a bounded Render deployment ID for an already allowlisted service;
+- broker responses are explicitly credential-free.
+
+The broker does not create or infer provider credentials. If the `render-deployer` Vault secret or the `deploy-broker-control` internal service key is unavailable, it fails closed.
+
+Two Hercules differentiators in this increment are: (1) provider credentials never transit deployment job state, and (2) deployment completion is bound to exact-commit plus application-health and MCP-auth evidence rather than provider status alone.
