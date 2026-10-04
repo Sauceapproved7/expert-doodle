@@ -1,6 +1,7 @@
 import os, sqlite3, time, uuid
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from typing import Literal
 from .mcp_server import dispatch
@@ -30,7 +31,6 @@ class ChatRequest(BaseModel):
     conversation_id:str|None=None
     stream:bool=False
     speed_mode:str|None="balanced"
-    stream:bool=False
 class HardwareRequest(BaseModel):
     ram_gb:float=0
     vram_gb:float=0
@@ -76,7 +76,22 @@ async def get_speed(mode:str):
 @app.post("/v1/chat/completions")
 async def chat(req:ChatRequest):
     if req.stream:
-        raise HTTPException(400,"Streaming is not enabled in v1.")
+        try:
+            profile=speed_profile(req.speed_mode)
+        except ValueError as e:
+            raise HTTPException(400,str(e))
+        model_by_slot={"fast":FAST_MODEL,"balanced":DEFAULT,"deep":DEEP_MODEL}
+        payload={"model":req.model or model_by_slot[profile["model_slot"]],"messages":[m.model_dump() for m in req.messages],"stream":True,"max_tokens":profile["max_tokens"]}
+        async def events():
+            try:
+                async with httpx.AsyncClient(timeout=profile["timeout_seconds"]) as client:
+                    async with client.stream("POST",f"{BASE}/v1/chat/completions",json=payload) as r:
+                        r.raise_for_status()
+                        async for chunk in r.aiter_text():
+                            if chunk: yield chunk
+            except Exception as e:
+                yield "data: {\"error\":\"Local model backend unavailable: "+type(e).__name__+"\"}\\n\\n"
+        return StreamingResponse(events(),media_type="text/event-stream")
     cid=req.conversation_id or str(uuid.uuid4())
     conn=db()
     now=int(time.time())
