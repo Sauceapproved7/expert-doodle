@@ -45,4 +45,37 @@ if(buildCatering){
   });
 }
 
+function filterMenu() {
+  const query=(document.getElementById("menuSearch")?.value||"").trim().toLowerCase();
+  const availability=document.getElementById("availabilityFilter")?.value||"all";
+  const rows=[...document.querySelectorAll(".menu-row")];
+  let visible=0;
+  for (const row of rows) {
+    const name=(row.dataset.menuName||"").toLowerCase();
+    const status=row.dataset.menuStatus||"";
+    const show=(!query||name.includes(query))&&(availability==="all"||status===availability);
+    row.hidden=!show;
+    if(show) visible++;
+  }
+  for (const category of document.querySelectorAll(".menu-category")) {
+    category.hidden=!category.querySelector(".menu-row:not([hidden])");
+  }
+  const count=document.getElementById("menuCount");
+  if(count) count.textContent=visible+" menu item"+(visible===1?"":"s");
+}
 
+document.getElementById("menuSearch")?.addEventListener("input",filterMenu);
+document.getElementById("availabilityFilter")?.addEventListener("change",filterMenu);
+
+const menuCategoryNav=document.getElementById("menuCategoryNav");
+if(menuCategoryNav){
+  menuCategoryNav.addEventListener("click",(event)=>{
+    const button=event.target.closest("[data-menu-category]");
+    if(!button) return;
+    const target=[...document.querySelectorAll(".menu-category")].find(section=>section.dataset.category===button.dataset.menuCategory);
+    if(target){
+      target.hidden=false;
+      target.scrollIntoView({behavior:"smooth",block:"start"});
+    }
+  });
+}
