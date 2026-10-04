@@ -62,9 +62,8 @@ async function target(code:string){
   return {code:String(row.code),serviceId:String(row.service_id),publicOrigin:origin.origin};
 }
 async function render(path:string,token:string,init:RequestInit={}){
-  const headers=new Headers(init.headers||{});
-  headers.set('authorization','Bearer '+token);
-  headers.set('accept','application/json');
+  const headers=new Headers({authorization:'Bearer '+token,accept:'application/json'});
+  for(const [key,value] of new Headers(init.headers||{}).entries())headers.set(key,value);
   if(init.body)headers.set('content-type','application/json');
   const response=await fetch(RENDER_API+path,{...init,headers,redirect:'error',signal:AbortSignal.timeout(10000)});
   const text=await response.text();
