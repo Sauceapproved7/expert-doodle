@@ -1,29 +1,61 @@
 {
   "schema": "sauceapproved.hercules.identity-policy",
-  "version": "1.0",
+  "version": "1.1",
   "mode": "github-organization-compatible",
   "defaultDecision": "deny",
-  "principles": ["least-privilege","explicit-grants","separation-of-duties","revocation-first","auditable-changes"],
+  "principles": [
+    "least-privilege",
+    "explicit-grants",
+    "separation-of-duties",
+    "revocation-first",
+    "auditable-changes"
+  ],
   "roles": {
     "owner": {
-      "repositories": {"expert-doodle":"admin"},
-      "capabilities": ["identity:revoke","identity:grant","release:approve","policy:approve"]
+      "repositories": {
+        "expert-doodle": "admin"
+      },
+      "capabilities": [
+        "identity:revoke",
+        "identity:grant",
+        "release:approve",
+        "policy:approve"
+      ]
     },
     "builder": {
-      "repositories": {"expert-doodle":"write"},
-      "capabilities": ["build:propose","test:run"]
+      "repositories": {
+        "expert-doodle": "write"
+      },
+      "capabilities": [
+        "build:propose",
+        "test:run"
+      ]
     },
     "deployment-agent": {
-      "repositories": {"expert-doodle":"read"},
-      "capabilities": ["deploy:read","release:evidence:read"]
+      "repositories": {
+        "expert-doodle": "read"
+      },
+      "capabilities": [
+        "deploy:read",
+        "release:evidence:read"
+      ]
     },
     "security-agent": {
-      "repositories": {"expert-doodle":"read"},
-      "capabilities": ["audit:read","security:scan"]
+      "repositories": {
+        "expert-doodle": "read"
+      },
+      "capabilities": [
+        "audit:read",
+        "security:scan"
+      ]
     },
     "auditor": {
-      "repositories": {"expert-doodle":"read"},
-      "capabilities": ["audit:read"]
+      "repositories": {
+        "expert-doodle": "read"
+      },
+      "capabilities": [
+        "audit:read"
+      ]
     }
   },
   "guardrails": {
@@ -32,10 +64,15 @@
     "agentsMayChangeIdentityPolicy": false,
     "inactiveIdentityAccess": "deny",
     "unknownIdentityAccess": "deny",
-    "emergencyRevocation": "owner-only"
+    "emergencyRevocation": "owner-only",
+    "expiringGrantsSupported": true,
+    "emergencyLockdownOwnerRecoveryOnly": true,
+    "authorizationEvidenceSha256": true,
+    "policyDriftDetection": true
   },
   "futureEnterpriseManagedUsers": {
     "required": false,
     "adapterBoundary": "IdP authentication/provisioning may replace identity source without changing Hercules authorization semantics"
-  }
+  },
+  "emergencyLockdown": false
 }
