@@ -77,7 +77,7 @@ export class HttpsContainerTargetAdapter {
       body: JSON.stringify({jsonrpc: "2.0", id: "verify", method: "ping"}),
       signal: AbortSignal.timeout(5000),
     });
-    if (![401, 403, 503].includes(mcp.status)) {
+    if (![401, 403].includes(mcp.status)) {
       throw new Error("MCP endpoint is not protected");
     }
     return {
