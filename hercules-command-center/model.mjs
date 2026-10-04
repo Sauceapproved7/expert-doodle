@@ -1,0 +1,16 @@
+const DEFAULT_STAGES=["idea","build","test","secure","deploy"];
+
+export function createCommandCenterModel(input={}) {
+  const verified=input.owner?.verified === true;
+  const stages=Array.isArray(input.stages)&&input.stages.length?input.stages:DEFAULT_STAGES;
+  return {
+    product:"Hercules Command Center",
+    version:"0.1",
+    executionAuthority:false,
+    core:{state:input.core?.state ?? "standby"},
+    owner:{verified,actionsEnabled:verified},
+    pipeline:stages.map((id,index)=>({id,order:index+1})),
+    evidence:Array.isArray(input.evidence)?structuredClone(input.evidence):[],
+    surfaces:["core","forge","security","deployments","evidence"],
+  };
+}
