@@ -30,4 +30,6 @@ test("Vault-backed deploy target registry is service-role only and allowlisted",
   assert.match(migration, /vault\.create_secret/i);
   assert.match(migration, /purpose='deploy-broker-control'/i);
   assert.match(migration, /'deploy-broker-control'/i);
+  assert.match(migration, /'credential_custody','supabase_vault'/i);
+  assert.match(migration, /'carries_credentials',false/i);
 });
