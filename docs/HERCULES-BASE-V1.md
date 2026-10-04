@@ -83,6 +83,7 @@ additional Hercules permissions.
 
 Implemented and evidenced:
 
+- Hercules Base Pulse realtime with durable PostgreSQL event replay, JWT-owned channels, cursor polling, consumer-backpressured SSE streaming, cancellation propagation, and no Supabase Realtime dependency;
 - Hercules Base Storage with content-addressed SHA-256 blobs, private JWT-owned buckets and objects, PostgreSQL metadata, persistent self-hosted storage, and download-time integrity verification;
 - Hercules Base Auth with scrypt password hashing, JWT access tokens, rotating opaque refresh tokens, server-only credential/session RPCs, and fixture-only staging identities;
 - PostgreSQL database substrate in isolated Hercules staging;
@@ -96,7 +97,6 @@ Implemented and evidenced:
 
 Planned, not represented as complete:
 
-- Hercules Base Realtime;
 - Hercules Base Functions;
 - multi-project provisioning onto deployment targets;
 - production migration/cutover from managed Supabase.
@@ -145,6 +145,10 @@ Owned Hercules source:
 - `hercules-base/storage-core.mjs`
 - `hercules-base/storage-router.mjs`
 - `hercules-base/storage-store.mjs`
+- `hercules-base/realtime-core.mjs`
+- `hercules-base/realtime-router.mjs`
+- `hercules-base/realtime-store.mjs`
+- `hercules-base/response-bridge.mjs`
 - `hercules-base/router.mjs`
 - `hercules-base/server.mjs`
 - Hercules Base tests, docs, policy logic, and future owned control software.
