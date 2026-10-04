@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "principle": "knowledge_first",
+  "vault_role": "brain",
+  "require_provenance": true,
+  "distinguish_verified_from_assumed": true,
+  "prefer_authoritative_sources": true,
+  "preserve_decision_evidence": true,
+  "unsafe_or_unlicensed_material_is_trusted": false
+}
