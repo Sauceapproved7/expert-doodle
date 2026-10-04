@@ -7,12 +7,16 @@ services:
       HERCULES_MODEL_BASE_URL: http://ollama:11434
       HERCULES_DEFAULT_MODEL: qwen2.5:7b
       HERCULES_DB: /data/hercules.db
+      HERCULES_VAULT_DB: /data/hercules-vault.db
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
       - hercules-data:/data
     depends_on:
       - ollama
+    read_only: true
+    tmpfs:
+      - /tmp
     security_opt:
       - no-new-privileges:true
     cap_drop:
