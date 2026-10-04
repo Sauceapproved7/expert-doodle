@@ -28,7 +28,7 @@ test("Render provider deploys an exact commit without leaking credentials", asyn
 test("Render provider fails closed outside its service allowlist and on insecure API origins", async () => {
   assert.throws(() => new RenderDeployProviderClient({apiToken: token, allowedServiceIds: [serviceId], baseUrl: "http://api.render.com"}), /credential-free HTTPS URL/);
   const client = new RenderDeployProviderClient({apiToken: token, allowedServiceIds: [serviceId], fetchImpl: async () => { throw new Error("network should not be called"); }});
-  await assert.rejects(client.deployRelease({serviceId: "srv-not-allowed", sourceCommit: "a".repeat(40)}), /service is not allowed/);
+  await assert.rejects(client.deployRelease({serviceId: "srv-notallowed123", sourceCommit: "a".repeat(40)}), /service is not allowed/);
 });
 
 test("Render provider rollback follows the official service rollback contract", async () => {
