@@ -1,7 +1,7 @@
-import os, sqlite3, time, uuid, json, asyncio
+import os, sqlite3, time, uuid, json, asyncio, secrets
 from pathlib import Path
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel, Field
 from typing import Literal
@@ -15,6 +15,8 @@ DEFAULT=os.getenv("HERCULES_DEFAULT_MODEL","qwen2.5:7b")
 FAST_MODEL=os.getenv("HERCULES_FAST_MODEL",DEFAULT)
 DEEP_MODEL=os.getenv("HERCULES_DEEP_MODEL",DEFAULT)
 KEEPALIVE_SECONDS=float(os.getenv("HERCULES_SSE_KEEPALIVE_SECONDS","15"))
+MCP_TOKEN=os.getenv("HERCULES_MCP_TOKEN","")
+PUBLIC_HOSTED=os.getenv("HERCULES_PUBLIC_HOSTED","0").lower() in {"1","true","yes"}
 app=FastAPI(title="Hercules AI Core",version="1.1.0")
 
 def db():
@@ -55,7 +57,14 @@ async def health():
     return {"ok":True,"service":"hercules-ai","model":DEFAULT,"mcp":"/mcp"}
 
 @app.post("/mcp")
-async def mcp(req:RpcRequest):
+async def mcp(req:RpcRequest, authorization:str|None=Header(default=None,alias="Authorization")):
+    if PUBLIC_HOSTED and not MCP_TOKEN:
+        raise HTTPException(503,"MCP authentication is not configured")
+    if MCP_TOKEN:
+        supplied=(authorization or "")
+        expected=f"Bearer {MCP_TOKEN}"
+        if not secrets.compare_digest(supplied,expected):
+            raise HTTPException(401,"Unauthorized",headers={"WWW-Authenticate":"Bearer"})
     if req.jsonrpc!="2.0":
         raise HTTPException(400,"JSON-RPC 2.0 required")
     try:
