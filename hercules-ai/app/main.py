@@ -1,8 +1,8 @@
-import os, sqlite3, time, uuid, json, asyncio, secrets
+import os, sqlite3, time, uuid, json, asyncio, secrets, struct, zlib
 from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException, Header
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import Literal
 from .mcp_server import dispatch
@@ -46,11 +46,45 @@ class RpcRequest(BaseModel):
     method:str
     params:dict={}
 
-UI=Path(__file__).resolve().parent.parent/"ui"/"index.html"
+UI_DIR=Path(__file__).resolve().parent.parent/"ui"
+UI=UI_DIR/"index.html"
+
+def _png_icon(size:int)->bytes:
+    def pixel(x:int,y:int)->bytes:
+        dark=(8,10,13); orange=(255,107,34); light=(244,241,232)
+        # Shield border + simple Hercules H monogram.
+        cx=size/2; cy=size/2
+        shield=max(abs((x-cx)/(size*.31)),abs((y-cy)/(size*.38)))
+        shield_edge=.91 <= shield <= 1.0
+        h_left=abs(x-size*.38) <= size*.035 and size*.31 <= y <= size*.69
+        h_right=abs(x-size*.62) <= size*.035 and size*.31 <= y <= size*.69
+        h_bar=abs(y-size*.50) <= size*.035 and size*.38 <= x <= size*.62
+        c=light if (h_left or h_right or h_bar) else orange if shield_edge else dark
+        return bytes(c)
+    raw=b"".join(b"\x00"+b"".join(pixel(x,y) for x in range(size)) for y in range(size))
+    def chunk(kind:bytes,data:bytes)->bytes:
+        return struct.pack(">I",len(data))+kind+data+struct.pack(">I",zlib.crc32(kind+data)&0xffffffff)
+    return b"\x89PNG\r\n\x1a\n"+chunk(b"IHDR",struct.pack(">IIBBBBB",size,size,8,2,0,0,0))+chunk(b"IDAT",zlib.compress(raw,9))+chunk(b"IEND",b"")
 
 @app.get("/",include_in_schema=False)
 async def command_center():
     return FileResponse(UI)
+
+@app.get("/manifest.webmanifest",include_in_schema=False)
+async def app_manifest():
+    return FileResponse(UI_DIR/"manifest.webmanifest",media_type="application/manifest+json")
+
+@app.get("/service-worker.js",include_in_schema=False)
+async def service_worker():
+    return FileResponse(UI_DIR/"service-worker.js",media_type="application/javascript",headers={"Service-Worker-Allowed":"/","Cache-Control":"no-cache"})
+
+@app.get("/app-icon-192.png",include_in_schema=False)
+async def app_icon_192():
+    return Response(content=_png_icon(192),media_type="image/png",headers={"Cache-Control":"public, max-age=86400"})
+
+@app.get("/app-icon-512.png",include_in_schema=False)
+async def app_icon_512():
+    return Response(content=_png_icon(512),media_type="image/png",headers={"Cache-Control":"public, max-age=86400"})
 
 @app.get("/health")
 async def health():
