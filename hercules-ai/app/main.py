@@ -4,10 +4,13 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from .mcp_server import dispatch
 from .sovereign import choose_model, mission_plan
+from .speed import speed_profile
 
 DB=os.getenv("HERCULES_DB","/data/hercules.db")
 BASE=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
 DEFAULT=os.getenv("HERCULES_DEFAULT_MODEL","qwen2.5:7b")
+FAST_MODEL=os.getenv("HERCULES_FAST_MODEL",DEFAULT)
+DEEP_MODEL=os.getenv("HERCULES_DEEP_MODEL",DEFAULT)
 app=FastAPI(title="Hercules AI Core",version="1.1.0")
 
 def db():
@@ -25,6 +28,7 @@ class ChatRequest(BaseModel):
     messages:list[Message]
     conversation_id:str|None=None
     stream:bool=False
+    speed_mode:str|None="balanced"
 class HardwareRequest(BaseModel):
     ram_gb:float=0
     vram_gb:float=0
@@ -60,6 +64,13 @@ async def select_model(req:HardwareRequest):
 async def create_mission(req:MissionRequest):
     return mission_plan(req.goal)
 
+@app.get("/v1/speed/{mode}")
+async def get_speed(mode:str):
+    try:
+        return speed_profile(mode)
+    except ValueError as e:
+        raise HTTPException(400,str(e))
+
 @app.post("/v1/chat/completions")
 async def chat(req:ChatRequest):
     if req.stream:
@@ -71,11 +82,17 @@ async def chat(req:ChatRequest):
         conn.execute("insert into messages(id,conversation_id,role,content,created_at,sequence) values(?,?,?,?,?,?)",
                      (str(uuid.uuid4()),cid,m.role,m.content,now,i))
     conn.commit()
-    payload={"model":req.model or DEFAULT,
-             "messages":[m.model_dump() for m in req.messages],
-             "stream":False}
     try:
-        async with httpx.AsyncClient(timeout=180) as client:
+        profile=speed_profile(req.speed_mode)
+    except ValueError as e:
+        raise HTTPException(400,str(e))
+    model_by_slot={"fast":FAST_MODEL,"balanced":DEFAULT,"deep":DEEP_MODEL}
+    payload={"model":req.model or model_by_slot[profile["model_slot"]],
+             "messages":[m.model_dump() for m in req.messages],
+             "stream":False,
+             "max_tokens":profile["max_tokens"]}
+    try:
+        async with httpx.AsyncClient(timeout=profile["timeout_seconds"]) as client:
             r=await client.post(f"{BASE}/v1/chat/completions",json=payload)
             r.raise_for_status()
             out=r.json()
