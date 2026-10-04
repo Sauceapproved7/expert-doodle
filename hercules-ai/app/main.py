@@ -3,6 +3,7 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from .mcp_server import dispatch
+from .sovereign import choose_model, mission_plan
 
 DB=os.getenv("HERCULES_DB","/data/hercules.db")
 BASE=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
@@ -24,6 +25,11 @@ class ChatRequest(BaseModel):
     messages:list[Message]
     conversation_id:str|None=None
     stream:bool=False
+class HardwareRequest(BaseModel):
+    ram_gb:float=0
+    vram_gb:float=0
+class MissionRequest(BaseModel):
+    goal:str=Field(min_length=1,max_length=2000)
 class RpcRequest(BaseModel):
     jsonrpc:str
     id:int|str|None=None
@@ -45,6 +51,14 @@ async def mcp(req:RpcRequest):
         return {"jsonrpc":"2.0","id":req.id,"error":{"code":-32601,"message":str(e)}}
     except (ValueError,TypeError) as e:
         return {"jsonrpc":"2.0","id":req.id,"error":{"code":-32602,"message":str(e)}}
+
+@app.post("/v1/models/select")
+async def select_model(req:HardwareRequest):
+    return choose_model(req.model_dump())
+
+@app.post("/v1/missions/plan")
+async def create_mission(req:MissionRequest):
+    return mission_plan(req.goal)
 
 @app.post("/v1/chat/completions")
 async def chat(req:ChatRequest):
