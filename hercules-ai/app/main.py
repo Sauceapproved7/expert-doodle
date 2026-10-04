@@ -1,7 +1,7 @@
-import os, sqlite3, time, uuid, json, asyncio
+import os, sqlite3, time, uuid, json, asyncio, secrets
 from pathlib import Path
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel, Field
 from typing import Literal
@@ -14,7 +14,7 @@ BASE=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
 DEFAULT=os.getenv("HERCULES_DEFAULT_MODEL","qwen2.5:7b")
 FAST_MODEL=os.getenv("HERCULES_FAST_MODEL",DEFAULT)
 DEEP_MODEL=os.getenv("HERCULES_DEEP_MODEL",DEFAULT)
-KEEPALIVE_SECONDS=float(os.getenv("HERCULES_SSE_KEEPALIVE_SECONDS","15"))
+KEEPALIVE_SECONDS=float(os.getenv("HERCULES_SSE_KEEPALIVE_SECONDS","15"))\nMCP_TOKEN=os.getenv("HERCULES_MCP_TOKEN","")\nPUBLIC_HOSTED=os.getenv("HERCULES_PUBLIC_HOSTED","0").lower() in {"1","true","yes"}
 app=FastAPI(title="Hercules AI Core",version="1.1.0")
 
 def db():
