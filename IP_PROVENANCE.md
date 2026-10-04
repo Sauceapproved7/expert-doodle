@@ -238,3 +238,12 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Dependencies: Node.js built-ins and existing repository-owned modules only; no vendored dependencies, third-party executable code, archives, exploit artifacts, or malware samples.
 - Metadata provenance: source names, public URLs, original Hercules classifications, and verification observations; third-party documents and datasets are not copied or claimed as project-owned content.
 - Boundary: authenticated, checksum-gated local catalog search only; no remote retrieval, source mutation, execution, or authority expansion. Production connection requires separate exact-commit deployment evidence.
+
+## Hercules Binary Inspector v1 provenance — 2026-10-04
+
+- Component paths: `hercules-binary-inspector/*.mjs`, `hercules-binary-inspector/*.md`, `tests/hercules-binary-inspector.test.mjs`, and the dedicated CI workflow.
+- Origin: project-authored Hercules defensive static-analysis implementation forward-ported from stale PR #741 and hardened with AI assistance under the repository contribution controls.
+- Runtime dependencies: Node.js built-ins only; no vendored binaries, disassemblers, model weights, third-party plugins, or external runtime packages are included.
+- Security scope: explicit authorization input, bounded in-memory static inspection, deterministic SHA-256 evidence, bounded printable-string extraction, and explicit no-execution/no-mutation reporting.
+- IDA is documented only as an optional future adapter boundary. IDA and any third-party plugin/runtime remain external and are not claimed as SauceApproved-owned code.
+
