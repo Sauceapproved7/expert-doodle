@@ -83,6 +83,7 @@ additional Hercules permissions.
 
 Implemented and evidenced:
 
+- Hercules Base Sparks control plane for owner-scoped function manifests, deterministic fingerprints, bounded resource/network policy, and explicit fail-closed invocation while isolated execution remains unavailable;
 - Hercules Base Pulse realtime with durable PostgreSQL event replay, JWT-owned channels, cursor polling, consumer-backpressured SSE streaming, cancellation propagation, and no Supabase Realtime dependency;
 - Hercules Base Storage with content-addressed SHA-256 blobs, private JWT-owned buckets and objects, PostgreSQL metadata, persistent self-hosted storage, and download-time integrity verification;
 - Hercules Base Auth with scrypt password hashing, JWT access tokens, rotating opaque refresh tokens, server-only credential/session RPCs, and fixture-only staging identities;
@@ -97,7 +98,7 @@ Implemented and evidenced:
 
 Planned, not represented as complete:
 
-- Hercules Base Functions;
+- Hercules Base Functions execution: Sparks registration/control is implemented, but arbitrary function execution remains blocked until a hardened isolated executor is built and benchmarked;
 - multi-project provisioning onto deployment targets;
 - production migration/cutover from managed Supabase.
 
