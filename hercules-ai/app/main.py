@@ -19,7 +19,11 @@ MCP_TOKEN=os.getenv("HERCULES_MCP_TOKEN","")
 PUBLIC_HOSTED=os.getenv("HERCULES_PUBLIC_HOSTED","0").lower() in {"1","true","yes"}
 OPENAI_APPS_CHALLENGE=os.getenv("OPENAI_APPS_CHALLENGE","").strip()
 MCP_RESOURCE=os.getenv("HERCULES_MCP_RESOURCE","").strip()
-MCP_AUTHORIZATION_SERVER=os.getenv("HERCULES_MCP_AUTHORIZATION_SERVER","").strip()\nMCP_OAUTH_INTROSPECTION_URL=os.getenv("HERCULES_MCP_OAUTH_INTROSPECTION_URL","").strip()\nMCP_OAUTH_CLIENT_ID=os.getenv("HERCULES_MCP_OAUTH_CLIENT_ID","").strip()\nMCP_OAUTH_CLIENT_SECRET=os.getenv("HERCULES_MCP_OAUTH_CLIENT_SECRET","").strip()\nMCP_OAUTH_REQUIRED_SCOPES={value for value in os.getenv("HERCULES_MCP_OAUTH_REQUIRED_SCOPES","").split() if value}
+MCP_AUTHORIZATION_SERVER=os.getenv("HERCULES_MCP_AUTHORIZATION_SERVER","").strip()
+MCP_OAUTH_INTROSPECTION_URL=os.getenv("HERCULES_MCP_OAUTH_INTROSPECTION_URL","").strip()
+MCP_OAUTH_CLIENT_ID=os.getenv("HERCULES_MCP_OAUTH_CLIENT_ID","").strip()
+MCP_OAUTH_CLIENT_SECRET=os.getenv("HERCULES_MCP_OAUTH_CLIENT_SECRET","").strip()
+MCP_OAUTH_REQUIRED_SCOPES={value for value in os.getenv("HERCULES_MCP_OAUTH_REQUIRED_SCOPES","").split() if value}
 mcp_asgi=hercules_mcp.streamable_http_app(
     streamable_http_path="/",
     stateless_http=True,
