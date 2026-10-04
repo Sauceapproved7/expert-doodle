@@ -100,11 +100,17 @@ export function createHerculesDeployService({
       }
 
       if (req.method === "GET" && url.pathname === "/ready") {
-        return send(res, worker.stopped ? 503 : 200, {
-          ready: !worker.stopped,
+        const workerRunning = !worker.stopped;
+        const adapterKinds = [...adapters.keys()].sort();
+        const productionTargetReady = adapters.has("https_container");
+        const ready = workerRunning && productionTargetReady;
+        return send(res, ready ? 200 : 503, {
+          ready,
           service: "hercules-deploy-plane",
           version: "0.1",
-          workerRunning: !worker.stopped,
+          workerRunning,
+          productionTargetReady,
+          adapterKinds,
         });
       }
 
