@@ -15,7 +15,7 @@ test("existing deployment broker slot owns the Vault-backed Render actions witho
   assert.match(source, /deployment-broker/);
   assert.match(source, /render-deployer/);
   assert.match(source, /hercules_deploy_targets/);
-  assert.match(source, /https:\/\/api\.render\.com/);
+  assert.match(source, /^const RENDER_API='https:\/\/api\.render\.com';$/m);
   assert.match(source, /\/health/);
   assert.match(source, /\/mcp/);
   assert.match(source, /\[401,403\]/);
