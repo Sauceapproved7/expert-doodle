@@ -20,3 +20,38 @@ def test_portable_plugin_declares_remote_mcp_at_package_root():
     config = root_mcp.read_text()
     assert '"type": "streamable-http"' in config
     assert '"url": "https://hercules-mcp.onrender.com/mcp"' in config
+
+
+def test_submission_metadata_has_owned_icons_and_complete_review_cases():
+    import json
+
+    manifest = json.loads(Path("plugin.json").read_text())
+    openai = manifest["extensions"]["com.openai"]
+    interface = openai["interface"]
+
+    assert interface["logo"] == "./assets/hercules-plugin.svg"
+    assert interface["composerIcon"] == "./assets/hercules-plugin.svg"
+    assert Path("assets/hercules-plugin.svg").is_file()
+
+    cases = openai["review"]["test_cases"]
+    assert len(cases["positive"]) == 5
+    assert len(cases["negative"]) == 3
+
+    allowed_tools = {
+        "hercules.command.status",
+        "hercules.command.mission",
+        "hercules.command.vault",
+        "hercules.command.models",
+        "hercules.command.verify",
+    }
+    for case in cases["positive"]:
+        assert case["description"].strip()
+        assert case["prompt"].strip()
+        assert case["expected_behavior"].strip()
+        triggered = {name.strip() for name in case["tools_triggered"].split(",")}
+        assert triggered
+        assert triggered <= allowed_tools
+
+    for case in cases["negative"]:
+        assert case["description"].strip()
+        assert case["prompt"].strip()
