@@ -75,7 +75,7 @@ export function createPostgrestRealtimeStore({
         p_channel:channel,
         p_after_id:afterId,
         p_limit:limit,
-      }));
+      },{signal}));
     },
   });
 }
