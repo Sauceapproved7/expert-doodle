@@ -1,11 +1,11 @@
-import os, sqlite3, time, uuid, json, asyncio, secrets, struct, zlib
+import os, sqlite3, time, uuid, json, asyncio, secrets, struct, zlib, contextlib
 from pathlib import Path
 import httpx
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import Literal
-from .mcp_server import dispatch
+from .mcp_runtime import hercules_mcp, transport_security
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 
@@ -18,7 +18,42 @@ KEEPALIVE_SECONDS=float(os.getenv("HERCULES_SSE_KEEPALIVE_SECONDS","15"))
 MCP_TOKEN=os.getenv("HERCULES_MCP_TOKEN","")
 PUBLIC_HOSTED=os.getenv("HERCULES_PUBLIC_HOSTED","0").lower() in {"1","true","yes"}
 OPENAI_APPS_CHALLENGE=os.getenv("OPENAI_APPS_CHALLENGE","").strip()
-app=FastAPI(title="Hercules AI Core",version="1.1.0")
+mcp_asgi=hercules_mcp.streamable_http_app(
+    streamable_http_path="/",
+    stateless_http=True,
+    json_response=True,
+    transport_security=transport_security(),
+)
+
+@contextlib.asynccontextmanager
+async def lifespan(_app:FastAPI):
+    async with hercules_mcp.session_manager.run():
+        yield
+
+app=FastAPI(title="Hercules AI Core",version="1.1.0",lifespan=lifespan)
+
+@app.middleware("http")
+async def protect_mcp(request, call_next):
+    if request.url.path.startswith("/mcp"):
+        if PUBLIC_HOSTED and not MCP_TOKEN:
+            return Response(
+                content='{"detail":"MCP authentication is not configured"}',
+                status_code=503,
+                media_type="application/json",
+            )
+        if MCP_TOKEN:
+            supplied=request.headers.get("Authorization","")
+            expected=f"Bearer {MCP_TOKEN}"
+            if not secrets.compare_digest(supplied,expected):
+                return Response(
+                    content='{"detail":"Unauthorized"}',
+                    status_code=401,
+                    media_type="application/json",
+                    headers={"WWW-Authenticate":"Bearer"},
+                )
+    return await call_next(request)
+
+app.mount("/mcp",mcp_asgi)
 
 def db():
     c=sqlite3.connect(DB)
@@ -41,12 +76,6 @@ class HardwareRequest(BaseModel):
     vram_gb:float=0
 class MissionRequest(BaseModel):
     goal:str=Field(min_length=1,max_length=2000)
-class RpcRequest(BaseModel):
-    jsonrpc:str
-    id:int|str|None=None
-    method:str
-    params:dict={}
-
 UI_DIR=Path(__file__).resolve().parent.parent/"ui"
 UI=UI_DIR/"index.html"
 
@@ -97,24 +126,6 @@ async def openai_apps_challenge():
 async def health():
     return {"ok":True,"service":"hercules-ai","model":DEFAULT,"mcp":"/mcp"}
 
-@app.post("/mcp")
-async def mcp(req:RpcRequest, authorization:str|None=Header(default=None,alias="Authorization")):
-    if PUBLIC_HOSTED and not MCP_TOKEN:
-        raise HTTPException(503,"MCP authentication is not configured")
-    if MCP_TOKEN:
-        supplied=(authorization or "")
-        expected=f"Bearer {MCP_TOKEN}"
-        if not secrets.compare_digest(supplied,expected):
-            raise HTTPException(401,"Unauthorized",headers={"WWW-Authenticate":"Bearer"})
-    if req.jsonrpc!="2.0":
-        raise HTTPException(400,"JSON-RPC 2.0 required")
-    try:
-        result=dispatch(req.method,req.params)
-        return {"jsonrpc":"2.0","id":req.id,"result":result}
-    except KeyError as e:
-        return {"jsonrpc":"2.0","id":req.id,"error":{"code":-32601,"message":str(e)}}
-    except (ValueError,TypeError) as e:
-        return {"jsonrpc":"2.0","id":req.id,"error":{"code":-32602,"message":str(e)}}
 
 @app.get("/v1/models")
 async def model_inventory():
