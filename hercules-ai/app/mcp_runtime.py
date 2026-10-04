@@ -48,8 +48,9 @@ def _text(name: str, arguments: dict) -> str:
 
 
 @hercules_mcp.tool(
-    name="hercules.command.status",
-    description="Read-only Hercules runtime status.",
+    name="hercules.get_status",
+    title="Get Hercules status",
+    description="Use when the user asks whether Hercules is running or wants its current service status. Returns a bounded read-only summary and never changes Hercules state.",
     annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_status() -> str:
@@ -57,8 +58,9 @@ def command_status() -> str:
 
 
 @hercules_mcp.tool(
-    name="hercules.command.mission",
-    description="Create a non-executing Hercules mission plan.",
+    name="hercules.plan_mission",
+    title="Plan Hercules mission",
+    description="Use when the user asks Hercules to plan a goal without executing it. Returns a non-executing staged plan and never deploys or changes state.",
     annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_mission(goal: str) -> str:
@@ -66,8 +68,9 @@ def command_mission(goal: str) -> str:
 
 
 @hercules_mcp.tool(
-    name="hercules.command.vault",
-    description="Read-only Hercules Vault status and recent events.",
+    name="hercules.get_vault_summary",
+    title="Get Hercules Vault summary",
+    description="Use when the user asks about Hercules Vault health or recent activity. Returns a minimized summary and recent action names; it never returns raw event records or changes Vault state.",
     annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_vault(limit: int = 25) -> str:
@@ -75,8 +78,9 @@ def command_vault(limit: int = 25) -> str:
 
 
 @hercules_mcp.tool(
-    name="hercules.command.models",
-    description="Read-only inventory of installed Hercules models.",
+    name="hercules.list_models",
+    title="List Hercules models",
+    description="Use when the user asks which models Hercules currently reports as installed. Returns model name and size only and never changes model state.",
     annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_models() -> str:
@@ -84,8 +88,9 @@ def command_models() -> str:
 
 
 @hercules_mcp.tool(
-    name="hercules.command.verify",
-    description="Verify the Hercules Vault hash chain without mutation.",
+    name="hercules.verify_vault",
+    title="Verify Hercules Vault",
+    description="Use when the user asks to verify Hercules Vault evidence integrity. Returns validity and event count only and never returns raw hashes or changes Vault state.",
     annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_verify() -> str:

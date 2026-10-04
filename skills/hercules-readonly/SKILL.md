@@ -1,9 +1,9 @@
 ---
 name: hercules-readonly
-description: Inspect Hercules status, model inventory, mission plans, vault verification evidence, or other read-only Hercules command information without changing Hercules state.
+description: Inspect Hercules status, model inventory, mission plans, vault verification evidence, or other read-only Hercules tool information without changing Hercules state.
 ---
 
-# Hercules read-only workflow
+# Hercules read-only tool workflow
 
 Use only the Hercules tools exposed by the connected plugin.
 

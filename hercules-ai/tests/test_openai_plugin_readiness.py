@@ -38,11 +38,11 @@ def test_submission_metadata_has_owned_icons_and_complete_review_cases():
     assert len(cases["negative"]) == 3
 
     allowed_tools = {
-        "hercules.command.status",
-        "hercules.command.mission",
-        "hercules.command.vault",
-        "hercules.command.models",
-        "hercules.command.verify",
+        "hercules.get_status",
+        "hercules.plan_mission",
+        "hercules.get_vault_summary",
+        "hercules.list_models",
+        "hercules.verify_vault",
     }
     for case in cases["positive"]:
         assert case["description"].strip()

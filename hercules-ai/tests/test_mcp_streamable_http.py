@@ -35,3 +35,25 @@ def test_public_mcp_tools_declare_explicit_safe_annotations():
     assert "destructive_hint=False" in runtime
     assert "open_world_hint=False" in runtime
     assert runtime.count("annotations=READ_ONLY_CLOSED_WORLD") == 5
+
+
+def test_public_tool_contract_uses_action_oriented_names_and_usage_descriptions():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+
+    for name in (
+        "hercules.get_status",
+        "hercules.plan_mission",
+        "hercules.get_vault_summary",
+        "hercules.list_models",
+        "hercules.verify_vault",
+    ):
+        assert f'name="{name}"' in runtime
+
+    assert 'name="hercules.command.' not in runtime
+    assert runtime.count('description="Use when ') == 5
+    assert runtime.count('title="') >= 5
+    assert "never changes Hercules state" in runtime
+    assert "never deploys or changes state" in runtime
+    assert "never returns raw event records" in runtime
+    assert "Returns model name and size only" in runtime
+    assert "Returns validity and event count only" in runtime
