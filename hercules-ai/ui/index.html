@@ -1,6 +1,12 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HERCULES // COMMAND CENTER</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#080a0d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hercules">
+<link rel="apple-touch-icon" href="/app-icon-192.png">
 <style>
 :root{--ink:#080a0d;--panel:#11151b;--line:#2b3440;--text:#f4f1e8;--hot:#ff6b22;--steel:#91a0ae}
 *{box-sizing:border-box}body{margin:0;background:var(--ink);color:var(--text);font-family:Arial,sans-serif}
@@ -34,4 +40,5 @@ let conversationId=null;
 const labels={turbo:"TURBO • 512 TOKEN BUDGET",fast:"FAST • 1024 TOKEN BUDGET",balanced:"BALANCED • 2048 TOKEN BUDGET",deep:"DEEP • 4096 TOKEN BUDGET",max:"MAX • 8192 TOKEN BUDGET"};
 speed.addEventListener("change",()=>{readout.textContent=labels[speed.value]||labels.balanced});
 send.addEventListener("click",async()=>{const content=input.value.trim();if(!content)return;send.disabled=true;log.textContent+="YOU // "+content+"\\nHERCULES // ";input.value="";try{const response=await fetch("/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:[{role:"user",content}],conversation_id:conversationId,speed_mode:speed.value,stream:true})});if(!response.ok||!response.body)throw new Error("stream unavailable");conversationId=response.headers.get("X-Hercules-Conversation-Id")||conversationId;const reader=response.body.getReader(),decoder=new TextDecoder();let buffer="";while(true){const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split("\\n");buffer=lines.pop()||"";for(const line of lines){if(!line.startsWith("data: "))continue;const data=line.slice(6);if(data==="[DONE]")continue;try{const event=JSON.parse(data);const token=event.choices?.[0]?.delta?.content;if(token)log.textContent+=token;if(event.error)log.textContent+="["+event.error+"]"}catch{}}}log.textContent+="\\n";}catch(e){log.textContent+="[LOCAL STREAM ERROR]\\n";}finally{send.disabled=false;input.focus();}});
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/service-worker.js").catch(()=>{}));}
 </script><footer>SAUCEAPPROVED // HERCULES SOVEREIGN SYSTEM</footer></body></html>
