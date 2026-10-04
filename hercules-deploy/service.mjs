@@ -4,6 +4,7 @@ import {createSupabaseEdgeFunctionAdapterFromEnv} from "./supabase-management.mj
 import {createMarketing16DeployBridge} from "./marketing-16-bridge.mjs";
 import {HerculesBotDeployTargetAdapter} from "./hercules-bot-adapter.mjs";
 import {HttpsContainerTargetAdapter} from "./https-container.mjs";
+import {RenderDeployProviderClient} from "./render-provider.mjs";
 
 function required(env, name) {
   const value = env[name];
@@ -131,8 +132,20 @@ export function createHerculesDeployAdaptersFromEnv(
   const adapters = new Map([
     ["hercules_marketing_16", createMarketing16TargetAdapter()],
   ]);
-  if (httpsContainerProvider) {
-    const {deployRelease, rollbackRelease} = httpsContainerProvider;
+  const renderToken = String(env.HERCULES_RENDER_API_TOKEN ?? "").trim();
+  const renderServiceIds = String(env.HERCULES_RENDER_SERVICE_IDS ?? "").trim();
+  if (Boolean(renderToken) !== Boolean(renderServiceIds)) {
+    throw new Error(renderToken ? "HERCULES_RENDER_SERVICE_IDS is required when HERCULES_RENDER_API_TOKEN is set" : "HERCULES_RENDER_API_TOKEN is required when HERCULES_RENDER_SERVICE_IDS is set");
+  }
+  if (renderToken && httpsContainerProvider) {
+    throw new Error("https_container provider is ambiguous");
+  }
+  const resolvedHttpsContainerProvider = renderToken
+    ? new RenderDeployProviderClient({apiToken: renderToken, allowedServiceIds: renderServiceIds, fetchImpl})
+    : httpsContainerProvider;
+  if (resolvedHttpsContainerProvider) {
+    const deployRelease = resolvedHttpsContainerProvider.deployRelease.bind(resolvedHttpsContainerProvider);
+    const rollbackRelease = resolvedHttpsContainerProvider.rollbackRelease.bind(resolvedHttpsContainerProvider);
     if (typeof deployRelease !== "function" || typeof rollbackRelease !== "function") {
       throw new Error("httpsContainerProvider requires deployRelease and rollbackRelease hooks");
     }
