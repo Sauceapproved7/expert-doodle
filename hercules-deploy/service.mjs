@@ -3,6 +3,7 @@ import {listenHerculesDeployService} from "./control-api.mjs";
 import {createSupabaseEdgeFunctionAdapterFromEnv} from "./supabase-management.mjs";
 import {createMarketing16DeployBridge} from "./marketing-16-bridge.mjs";
 import {HerculesBotDeployTargetAdapter} from "./hercules-bot-adapter.mjs";
+import {HttpsContainerTargetAdapter} from "./https-container.mjs";
 
 function required(env, name) {
   const value = env[name];
@@ -125,11 +126,22 @@ export function createMarketing16TargetAdapter() {
 
 export function createHerculesDeployAdaptersFromEnv(
   env = process.env,
-  {fetchImpl = globalThis.fetch} = {},
+  {fetchImpl = globalThis.fetch, httpsContainerProvider = null} = {},
 ) {
   const adapters = new Map([
     ["hercules_marketing_16", createMarketing16TargetAdapter()],
   ]);
+  if (httpsContainerProvider) {
+    const {deployRelease, rollbackRelease} = httpsContainerProvider;
+    if (typeof deployRelease !== "function" || typeof rollbackRelease !== "function") {
+      throw new Error("httpsContainerProvider requires deployRelease and rollbackRelease hooks");
+    }
+    adapters.set("https_container", new HttpsContainerTargetAdapter({
+      deployRelease,
+      rollbackRelease,
+      fetchImpl,
+    }));
+  }
   const supabase = createSupabaseEdgeFunctionAdapterFromEnv(env, {fetchImpl});
   if (supabase) adapters.set("supabase_edge_function", supabase);
   return adapters;
