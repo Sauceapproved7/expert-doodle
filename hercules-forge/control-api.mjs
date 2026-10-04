@@ -10,6 +10,7 @@ import {customerConsoleAsset} from "./customer-console.mjs";
 import {ForgeIdentityStore} from "./identity.mjs";
 import {DEFAULT_RUNTIME_DATA_MAX_BYTES, ForgeLocalRuntimeDataAdapter} from "./runtime-data.mjs";
 import {ForgeAuditStore} from "./audit.mjs";
+import {querySecurityRegistry} from "../hercules-runtime/security-registry/operator-api.mjs";
 
 const MAX_BODY_BYTES = 1024 * 1024;
 const promptHash = (prompt) => createHash("sha256").update(prompt).digest("hex");
@@ -291,6 +292,12 @@ export function createForgeControlService({
             enforcement: false,
           },
         });
+      }
+
+      if (url.pathname === "/v1/security/registry") {
+        requireToken(req, token);
+        if (req.method !== "GET") return await reply(405, {error: "registry_read_only"}, {allow: "GET"});
+        return await reply(200, await querySecurityRegistry(url.searchParams));
       }
 
       if (req.method === "GET" && url.pathname === "/v1/security/smokescreen") {

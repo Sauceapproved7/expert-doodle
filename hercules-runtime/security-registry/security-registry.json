@@ -1,0 +1,807 @@
+{
+  "generated_at": "2026-10-04T14:05:26Z",
+  "schema_version": "1.3.3",
+  "source_count": 21,
+  "sources": [
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "vulnerability-identifiers",
+      "formats": [
+        "HTML",
+        "JSON",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "cve",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "inventory",
+        "correlation",
+        "remediation"
+      ],
+      "publisher": "CVE Program",
+      "relationships": [
+        "nvd",
+        "cisa-kev",
+        "cwe",
+        "capec"
+      ],
+      "safety": "defensive",
+      "title": "CVE Program",
+      "trust_tier": "authoritative",
+      "update_cadence": "continuous",
+      "url": "https://www.cve.org/",
+      "utility_score": 100
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "vulnerability-enrichment",
+      "formats": [
+        "HTML",
+        "JSON",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "nvd",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "US",
+      "permitted_use": [
+        "inventory",
+        "severity",
+        "remediation"
+      ],
+      "publisher": "NIST",
+      "relationships": [
+        "cve",
+        "cisa-kev",
+        "cwe"
+      ],
+      "safety": "defensive",
+      "title": "National Vulnerability Database",
+      "trust_tier": "authoritative",
+      "update_cadence": "continuous",
+      "url": "https://nvd.nist.gov/",
+      "utility_score": 100
+    },
+    {
+      "access": "public",
+      "alternate_urls": [
+        "https://github.com/cisagov/kev-data"
+      ],
+      "availability": {
+        "checked_at": "2026-10-04T13:08:05Z",
+        "http_observation": "Canonical CISA page returned HTTP 403; the official cisagov/kev-data mirror resolved and documents CSV, JSON, and JSON Schema files.",
+        "status": "crawler-blocked"
+      },
+      "category": "active-exploitation",
+      "formats": [
+        "CSV",
+        "HTML",
+        "JSON",
+        "JSON_SCHEMA"
+      ],
+      "freshness": {
+        "checked_at": "2026-10-04T13:08:05Z",
+        "evidence": "Official mirror README confirms format metadata and synchronization policy. Individual catalog entries and actual synchronization lag were not verified.",
+        "status": "current"
+      },
+      "id": "cisa-kev",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "US",
+      "permitted_use": [
+        "prioritization",
+        "patching",
+        "risk-scoring"
+      ],
+      "publisher": "CISA",
+      "relationships": [
+        "cve",
+        "nvd",
+        "epss"
+      ],
+      "safety": "defensive",
+      "title": "Known Exploited Vulnerabilities Catalog",
+      "trust_tier": "authoritative",
+      "update_cadence": "continuous",
+      "url": "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+      "utility_score": 100
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "exploit-probability",
+      "formats": [
+        "HTML",
+        "CSV",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "epss",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "prioritization",
+        "risk-scoring"
+      ],
+      "publisher": "FIRST",
+      "relationships": [
+        "cve",
+        "cisa-kev"
+      ],
+      "safety": "defensive",
+      "title": "Exploit Prediction Scoring System",
+      "trust_tier": "authoritative",
+      "update_cadence": "daily",
+      "url": "https://www.first.org/epss/",
+      "utility_score": 95
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "adversary-behavior",
+      "formats": [
+        "HTML",
+        "JSON",
+        "STIX"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "mitre-attack",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "detection-engineering",
+        "threat-modeling",
+        "authorized-emulation"
+      ],
+      "publisher": "MITRE",
+      "relationships": [
+        "capec",
+        "mitre-d3fend",
+        "mitre-atlas"
+      ],
+      "safety": "dual_use",
+      "title": "MITRE ATT&CK",
+      "trust_tier": "authoritative",
+      "update_cadence": "periodic",
+      "url": "https://attack.mitre.org/",
+      "utility_score": 90
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "software-weaknesses",
+      "formats": [
+        "HTML",
+        "CSV",
+        "XML"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "cwe",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "secure-development",
+        "classification"
+      ],
+      "publisher": "MITRE",
+      "relationships": [
+        "cve",
+        "capec"
+      ],
+      "safety": "defensive",
+      "title": "Common Weakness Enumeration",
+      "trust_tier": "authoritative",
+      "update_cadence": "periodic",
+      "url": "https://cwe.mitre.org/",
+      "utility_score": 83
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "attack-patterns",
+      "formats": [
+        "HTML",
+        "CSV",
+        "XML"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "capec",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "threat-modeling",
+        "defensive-analysis"
+      ],
+      "publisher": "MITRE",
+      "relationships": [
+        "cwe",
+        "mitre-attack"
+      ],
+      "safety": "dual_use",
+      "title": "Common Attack Pattern Enumeration and Classification",
+      "trust_tier": "authoritative",
+      "update_cadence": "periodic",
+      "url": "https://capec.mitre.org/",
+      "utility_score": 83
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "defensive-countermeasures",
+      "formats": [
+        "HTML",
+        "JSON"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "mitre-d3fend",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "countermeasure-mapping",
+        "detection-engineering"
+      ],
+      "publisher": "MITRE",
+      "relationships": [
+        "mitre-attack"
+      ],
+      "safety": "defensive",
+      "title": "MITRE D3FEND",
+      "trust_tier": "authoritative",
+      "update_cadence": "periodic",
+      "url": "https://d3fend.mitre.org/",
+      "utility_score": 80
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "ai-adversary-behavior",
+      "formats": [
+        "HTML",
+        "JSON"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "mitre-atlas",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "ai-threat-modeling",
+        "authorized-testing"
+      ],
+      "publisher": "MITRE",
+      "relationships": [
+        "mitre-attack",
+        "owasp-genai"
+      ],
+      "safety": "dual_use",
+      "title": "MITRE ATLAS",
+      "trust_tier": "authoritative",
+      "update_cadence": "periodic",
+      "url": "https://atlas.mitre.org/",
+      "utility_score": 80
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "open-source-vulnerabilities",
+      "formats": [
+        "HTML",
+        "JSON",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "osv",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "dependency-scanning",
+        "remediation"
+      ],
+      "publisher": "Google Open Source Security",
+      "relationships": [
+        "github-advisories",
+        "openssf-malicious-packages"
+      ],
+      "safety": "defensive",
+      "title": "Open Source Vulnerabilities",
+      "trust_tier": "authoritative",
+      "update_cadence": "continuous",
+      "url": "https://osv.dev/",
+      "utility_score": 100
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "package-advisories",
+      "formats": [
+        "HTML",
+        "JSON",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "github-advisories",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "dependency-scanning",
+        "remediation"
+      ],
+      "publisher": "GitHub",
+      "relationships": [
+        "osv",
+        "openssf-malicious-packages"
+      ],
+      "safety": "defensive",
+      "title": "GitHub Advisory Database",
+      "trust_tier": "community-vetted",
+      "update_cadence": "continuous",
+      "url": "https://github.com/advisories",
+      "utility_score": 88
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "malicious-packages",
+      "formats": [
+        "JSON",
+        "YAML"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "openssf-malicious-packages",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "notes": "Ingest reports and indicators only; never install referenced packages.",
+      "permitted_use": [
+        "package-blocking",
+        "supply-chain-defense"
+      ],
+      "publisher": "OpenSSF",
+      "relationships": [
+        "osv",
+        "github-advisories"
+      ],
+      "safety": "hazardous_artifact",
+      "title": "OpenSSF Malicious Packages",
+      "trust_tier": "community-vetted",
+      "update_cadence": "continuous",
+      "url": "https://github.com/ossf/malicious-packages",
+      "utility_score": 73
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "threat-intelligence-sharing",
+      "formats": [
+        "JSON",
+        "STIX",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "misp",
+      "ingestion_mode": "manual_review",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "ioc-correlation",
+        "incident-response"
+      ],
+      "publisher": "MISP Project",
+      "relationships": [
+        "opencti",
+        "urlhaus",
+        "malwarebazaar"
+      ],
+      "safety": "dual_use",
+      "title": "MISP Threat Intelligence Platform",
+      "trust_tier": "community-vetted",
+      "update_cadence": "continuous",
+      "url": "https://www.misp-project.org/",
+      "utility_score": 81
+    },
+    {
+      "access": "public",
+      "alternate_urls": [
+        "https://www.opencti.io/"
+      ],
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Legacy OpenCTI domain redirects to Filigran canonical site.",
+        "status": "redirected"
+      },
+      "category": "threat-intelligence-knowledge-graph",
+      "formats": [
+        "JSON",
+        "STIX",
+        "TAXII",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "HTTP redirect observed from https://www.opencti.io/ to https://filigran.io/.",
+        "status": "canonical-url-changed"
+      },
+      "id": "opencti",
+      "ingestion_mode": "manual_review",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "threat-modeling",
+        "ioc-correlation"
+      ],
+      "publisher": "Filigran",
+      "relationships": [
+        "misp",
+        "mitre-attack"
+      ],
+      "safety": "dual_use",
+      "title": "OpenCTI",
+      "trust_tier": "community-vetted",
+      "update_cadence": "continuous",
+      "url": "https://filigran.io/",
+      "utility_score": 81
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "malicious-urls",
+      "formats": [
+        "CSV",
+        "JSON",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "urlhaus",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "Global",
+      "notes": "Do not visit listed URLs from user or production devices.",
+      "permitted_use": [
+        "blocking",
+        "detection",
+        "incident-response"
+      ],
+      "publisher": "abuse.ch",
+      "relationships": [
+        "misp",
+        "malwarebazaar"
+      ],
+      "safety": "hazardous_artifact",
+      "title": "URLhaus",
+      "trust_tier": "community-vetted",
+      "update_cadence": "continuous",
+      "url": "https://urlhaus.abuse.ch/",
+      "utility_score": 80
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "malware-intelligence",
+      "formats": [
+        "CSV",
+        "JSON",
+        "API"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "malwarebazaar",
+      "ingestion_mode": "metadata_only",
+      "jurisdiction": "Global",
+      "notes": "Samples remain disabled; index metadata and hashes only.",
+      "permitted_use": [
+        "hash-correlation",
+        "detection",
+        "research-lab"
+      ],
+      "publisher": "abuse.ch",
+      "relationships": [
+        "misp",
+        "urlhaus"
+      ],
+      "safety": "hazardous_artifact",
+      "title": "MalwareBazaar",
+      "trust_tier": "community-vetted",
+      "update_cadence": "continuous",
+      "url": "https://bazaar.abuse.ch/",
+      "utility_score": 70
+    },
+    {
+      "access": "public",
+      "alternate_urls": [
+        "https://github.com/cisagov/CSAF"
+      ],
+      "availability": {
+        "checked_at": "2026-10-04T13:09:47Z",
+        "http_observation": "Canonical CISA website returned HTTP 403; official cisagov/CSAF repository and an ICS advisory JSON page resolved.",
+        "status": "crawler-blocked"
+      },
+      "category": "ics-ot-advisories",
+      "formats": [
+        "HTML",
+        "JSON"
+      ],
+      "freshness": {
+        "checked_at": "2026-10-04T13:09:47Z",
+        "evidence": "Official CSAF alternate source verified using ICSA-26-274-01 and its canonical CISA cross-link. Website content and full advisory coverage remain unverified.",
+        "status": "check-limited"
+      },
+      "id": "cisa-ics",
+      "ingestion_mode": "automatic",
+      "jurisdiction": "US",
+      "notes": "Official CSAF repository includes ICS/OT advisories as JSON. Verified advisory ICSA-26-274-01 links to its canonical CISA web version; completeness and synchronization lag were not verified.",
+      "permitted_use": [
+        "asset-risk",
+        "patching",
+        "critical-infrastructure-defense"
+      ],
+      "publisher": "CISA",
+      "relationships": [
+        "cve",
+        "nvd",
+        "mitre-attack"
+      ],
+      "safety": "defensive",
+      "title": "CISA ICS Advisories",
+      "trust_tier": "authoritative",
+      "update_cadence": "continuous",
+      "url": "https://www.cisa.gov/news-events/ics-advisories",
+      "utility_score": 90
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "dns-abuse",
+      "formats": [
+        "HTML",
+        "PDF"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "icann-daar",
+      "ingestion_mode": "manual_review",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "trend-analysis",
+        "dns-abuse-defense"
+      ],
+      "publisher": "ICANN",
+      "relationships": [
+        "urlhaus"
+      ],
+      "safety": "defensive",
+      "title": "Domain Abuse Activity Reporting",
+      "trust_tier": "authoritative",
+      "update_cadence": "periodic",
+      "url": "https://www.icann.org/octo-ssr/daar",
+      "utility_score": 67
+    },
+    {
+      "access": "public",
+      "alternate_urls": [
+        "https://owasp.org/www-project-web-security-testing-guide/"
+      ],
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Legacy OWASP project URL redirects to the canonical project route.",
+        "status": "redirected"
+      },
+      "category": "authorized-testing-guidance",
+      "formats": [
+        "HTML",
+        "PDF"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "HTTP redirect observed to https://owasp.org/projects/web-security-testing-guide.",
+        "status": "canonical-url-changed"
+      },
+      "id": "owasp-wstg",
+      "ingestion_mode": "manual_review",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "authorized-testing",
+        "secure-development"
+      ],
+      "publisher": "OWASP",
+      "relationships": [
+        "owasp-genai"
+      ],
+      "safety": "dual_use",
+      "title": "Web Security Testing Guide",
+      "trust_tier": "community-vetted",
+      "update_cadence": "periodic",
+      "url": "https://owasp.org/projects/web-security-testing-guide",
+      "utility_score": 55
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "genai-security",
+      "formats": [
+        "HTML",
+        "PDF"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "owasp-genai",
+      "ingestion_mode": "manual_review",
+      "jurisdiction": "Global",
+      "permitted_use": [
+        "ai-threat-modeling",
+        "secure-development",
+        "authorized-testing"
+      ],
+      "publisher": "OWASP",
+      "relationships": [
+        "mitre-atlas",
+        "owasp-wstg"
+      ],
+      "safety": "dual_use",
+      "title": "OWASP GenAI Security Project",
+      "trust_tier": "community-vetted",
+      "update_cadence": "periodic",
+      "url": "https://genai.owasp.org/",
+      "utility_score": 55
+    },
+    {
+      "access": "public",
+      "availability": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "http_observation": "Canonical HTTPS page resolved in the automated availability check.",
+        "status": "accessible"
+      },
+      "category": "proof-of-concept-archive",
+      "formats": [
+        "HTML",
+        "CSV"
+      ],
+      "freshness": {
+        "checked_at": "2026-09-21T13:03:30Z",
+        "evidence": "Homepage identity and source role were consistent with the prior registry record.",
+        "status": "current"
+      },
+      "id": "exploit-db",
+      "ingestion_mode": "metadata_only",
+      "jurisdiction": "Global",
+      "notes": "Index identifiers and references only; executable retrieval is disabled.",
+      "permitted_use": [
+        "authorized-lab",
+        "defensive-validation"
+      ],
+      "publisher": "OffSec",
+      "relationships": [
+        "cve",
+        "nvd"
+      ],
+      "safety": "hazardous_artifact",
+      "title": "Exploit Database",
+      "trust_tier": "dual-use",
+      "update_cadence": "continuous",
+      "url": "https://www.exploit-db.com/",
+      "utility_score": 46
+    }
+  ]
+}
