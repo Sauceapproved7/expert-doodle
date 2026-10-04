@@ -153,6 +153,13 @@ Public operational endpoints:
 - `GET /health`
 - `GET /ready`
 
+`GET /ready` fails closed with HTTP 503 unless both conditions are true:
+
+- the background worker is running;
+- a production `https_container` target adapter is configured.
+
+Its response is intentionally secret-free and reports only readiness booleans plus configured adapter kinds.
+
 Control-token endpoints:
 
 - `POST /v1/deployments`
@@ -228,20 +235,39 @@ Optional:
 
 The command prints deployment identity/status but never the Deploy Plane control token.
 
-## Production provider boundary
+## Render production target
 
-The Deploy Plane now includes a bounded Render provider adapter plus a Vault-backed cloud broker.
+The Deploy Plane now includes a bounded Render provider adapter behind the generic `https_container` target contract.
 
-The direct runtime adapter path remains available when a trusted Hercules runtime is present. The cloud broker adds an alternative execution surface for cases where no authorized desktop/runtime machine is attached:
+Runtime configuration is fail-closed:
+
+- `HERCULES_RENDER_API_TOKEN` and `HERCULES_RENDER_SERVICE_IDS` must be provided together;
+- configured Render service IDs are allowlisted before any provider call;
+- exact 40-character source commits are required;
+- credentials are carried only in the provider Authorization header and are not persisted in deployment jobs or evidence;
+- deployment verification requires the public `/health` contract and requires unauthenticated `/mcp` access to remain protected;
+- rollback requires a previously recorded provider deployment identifier.
+
+Render remains third-party infrastructure and is not claimed as SauceApproved-owned technology.
+
+## Vault-backed cloud execution broker
+
+When no authorized desktop/runtime machine is attached, Hercules can use the server-side Vault-backed broker as an alternative execution surface without moving provider credentials into deployment jobs.
 
 - provider credentials remain in Supabase Vault and are retrieved only server-side;
-- deployment requests carry only target code, exact commit SHA, and provider deployment identity;
-- production targets are resolved through the service-role-only `hercules_deploy_targets` allowlist;
-- Render deploys are triggered only for exact 40-character commit SHAs;
-- verification requires Render to report the same exact commit as `live`, then requires `/health` to satisfy the Hercules health contract and unauthenticated `/mcp` to remain protected with 401/403;
-- rollback accepts only a bounded Render deployment ID for an already allowlisted service;
-- broker responses are explicitly credential-free.
+- deployment requests carry only target code, exact commit SHA, and bounded provider deployment identity;
+- production targets resolve through the service-role-only `hercules_deploy_targets` allowlist;
+- Render deploys require exact 40-character commit SHAs;
+- verification requires Render to report that same exact commit as `live`, then requires the Hercules `/health` contract and protected unauthenticated `/mcp` behavior (401/403);
+- rollback accepts only a bounded Render deployment ID for an allowlisted service;
+- broker responses are credential-free.
 
-The broker does not create or infer provider credentials. If the `render-deployer` Vault secret or the `deploy-broker-control` internal service key is unavailable, it fails closed.
+The broker does not create or infer provider credentials. If the `render-deployer` Vault secret or `deploy-broker-control` internal service key is unavailable, it fails closed.
 
-Two Hercules differentiators in this increment are: (1) provider credentials never transit deployment job state, and (2) deployment completion is bound to exact-commit plus application-health and MCP-auth evidence rather than provider status alone.
+Two Hercules differentiators in this increment are: provider credentials never transit deployment job state, and deployment completion is bound to exact-commit plus application-health and MCP-auth evidence rather than provider status alone.
+
+## Current boundary
+
+v0.1 now includes the first production provider path and can drive an allowlisted Render service through the owned Deploy Plane when the runtime has the required owner-authorized provider credential.
+
+Repository readiness does not prove runtime connectivity. A production cutover is complete only after the Deploy Plane is running on an authorized runtime, its secret-free `/ready` endpoint reports production readiness, an exact deployment is processed through the Deploy Plane, and the resulting runtime verification evidence passes.
