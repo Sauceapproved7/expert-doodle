@@ -112,7 +112,7 @@ async def chat(req:ChatRequest):
                     conn.commit(); conn.close()
             except Exception as e:
                 yield "data: {\"error\":\"Local model backend unavailable: "+type(e).__name__+"\"}\\n\\n"
-        return StreamingResponse(events(),media_type="text/event-stream",headers={"X-Hercules-Conversation-Id":cid})
+        return StreamingResponse(events(),media_type="text/event-stream",headers={"X-Hercules-Conversation-Id":cid,"Cache-Control":"no-cache","X-Accel-Buffering":"no"})
     cid=req.conversation_id or str(uuid.uuid4())
     conn=db()
     now=int(time.time())
