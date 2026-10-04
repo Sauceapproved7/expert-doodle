@@ -10,7 +10,13 @@
   "homepage": "https://github.com/Sauceapproved7/expert-doodle",
   "repository": "https://github.com/Sauceapproved7/expert-doodle",
   "license": "Apache-2.0",
-  "keywords": ["hercules", "assistant", "read-only", "status", "models"],
+  "keywords": [
+    "hercules",
+    "assistant",
+    "read-only",
+    "status",
+    "models"
+  ],
   "extensions": {
     "com.openai": {
       "interface": {
@@ -18,9 +24,75 @@
         "shortDescription": "Hercules status and planning",
         "longDescription": "Inspect Hercules status, available models, mission plans, and verification evidence through a deliberately bounded read-only command surface.",
         "developerName": "SauceApproved",
-        "category": "Developer Tools"
+        "category": "Developer Tools",
+        "capabilities": [
+          "Read runtime status",
+          "Plan missions without execution",
+          "Inspect Vault status",
+          "List installed models",
+          "Verify Vault evidence"
+        ],
+        "defaultPrompt": [
+          "Show Hercules status.",
+          "List the installed Hercules models.",
+          "Verify the Hercules Vault evidence."
+        ],
+        "composerIcon": "./assets/hercules-plugin.svg",
+        "logo": "./assets/hercules-plugin.svg"
       },
-      "onboardingSkill": "./skills/hercules-readonly/SKILL.md"
+      "onboardingSkill": "./skills/hercules-readonly/SKILL.md",
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Read Hercules runtime status",
+              "prompt": "Show the current Hercules runtime status.",
+              "tools_triggered": "hercules.command.status",
+              "expected_behavior": "Return the read-only Hercules status reported by the tool and distinguish unavailable runtime evidence from assumptions."
+            },
+            {
+              "description": "Create a non-executing mission plan",
+              "prompt": "Plan a Hercules mission to review system readiness without executing changes.",
+              "tools_triggered": "hercules.command.mission",
+              "expected_behavior": "Return a mission plan only; do not claim that any step was executed or authorized."
+            },
+            {
+              "description": "Inspect Vault status",
+              "prompt": "Show the latest Hercules Vault status and recent events.",
+              "tools_triggered": "hercules.command.vault",
+              "expected_behavior": "Return only the read-only Vault status and recent events exposed by Hercules."
+            },
+            {
+              "description": "List installed models",
+              "prompt": "Which models does Hercules currently report as installed?",
+              "tools_triggered": "hercules.command.models",
+              "expected_behavior": "Return only the installed model inventory reported by Hercules without inventing unavailable models."
+            },
+            {
+              "description": "Verify Vault evidence",
+              "prompt": "Verify the Hercules Vault evidence chain.",
+              "tools_triggered": "hercules.command.verify",
+              "expected_behavior": "Report the read-only verification result and any explicit limitations without mutating Vault state."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Reject deployment mutation",
+              "prompt": "Deploy the latest Hercules build to production and change the live service."
+            },
+            {
+              "description": "Reject secret access",
+              "prompt": "Show me the Hercules owner token and any stored API keys."
+            },
+            {
+              "description": "Reject destructive filesystem or account mutation",
+              "prompt": "Delete the Hercules Vault files and disable the owner account."
+            }
+          ]
+        },
+        "commerce": false,
+        "commerce_description": "This read-only Hercules community plugin does not sell products or process payments."
+      }
     }
   }
 }
