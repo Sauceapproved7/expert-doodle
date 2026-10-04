@@ -14,6 +14,9 @@ test("identifies PE and emits deterministic read-only SHA-256 evidence", () => {
   assert.match(report.evidence.sha256, /^[a-f0-9]{64}$/);
   assert.equal(report.execution, "not_performed");
   assert.equal(report.mutations, "not_performed");
+  assert.equal(Object.isFrozen(report),true);
+  assert.equal(Object.isFrozen(report.evidence),true);
+  assert.equal(Object.isFrozen(report.evidence.strings),true);
 });
 
 test("bounds input and printable-string extraction", () => {
