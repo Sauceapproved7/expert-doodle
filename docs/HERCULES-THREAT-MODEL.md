@@ -132,3 +132,10 @@ Controls: loopback-only dashboard binding, per-process control token, origin che
 24. **Normalized SmokeScreen telemetry -> ATT&CK candidate enrichment -> operator evidence**: normalized request/authentication evidence crosses a taxonomy boundary where behavioral indicators are mapped to candidate MITRE ATT&CK techniques. ATT&CK metadata must not be treated as proof of actor identity, campaign identity, compromise success, or authorization for enforcement.
 
 Controls: candidate-only output; explicit confidence and corroboration fields; fixed technique allowlist reviewed against MITRE public documentation; bounded route categories instead of raw route disclosure; no inference of `T1046 Network Service Discovery` without network-service telemetry; no inference of `T1078 Valid Accounts` without successful-account-use evidence; `actorAttribution=false`; `campaignAttribution=false`; `automaticResponseAuthority=false`; `outboundCounterattack=false`; and Forge remains `OBSERVE_ONLY` during this stage.
+
+
+### Vault-backed deployment broker boundary
+
+25. **Hercules control plane -> Supabase Vault-backed deploy broker -> Render production API**: an authenticated internal deployment request crosses a server-side credential-custody and provider-mutation boundary. The request may identify only an allowlisted target, exact source commit, and bounded provider deployment ID; it must not carry provider credentials.
+
+Controls: constant-time internal-key digest comparison; service-role-only target registry; Supabase Vault retrieval for `deploy-broker-control` and `render-deployer`; credential-free request/state/evidence; fixed Render API origin; exact service-ID and commit/deployment-ID validation; redirects disabled; bounded network timeouts; explicit allowlist resolution; live exact-commit verification; independent public `/health` verification; unauthenticated `/mcp` 401/403 verification; bounded rollback; safe error-code projection; and fail-closed behavior when credentials or targets are unavailable. The broker does not mint provider credentials, bypass Render authorization, or treat provider status alone as proof of application health.
