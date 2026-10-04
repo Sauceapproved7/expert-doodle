@@ -1,7 +1,8 @@
 import os, sqlite3, time, uuid, json
+from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel, Field
 from typing import Literal
 from .mcp_server import dispatch
@@ -41,6 +42,12 @@ class RpcRequest(BaseModel):
     id:int|str|None=None
     method:str
     params:dict={}
+
+UI=Path(__file__).resolve().parent.parent/"ui"/"index.html"
+
+@app.get("/",include_in_schema=False)
+async def command_center():
+    return FileResponse(UI)
 
 @app.get("/health")
 async def health():
