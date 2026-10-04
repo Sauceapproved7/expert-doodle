@@ -125,13 +125,18 @@ async def chat(req:ChatRequest):
                         r.raise_for_status()
                         buffer=""
                         iterator=r.aiter_text().__aiter__()
+                        pending_next=None
                         while True:
+                            if pending_next is None:
+                                pending_next=asyncio.create_task(iterator.__anext__())
                             try:
-                                chunk=await asyncio.wait_for(iterator.__anext__(),timeout=KEEPALIVE_SECONDS)
+                                chunk=await asyncio.wait_for(asyncio.shield(pending_next),timeout=KEEPALIVE_SECONDS)
+                                pending_next=None
                             except asyncio.TimeoutError:
                                 yield ": keepalive\\n\\n"
                                 continue
                             except StopAsyncIteration:
+                                pending_next=None
                                 break
                             if chunk:
                                 buffer+=chunk
