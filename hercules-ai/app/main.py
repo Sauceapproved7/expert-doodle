@@ -4,10 +4,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from .mcp_server import dispatch
 from .sovereign import choose_model, mission_plan
+from .memory import MemoryStore
 
 DB=os.getenv("HERCULES_DB","/data/hercules.db")
 BASE=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
 DEFAULT=os.getenv("HERCULES_DEFAULT_MODEL","qwen2.5:7b")
+MEMORY_DB=os.getenv("HERCULES_MEMORY_DB","/data/hercules-memory.db")
 app=FastAPI(title="Hercules AI Core",version="1.1.0")
 
 def db():
@@ -30,6 +32,9 @@ class HardwareRequest(BaseModel):
     vram_gb:float=0
 class MissionRequest(BaseModel):
     goal:str=Field(min_length=1,max_length=2000)
+class MemoryRequest(BaseModel):
+    content:str=Field(min_length=1,max_length=100000)
+    tags:list[str]=[]
 class RpcRequest(BaseModel):
     jsonrpc:str
     id:int|str|None=None
@@ -59,6 +64,16 @@ async def select_model(req:HardwareRequest):
 @app.post("/v1/missions/plan")
 async def create_mission(req:MissionRequest):
     return mission_plan(req.goal)
+
+@app.post("/v1/memory")
+async def remember(req:MemoryRequest):
+    store=MemoryStore(MEMORY_DB)
+    return {"id":store.remember(req.content,req.tags)}
+
+@app.get("/v1/memory/search")
+async def search_memory(q:str,limit:int=10):
+    store=MemoryStore(MEMORY_DB)
+    return {"items":store.search(q,limit)}
 
 @app.post("/v1/chat/completions")
 async def chat(req:ChatRequest):
