@@ -33,18 +33,29 @@ def list_tools():
 
 def call_tool(name:str,args:dict[str,Any]):
     if name=="hercules.command.status":
-        return call_tool("hercules.status",{})
+        status=json.loads(call_tool("hercules.status",{})["content"][0]["text"])
+        public={"ok":bool(status.get("ok")),"service":status.get("server",{}).get("name","hercules-mcp"),"mutation_authority":False}
+        return {"content":[{"type":"text","text":json.dumps(public,sort_keys=True)}]}
     if name=="hercules.command.mission":
-        return call_tool("hercules.mission.plan",args)
+        plan=json.loads(call_tool("hercules.mission.plan",args)["content"][0]["text"])
+        public={"goal":plan.get("goal"),"stages":plan.get("stages",[]),"mutation_requires_authorization":bool(plan.get("mutation_requires_authorization",True))}
+        return {"content":[{"type":"text","text":json.dumps(public,sort_keys=True)}]}
     if name=="hercules.command.vault":
         limit=args.get("limit",25)
-        status=call_tool("hercules.vault.status",{})
-        events=call_tool("hercules.vault.events",{"limit":limit})
-        return {"content":[{"type":"text","text":json.dumps({"mutation_authority":False,"status":json.loads(status["content"][0]["text"]),"events":json.loads(events["content"][0]["text"])},sort_keys=True)}]}
+        status=json.loads(call_tool("hercules.vault.status",{})["content"][0]["text"])
+        events=json.loads(call_tool("hercules.vault.events",{"limit":limit})["content"][0]["text"])
+        actions=[event.get("action") for event in events if isinstance(event,dict) and isinstance(event.get("action"),str)]
+        public={"append_only":bool(status.get("append_only")),"mutation_authority":False,"event_count":int(status.get("event_count",0)),"recent_actions":actions}
+        return {"content":[{"type":"text","text":json.dumps(public,sort_keys=True)}]}
     if name=="hercules.command.models":
-        return call_tool("hercules.models.installed",{})
+        inventory=json.loads(call_tool("hercules.models.installed",{})["content"][0]["text"])
+        installed=[{"name":model.get("name"),"size":model.get("size")} for model in inventory.get("installed",[]) if isinstance(model,dict) and model.get("name")]
+        public={"installed":installed,"count":len(installed),"mutation_authority":False}
+        return {"content":[{"type":"text","text":json.dumps(public,sort_keys=True)}]}
     if name=="hercules.command.verify":
-        return call_tool("hercules.vault.verify",{})
+        verification=json.loads(call_tool("hercules.vault.verify",{})["content"][0]["text"])
+        public={"valid":bool(verification.get("valid")),"events":int(verification.get("events",0))}
+        return {"content":[{"type":"text","text":json.dumps(public,sort_keys=True)}]}
     if name=="hercules.status":
         return {"content":[{"type":"text","text":json.dumps({
           "ok":True,"server":SERVER,"protocol":PROTOCOL,
