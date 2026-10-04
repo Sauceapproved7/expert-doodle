@@ -14,7 +14,7 @@ def db():
     c=sqlite3.connect(DB)
     c.execute("""create table if not exists messages(
       id text primary key, conversation_id text not null, role text not null,
-      content text not null, created_at integer not null)""")
+      content text not null, created_at integer not null, sequence integer not null default 0)""")
     c.commit(); return c
 
 class Message(BaseModel):
@@ -67,9 +67,9 @@ async def chat(req:ChatRequest):
     cid=req.conversation_id or str(uuid.uuid4())
     conn=db()
     now=int(time.time())
-    for m in req.messages:
-        conn.execute("insert into messages values(?,?,?,?,?)",
-                     (str(uuid.uuid4()),cid,m.role,m.content,now))
+    for i,m in enumerate(req.messages):
+        conn.execute("insert into messages(id,conversation_id,role,content,created_at,sequence) values(?,?,?,?,?,?)",
+                     (str(uuid.uuid4()),cid,m.role,m.content,now,i))
     conn.commit()
     payload={"model":req.model or DEFAULT,
              "messages":[m.model_dump() for m in req.messages],
@@ -83,8 +83,8 @@ async def chat(req:ChatRequest):
         raise HTTPException(502,f"Local model backend unavailable: {type(e).__name__}")
     try:
         answer=out["choices"][0]["message"]["content"]
-        conn.execute("insert into messages values(?,?,?,?,?)",
-                     (str(uuid.uuid4()),cid,"assistant",answer,int(time.time())))
+        conn.execute("insert into messages(id,conversation_id,role,content,created_at,sequence) values(?,?,?,?,?,?)",
+                     (str(uuid.uuid4()),cid,"assistant",answer,int(time.time()),len(req.messages)))
         conn.commit()
     finally:
         conn.close()
@@ -94,7 +94,7 @@ async def chat(req:ChatRequest):
 @app.get("/v1/conversations/{conversation_id}")
 async def conversation(conversation_id:str):
     conn=db()
-    rows=conn.execute("select role,content,created_at from messages where conversation_id=? order by created_at,id",(conversation_id,)).fetchall()
+    rows=conn.execute("select role,content,created_at from messages where conversation_id=? order by created_at,sequence,id",(conversation_id,)).fetchall()
     conn.close()
     return {"conversation_id":conversation_id,
             "messages":[{"role":r,"content":c,"created_at":t} for r,c,t in rows]}
