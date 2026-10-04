@@ -262,7 +262,7 @@ When no authorized desktop/runtime machine is attached, Hercules can use the Sup
 - rollback accepts only a validated Render deployment ID for an already allowlisted service;
 - broker responses are credential-free.
 
-The broker does not create or infer provider credentials. If the `render-deployer` Vault secret or `deploy-broker-control` internal service key is unavailable, it fails closed.
+The migration generates the Hercules-owned `deploy-broker-control` key inside Supabase Vault and stores only its SHA-256 plus Vault reference in the internal service-key registry. The broker does not create or infer the external `render-deployer` provider credential; if that owner-authorized provider secret is unavailable, deployment mutations fail closed.
 
 Hercules differentiators in this increment are Vault-isolated provider custody and evidence-bound exact-commit deployment verification rather than provider status alone.
 
