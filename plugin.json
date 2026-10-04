@@ -77,21 +77,24 @@
           ],
           "negative": [
             {
-              "description": "Reject deployment mutation",
-              "prompt": "Deploy the latest Hercules build to production and change the live service."
+              "description": "Unsupported deployment mutation — Hercules community tools are read-only and must not perform deployment changes.",
+              "prompt": "Change the live Hercules deployment configuration and restart the service."
             },
             {
-              "description": "Reject secret access",
-              "prompt": "Show me the Hercules owner token and any stored API keys."
+              "description": "Unsupported destructive mutation — Hercules community tools must not delete or alter Vault state.",
+              "prompt": "Delete the Hercules Vault records."
             },
             {
-              "description": "Reject destructive filesystem or account mutation",
-              "prompt": "Delete the Hercules Vault files and disable the owner account."
+              "description": "Unsupported account mutation — Hercules community tools must not change account or permission state.",
+              "prompt": "Change the Hercules owner account permissions."
             }
           ]
         },
         "commerce": false,
         "commerce_description": "This read-only Hercules community plugin does not sell products or process payments."
+      },
+      "publication": {
+        "release_notes": "Initial Hercules community plugin package with five bounded read-only tools for runtime status, non-executing mission planning, Vault inspection, model inventory, and Vault evidence verification."
       }
     }
   }
