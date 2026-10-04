@@ -25,9 +25,9 @@ Unauthorized MCP requests advertise that metadata through the `WWW-Authenticate`
 The repository contains:
 
 - root `plugin.json`
-- `hercules-plugin/mcp.json`
+- root `mcp.json`
 - `skills/hercules-readonly/SKILL.md`
 
 The domain-verification challenge is served from `/.well-known/openai-apps-challenge` only when `OPENAI_APPS_CHALLENGE` is configured.
 
-Repository readiness does not by itself prove that the public MCP endpoint is deployed, reachable, approved, or published in the plugin directory. Those states require separate runtime and directory-review evidence.
+The existing public MCP endpoint has current Render deployment evidence for canonical commit `fa35c81808fb74b41bd3d6e4c5d5dd60cdd20786`. Deployment evidence does not prove directory approval or publication; those states still require separate OpenAI directory-review evidence.
