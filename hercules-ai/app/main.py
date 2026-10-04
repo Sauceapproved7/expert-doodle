@@ -2,6 +2,7 @@ import os, sqlite3, time, uuid
 import httpx
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from typing import Literal
 from .mcp_server import dispatch
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
@@ -21,11 +22,11 @@ def db():
     c.commit(); return c
 
 class Message(BaseModel):
-    role:str
+    role:Literal["system","user","assistant","tool"]
     content:str=Field(min_length=1,max_length=100000)
 class ChatRequest(BaseModel):
     model:str|None=None
-    messages:list[Message]
+    messages:list[Message]=Field(min_length=1,max_length=200)
     conversation_id:str|None=None
     stream:bool=False
     speed_mode:str|None="balanced"
