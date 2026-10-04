@@ -50,7 +50,8 @@ test("KayNate full menu has fast customer navigation controls", async () => {
   assert.match(html, /id="availabilityFilter"/);
   assert.match(html, /id="menuCount"/);
   assert.match(js, /filterMenu/);
-  assert.match(js, /data-menu-name/);
+  assert.match(html, /data-menu-name=/);
+  assert.match(js, /dataset\.menuName/);
 });
 
 test("KayNate full menu exposes category jump navigation", async () => {
