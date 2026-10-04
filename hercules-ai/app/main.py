@@ -100,12 +100,17 @@ async def chat(req:ChatRequest):
                 async with httpx.AsyncClient(timeout=profile["timeout_seconds"]) as client:
                     async with client.stream("POST",f"{BASE}/v1/chat/completions",json=payload) as r:
                         r.raise_for_status()
+                        buffer=""
                         async for chunk in r.aiter_text():
-                            for line in chunk.splitlines():
-                                if line.startswith("data: ") and line[6:]!="[DONE]":
-                                    try: answer.append(json.loads(line[6:])["choices"][0]["delta"].get("content",""))
-                                    except (json.JSONDecodeError,KeyError,IndexError,TypeError): pass
-                            if chunk: yield chunk
+                            if chunk:
+                                buffer+=chunk
+                                while "\n" in buffer:
+                                    line,buffer=buffer.split("\n",1)
+                                    line=line.rstrip("\r")
+                                    if line.startswith("data: ") and line[6:]!="[DONE]":
+                                        try: answer.append(json.loads(line[6:])["choices"][0]["delta"].get("content",""))
+                                        except (json.JSONDecodeError,KeyError,IndexError,TypeError): pass
+                                yield chunk
                 if answer:
                     conn=db()
                     conn.execute("insert into messages(id,conversation_id,role,content,created_at,sequence) values(?,?,?,?,?,?)",(str(uuid.uuid4()),cid,"assistant","".join(answer),int(time.time()),len(req.messages)))
