@@ -22,7 +22,7 @@ set provider=excluded.provider,
     enabled=excluded.enabled,
     updated_at=now();
 
-do $
+do $$
 declare
   v_secret text;
   v_secret_ref uuid;
@@ -55,7 +55,7 @@ begin
     );
     v_secret := null;
   end if;
-end $;
+end $$;
 
 create or replace function public.hercules_deploy_broker_submit(p_request jsonb)
 returns bigint
