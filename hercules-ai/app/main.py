@@ -1,4 +1,4 @@
-import os, sqlite3, time, uuid, json
+import os, sqlite3, time, uuid, json, asyncio
 from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -14,6 +14,7 @@ BASE=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
 DEFAULT=os.getenv("HERCULES_DEFAULT_MODEL","qwen2.5:7b")
 FAST_MODEL=os.getenv("HERCULES_FAST_MODEL",DEFAULT)
 DEEP_MODEL=os.getenv("HERCULES_DEEP_MODEL",DEFAULT)
+KEEPALIVE_SECONDS=float(os.getenv("HERCULES_SSE_KEEPALIVE_SECONDS","15"))
 app=FastAPI(title="Hercules AI Core",version="1.1.0")
 
 def db():
@@ -102,7 +103,15 @@ async def chat(req:ChatRequest):
                     async with client.stream("POST",f"{BASE}/v1/chat/completions",json=payload) as r:
                         r.raise_for_status()
                         buffer=""
-                        async for chunk in r.aiter_text():
+                        iterator=r.aiter_text().__aiter__()
+                        while True:
+                            try:
+                                chunk=await asyncio.wait_for(iterator.__anext__(),timeout=KEEPALIVE_SECONDS)
+                            except asyncio.TimeoutError:
+                                yield ": keepalive\\n\\n"
+                                continue
+                            except StopAsyncIteration:
+                                break
                             if chunk:
                                 buffer+=chunk
                                 while "\n" in buffer:
