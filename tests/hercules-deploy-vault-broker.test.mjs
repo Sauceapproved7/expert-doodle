@@ -26,4 +26,8 @@ test("Vault-backed deploy target registry is service-role only and allowlisted",
   assert.match(migration, /enable row level security/i);
   assert.match(migration, /revoke all on table public\.hercules_deploy_targets from public, anon, authenticated/i);
   assert.match(migration, /grant select on table public\.hercules_deploy_targets to service_role/i);
+  assert.match(migration, /gen_random_bytes\(32\)/i);
+  assert.match(migration, /vault\.create_secret/i);
+  assert.match(migration, /purpose='deploy-broker-control'/i);
+  assert.match(migration, /'deploy-broker-control'/i);
 });
