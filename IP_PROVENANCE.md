@@ -220,3 +220,13 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - External services remain external: deployment, commerce, identity, model, and publishing providers are represented as authorization-sensitive integration classes and are not claimed as SauceApproved-owned technology.
 - Trust scope: hidden owned modules are promoted to customer-facing routes without weakening consent, likeness, execution, provider, physical-device, payment, or publication gates.
 - Evidence scope: Vintage Camera physical-device/full-quality export proof and post-first-real-order payment observation remain explicitly unverified until real evidence exists.
+
+
+## Hercules Vault-backed Deploy Broker v1 provenance — 2026-10-04
+
+- Component paths: `supabase/functions/hercules-deploy-broker/index.ts`, `supabase/migrations/20261004111500_hercules_deploy_vault_broker_v1.sql`, `tests/hercules-deploy-vault-broker.test.mjs`, and `docs/HERCULES-DEPLOY-PLANE-V0.1.md`.
+- Origin: original SauceApproved/Hercules implementation created with AI assistance under the repository's existing implementation-enforcement and ownership controls.
+- Runtime dependencies: Supabase Edge Functions/Postgres/Vault and the Render HTTPS API are external infrastructure; no provider SDK, vendored runtime source, binary, model weight, credential, or copied third-party code is packaged.
+- Secret boundary: the Hercules-owned broker control key is generated server-side inside Supabase Vault; the external Render credential remains owner-authorized and server-side in Vault. Neither secret enters deployment request bodies, persisted deploy evidence, GitHub source, or broker responses.
+- Verification boundary: successful deployment evidence requires exact-commit `live` status plus Hercules `/health` and protected unauthenticated `/mcp` behavior.
+- Differentiators: Vault-isolated provider custody and evidence-bound exact-commit deployment verification. These are Hercules differentiators, not claims that competitors lack equivalent capabilities.

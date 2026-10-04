@@ -250,6 +250,22 @@ Runtime configuration is fail-closed:
 
 Render remains third-party infrastructure and is not claimed as SauceApproved-owned technology.
 
+## Vault-backed cloud execution broker
+
+When no authorized desktop/runtime machine is attached, Hercules can use the Supabase-hosted deploy broker as a bounded cloud execution surface without moving provider credentials into deployment jobs.
+
+- provider credentials remain in Supabase Vault and are retrieved only server-side;
+- deployment requests carry only the allowlisted target code, exact commit SHA, and bounded provider deployment identity;
+- production targets resolve through the service-role-only `hercules_deploy_targets` registry;
+- Render deploys require an exact 40-character commit SHA;
+- verification requires Render to report the same exact commit as `live`, then requires the Hercules `/health` contract and unauthenticated `/mcp` protection (401/403);
+- rollback accepts only a validated Render deployment ID for an already allowlisted service;
+- broker responses are credential-free.
+
+The migration generates the Hercules-owned `deploy-broker-control` key inside Supabase Vault and stores only its SHA-256 plus Vault reference in the internal service-key registry. The broker does not create or infer the external `render-deployer` provider credential; if that owner-authorized provider secret is unavailable, deployment mutations fail closed.
+
+Hercules differentiators in this increment are Vault-isolated provider custody and evidence-bound exact-commit deployment verification rather than provider status alone.
+
 ## Current boundary
 
 v0.1 now includes the first production provider path and can drive an allowlisted Render service through the owned Deploy Plane when the runtime has the required owner-authorized provider credential.
