@@ -25,3 +25,13 @@ def test_transport_security_remains_fail_closed_for_public_hosts():
     assert "HERCULES_MCP_ALLOWED_HOSTS" in runtime
     assert "TransportSecuritySettings" in runtime
     assert "enable_dns_rebinding_protection=True" in runtime
+
+
+def test_public_mcp_tools_declare_explicit_safe_annotations():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+
+    assert "ToolAnnotations" in runtime
+    assert "read_only_hint=True" in runtime
+    assert "destructive_hint=False" in runtime
+    assert "open_world_hint=False" in runtime
+    assert runtime.count("annotations=READ_ONLY_CLOSED_WORLD") == 5
