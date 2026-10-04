@@ -7,6 +7,11 @@ SERVER={"name":"hercules-mcp","version":"1.0.0"}
 PROTOCOL="2025-06-18"
 
 TOOLS={
+ "hercules.command.status":{"description":"ChatGPT-facing read-only Hercules status command.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
+ "hercules.command.mission":{"description":"ChatGPT-facing non-executing mission planning command.","inputSchema":{"type":"object","properties":{"goal":{"type":"string","minLength":1,"maxLength":2000}},"required":["goal"],"additionalProperties":False}},
+ "hercules.command.vault":{"description":"ChatGPT-facing read-only Vault status and recent events command.","inputSchema":{"type":"object","properties":{"limit":{"type":"integer","minimum":1,"maximum":100}},"additionalProperties":False}},
+ "hercules.command.models":{"description":"ChatGPT-facing read-only installed-model inventory command.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
+ "hercules.command.verify":{"description":"ChatGPT-facing read-only Vault verification command.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
  "hercules.status":{
    "description":"Read-only status of the Hercules MCP runtime.",
    "inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
@@ -26,6 +31,19 @@ def list_tools():
     return [{"name":k,**v} for k,v in TOOLS.items()]
 
 def call_tool(name:str,args:dict[str,Any]):
+    if name=="hercules.command.status":
+        return call_tool("hercules.status",{})
+    if name=="hercules.command.mission":
+        return call_tool("hercules.mission.plan",args)
+    if name=="hercules.command.vault":
+        limit=args.get("limit",25)
+        status=call_tool("hercules.vault.status",{})
+        events=call_tool("hercules.vault.events",{"limit":limit})
+        return {"content":[{"type":"text","text":json.dumps({"mutation_authority":False,"status":json.loads(status["content"][0]["text"]),"events":json.loads(events["content"][0]["text"])},sort_keys=True)}]}
+    if name=="hercules.command.models":
+        return call_tool("hercules.models.installed",{})
+    if name=="hercules.command.verify":
+        return call_tool("hercules.vault.verify",{})
     if name=="hercules.status":
         return {"content":[{"type":"text","text":json.dumps({
           "ok":True,"server":SERVER,"protocol":PROTOCOL,
