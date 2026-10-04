@@ -78,18 +78,6 @@ async def model_inventory():
     models=[{"name":m.get("name"),"size":m.get("size"),"modified_at":m.get("modified_at")} for m in data.get("models",[]) if m.get("name")]
     return {"installed":models,"count":len(models),"backend":"local"}
 
-@app.get("/v1/models")
-async def model_inventory():
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            r=await client.get(f"{BASE}/api/tags")
-            r.raise_for_status()
-            raw=r.json().get("models",[])
-    except Exception as e:
-        raise HTTPException(502,f"Local model inventory unavailable: {type(e).__name__}")
-    models=[{"name":m.get("name"),"size":m.get("size"),"modified_at":m.get("modified_at")} for m in raw]
-    return {"installed":models,"count":len(models),"read_only":True}
-
 @app.post("/v1/models/select")
 async def select_model(req:HardwareRequest):
     return choose_model(req.model_dump())
