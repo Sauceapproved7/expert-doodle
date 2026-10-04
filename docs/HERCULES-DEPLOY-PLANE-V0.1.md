@@ -153,6 +153,13 @@ Public operational endpoints:
 - `GET /health`
 - `GET /ready`
 
+`GET /ready` fails closed with HTTP 503 unless both conditions are true:
+
+- the background worker is running;
+- a production `https_container` target adapter is configured.
+
+Its response is intentionally secret-free and reports only readiness booleans plus configured adapter kinds.
+
 Control-token endpoints:
 
 - `POST /v1/deployments`
@@ -228,10 +235,23 @@ Optional:
 
 The command prints deployment identity/status but never the Deploy Plane control token.
 
+## Render production target
+
+The Deploy Plane now includes a bounded Render provider adapter behind the generic `https_container` target contract.
+
+Runtime configuration is fail-closed:
+
+- `HERCULES_RENDER_API_TOKEN` and `HERCULES_RENDER_SERVICE_IDS` must be provided together;
+- configured Render service IDs are allowlisted before any provider call;
+- exact 40-character source commits are required;
+- credentials are carried only in the provider Authorization header and are not persisted in deployment jobs or evidence;
+- deployment verification requires the public `/health` contract and requires unauthenticated `/mcp` access to remain protected;
+- rollback requires a previously recorded provider deployment identifier.
+
+Render remains third-party infrastructure and is not claimed as SauceApproved-owned technology.
+
 ## Current boundary
 
-v0.1 creates the owned background deployment control plane and adapter contract.
+v0.1 now includes the first production provider path and can drive an allowlisted Render service through the owned Deploy Plane when the runtime has the required owner-authorized provider credential.
 
-It does not yet include a production target adapter for a specific public host/provider. Therefore v0.1 can queue/process deployments with configured adapters, but it does not by itself provision a new public server.
-
-The next increment should add the first real target adapter while preserving this contract.
+Repository readiness does not prove runtime connectivity. A production cutover is complete only after the Deploy Plane is running on an authorized runtime, its secret-free `/ready` endpoint reports production readiness, an exact deployment is processed through the Deploy Plane, and the resulting runtime verification evidence passes.
