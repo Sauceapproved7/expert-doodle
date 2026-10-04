@@ -8,11 +8,15 @@ services:
       HERCULES_DEFAULT_MODEL: qwen2.5:7b
       HERCULES_DB: /data/hercules.db
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - hercules-data:/data
     depends_on:
       - ollama
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
   ollama:
     image: ollama/ollama:latest
     container_name: hercules-ollama
