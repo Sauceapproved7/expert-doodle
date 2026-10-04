@@ -2,21 +2,39 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HERCULES // COMMAND CENTER</title>
 <style>
-:root{--ink:#080a0d;--panel:#11151b;--line:#2b3440;--text:#f4f1e8;--hot:#ff6b22;--steel:#91a0ae}
-*{box-sizing:border-box}body{margin:0;background:var(--ink);color:var(--text);font-family:Arial,sans-serif}
-header{padding:24px 5vw;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:end}
-.brand{font-size:clamp(28px,5vw,64px);font-weight:900;letter-spacing:-.05em}.brand b{color:var(--hot)}
-.status{font:12px monospace;color:var(--steel)}main{padding:4vw;display:grid;grid-template-columns:1.4fr 1fr;gap:18px}
-.card{background:linear-gradient(145deg,#141920,#0c0f13);border:1px solid var(--line);padding:22px;min-height:190px}
-.card h2{margin:0 0 18px;font-size:13px;letter-spacing:.18em;color:var(--hot)}
-.hero{grid-row:span 2}.mission{font-size:clamp(25px,4vw,52px);font-weight:800;max-width:12ch}
-.pill{display:inline-block;border:1px solid var(--line);padding:7px 10px;margin:5px 5px 0 0;font:12px monospace}
-footer{padding:0 4vw 4vw;color:var(--steel);font:11px monospace}@media(max-width:760px){main{grid-template-columns:1fr}.hero{grid-row:auto}}
+:root{--ink:#07090c;--panel:#10151b;--line:#2c3642;--text:#f4f1e8;--hot:#ff6b22;--steel:#91a0ae}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top right,#18202a 0,#07090c 38%);color:var(--text);font-family:Arial,sans-serif}
+header{padding:22px 4vw;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:end}
+.brand{font-size:clamp(30px,6vw,68px);font-weight:900;letter-spacing:-.055em}.brand b{color:var(--hot)}
+.status{font:12px monospace;color:var(--steel)}main{padding:24px 4vw 5vw;display:grid;grid-template-columns:1.5fr 1fr;gap:16px}
+.card{background:linear-gradient(145deg,#141a21,#0b0f13);border:1px solid var(--line);padding:20px;min-height:160px}
+.card h2{margin:0 0 14px;font-size:12px;letter-spacing:.19em;color:var(--hot)}
+.stream{grid-row:span 3;min-height:620px;display:flex;flex-direction:column}.log{flex:1;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:16px 0;overflow:auto;white-space:pre-wrap}
+.composer{display:flex;gap:8px;padding-top:14px}.composer textarea{flex:1;min-height:72px;background:#090c10;border:1px solid var(--line);color:var(--text);padding:12px}
+button{background:var(--hot);border:0;color:#080808;font-weight:900;padding:0 18px;cursor:pointer}.pill{display:inline-block;border:1px solid var(--line);padding:6px 9px;margin:4px 4px 0 0;font:11px monospace}
+.small{font:12px monospace;color:var(--steel)}@media(max-width:780px){main{grid-template-columns:1fr}.stream{grid-row:auto;min-height:520px}}
 </style></head><body>
 <header><div class="brand">HERCULES<b>//</b></div><div class="status">OWNER CONTROLLED • LOCAL FIRST</div></header>
 <main>
-<section class="card hero"><h2>MISSION COMMANDER</h2><div class="mission">TALK. BUILD. TEST. SHIP. VERIFY.</div><p>One controlled pipeline from intent to evidence.</p><span class="pill">PLAN</span><span class="pill">BUILD</span><span class="pill">TEST</span><span class="pill">SECURITY</span><span class="pill">DEPLOY</span><span class="pill">VERIFY</span></section>
-<section class="card"><h2>SOVEREIGN MODE</h2><p>Local inference. Owner-controlled storage. Remote providers optional, never implicit.</p><span class="pill">LOCAL</span><span class="pill">FAIL-CLOSED</span></section>
-<section class="card"><h2>MODEL ARSENAL</h2><p>Hardware-aware model selection with compact, strong and heavy tiers.</p><span class="pill">AUTO SELECT</span><span class="pill">HOT-SWAP READY</span></section>
-<section class="card"><h2>BLACK BOX VAULT</h2><p>Decisions, actions, commits and rollback references form an auditable recovery trail.</p><span class="pill">AUDIT</span><span class="pill">ROLLBACK</span></section>
-</main><footer>SAUCEAPPROVED // HERCULES SOVEREIGN SYSTEM</footer></body></html>
+<section class="card stream"><h2>COMMAND STREAM</h2><div id="log" class="log">HERCULES READY.
+Local inference connects here when the runtime is online.</div>
+<div class="composer"><textarea id="prompt" placeholder="Give Hercules a mission..."></textarea><button onclick="send()">RUN</button></div></section>
+<section class="card"><h2>MISSION COMMANDER</h2><p>Intent becomes a gated execution path.</p><span class="pill">PLAN</span><span class="pill">BUILD</span><span class="pill">TEST</span><span class="pill">SECURITY</span><span class="pill">DEPLOY</span><span class="pill">VERIFY</span></section>
+<section class="card"><h2>MODEL ARSENAL</h2><p>Compact, strong and heavy local model profiles selected against available hardware.</p><span class="pill">AUTO SELECT</span><span class="pill">LOCAL</span></section>
+<section class="card"><h2>MEMORY VAULT</h2><p>Search owner-controlled Hercules memory without sending it to an external provider.</p><div class="composer"><textarea id="memoryQ" placeholder="Search the Vault..."></textarea><button onclick="memorySearch()">SEARCH</button></div><div id="memoryOut" class="small"></div></section>
+</main>
+<script>
+async function send(){
+ const p=document.getElementById('prompt'),log=document.getElementById('log'),text=p.value.trim(); if(!text)return;
+ log.textContent+="\n\nYOU > "+text; p.value="";
+ try{
+   const r=await fetch('/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({messages:[{role:'user',content:text}]})});
+   const j=await r.json(); log.textContent+="\n\nHERCULES > "+(j.choices?.[0]?.message?.content||j.detail||'No response');
+ }catch(e){log.textContent+="\n\nSYSTEM > Local runtime unavailable."}
+}
+async function memorySearch(){
+ const q=document.getElementById('memoryQ').value.trim(),out=document.getElementById('memoryOut'); if(!q)return;
+ const r=await fetch('/v1/memory/search?q='+encodeURIComponent(q)); const j=await r.json();
+ out.textContent=(j.items||[]).map(x=>'• '+x.content).join('\n')||'No matching Vault memory.';
+}
+</script></body></html>
