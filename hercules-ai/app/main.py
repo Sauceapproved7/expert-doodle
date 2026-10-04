@@ -18,6 +18,8 @@ KEEPALIVE_SECONDS=float(os.getenv("HERCULES_SSE_KEEPALIVE_SECONDS","15"))
 MCP_TOKEN=os.getenv("HERCULES_MCP_TOKEN","")
 PUBLIC_HOSTED=os.getenv("HERCULES_PUBLIC_HOSTED","0").lower() in {"1","true","yes"}
 OPENAI_APPS_CHALLENGE=os.getenv("OPENAI_APPS_CHALLENGE","").strip()
+MCP_RESOURCE=os.getenv("HERCULES_MCP_RESOURCE","").strip()
+MCP_AUTHORIZATION_SERVER=os.getenv("HERCULES_MCP_AUTHORIZATION_SERVER","").strip()
 mcp_asgi=hercules_mcp.streamable_http_app(
     streamable_http_path="/",
     stateless_http=True,
@@ -49,7 +51,7 @@ async def protect_mcp(request, call_next):
                     content='{"detail":"Unauthorized"}',
                     status_code=401,
                     media_type="application/json",
-                    headers={"WWW-Authenticate":"Bearer"},
+                    headers={"WWW-Authenticate":f'Bearer resource_metadata="{str(request.base_url).rstrip("/")}.well-known/oauth-protected-resource"'},
                 )
     return await call_next(request)
 
@@ -121,6 +123,16 @@ async def openai_apps_challenge():
     if not OPENAI_APPS_CHALLENGE:
         raise HTTPException(404,"Not configured")
     return Response(content=OPENAI_APPS_CHALLENGE,media_type="text/plain")
+
+@app.get("/.well-known/oauth-protected-resource",include_in_schema=False)
+async def oauth_protected_resource():
+    if not MCP_RESOURCE or not MCP_AUTHORIZATION_SERVER:
+        raise HTTPException(404,"Not configured")
+    return {
+        "resource": MCP_RESOURCE,
+        "authorization_servers": [MCP_AUTHORIZATION_SERVER],
+        "bearer_methods_supported": ["header"],
+    }
 
 @app.get("/health")
 async def health():
