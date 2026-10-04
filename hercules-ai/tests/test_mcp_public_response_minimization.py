@@ -84,6 +84,7 @@ def test_public_model_inventory_omits_backend_timestamps(monkeypatch):
     assert payload == {
         "installed": [{"name": "hercules-local", "size": 42}],
         "count": 1,
+        "available": True,
         "mutation_authority": False,
     }
 
@@ -103,3 +104,19 @@ def test_public_verification_omits_hashes_and_internal_event_ids(monkeypatch):
     payload = _payload("hercules.command.verify")
 
     assert payload == {"valid": False, "events": 4}
+
+
+def test_public_model_inventory_fails_safe_when_backend_is_unavailable(monkeypatch):
+    def unavailable(*args, **kwargs):
+        raise OSError("backend unavailable")
+
+    monkeypatch.setattr(mcp_server.urllib.request, "urlopen", unavailable)
+
+    payload = _payload("hercules.command.models")
+
+    assert payload == {
+        "installed": [],
+        "count": 0,
+        "available": False,
+        "mutation_authority": False,
+    }
