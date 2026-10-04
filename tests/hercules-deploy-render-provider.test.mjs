@@ -16,11 +16,11 @@ test("Render provider deploys an exact commit without leaking credentials", asyn
       assert.equal(String(url).includes(token), false);
       assert.equal(options.method, "POST");
       assert.deepEqual(JSON.parse(options.body), {clearCache: "do_not_clear", commitId: "a".repeat(40)});
-      return Response.json({id: "dep-123", status: "build_in_progress", commit: {id: "a".repeat(40)}}, {status: 201});
+      return Response.json({id: "dep-abc123", status: "build_in_progress", commit: {id: "a".repeat(40)}}, {status: 201});
     },
   });
   const result = await client.deployRelease({serviceId, sourceCommit: "a".repeat(40)});
-  assert.deepEqual(result, {provider: "render", providerDeploymentId: "dep-123", serviceId, sourceCommit: "a".repeat(40)});
+  assert.deepEqual(result, {provider: "render", providerDeploymentId: "dep-abc123", serviceId, sourceCommit: "a".repeat(40)});
   assert.equal(JSON.stringify(result).includes(token), false);
   assert.equal(calls.length, 1);
 });
@@ -38,14 +38,14 @@ test("Render provider rollback follows the official service rollback contract", 
     allowedServiceIds: [serviceId],
     fetchImpl: async (url, options = {}) => {
       calls.push({url: String(url), options});
-      return Response.json({id: "dep-rollback-created", status: "created", trigger: "rollback"}, {status: 201});
+      return Response.json({id: "dep-rollbackcreated", status: "created", trigger: "rollback"}, {status: 201});
     },
   });
-  const result = await client.rollbackRelease({serviceId, providerDeploymentId: "dep-prior"});
-  assert.deepEqual(result, {provider: "render", providerDeploymentId: "dep-rollback-created", rollbackTargetDeploymentId: "dep-prior", serviceId, rolledBack: true});
+  const result = await client.rollbackRelease({serviceId, providerDeploymentId: "dep-prior123"});
+  assert.deepEqual(result, {provider: "render", providerDeploymentId: "dep-rollbackcreated", rollbackTargetDeploymentId: "dep-prior123", serviceId, rolledBack: true});
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /\/v1\/services\/srv-db0sic6gekts73b40jcg\/rollback$/);
-  assert.deepEqual(JSON.parse(calls[0].options.body), {deployId: "dep-prior"});
+  assert.deepEqual(JSON.parse(calls[0].options.body), {deployId: "dep-prior123"});
 });
 
 test("Render provider rejects malformed commit and deployment identifiers before network access", async () => {
