@@ -14,7 +14,8 @@ TOOLS={
    "description":"Return supplied text. Useful for MCP connectivity tests.",
    "inputSchema":{"type":"object","properties":{"text":{"type":"string","maxLength":10000}},"required":["text"],"additionalProperties":False}},
  "hercules.sovereign.status":{"description":"Read-only sovereign runtime boundary status.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
- "hercules.models.recommend":{"description":"Recommend a local model tier from hardware facts.","inputSchema":{"type":"object","properties":{"ram_gb":{"type":"number","minimum":0},"vram_gb":{"type":"number","minimum":0}},"additionalProperties":False}},\n "hercules.models.installed":{"description":"Read installed local models from the configured local model backend.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
+ "hercules.models.recommend":{"description":"Recommend a local model tier from hardware facts.","inputSchema":{"type":"object","properties":{"ram_gb":{"type":"number","minimum":0},"vram_gb":{"type":"number","minimum":0}},"additionalProperties":False}},
+ "hercules.models.installed":{"description":"Read installed local models from the configured local model backend.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
  "hercules.mission.plan":{"description":"Create a non-executing, authorization-gated mission plan.","inputSchema":{"type":"object","properties":{"goal":{"type":"string","minLength":1,"maxLength":2000}},"required":["goal"],"additionalProperties":False}},
  "hercules.vault.status":{"description":"Read-only Black Box Vault status.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
  "hercules.vault.events":{"description":"Read recent Black Box Vault events.","inputSchema":{"type":"object","properties":{"limit":{"type":"integer","minimum":1,"maximum":100}},"additionalProperties":False}},
@@ -33,6 +34,20 @@ def call_tool(name:str,args:dict[str,Any]):
         return {"content":[{"type":"text","text":json.dumps({"local_first":True,"mutation_authority":False,"default_deny":True})}]}
     if name=="hercules.models.recommend":
         return {"content":[{"type":"text","text":json.dumps(choose_model(args),sort_keys=True)}]}
+    if name=="hercules.models.installed":
+        base=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
+        try:
+            with urllib.request.urlopen(f"{base}/api/tags", timeout=5) as response:
+                data=json.load(response)
+        except Exception as e:
+            raise ValueError(f"Local model inventory unavailable: {type(e).__name__}")
+        models=[
+            {"name":m.get("name"),"size":m.get("size"),"modified_at":m.get("modified_at")}
+            for m in data.get("models",[]) if isinstance(m,dict) and m.get("name")
+        ]
+        return {"content":[{"type":"text","text":json.dumps({
+            "installed":models,"count":len(models),"mutation_authority":False
+        },sort_keys=True)}]}
     if name=="hercules.mission.plan":
         goal=args.get("goal")
         if not isinstance(goal,str) or not goal.strip() or len(goal)>2000: raise ValueError("Invalid goal")
@@ -50,10 +65,10 @@ def call_tool(name:str,args:dict[str,Any]):
         path=os.getenv("HERCULES_VAULT_DB","/data/hercules-vault.db")
         return {"content":[{"type":"text","text":json.dumps(list_events(path,limit=limit),sort_keys=True)}]}
     if name=="hercules.echo":
-        text=args.get("text")
-        if not isinstance(text,str) or len(text)>10000:
+        value=args.get("text")
+        if not isinstance(value,str) or len(value)>10000:
             raise ValueError("Invalid text")
-        return {"content":[{"type":"text","text":text}]}
+        return {"content":[{"type":"text","text":value}]}
     raise KeyError("Unknown or unauthorized tool")
 
 def dispatch(method:str,params:dict[str,Any]):
