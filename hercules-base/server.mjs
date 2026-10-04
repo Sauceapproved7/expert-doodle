@@ -4,7 +4,7 @@ import {routeAuthRequest} from "./auth-router.mjs";
 import {createPostgrestAuthStore} from "./auth-store.mjs";
 import {routeStorageRequest} from "./storage-router.mjs";
 import {createPostgrestStorageStore} from "./storage-store.mjs";
-import {createFilesystemBlobStore} from "./storage-core.mjs";
+import {createFilesystemBlobStore} from "./storage-core.mjs";\nimport {routeRealtimeRequest} from "./realtime-router.mjs";\nimport {createPostgrestRealtimeStore} from "./realtime-store.mjs";\nimport {writeFetchResponse} from "./response-bridge.mjs";
 import {createSmokeScreenIngressObserver} from "../hercules-runtime/smokescreen-ingress.mjs";
 
 const host=process.env.HERCULES_BASE_HOST||"0.0.0.0";
@@ -25,9 +25,9 @@ if(!jwtSecret||Buffer.byteLength(jwtSecret)<32){
 }
 const authStore=createPostgrestAuthStore({postgrestUrl,jwtSecret});
 const storageStore=createPostgrestStorageStore({postgrestUrl,jwtSecret});
-const blobs=createFilesystemBlobStore({root:storageRoot});
+const blobs=createFilesystemBlobStore({root:storageRoot});\nconst realtimeStore=createPostgrestRealtimeStore({postgrestUrl,jwtSecret});
 
-function nodeRequestToFetch(request){
+function nodeRequestToFetch(request,{signal}={}){
   const origin="http://hercules-base.local";
   const target=new URL(request.url||"/",origin);
   const headers=new Headers();
