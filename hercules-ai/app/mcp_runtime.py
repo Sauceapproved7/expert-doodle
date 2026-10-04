@@ -80,7 +80,7 @@ def command_vault(limit: int = 25) -> str:
 @hercules_mcp.tool(
     name="hercules.list_models",
     title="List Hercules models",
-    description="Use when the user asks which models Hercules currently reports as installed. Returns model name and size only and never changes model state.",
+    description="Use when the user asks which models Hercules currently reports as installed. Returns model name and size only; if the inventory backend is unavailable, returns an explicit unavailable empty result and never changes model state.",
     annotations=READ_ONLY_CLOSED_WORLD,
 )
 def command_models() -> str:

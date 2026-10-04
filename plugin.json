@@ -66,7 +66,7 @@
               "description": "List installed models",
               "prompt": "Which models does Hercules currently report as installed?",
               "tools_triggered": "hercules.list_models",
-              "expected_behavior": "Return only the installed model inventory reported by Hercules without inventing unavailable models."
+              "expected_behavior": "Return the installed model names and sizes reported by Hercules; if the backend is unavailable, return an explicit unavailable empty inventory without inventing models."
             },
             {
               "description": "Verify Vault evidence",

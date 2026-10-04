@@ -50,7 +50,7 @@ def call_tool(name:str,args:dict[str,Any]):
     if name=="hercules.command.models":
         inventory=json.loads(call_tool("hercules.models.installed",{})["content"][0]["text"])
         installed=[{"name":model.get("name"),"size":model.get("size")} for model in inventory.get("installed",[]) if isinstance(model,dict) and model.get("name")]
-        public={"installed":installed,"count":len(installed),"mutation_authority":False}
+        public={"installed":installed,"count":len(installed),"available":bool(inventory.get("available",True)),"mutation_authority":False}
         return {"content":[{"type":"text","text":json.dumps(public,sort_keys=True)}]}
     if name=="hercules.command.verify":
         verification=json.loads(call_tool("hercules.vault.verify",{})["content"][0]["text"])
@@ -69,14 +69,16 @@ def call_tool(name:str,args:dict[str,Any]):
         try:
             with urllib.request.urlopen(f"{base}/api/tags", timeout=5) as response:
                 data=json.load(response)
-        except Exception as e:
-            raise ValueError(f"Local model inventory unavailable: {type(e).__name__}")
+        except Exception:
+            return {"content":[{"type":"text","text":json.dumps({
+                "installed":[],"count":0,"available":False,"mutation_authority":False
+            },sort_keys=True)}]}
         models=[
             {"name":m.get("name"),"size":m.get("size"),"modified_at":m.get("modified_at")}
             for m in data.get("models",[]) if isinstance(m,dict) and m.get("name")
         ]
         return {"content":[{"type":"text","text":json.dumps({
-            "installed":models,"count":len(models),"mutation_authority":False
+            "installed":models,"count":len(models),"available":True,"mutation_authority":False
         },sort_keys=True)}]}
     if name=="hercules.mission.plan":
         goal=args.get("goal")
