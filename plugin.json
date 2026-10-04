@@ -1,0 +1,26 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "hercules-community",
+  "version": "0.1.0",
+  "description": "Use Hercules read-only command capabilities from ChatGPT and Codex with explicit security boundaries.",
+  "author": {
+    "name": "SauceApproved",
+    "url": "https://github.com/Sauceapproved7/expert-doodle"
+  },
+  "homepage": "https://github.com/Sauceapproved7/expert-doodle",
+  "repository": "https://github.com/Sauceapproved7/expert-doodle",
+  "license": "Apache-2.0",
+  "keywords": ["hercules", "assistant", "read-only", "status", "models"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Hercules",
+        "shortDescription": "Hercules status and planning",
+        "longDescription": "Inspect Hercules status, available models, mission plans, and verification evidence through a deliberately bounded read-only command surface.",
+        "developerName": "SauceApproved",
+        "category": "Developer Tools"
+      },
+      "onboardingSkill": "./skills/hercules-readonly/SKILL.md"
+    }
+  }
+}
