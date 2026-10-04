@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Hercules</title>
+  <desc id="desc">Hercules H inside a strong shield mark.</desc>
+  <rect width="256" height="256" rx="48" fill="#101114"/>
+  <path d="M128 24 208 54v63c0 53-31 92-80 115-49-23-80-62-80-115V54l80-30Z" fill="none" stroke="#F26A21" stroke-width="14" stroke-linejoin="round"/>
+  <path d="M88 76v104M168 76v104M88 128h80" fill="none" stroke="#F7F3EA" stroke-width="20" stroke-linecap="round"/>
+</svg>
