@@ -98,20 +98,18 @@ export class RenderDeployProviderClient {
     const id = this.assertService(serviceId);
     const deploymentId = requireDeploymentId(providerDeploymentId);
     const response = await this.fetchImpl(
-      this.baseUrl + "/v1/services/" + encodeURIComponent(id) + "/deploys/" +
-        encodeURIComponent(deploymentId) + "/rollback",
+      this.baseUrl + "/v1/services/" + encodeURIComponent(id) + "/rollback",
       {
         method: "POST",
         redirect: "error",
         cache: "no-store",
         headers: this.headers(),
-        body: JSON.stringify({}),
+        body: JSON.stringify({deployId: deploymentId}),
       },
     );
     if (!response.ok) throw new Error("Render rollback failed with status " + response.status);
     const body = await readJson(response, "Render rollback");
-    const returnedId = body.id == null ? deploymentId : requireDeploymentId(body.id);
-    if (returnedId !== deploymentId) throw new Error("Render rollback deployment id mismatch");
-    return {provider: "render", providerDeploymentId: deploymentId, serviceId: id, rolledBack: true};
+    const returnedId = requireDeploymentId(body.id);
+    return {provider: "render", providerDeploymentId: returnedId, rollbackTargetDeploymentId: deploymentId, serviceId: id, rolledBack: true};
   }
 }
