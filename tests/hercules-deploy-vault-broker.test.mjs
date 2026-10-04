@@ -1,4 +1,4 @@
-import test from "node:test";
+// Exact-head gate anchor: Vault broker implementation + governance records must verify together.\nimport test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
