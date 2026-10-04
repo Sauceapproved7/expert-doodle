@@ -53,7 +53,7 @@ export const BASE_CAPABILITIES=Object.freeze({
     substrate:"hercules-owned-filesystem-over-postgres-metadata",
     evidence:"hercules-base/storage-router.mjs",
   }),
-  realtime:Object.freeze({status:"planned"}),
+  realtime:Object.freeze({\n    status:"implemented",\n    product:"Hercules Base Pulse",\n    substrate:"hercules-owned-sse-over-postgres-event-log",\n    evidence:"hercules-base/realtime-router.mjs",\n  }),
   functions:Object.freeze({status:"planned"}),
 });
 
