@@ -1,4 +1,4 @@
-import json, os, platform, time
+import json, os, platform, time, urllib.request
 from typing import Any
 from .sovereign import choose_model, mission_plan
 from .vault import list_events, verify_chain
@@ -14,7 +14,7 @@ TOOLS={
    "description":"Return supplied text. Useful for MCP connectivity tests.",
    "inputSchema":{"type":"object","properties":{"text":{"type":"string","maxLength":10000}},"required":["text"],"additionalProperties":False}},
  "hercules.sovereign.status":{"description":"Read-only sovereign runtime boundary status.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
- "hercules.models.recommend":{"description":"Recommend a local model tier from hardware facts.","inputSchema":{"type":"object","properties":{"ram_gb":{"type":"number","minimum":0},"vram_gb":{"type":"number","minimum":0}},"additionalProperties":False}},
+ "hercules.models.recommend":{"description":"Recommend a local model tier from hardware facts.","inputSchema":{"type":"object","properties":{"ram_gb":{"type":"number","minimum":0},"vram_gb":{"type":"number","minimum":0}},"additionalProperties":False}},\n "hercules.models.installed":{"description":"Read installed local models from the configured local model backend.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
  "hercules.mission.plan":{"description":"Create a non-executing, authorization-gated mission plan.","inputSchema":{"type":"object","properties":{"goal":{"type":"string","minLength":1,"maxLength":2000}},"required":["goal"],"additionalProperties":False}},
  "hercules.vault.status":{"description":"Read-only Black Box Vault status.","inputSchema":{"type":"object","properties":{},"additionalProperties":False}},
  "hercules.vault.events":{"description":"Read recent Black Box Vault events.","inputSchema":{"type":"object","properties":{"limit":{"type":"integer","minimum":1,"maximum":100}},"additionalProperties":False}},
