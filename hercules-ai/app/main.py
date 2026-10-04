@@ -34,6 +34,35 @@ async def lifespan(_app:FastAPI):
 
 app=FastAPI(title="Hercules AI Core",version="1.1.0",lifespan=lifespan)
 
+async def validate_public_mcp_token(token:str)->bool:
+    if not (
+        MCP_OAUTH_INTROSPECTION_URL
+        and MCP_OAUTH_CLIENT_ID
+        and MCP_OAUTH_CLIENT_SECRET
+        and MCP_RESOURCE
+    ):
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response=await client.post(
+                MCP_OAUTH_INTROSPECTION_URL,
+                data={"token":token},
+                auth=(MCP_OAUTH_CLIENT_ID,MCP_OAUTH_CLIENT_SECRET),
+            )
+        if response.status_code != 200:
+            return False
+        payload=response.json()
+    except (httpx.HTTPError, ValueError):
+        return False
+    if payload.get("active") is not True:
+        return False
+    audience=payload.get("aud")
+    audiences={audience} if isinstance(audience,str) else set(audience or [])
+    if MCP_RESOURCE not in audiences:
+        return False
+    scopes=set(str(payload.get("scope","")).split())
+    return MCP_OAUTH_REQUIRED_SCOPES.issubset(scopes)
+
 @app.middleware("http")
 async def protect_mcp(request, call_next):
     if request.url.path.startswith("/mcp"):
