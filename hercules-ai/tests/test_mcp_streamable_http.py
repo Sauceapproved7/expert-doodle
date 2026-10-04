@@ -51,6 +51,7 @@ def test_public_tool_contract_uses_action_oriented_names_and_usage_descriptions(
 
     assert 'name="hercules.command.' not in runtime
     assert runtime.count('description="Use when ') == 5
+    assert runtime.count('title="') >= 5
     assert "never changes Hercules state" in runtime
     assert "never deploys or changes state" in runtime
     assert "never returns raw event records" in runtime
