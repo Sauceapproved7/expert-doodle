@@ -17,6 +17,7 @@ DEEP_MODEL=os.getenv("HERCULES_DEEP_MODEL",DEFAULT)
 KEEPALIVE_SECONDS=float(os.getenv("HERCULES_SSE_KEEPALIVE_SECONDS","15"))
 MCP_TOKEN=os.getenv("HERCULES_MCP_TOKEN","")
 PUBLIC_HOSTED=os.getenv("HERCULES_PUBLIC_HOSTED","0").lower() in {"1","true","yes"}
+OPENAI_APPS_CHALLENGE=os.getenv("OPENAI_APPS_CHALLENGE","").strip()
 app=FastAPI(title="Hercules AI Core",version="1.1.0")
 
 def db():
@@ -85,6 +86,12 @@ async def app_icon_192():
 @app.get("/app-icon-512.png",include_in_schema=False)
 async def app_icon_512():
     return Response(content=_png_icon(512),media_type="image/png",headers={"Cache-Control":"public, max-age=86400"})
+
+@app.get("/.well-known/openai-apps-challenge",include_in_schema=False)
+async def openai_apps_challenge():
+    if not OPENAI_APPS_CHALLENGE:
+        raise HTTPException(404,"Not configured")
+    return Response(content=OPENAI_APPS_CHALLENGE,media_type="text/plain")
 
 @app.get("/health")
 async def health():

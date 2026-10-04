@@ -28,7 +28,8 @@ TOOLS={
 }
 
 def list_tools():
-    return [{"name":k,**v} for k,v in TOOLS.items()]
+    annotation={"readOnlyHint":True,"openWorldHint":False,"destructiveHint":False}
+    return [{"name":k,**v,"annotations":{**annotation,"title":v["description"]}} for k,v in TOOLS.items()]
 
 def call_tool(name:str,args:dict[str,Any]):
     if name=="hercules.command.status":
