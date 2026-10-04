@@ -22,6 +22,41 @@ set provider=excluded.provider,
     enabled=excluded.enabled,
     updated_at=now();
 
+do $
+declare
+  v_secret text;
+  v_secret_ref uuid;
+begin
+  if not exists (
+    select 1 from public.hercules_internal_service_keys
+    where purpose='deploy-broker-control'
+  ) then
+    v_secret := encode(gen_random_bytes(32),'hex');
+    select vault.create_secret(
+      v_secret,
+      'hercules-deploy-broker-control',
+      'Hercules Deploy Broker internal service key'
+    ) into v_secret_ref;
+
+    insert into public.hercules_internal_service_keys(
+      purpose,key_sha256,enabled,rotated_at,metadata,secret_ref
+    ) values (
+      'deploy-broker-control',
+      encode(digest(v_secret,'sha256'),'hex'),
+      true,
+      now(),
+      jsonb_build_object(
+        'scope','deploy-broker-control',
+        'credential_custody','supabase_vault',
+        'carries_credentials',false,
+        'version','v1'
+      ),
+      v_secret_ref
+    );
+    v_secret := null;
+  end if;
+end $;
+
 create or replace function public.hercules_deploy_broker_submit(p_request jsonb)
 returns bigint
 language plpgsql
