@@ -29,8 +29,10 @@ export function createOfflineSemanticEvaluator({
 }={}) {
   const id=String(evaluatorId||"").trim();
   if (!id) throw new Error("offline_evaluator_id_required");
-  if (!String(command||"").trim()) throw new Error("offline_evaluator_command_required");
-  if (!Array.isArray(args)) throw new Error("offline_evaluator_args_required");
+  const workerCommand=String(command||"").trim();
+  if (!workerCommand||workerCommand.length>1024) throw new Error("offline_evaluator_command_invalid");
+  if (!Array.isArray(args)||args.length>64||args.some(value=>String(value).length>4096)) throw new Error("offline_evaluator_args_invalid");
+  const workerArgs=args.map(String);
   if (typeof readiness!=="function") throw new Error("offline_evaluator_readiness_required");
   if (!Number.isInteger(timeoutMs)||timeoutMs<=0) throw new Error("offline_evaluator_timeout_invalid");
 
@@ -38,6 +40,8 @@ export function createOfflineSemanticEvaluator({
     if (!shot||!artifact) throw new Error("offline_evaluator_context_required");
     const uri=String(artifact.uri||"");
     if (!uri.startsWith("file://")) throw new Error("offline_evaluator_local_media_required");
+    const mediaSha256=String(artifact.sha256||"");
+    if (!/^[a-f0-9]{64}$/.test(mediaSha256)) throw new Error("offline_evaluator_media_sha256_invalid");
     const mediaPath=fileURLToPath(uri);
     const info=await statImpl(mediaPath).catch(()=>null);
     if (!info?.isFile()||info.size<=0) throw new Error("offline_evaluator_media_missing");
@@ -46,17 +50,20 @@ export function createOfflineSemanticEvaluator({
 
     const payload={schema:"sauceapproved.hercules.video-offline-semantic-request",version:1,evaluatorId:id,modelId:String(model.modelId),modelRevision:String(model.revision),mediaUri:uri,shot:{id:String(shot.id||""),prompt:String(shot.prompt||"")}};
     const output=await new Promise((resolve,reject)=>{
-      const child=spawnImpl(String(command),args.map(String),{stdio:["pipe","pipe","pipe"],shell:false,env:{...process.env,HF_HUB_OFFLINE:"1",TRANSFORMERS_OFFLINE:"1"}});
-      let stdout="",stderr="",settled=false;
-      const timer=setTimeout(()=>{if(settled)return;settled=true;child.kill("SIGTERM");reject(new Error("offline_evaluator_timeout"));},timeoutMs);
-      child.stdout?.on("data",c=>stdout+=c.toString());
-      child.stderr?.on("data",c=>stderr+=c.toString());
+      const workerEnv={PATH:String(process.env.PATH||""),PYTHONNOUSERSITE:"1",HF_HUB_OFFLINE:"1",TRANSFORMERS_OFFLINE:"1"};
+      const child=spawnImpl(workerCommand,workerArgs,{stdio:["pipe","pipe","pipe"],shell:false,env:workerEnv});
+      let stdout="",stderr="",stdoutBytes=0,stderrBytes=0,settled=false;
+      const outputLimit=1024*1024;
+      const fail=(error)=>{if(settled)return;settled=true;clearTimeout(timer);child.kill("SIGTERM");reject(error);};
+      const timer=setTimeout(()=>fail(new Error("offline_evaluator_timeout")),timeoutMs);
+      child.stdout?.on("data",chunk=>{if(settled)return;stdoutBytes+=Buffer.byteLength(chunk);if(stdoutBytes>outputLimit)return fail(new Error("offline_evaluator_output_too_large"));stdout+=chunk.toString();});
+      child.stderr?.on("data",chunk=>{if(settled)return;stderrBytes+=Buffer.byteLength(chunk);if(stderrBytes>outputLimit)return fail(new Error("offline_evaluator_output_too_large"));stderr+=chunk.toString();});
       child.once("error",e=>{if(settled)return;settled=true;clearTimeout(timer);reject(e);});
       child.once("close",code=>{if(settled)return;settled=true;clearTimeout(timer);code===0?resolve(stdout):reject(new Error("offline_evaluator_process_failed:"+stderr.slice(-1000)));});
       child.stdin?.end(JSON.stringify(payload));
     });
     const result=parse(output);
-    const evidence={schema:"sauceapproved.hercules.video-semantic-evaluation-evidence",version:1,evaluatorId:id,modelId:String(model.modelId),modelRevision:String(model.revision),modelManifestFingerprint:String(model.manifestFingerprint),mediaSha256:String(artifact.sha256||""),shotId:String(shot.id||""),notes:result.notes,scores:result.scores};
+    const evidence={schema:"sauceapproved.hercules.video-semantic-evaluation-evidence",version:1,evaluatorId:id,modelId:String(model.modelId),modelRevision:String(model.revision),modelManifestFingerprint:String(model.manifestFingerprint),mediaSha256,shotId:String(shot.id||""),notes:result.notes,scores:result.scores};
     return {...result.scores,evidence:{...evidence,fingerprint:fingerprint(evidence)}};
   };
 }
