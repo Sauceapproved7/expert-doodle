@@ -36,6 +36,8 @@ Authentication uses `x-hercules-internal-key` with the dedicated `forge-interpre
 
 The model output must resolve to one JSON object matching Forge spec version `0.1`.
 
+Before schema mapping, the owned interpreter contract directs the model to reason over six semantic dimensions: `GOAL -> CONTEXT -> CONSTRAINTS -> ACTION -> OUTPUT -> VERIFICATION`. These dimensions improve specificity without creating new authority: omitted details are not invented, explicit constraints are preserved, and verification requests cannot authorize execution, mutation, deployment, or release.
+
 Forge accepts:
 - plain JSON object text;
 - one complete ```json fenced object.
