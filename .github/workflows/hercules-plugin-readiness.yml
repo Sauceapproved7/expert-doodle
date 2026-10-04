@@ -1,0 +1,26 @@
+name: Hercules Plugin Readiness
+
+on:
+  pull_request:
+    paths:
+      - "plugin.json"
+      - "mcp.json"
+      - "skills/hercules-readonly/**"
+      - "hercules-ai/**"
+      - ".github/workflows/hercules-plugin-readiness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  plugin-readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Enforce repository-wide owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Install test runner
+        run: python -m pip install pytest
+      - name: Run Hercules plugin readiness tests
+        run: python -m pytest -q hercules-ai/tests/test_openai_plugin_readiness.py
