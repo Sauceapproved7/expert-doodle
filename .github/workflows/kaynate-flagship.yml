@@ -1,0 +1,28 @@
+name: KayNate Flagship
+
+on:
+  pull_request:
+    paths:
+      - "clients/kaynate-flagship/**"
+      - "tests/kaynate-flagship.test.mjs"
+      - ".github/workflows/kaynate-flagship.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "clients/kaynate-flagship/**"
+      - "tests/kaynate-flagship.test.mjs"
+      - ".github/workflows/kaynate-flagship.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  kaynate-flagship:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.23.3"
+      - run: node --test tests/kaynate-flagship.test.mjs
