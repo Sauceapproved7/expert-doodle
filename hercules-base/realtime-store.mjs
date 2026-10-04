@@ -28,7 +28,7 @@ export function createPostgrestRealtimeStore({
     },jwtSecret);
   }
 
-  async function rpc(name,payload){
+  async function rpc(name,payload,{signal}={}){
     const response=await fetchImpl(origin+"/rpc/"+name,{
       method:"POST",
       headers:{
@@ -36,7 +36,7 @@ export function createPostgrestRealtimeStore({
         authorization:"Bearer "+serviceToken(),
       },
       body:JSON.stringify(payload),
-      signal:AbortSignal.timeout(5000),
+      signal:signal?AbortSignal.any([signal,AbortSignal.timeout(5000)]):AbortSignal.timeout(5000),
     });
     const text=await response.text();
     let body=null;
@@ -69,7 +69,7 @@ export function createPostgrestRealtimeStore({
       }))[0]??null;
     },
 
-    async poll({ownerId,channel,afterId=0,limit=100}){
+    async poll({ownerId,channel,afterId=0,limit=100,signal}){
       return rows(await rpc("realtime_poll",{
         p_owner_id:ownerId,
         p_channel:channel,
