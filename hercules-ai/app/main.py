@@ -96,6 +96,7 @@ async def chat(req:ChatRequest):
         payload={"model":req.model or model_by_slot[profile["model_slot"]],"messages":[m.model_dump() for m in req.messages],"stream":True,"max_tokens":profile["max_tokens"]}
         async def events():
             answer=[]
+            stream_complete=False
             try:
                 async with httpx.AsyncClient(timeout=profile["timeout_seconds"]) as client:
                     async with client.stream("POST",f"{BASE}/v1/chat/completions",json=payload) as r:
@@ -107,11 +108,13 @@ async def chat(req:ChatRequest):
                                 while "\n" in buffer:
                                     line,buffer=buffer.split("\n",1)
                                     line=line.rstrip("\r")
-                                    if line.startswith("data: ") and line[6:]!="[DONE]":
+                                    if line.startswith("data: ") and line[6:]=="[DONE]":
+                                        stream_complete=True
+                                    elif line.startswith("data: "):
                                         try: answer.append(json.loads(line[6:])["choices"][0]["delta"].get("content",""))
                                         except (json.JSONDecodeError,KeyError,IndexError,TypeError): pass
                                 yield chunk
-                if answer:
+                if answer and stream_complete:
                     conn=db()
                     conn.execute("insert into messages(id,conversation_id,role,content,created_at,sequence) values(?,?,?,?,?,?)",(str(uuid.uuid4()),cid,"assistant","".join(answer),int(time.time()),len(req.messages)))
                     conn.commit(); conn.close()
