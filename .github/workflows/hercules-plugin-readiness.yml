@@ -27,4 +27,5 @@ jobs:
       - name: Run Hercules plugin readiness tests
         run: |
           python -m pytest -q hercules-ai/tests/test_openai_plugin_readiness.py
-          node --test tests/hercules-plugin-submission-readiness.test.mjs hercules-ai/tests/test_mcp_oauth_wire.py
+          python -m pytest -q hercules-ai/tests/test_mcp_oauth_wire.py
+          node --test tests/hercules-plugin-submission-readiness.test.mjs
