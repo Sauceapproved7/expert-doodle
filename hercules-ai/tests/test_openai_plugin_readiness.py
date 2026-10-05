@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 MAIN = Path("hercules-ai/app/main.py").read_text()
@@ -55,3 +56,16 @@ def test_submission_metadata_has_owned_icons_and_complete_review_cases():
     for case in cases["negative"]:
         assert case["description"].strip()
         assert case["prompt"].strip()
+
+
+def test_plugin_has_first_party_website_and_support_urls():
+    manifest = json.loads(Path("plugin.json").read_text())
+    interface = manifest["extensions"]["com.openai"]["interface"]
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert interface["websiteURL"] == "https://hercules-mcp.onrender.com/plugin"
+    assert interface["supportURL"] == "https://hercules-mcp.onrender.com/plugin/support"
+    assert '@app.get("/plugin")' in main
+    assert '@app.get("/plugin/support")' in main
+    assert "Hercules by SauceApproved enterprise LLC" in main
+    assert "support" in main.lower()
