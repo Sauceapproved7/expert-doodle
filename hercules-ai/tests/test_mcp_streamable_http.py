@@ -100,7 +100,7 @@ def test_oauth_tool_contract_self_verifies_and_fails_closed_when_public_oauth_is
 
     assert "async def oauth_tool_contract_ready" in runtime
     assert 'tool.get("securitySchemes")' in runtime
-    assert 'wire.get("_meta")' in runtime
+    assert 'tool.get("_meta")' in runtime
     assert '"oauth_tool_contract_ready"' in main
     assert "if public_oauth_configured and not oauth_contract_ready" in main
     assert "Hercules MCP OAuth tool contract is not ready" in main
