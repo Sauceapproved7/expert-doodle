@@ -7,6 +7,8 @@ on:
       - "mcp.json"
       - "skills/hercules-readonly/**"
       - "hercules-ai/**"
+      - "scripts/verify-hercules-plugin-submission-readiness.mjs"
+      - "tests/hercules-plugin-submission-readiness.test.mjs"
       - ".github/workflows/hercules-plugin-readiness.yml"
 
 permissions:
@@ -23,4 +25,7 @@ jobs:
       - name: Install pinned Hercules MCP test runtime
         run: python -m pip install -r hercules-ai/requirements.txt pytest
       - name: Run Hercules plugin readiness tests
-        run: python -m pytest -q hercules-ai/tests/test_openai_plugin_readiness.py hercules-ai/tests/test_mcp_oauth_wire.py
+        run: |
+          python -m pytest -q hercules-ai/tests/test_openai_plugin_readiness.py
+          python -m pytest -q hercules-ai/tests/test_mcp_oauth_wire.py
+          node --test tests/hercules-plugin-submission-readiness.test.mjs
