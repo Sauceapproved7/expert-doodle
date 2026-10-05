@@ -250,6 +250,22 @@ async def app_icon_192():
 async def app_icon_512():
     return Response(content=_png_icon(512),media_type="image/png",headers={"Cache-Control":"public, max-age=86400"})
 
+@app.get("/plugin")
+async def plugin_website():
+    return HTMLResponse(
+        content="""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hercules by SauceApproved</title></head><body><main><h1>Hercules by SauceApproved enterprise LLC</h1><p>Hercules is a bounded read-only community plugin for service status, non-executing mission planning, minimized Vault summaries, model inventory, and Vault evidence verification.</p><p>The public tool surface cannot deploy, delete records, change accounts, process payments, or access private credentials.</p><p><a href="/plugin/support">Customer support</a></p></main></body></html>""",
+        headers={"Cache-Control":"public, max-age=300","X-Content-Type-Options":"nosniff"},
+    )
+
+
+@app.get("/plugin/support")
+async def plugin_support():
+    return HTMLResponse(
+        content="""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hercules Support</title></head><body><main><h1>Hercules Support</h1><p>Hercules by SauceApproved enterprise LLC</p><p>For non-sensitive plugin support, bug reports, or documentation issues, use the Hercules repository issue tracker.</p><p><a href="https://github.com/Sauceapproved7/expert-doodle/issues">Open Hercules support</a></p><p>Do not post passwords, API keys, access tokens, private customer data, or security vulnerabilities in a public issue. Use GitHub private vulnerability reporting for security reports when available.</p></main></body></html>""",
+        headers={"Cache-Control":"public, max-age=300","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"},
+    )
+
+
 @app.get("/oauth/consent")
 async def oauth_consent():
     if (
