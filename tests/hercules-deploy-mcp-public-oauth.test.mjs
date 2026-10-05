@@ -24,7 +24,7 @@ test("public MCP OAuth preserves provider-specific token binding", () => {
   assert.match(validation, /payload\.get\("scope"/);
   assert.match(validation, /validate_supabase_claims/);
   assert.match(validation, /payload\.get\("client_id"\)/);
-  assert.match(source, /MCP_OAUTH_MODE=="supabase"/);
+  assert.match(source, /MCP_OAUTH_MODE=="supabase"/);\n  assert.match(source, /\\/auth\\/v1\\/oauth\\/userinfo/);\n  assert.match(validation, /email_verified/);
   assert.match(source, /MCP_OAUTH_MODE=="introspection"/);
 });
 
