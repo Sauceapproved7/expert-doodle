@@ -71,6 +71,17 @@ async def validate_public_mcp_token(token:str)->bool:
         return False
     if payload.get("active") is not True:
         return False
+    if payload.get("iss") != MCP_AUTHORIZATION_SERVER:
+        return False
+    now=time.time()
+    exp=payload.get("exp")
+    if not isinstance(exp,(int,float)) or isinstance(exp,bool) or exp <= now:
+        return False
+    nbf=payload.get("nbf")
+    if nbf is not None and (
+        not isinstance(nbf,(int,float)) or isinstance(nbf,bool) or nbf > now
+    ):
+        return False
     audience=payload.get("aud")
     audiences={audience} if isinstance(audience,str) else set(audience or [])
     if MCP_RESOURCE not in audiences:
