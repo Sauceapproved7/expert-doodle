@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import Literal
-from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, transport_security
+from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, oauth_tool_contract_ready, transport_security
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 
@@ -33,12 +33,17 @@ mcp_asgi=hercules_mcp.streamable_http_app(
 
 @contextlib.asynccontextmanager
 async def lifespan(_app:FastAPI):
+    public_oauth_configured=bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_INTROSPECTION_URL and MCP_OAUTH_CLIENT_ID and MCP_OAUTH_CLIENT_SECRET)
+    oauth_contract_ready=await oauth_tool_contract_ready()
     readiness={"event":"hercules_mcp_readiness",
-               "public_oauth_configured":bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_INTROSPECTION_URL and MCP_OAUTH_CLIENT_ID and MCP_OAUTH_CLIENT_SECRET),
+               "public_oauth_configured":public_oauth_configured,
+               "oauth_tool_contract_ready":oauth_contract_ready,
                "owner_token_configured":bool(MCP_TOKEN),
                "domain_challenge_configured":bool(OPENAI_APPS_CHALLENGE),
                "transport_allowlist_configured":bool(effective_allowed_hosts())}
     print(json.dumps(readiness,sort_keys=True),flush=True)
+    if public_oauth_configured and not oauth_contract_ready:
+        raise RuntimeError("Hercules MCP OAuth tool contract is not ready")
     async with hercules_mcp.session_manager.run():
         yield
 
