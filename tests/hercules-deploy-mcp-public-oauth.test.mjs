@@ -26,3 +26,12 @@ test("owner bearer token remains a distinct fail-closed authentication path", ()
   assert.match(source, /secrets\.compare_digest/);
   assert.match(source, /validate_public_mcp_token/);
 });
+
+
+test("public MCP OAuth validates issuer and token time bounds", () => {
+  assert.match(source, /payload\.get\("iss"\)/);
+  assert.match(source, /MCP_AUTHORIZATION_SERVER/);
+  assert.match(source, /payload\.get\("exp"\)/);
+  assert.match(source, /payload\.get\("nbf"\)/);
+  assert.match(source, /time\.time\(\)/);
+});
