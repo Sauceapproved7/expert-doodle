@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Enforce repository-wide owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
-      - name: Install test runner
-        run: python -m pip install pytest
+      - name: Install pinned Hercules MCP test runtime
+        run: python -m pip install -r hercules-ai/requirements.txt pytest
       - name: Run Hercules plugin readiness tests
-        run: python -m pytest -q hercules-ai/tests/test_openai_plugin_readiness.py
+        run: python -m pytest -q hercules-ai/tests/test_openai_plugin_readiness.py hercules-ai/tests/test_mcp_oauth_wire.py
