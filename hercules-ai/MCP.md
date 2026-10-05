@@ -7,7 +7,7 @@ Hercules exposes its MCP server at `/mcp` using the official MCP SDK Streamable 
 - MCP tools are explicit allow-list entries and unknown tools fail closed.
 - The public surface is deliberately read-only and non-destructive.
 - Owner bearer-token authentication remains a separate owner-only path.
-- Community/public bearer tokens are validated through the configured OAuth verifier and must be bound to the configured Hercules MCP resource and the fixed least-privilege `hercules.read` scope.
+- Community/public bearer tokens are validated through the configured OAuth verifier and must be bound to the configured Hercules MCP resource and the provider-supported `openid email` scopes in Supabase mode.
 - Public hosting fails closed when MCP authentication is not configured.
 - Transport security uses DNS-rebinding protection and an explicit production host allowlist.
 - No shell, filesystem mutation, credential access, deployment, commerce mutation, account mutation, or secret-access tool is exposed through the community read-only surface.
@@ -18,7 +18,7 @@ When configured for public OAuth, Hercules publishes protected-resource metadata
 
 `/.well-known/oauth-protected-resource`
 
-Unauthorized MCP requests advertise that metadata through the `WWW-Authenticate` response header. Protected-resource metadata advertises `hercules.read`, and every public tool advertises the same OAuth requirement through top-level `securitySchemes` plus the `_meta.securitySchemes` compatibility mirror. MCP Python 2.3.0 uses a strict `Tool` model, so Hercules adds the required top-level field at the SDK `ServerMiddleware` wire boundary after `tools/list` serialization instead of weakening or forking the protocol model. The authorization server is configured independently from the owner bearer token. Hercules remains fail-closed until that provider is configured.
+Unauthorized MCP requests advertise that metadata through the `WWW-Authenticate` response header. Protected-resource metadata advertises `openid email` in Supabase mode, and every public tool advertises the same OAuth requirement through top-level `securitySchemes` plus the `_meta.securitySchemes` compatibility mirror. MCP Python 2.3.0 uses a strict `Tool` model, so Hercules adds the required top-level field at the SDK `ServerMiddleware` wire boundary after `tools/list` serialization instead of weakening or forking the protocol model. The authorization server is configured independently from the owner bearer token. Supabase does not currently support custom OAuth scopes, so Hercules keeps tool authority bounded through its read-only MCP surface and provider/user authorization rather than inventing an unsupported scope. Supabase bearer validation uses the provider's OAuth UserInfo endpoint and requires a matching subject plus verified email. Hercules remains fail-closed until that provider is configured.
 
 ## Public plugin packaging
 
