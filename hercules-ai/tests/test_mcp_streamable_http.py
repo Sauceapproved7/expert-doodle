@@ -87,7 +87,7 @@ def test_public_tools_advertise_oauth_security_contract():
     main = Path("hercules-ai/app/main.py").read_text()
 
     assert 'DEFAULT_PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
-    assert "SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")" in runtime
+    assert 'SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")' in runtime
     assert "PUBLIC_MCP_SCOPES = public_mcp_scopes()" in runtime
     assert '"securitySchemes"' in runtime
     assert '"security_schemes"' not in runtime
@@ -112,7 +112,7 @@ def test_supabase_oauth_mode_is_explicit_and_provider_compatible():
     runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
     main = Path("hercules-ai/app/main.py").read_text()
 
-    assert "SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")" in runtime
+    assert 'SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")' in runtime
     assert 'MCP_OAUTH_MODE=os.getenv("HERCULES_MCP_OAUTH_MODE","").strip().lower()' in main
     assert 'async def validate_supabase_mcp_token' in main
     assert 'MCP_OAUTH_USER_PATH="/auth/v1/oauth/userinfo"' in main
@@ -125,7 +125,7 @@ def test_oauth_scopes_are_provider_specific_not_globally_weakened():
     runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
 
     assert 'DEFAULT_PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
-    assert "SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")" in runtime
+    assert 'SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")' in runtime
     assert "def public_mcp_scopes()" in runtime
     assert 'mode == "supabase"' in runtime
     assert "PUBLIC_MCP_SCOPES = public_mcp_scopes()" in runtime
