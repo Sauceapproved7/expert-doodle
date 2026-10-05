@@ -11,15 +11,15 @@ test("public MCP OAuth validates tokens through a separate configured verifier",
   assert.match(source, /HERCULES_MCP_OAUTH_CLIENT_ID/);
   assert.match(source, /HERCULES_MCP_OAUTH_CLIENT_SECRET/);
   assert.match(source, /async def validate_public_mcp_token/);
-  assert.match(source, /"active"/);
+  assert.match(validation, /payload\.get\("active"\)/);
 });
 
 test("public MCP OAuth binds accepted tokens to the configured resource and scopes", () => {
   assert.match(runtime, /PUBLIC_MCP_SCOPES = \("hercules\.read",\)/);
   assert.match(source, /MCP_OAUTH_REQUIRED_SCOPES=set\(PUBLIC_MCP_SCOPES\)/);
   assert.match(source, /MCP_RESOURCE/);
-  assert.match(source, /"aud"/);
-  assert.match(source, /"scope"/);
+  assert.match(validation, /payload\.get\("aud"\)/);
+  assert.match(validation, /payload\.get\("scope"/);
 });
 
 test("owner bearer token remains a distinct fail-closed authentication path", () => {
