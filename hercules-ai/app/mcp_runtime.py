@@ -12,41 +12,64 @@ OAUTH_ONLY_SECURITY_SCHEMES = [
 ]
 
 
-class HerculesMCPServer(MCPServer):
-    async def list_tools(self):
-        tools = await super().list_tools()
-        security_schemes = [dict(scheme) for scheme in OAUTH_ONLY_SECURITY_SCHEMES]
-        return [
-            tool.model_copy(
-                update={
-                    "security_schemes": security_schemes,
-                    "meta": {
-                        **(tool.meta or {}),
-                        "securitySchemes": security_schemes,
-                    },
-                }
-            )
-            for tool in tools
-        ]
+def _oauth_security_schemes() -> list[dict]:
+    return [
+        {"type": scheme["type"], "scopes": list(scheme["scopes"])}
+        for scheme in OAUTH_ONLY_SECURITY_SCHEMES
+    ]
+
+
+def _inject_oauth_tool_security(result: dict) -> dict:
+    tools = result.get("tools")
+    if not isinstance(tools, list):
+        return result
+    secured_tools = []
+    for tool in tools:
+        if not isinstance(tool, dict):
+            secured_tools.append(tool)
+            continue
+        schemes = _oauth_security_schemes()
+        raw_meta = tool.get("_meta")
+        meta = raw_meta if isinstance(raw_meta, dict) else {}
+        secured_tools.append({
+            **tool,
+            "securitySchemes": schemes,
+            "_meta": {**meta, "securitySchemes": schemes},
+        })
+    return {**result, "tools": secured_tools}
+
+
+async def oauth_tool_security_middleware(ctx, call_next):
+    result = await call_next(ctx)
+    if ctx.method != "tools/list" or not isinstance(result, dict):
+        return result
+    return _inject_oauth_tool_security(result)
 
 
 async def oauth_tool_contract_ready() -> bool:
     tools = await hercules_mcp.list_tools()
-    if len(tools) != 5:
+    wire = _inject_oauth_tool_security({
+        "tools": [
+            tool.model_dump(by_alias=True, mode="json", exclude_none=True)
+            for tool in tools
+        ]
+    })
+    secured_tools = wire.get("tools", [])
+    if len(secured_tools) != 5:
         return False
-    for tool in tools:
-        wire = tool.model_dump(by_alias=True, exclude_none=True)
-        if wire.get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
+    for tool in secured_tools:
+        if tool.get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
             return False
-        if (wire.get("_meta") or {}).get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
+        if (tool.get("_meta") or {}).get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
             return False
     return True
 
 
-hercules_mcp = HerculesMCPServer(
+hercules_mcp = MCPServer(
     "hercules-mcp",
     version="1.1.0",
     instructions="Bounded read-only Hercules status, planning, model, and Vault verification tools.",
+    middleware=[oauth_tool_security_middleware],
 )
 
 READ_ONLY_CLOSED_WORLD = ToolAnnotations(
