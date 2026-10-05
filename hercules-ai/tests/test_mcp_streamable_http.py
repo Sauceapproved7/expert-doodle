@@ -129,3 +129,26 @@ def test_oauth_scopes_are_provider_specific_not_globally_weakened():
     assert "def public_mcp_scopes()" in runtime
     assert 'mode == "supabase"' in runtime
     assert "PUBLIC_MCP_SCOPES = public_mcp_scopes()" in runtime
+
+
+def test_oauth_consent_surface_is_controlled_and_fail_closed():
+    main = Path("hercules-ai/app/main.py").read_text()
+    consent = Path("hercules-ai/app/oauth_consent.py").read_text()
+
+    assert '@app.get("/oauth/consent")' in main
+    assert "render_oauth_consent" in main
+    assert "HERCULES_MCP_OAUTH_SUPABASE_ORIGIN" in main
+    assert "HERCULES_MCP_OAUTH_PUBLISHABLE_KEY" in main
+    assert "oauth_consent_not_configured" in main
+
+    assert "getAuthorizationDetails" in consent
+    assert "approveAuthorization" in consent
+    assert "denyAuthorization" in consent
+    assert "signInWithOtp" in consent
+    assert "shouldCreateUser:false" in consent
+    assert "authorization_id" in consent
+    assert "textContent" in consent
+    assert "innerHTML" not in consent
+    assert "@supabase/supabase-js@2.57.4" in consent
+    assert "service_role" not in consent.lower()
+    assert "SUPABASE_SERVICE_ROLE_KEY" not in consent
