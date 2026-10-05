@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import Literal
-from .mcp_runtime import effective_allowed_hosts, hercules_mcp, transport_security
+from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, transport_security
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 
@@ -23,7 +23,7 @@ MCP_AUTHORIZATION_SERVER=os.getenv("HERCULES_MCP_AUTHORIZATION_SERVER","").strip
 MCP_OAUTH_INTROSPECTION_URL=os.getenv("HERCULES_MCP_OAUTH_INTROSPECTION_URL","").strip()
 MCP_OAUTH_CLIENT_ID=os.getenv("HERCULES_MCP_OAUTH_CLIENT_ID","").strip()
 MCP_OAUTH_CLIENT_SECRET=os.getenv("HERCULES_MCP_OAUTH_CLIENT_SECRET","").strip()
-MCP_OAUTH_REQUIRED_SCOPES={value for value in os.getenv("HERCULES_MCP_OAUTH_REQUIRED_SCOPES","").split() if value}
+MCP_OAUTH_REQUIRED_SCOPES=set(PUBLIC_MCP_SCOPES)
 mcp_asgi=hercules_mcp.streamable_http_app(
     streamable_http_path="/",
     stateless_http=True,
@@ -173,6 +173,7 @@ async def oauth_protected_resource():
     return {
         "resource": MCP_RESOURCE,
         "authorization_servers": [MCP_AUTHORIZATION_SERVER],
+        "scopes_supported": list(PUBLIC_MCP_SCOPES),
         "bearer_methods_supported": ["header"],
     }
 
