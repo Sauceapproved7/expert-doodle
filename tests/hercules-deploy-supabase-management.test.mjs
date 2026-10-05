@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  SupabaseManagementAuthClient,
   SupabaseManagementEdgeFunctionClient,
   createSupabaseEdgeFunctionAdapterFromEnv,
 } from "../hercules-deploy/supabase-management.mjs";
@@ -271,4 +272,79 @@ test("management client validates deploy bundles and provider write statuses", a
   await assert.rejects(client.deleteFunction({projectRef, slug}), /delete failed with status 500/);
   status = 404;
   assert.deepEqual(await client.deleteFunction({projectRef, slug}), {deleted: false});
+});
+
+
+test("management auth client enables only the bounded Hercules OAuth server contract and verifies it", async () => {
+  const token = ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_");
+  const calls = [];
+  let configured = false;
+  const client = new SupabaseManagementAuthClient({
+    accessToken: token,
+    allowedProjectRefs: [projectRef],
+    fetchImpl: async (url, options = {}) => {
+      calls.push({url: String(url), options});
+      const parsed = new URL(String(url));
+      assert.equal(parsed.pathname, `/v1/projects/${projectRef}/config/auth`);
+      assert.equal(options.headers.authorization, "Bearer " + token);
+      assert.equal(String(url).includes(token), false);
+      if (options.method === "GET") {
+        return Response.json({
+          oauth_server_enabled: configured,
+          oauth_server_allow_dynamic_registration: configured,
+          oauth_server_authorization_path: configured ? "/oauth/consent" : "",
+        });
+      }
+      assert.equal(options.method, "PATCH");
+      assert.deepEqual(JSON.parse(options.body), {
+        oauth_server_enabled: true,
+        oauth_server_allow_dynamic_registration: true,
+        oauth_server_authorization_path: "/oauth/consent",
+      });
+      configured = true;
+      return Response.json({
+        oauth_server_enabled: true,
+        oauth_server_allow_dynamic_registration: true,
+        oauth_server_authorization_path: "/oauth/consent",
+      });
+    },
+  });
+
+  const result = await client.ensureHerculesOAuthServer({
+    projectRef,
+    authorized: true,
+  });
+
+  assert.equal(result.changed, true);
+  assert.equal(result.verified, true);
+  assert.equal(calls.filter((call) => call.options.method === "PATCH").length, 1);
+  assert.equal(Object.values(JSON.parse(calls.find((call) => call.options.method === "PATCH").options.body)).includes(token), false);
+});
+
+test("management auth client is idempotent and fails closed without explicit authorization or project allowlist", async () => {
+  const client = new SupabaseManagementAuthClient({
+    accessToken: ["sbp","fc","test","token","for","hercules","deploy","123456"].join("_"),
+    allowedProjectRefs: [projectRef],
+    fetchImpl: async (_url, options = {}) => {
+      assert.equal(options.method, "GET");
+      return Response.json({
+        oauth_server_enabled: true,
+        oauth_server_allow_dynamic_registration: true,
+        oauth_server_authorization_path: "/oauth/consent",
+      });
+    },
+  });
+
+  await assert.rejects(
+    client.ensureHerculesOAuthServer({projectRef, authorized: false}),
+    /explicit owner authorization is required/,
+  );
+  await assert.rejects(
+    client.ensureHerculesOAuthServer({projectRef: "zzzzzzzzzzzzzzzzzzzz", authorized: true}),
+    /project ref is not allowed/,
+  );
+  assert.deepEqual(
+    await client.ensureHerculesOAuthServer({projectRef, authorized: true}),
+    {changed: false, verified: true},
+  );
 });

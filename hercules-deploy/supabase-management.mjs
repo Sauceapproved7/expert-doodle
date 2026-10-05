@@ -211,6 +211,96 @@ export class SupabaseManagementEdgeFunctionClient {
   }
 }
 
+export class SupabaseManagementAuthClient {
+  constructor({
+    accessToken,
+    allowedProjectRefs,
+    baseUrl = "https://api.supabase.com",
+    fetchImpl = globalThis.fetch,
+  } = {}) {
+    if (typeof fetchImpl !== "function") throw new TypeError("fetch implementation is required");
+    const url = new URL(String(baseUrl));
+    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) {
+      throw new TypeError("Supabase management base URL must be a credential-free HTTPS URL");
+    }
+    this.accessToken = requireToken(accessToken);
+    this.allowedProjectRefs = new Set(normalizeAllowedProjectRefs(allowedProjectRefs));
+    this.baseUrl = url.origin;
+    this.fetchImpl = fetchImpl;
+  }
+
+  assertProject(projectRef) {
+    const ref = String(projectRef ?? "").trim();
+    if (!PROJECT_REF.test(ref)) throw new TypeError("Supabase project ref is invalid");
+    if (!this.allowedProjectRefs.has(ref)) throw new Error("Supabase project ref is not allowed");
+    return ref;
+  }
+
+  headers(extra = {}) {
+    return {
+      authorization: "Bearer " + this.accessToken,
+      accept: "application/json",
+      ...extra,
+    };
+  }
+
+  authConfigUrl(projectRef) {
+    const ref = this.assertProject(projectRef);
+    return this.baseUrl + "/v1/projects/" + encodeURIComponent(ref) + "/config/auth";
+  }
+
+  async getAuthConfig({projectRef}) {
+    const response = await this.fetchImpl(this.authConfigUrl(projectRef), {
+      method: "GET",
+      redirect: "error",
+      cache: "no-store",
+      headers: this.headers(),
+    });
+    if (!response.ok) {
+      throw new Error("Supabase auth config request failed with status " + response.status);
+    }
+    return readJson(response, "Supabase auth config");
+  }
+
+  static isHerculesOAuthConfig(config) {
+    return config?.oauth_server_enabled === true &&
+      config?.oauth_server_allow_dynamic_registration === true &&
+      config?.oauth_server_authorization_path === "/oauth/consent";
+  }
+
+  async ensureHerculesOAuthServer({projectRef, authorized = false} = {}) {
+    if (authorized !== true) throw new Error("explicit owner authorization is required");
+    const url = this.authConfigUrl(projectRef);
+    const current = await this.getAuthConfig({projectRef});
+    if (SupabaseManagementAuthClient.isHerculesOAuthConfig(current)) {
+      return {changed: false, verified: true};
+    }
+
+    const desired = {
+      oauth_server_enabled: true,
+      oauth_server_allow_dynamic_registration: true,
+      oauth_server_authorization_path: "/oauth/consent",
+    };
+    const response = await this.fetchImpl(url, {
+      method: "PATCH",
+      redirect: "error",
+      cache: "no-store",
+      headers: this.headers({"content-type": "application/json"}),
+      body: JSON.stringify(desired),
+    });
+    if (!response.ok) {
+      throw new Error("Supabase auth config update failed with status " + response.status);
+    }
+    await readJson(response, "Supabase auth config update");
+
+    const verified = await this.getAuthConfig({projectRef});
+    if (!SupabaseManagementAuthClient.isHerculesOAuthConfig(verified)) {
+      throw new Error("Supabase OAuth server configuration verification failed");
+    }
+    return {changed: true, verified: true};
+  }
+}
+
 export function createSupabaseEdgeFunctionAdapterFromEnv(
   env = process.env,
   {fetchImpl = globalThis.fetch} = {},
