@@ -88,7 +88,7 @@ def test_public_tools_advertise_oauth_security_contract():
 
     assert 'PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
     assert '"securitySchemes"' in runtime
-    assert '"security_schemes"' in runtime
+    assert runtime.count("meta=OAUTH_TOOL_META") == 5
     assert '"type": "oauth2"' in runtime
     assert '"scopes_supported": list(PUBLIC_MCP_SCOPES)' in main
     assert "MCP_OAUTH_REQUIRED_SCOPES=set(PUBLIC_MCP_SCOPES)" in main
