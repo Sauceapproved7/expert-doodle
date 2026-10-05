@@ -81,3 +81,17 @@ def validate_supabase_claims(
 
     scopes = set(str(payload.get("scope", "")).split())
     return required_scopes.issubset(scopes)
+
+
+def jwks_has_asymmetric_signing_key(payload: Mapping[str, Any]) -> bool:
+    keys = payload.get("keys")
+    if not isinstance(keys, list):
+        return False
+    for key in keys:
+        if not isinstance(key, Mapping):
+            continue
+        kty = key.get("kty")
+        alg = key.get("alg")
+        if (kty == "RSA" and alg == "RS256") or (kty == "EC" and alg == "ES256"):
+            return True
+    return False

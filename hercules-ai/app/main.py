@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, oauth_tool_contract_ready, transport_security
 from .oauth_consent import render_oauth_consent
-from .oauth_validation import validate_introspection_claims, validate_supabase_claims
+from .oauth_validation import jwks_has_asymmetric_signing_key, validate_introspection_claims, validate_supabase_claims
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 
@@ -50,11 +50,13 @@ async def lifespan(_app:FastAPI):
     )
     oauth_contract_ready=await oauth_tool_contract_ready()
     oauth_provider_discovery_ready, oauth_dynamic_registration_advertised=await probe_supabase_oauth_discovery()
+    oauth_asymmetric_signing_ready=await probe_supabase_asymmetric_signing()
     readiness={"event":"hercules_mcp_readiness",
                "public_oauth_configured":public_oauth_configured,
                "oauth_tool_contract_ready":oauth_contract_ready,
                "oauth_provider_discovery_ready":oauth_provider_discovery_ready,
                "oauth_dynamic_registration_advertised":oauth_dynamic_registration_advertised,
+               "oauth_asymmetric_signing_ready":oauth_asymmetric_signing_ready,
                "owner_token_configured":bool(MCP_TOKEN),
                "domain_challenge_configured":bool(OPENAI_APPS_CHALLENGE),
                "transport_allowlist_configured":bool(effective_allowed_hosts())}
@@ -90,6 +92,22 @@ async def probe_supabase_oauth_discovery()->tuple[bool,bool]:
         and payload.get("registration_endpoint").startswith(MCP_OAUTH_SUPABASE_ORIGIN+"/")
     )
     return bool(discovery_ready),bool(dynamic_registration)
+
+
+async def probe_supabase_asymmetric_signing()->bool:
+    if not MCP_OAUTH_SUPABASE_ORIGIN.startswith("https://"):
+        return False
+    jwks_url=MCP_OAUTH_SUPABASE_ORIGIN+"/auth/v1/.well-known/jwks.json"
+    try:
+        async with httpx.AsyncClient(timeout=5.0,follow_redirects=False) as client:
+            response=await client.get(jwks_url)
+        if response.status_code!=200:
+            return False
+        payload=response.json()
+    except (httpx.HTTPError,ValueError):
+        return False
+    return jwks_has_asymmetric_signing_key(payload)
+
 
 
 async def validate_introspection_mcp_token(token:str)->bool:
