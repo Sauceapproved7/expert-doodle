@@ -104,3 +104,21 @@ def test_oauth_tool_contract_self_verifies_and_fails_closed_when_public_oauth_is
     assert '"oauth_tool_contract_ready"' in main
     assert "if public_oauth_configured and not oauth_contract_ready" in main
     assert "Hercules MCP OAuth tool contract is not ready" in main
+
+
+def test_supabase_oauth_compatibility_remains_fail_closed_until_selected():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert 'PUBLIC_MCP_SCOPES = ()' in runtime
+    assert '"hercules.read"' not in runtime
+    assert 'MCP_OAUTH_MODE=os.getenv("HERCULES_MCP_OAUTH_MODE","").strip().lower()' in main
+    assert 'async def validate_supabase_mcp_token' in main
+    assert '"/auth/v1/user"' in main
+    assert '"apikey":MCP_OAUTH_PUBLISHABLE_KEY' in main
+    assert 'payload.get("iss") != MCP_OAUTH_ISSUER' in main
+    assert 'MCP_OAUTH_AUDIENCE not in audiences' in main
+    assert 'not payload.get("client_id")' in main
+    assert 'int(payload.get("exp",0)) <= int(time.time())' in main
+    assert 'if MCP_OAUTH_MODE=="supabase":' in main
+    assert 'if MCP_OAUTH_MODE=="introspection":' in main
