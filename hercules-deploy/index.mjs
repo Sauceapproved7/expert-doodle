@@ -7,5 +7,5 @@ export {HttpHerculesDeployClient} from "./client.mjs";
 export {createHerculesDeployService, listenHerculesDeployService} from "./control-api.mjs";
 export {readHerculesDeployConfig, safeHerculesDeployConfig, createHerculesDeployAdaptersFromEnv, startHerculesDeployService} from "./service.mjs";
 export {SupabaseEdgeFunctionTargetAdapter, fingerprintEdgeFunctionBundle, normalizeEdgeFunctionBundle} from "./supabase-edge.mjs";
-export {SupabaseManagementEdgeFunctionClient, createSupabaseEdgeFunctionAdapterFromEnv} from "./supabase-management.mjs";
+export {SupabaseManagementAuthClient, SupabaseManagementEdgeFunctionClient, createSupabaseEdgeFunctionAdapterFromEnv} from "./supabase-management.mjs";
 export {SHOPIFY_DNS_RECORDS, SpaceshipDnsClient, createSpaceshipDnsClientFromEnv, planShopifyDnsReconciliation} from "./spaceship-dns.mjs";
