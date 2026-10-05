@@ -72,27 +72,35 @@ app=FastAPI(title="Hercules AI Core",version="1.1.0",lifespan=lifespan)
 async def probe_supabase_oauth_discovery()->tuple[bool,bool]:
     if not MCP_OAUTH_SUPABASE_ORIGIN.startswith("https://"):
         return False,False
-    discovery_url=MCP_OAUTH_SUPABASE_ORIGIN+"/.well-known/oauth-authorization-server/auth/v1"
-    try:
-        async with httpx.AsyncClient(timeout=5.0,follow_redirects=False) as client:
-            response=await client.get(discovery_url)
-        if response.status_code!=200:
-            return False,False
-        payload=response.json()
-    except (httpx.HTTPError,ValueError):
-        return False,False
+    discovery_urls=(
+        MCP_OAUTH_SUPABASE_ORIGIN+"/.well-known/oauth-authorization-server/auth/v1",
+        MCP_OAUTH_SUPABASE_ORIGIN+"/auth/v1/.well-known/openid-configuration",
+    )
     expected_issuer=MCP_OAUTH_SUPABASE_ORIGIN+"/auth/v1"
-    discovery_ready=(
-        payload.get("issuer")==expected_issuer
-        and isinstance(payload.get("authorization_endpoint"),str)
-        and isinstance(payload.get("token_endpoint"),str)
-    )
-    dynamic_registration=(
-        discovery_ready
-        and isinstance(payload.get("registration_endpoint"),str)
-        and payload.get("registration_endpoint").startswith(MCP_OAUTH_SUPABASE_ORIGIN+"/")
-    )
-    return bool(discovery_ready),bool(dynamic_registration)
+    for discovery_url in discovery_urls:
+        try:
+            async with httpx.AsyncClient(timeout=5.0,follow_redirects=False) as client:
+                response=await client.get(discovery_url)
+            if response.status_code!=200:
+                continue
+            payload=response.json()
+        except (httpx.HTTPError,ValueError):
+            continue
+        discovery_ready=(
+            payload.get("issuer")==expected_issuer
+            and isinstance(payload.get("authorization_endpoint"),str)
+            and payload.get("authorization_endpoint").startswith(MCP_OAUTH_SUPABASE_ORIGIN+"/")
+            and isinstance(payload.get("token_endpoint"),str)
+            and payload.get("token_endpoint").startswith(MCP_OAUTH_SUPABASE_ORIGIN+"/")
+        )
+        if not discovery_ready:
+            continue
+        dynamic_registration=(
+            isinstance(payload.get("registration_endpoint"),str)
+            and payload.get("registration_endpoint").startswith(MCP_OAUTH_SUPABASE_ORIGIN+"/")
+        )
+        return True,bool(dynamic_registration)
+    return False,False
 
 
 async def probe_supabase_asymmetric_signing()->bool:

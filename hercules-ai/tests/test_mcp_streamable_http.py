@@ -205,3 +205,12 @@ def test_runtime_reports_management_token_presence_without_secret_value():
     assert '"supabase_management_token_configured"' in source
     assert 'bool(os.getenv("HERCULES_SUPABASE_ACCESS_TOKEN","").strip())' in source
     assert '"supabase_management_token":' not in source
+
+
+def test_supabase_oauth_discovery_uses_documented_oidc_fallback():
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert '"/.well-known/oauth-authorization-server/auth/v1"' in main
+    assert '"/auth/v1/.well-known/openid-configuration"' in main
+    assert "for discovery_url in discovery_urls" in main
+    assert "registration_endpoint" in main
