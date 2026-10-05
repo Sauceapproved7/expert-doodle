@@ -38,7 +38,9 @@
           "Verify the Hercules Vault evidence."
         ],
         "composerIcon": "./assets/hercules-plugin.svg",
-        "logo": "./assets/hercules-plugin.svg"
+        "logo": "./assets/hercules-plugin.svg",
+        "websiteURL": "https://hercules-mcp.onrender.com/plugin",
+        "supportURL": "https://hercules-mcp.onrender.com/plugin/support"
       },
       "onboardingSkill": "./skills/hercules-readonly/SKILL.md",
       "review": {
