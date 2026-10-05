@@ -42,6 +42,7 @@ test("current protected boundaries fail closed with exact blockers", () => {
     "legal_approval_missing",
     "demo_url_missing",
     "production_scan_not_passed",
+    "reviewer_credentials_missing",
   ]);
 });
 
@@ -58,6 +59,7 @@ test("complete evidence passes without weakening required review cases", () => {
     legalApproved: true,
     demoUrl: "https://example.com/reviewer-demo",
     productionScanPassed: true,
+    reviewerCredentialsReady: true,
   });
 
   assert.equal(result.ready, true);
@@ -78,6 +80,7 @@ test("wrong review-case counts remain a blocker", () => {
     legalApproved: true,
     demoUrl: "https://example.com/reviewer-demo",
     productionScanPassed: true,
+    reviewerCredentialsReady: true,
   });
 
   assert.equal(result.ready, false);
