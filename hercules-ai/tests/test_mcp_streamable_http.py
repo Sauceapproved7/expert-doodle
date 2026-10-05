@@ -189,3 +189,11 @@ def test_supabase_oauth_uses_openid_email_and_standard_userinfo():
     assert 'user_subject=str(user.get("sub",""))' in main
     assert 'email_verified=user.get("email_verified") is True' in main
     assert 'required_scopes=MCP_OAUTH_REQUIRED_SCOPES' in main
+
+
+def test_runtime_reports_asymmetric_openid_signing_readiness():
+    source = Path("hercules-ai/app/main.py").read_text()
+
+    assert "async def probe_supabase_asymmetric_signing" in source
+    assert '"/auth/v1/.well-known/jwks.json"' in source
+    assert '"oauth_asymmetric_signing_ready"' in source
