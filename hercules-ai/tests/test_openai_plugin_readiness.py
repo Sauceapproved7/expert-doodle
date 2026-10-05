@@ -69,3 +69,13 @@ def test_plugin_has_first_party_website_and_support_urls():
     assert '@app.get("/plugin/support")' in main
     assert "Hercules by SauceApproved enterprise LLC" in main
     assert "support" in main.lower()
+
+
+def test_vault_review_case_matches_minimized_public_contract():
+    manifest = json.loads(Path("plugin.json").read_text())
+    cases = manifest["extensions"]["com.openai"]["review"]["test_cases"]["positive"]
+    vault = next(case for case in cases if case["tools_triggered"] == "hercules.get_vault_summary")
+
+    assert "event count" in vault["expected_behavior"].lower()
+    assert "recent action names" in vault["expected_behavior"].lower()
+    assert "recent events" not in vault["expected_behavior"].lower()
