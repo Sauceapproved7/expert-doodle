@@ -15,14 +15,13 @@ OAUTH_ONLY_SECURITY_SCHEMES = [
 class HerculesMCPServer(MCPServer):
     async def list_tools(self):
         tools = await super().list_tools()
-        security_schemes = [dict(scheme) for scheme in OAUTH_ONLY_SECURITY_SCHEMES]
+        oauth_schemes = [dict(scheme) for scheme in OAUTH_ONLY_SECURITY_SCHEMES]
         return [
             tool.model_copy(
                 update={
-                    "security_schemes": security_schemes,
                     "meta": {
                         **(tool.meta or {}),
-                        "securitySchemes": security_schemes,
+                        "securitySchemes": oauth_schemes,
                     },
                 }
             )
@@ -36,8 +35,6 @@ async def oauth_tool_contract_ready() -> bool:
         return False
     for tool in tools:
         wire = tool.model_dump(by_alias=True, exclude_none=True)
-        if wire.get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
-            return False
         if (wire.get("_meta") or {}).get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
             return False
     return True
