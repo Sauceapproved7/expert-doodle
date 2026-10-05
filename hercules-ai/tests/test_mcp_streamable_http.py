@@ -57,3 +57,16 @@ def test_public_tool_contract_uses_action_oriented_names_and_usage_descriptions(
     assert "never returns raw event records" in runtime
     assert "Returns model name and size only" in runtime
     assert "Returns validity and event count only" in runtime
+
+
+def test_runtime_emits_non_secret_mcp_readiness_evidence():
+    source = Path("hercules-ai/app/main.py").read_text()
+
+    assert '"event":"hercules_mcp_readiness"' in source
+    assert '"public_oauth_configured"' in source
+    assert '"owner_token_configured"' in source
+    assert '"domain_challenge_configured"' in source
+    assert '"transport_allowlist_configured"' in source
+    assert "MCP_OAUTH_CLIENT_SECRET" in source
+    assert "OPENAI_APPS_CHALLENGE" in source
+    assert 'print(json.dumps(readiness' in source

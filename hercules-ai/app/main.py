@@ -33,6 +33,12 @@ mcp_asgi=hercules_mcp.streamable_http_app(
 
 @contextlib.asynccontextmanager
 async def lifespan(_app:FastAPI):
+    readiness={"event":"hercules_mcp_readiness",
+               "public_oauth_configured":bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_INTROSPECTION_URL and MCP_OAUTH_CLIENT_ID and MCP_OAUTH_CLIENT_SECRET),
+               "owner_token_configured":bool(MCP_TOKEN),
+               "domain_challenge_configured":bool(OPENAI_APPS_CHALLENGE),
+               "transport_allowlist_configured":bool(os.getenv("HERCULES_MCP_ALLOWED_HOSTS","").strip())}
+    print(json.dumps(readiness,sort_keys=True),flush=True)
     async with hercules_mcp.session_manager.run():
         yield
 
