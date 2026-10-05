@@ -20,6 +20,8 @@ When configured for public OAuth, Hercules publishes protected-resource metadata
 
 Unauthorized MCP requests advertise that metadata through the `WWW-Authenticate` response header. Protected-resource metadata advertises `hercules.read`, and every public tool advertises the same OAuth requirement through top-level `securitySchemes` plus the `_meta.securitySchemes` compatibility mirror. The authorization server is configured independently from the owner bearer token. Hercules remains fail-closed until that provider is configured.
 
+MCP Python 2.x uses a strict `Tool` model that discards undeclared top-level extras during model serialization. Hercules therefore adds the top-level `securitySchemes` field at the SDK `ServerMiddleware` wire boundary after `tools/list` serialization, while preserving the `_meta.securitySchemes` compatibility mirror. An executable plugin-readiness test imports the pinned MCP runtime and verifies this wire transformation.
+
 ## Public plugin packaging
 
 The repository contains:
