@@ -6,7 +6,7 @@ from mcp.types import ToolAnnotations
 
 from .mcp_server import call_tool
 
-PUBLIC_MCP_SCOPES = ("hercules.read",)
+PUBLIC_MCP_SCOPES = ()
 OAUTH_ONLY_SECURITY_SCHEMES = [
     {"type": "oauth2", "scopes": list(PUBLIC_MCP_SCOPES)}
 ]
