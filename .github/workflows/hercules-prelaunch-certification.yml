@@ -20,4 +20,4 @@ jobs:
       - run: node --test tests/hercules-recovery*.test.mjs
       - run: node --test tests/hercules-time-machine.test.mjs tests/hercules-unified-execution.test.mjs tests/hercules-command-surface.test.mjs tests/hercules-customer-foundation.test.mjs tests/hercules-launch-hardening.test.mjs tests/hercules-production-ops-readiness.test.mjs
       - run: python -m pip install pytest
-      - run: python -m pytest -q hercules-ai/tests/test_mcp_streamable_http.py hercules-ai/tests/test_mcp_public_response_minimization.py
+      - run: python -m pytest -q hercules-ai/tests/test_mcp_streamable_http.py hercules-ai/tests/test_mcp_public_response_minimization.py hercules-ai/tests/test_mcp_oauth_token_validation.py
