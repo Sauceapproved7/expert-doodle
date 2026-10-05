@@ -86,7 +86,7 @@ def test_public_tools_advertise_oauth_security_contract():
     runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
     main = Path("hercules-ai/app/main.py").read_text()
 
-    assert 'PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
+    assert 'PUBLIC_MCP_SCOPES = ()' in runtime
     assert '"securitySchemes"' in runtime
     assert '"security_schemes"' not in runtime
     assert '"type": "oauth2"' in runtime
