@@ -49,9 +49,12 @@ async def lifespan(_app:FastAPI):
         and bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_SUPABASE_ORIGIN and MCP_OAUTH_PUBLISHABLE_KEY and MCP_OAUTH_ISSUER)
     )
     oauth_contract_ready=await oauth_tool_contract_ready()
+    oauth_provider_discovery_ready, oauth_dynamic_registration_advertised=await probe_supabase_oauth_discovery()
     readiness={"event":"hercules_mcp_readiness",
                "public_oauth_configured":public_oauth_configured,
                "oauth_tool_contract_ready":oauth_contract_ready,
+               "oauth_provider_discovery_ready":oauth_provider_discovery_ready,
+               "oauth_dynamic_registration_advertised":oauth_dynamic_registration_advertised,
                "owner_token_configured":bool(MCP_TOKEN),
                "domain_challenge_configured":bool(OPENAI_APPS_CHALLENGE),
                "transport_allowlist_configured":bool(effective_allowed_hosts())}
@@ -62,6 +65,32 @@ async def lifespan(_app:FastAPI):
         yield
 
 app=FastAPI(title="Hercules AI Core",version="1.1.0",lifespan=lifespan)
+
+async def probe_supabase_oauth_discovery()->tuple[bool,bool]:
+    if not MCP_OAUTH_SUPABASE_ORIGIN.startswith("https://"):
+        return False,False
+    discovery_url=MCP_OAUTH_SUPABASE_ORIGIN+"/.well-known/oauth-authorization-server/auth/v1"
+    try:
+        async with httpx.AsyncClient(timeout=5.0,follow_redirects=False) as client:
+            response=await client.get(discovery_url)
+        if response.status_code!=200:
+            return False,False
+        payload=response.json()
+    except (httpx.HTTPError,ValueError):
+        return False,False
+    expected_issuer=MCP_OAUTH_SUPABASE_ORIGIN+"/auth/v1"
+    discovery_ready=(
+        payload.get("issuer")==expected_issuer
+        and isinstance(payload.get("authorization_endpoint"),str)
+        and isinstance(payload.get("token_endpoint"),str)
+    )
+    dynamic_registration=(
+        discovery_ready
+        and isinstance(payload.get("registration_endpoint"),str)
+        and payload.get("registration_endpoint").startswith(MCP_OAUTH_SUPABASE_ORIGIN+"/")
+    )
+    return bool(discovery_ready),bool(dynamic_registration)
+
 
 async def validate_introspection_mcp_token(token:str)->bool:
     if not (
