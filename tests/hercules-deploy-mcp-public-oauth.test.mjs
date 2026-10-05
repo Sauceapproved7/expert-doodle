@@ -16,7 +16,7 @@ test("public MCP OAuth validates tokens through a separate configured verifier",
 
 test("public MCP OAuth preserves provider-specific token binding", () => {
   assert.match(runtime, /DEFAULT_PUBLIC_MCP_SCOPES = \("hercules\.read",\)/);
-  assert.match(runtime, /SUPABASE_PUBLIC_MCP_SCOPES = \(\)/);
+  assert.match(runtime, /SUPABASE_PUBLIC_MCP_SCOPES = \("openid", "email"\)/);
   assert.match(runtime, /PUBLIC_MCP_SCOPES = public_mcp_scopes\(\)/);
   assert.match(source, /MCP_OAUTH_REQUIRED_SCOPES=set\(PUBLIC_MCP_SCOPES\)/);
   assert.match(source, /MCP_RESOURCE/);
@@ -25,6 +25,8 @@ test("public MCP OAuth preserves provider-specific token binding", () => {
   assert.match(validation, /validate_supabase_claims/);
   assert.match(validation, /payload\.get\("client_id"\)/);
   assert.match(source, /MCP_OAUTH_MODE=="supabase"/);
+  assert.match(source, /\/auth\/v1\/oauth\/userinfo/);
+  assert.match(validation, /email_verified/);
   assert.match(source, /MCP_OAUTH_MODE=="introspection"/);
 });
 
@@ -33,7 +35,6 @@ test("owner bearer token remains a distinct fail-closed authentication path", ()
   assert.match(source, /secrets\.compare_digest/);
   assert.match(source, /validate_public_mcp_token/);
 });
-
 
 test("public MCP OAuth validates issuer and token time bounds", () => {
   assert.match(source, /validate_introspection_claims/);

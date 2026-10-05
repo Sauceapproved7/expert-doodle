@@ -7,7 +7,7 @@ from mcp.types import ToolAnnotations
 from .mcp_server import call_tool
 
 DEFAULT_PUBLIC_MCP_SCOPES = ("hercules.read",)
-SUPABASE_PUBLIC_MCP_SCOPES = ()
+SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")
 
 def public_mcp_scopes() -> tuple[str, ...]:
     mode = os.getenv("HERCULES_MCP_OAUTH_MODE", "").strip().lower()

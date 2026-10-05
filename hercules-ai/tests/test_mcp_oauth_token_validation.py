@@ -66,15 +66,43 @@ def test_supabase_claims_require_exact_identity_and_time_binding():
         "client_id": "client-1",
         "exp": 2000,
     }
-    assert validate_supabase(
-        payload,
-        user_id="user-1",
-        issuer="https://project.supabase.co/auth/v1",
-        audience="authenticated",
-        now=1000,
-    ) is True
-    assert validate_supabase({**payload, "iss": "https://evil.test"}, user_id="user-1", issuer="https://project.supabase.co/auth/v1", audience="authenticated", now=1000) is False
-    assert validate_supabase({**payload, "aud": "other"}, user_id="user-1", issuer="https://project.supabase.co/auth/v1", audience="authenticated", now=1000) is False
-    assert validate_supabase({**payload, "sub": "user-2"}, user_id="user-1", issuer="https://project.supabase.co/auth/v1", audience="authenticated", now=1000) is False
-    assert validate_supabase({**payload, "client_id": ""}, user_id="user-1", issuer="https://project.supabase.co/auth/v1", audience="authenticated", now=1000) is False
-    assert validate_supabase({**payload, "exp": 999}, user_id="user-1", issuer="https://project.supabase.co/auth/v1", audience="authenticated", now=1000) is False
+    payload["scope"] = "openid email"
+    kwargs = {
+        "user_subject": "user-1",
+        "email_verified": True,
+        "issuer": "https://project.supabase.co/auth/v1",
+        "audience": "authenticated",
+        "required_scopes": {"openid", "email"},
+        "now": 1000,
+    }
+    assert validate_supabase(payload, **kwargs) is True
+    assert validate_supabase({**payload, "iss": "https://evil.test"}, **kwargs) is False
+    assert validate_supabase({**payload, "aud": "other"}, **kwargs) is False
+    assert validate_supabase({**payload, "sub": "user-2"}, **kwargs) is False
+    assert validate_supabase({**payload, "client_id": ""}, **kwargs) is False
+    assert validate_supabase({**payload, "exp": 999}, **kwargs) is False
+
+
+def test_supabase_claims_require_openid_email_scope_and_verified_email():
+    validate_supabase = oauth_validation.validate_supabase_claims
+    payload = {
+        "iss": "https://project.supabase.co/auth/v1",
+        "aud": "authenticated",
+        "sub": "user-1",
+        "client_id": "client-1",
+        "scope": "openid email",
+        "exp": 2000,
+    }
+    kwargs = {
+        "user_subject": "user-1",
+        "email_verified": True,
+        "issuer": "https://project.supabase.co/auth/v1",
+        "audience": "authenticated",
+        "required_scopes": {"openid", "email"},
+        "now": 1000,
+    }
+    assert validate_supabase(payload, **kwargs) is True
+    assert validate_supabase(payload, **{**kwargs, "email_verified": False}) is False
+    assert validate_supabase({**payload, "scope": "email"}, **kwargs) is False
+    assert validate_supabase({**payload, "scope": "openid"}, **kwargs) is False
+    assert validate_supabase(payload, **{**kwargs, "user_subject": "user-2"}) is False

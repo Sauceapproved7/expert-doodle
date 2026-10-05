@@ -87,7 +87,7 @@ def test_public_tools_advertise_oauth_security_contract():
     main = Path("hercules-ai/app/main.py").read_text()
 
     assert 'DEFAULT_PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
-    assert "SUPABASE_PUBLIC_MCP_SCOPES = ()" in runtime
+    assert 'SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")' in runtime
     assert "PUBLIC_MCP_SCOPES = public_mcp_scopes()" in runtime
     assert '"securitySchemes"' in runtime
     assert '"security_schemes"' not in runtime
@@ -112,11 +112,11 @@ def test_supabase_oauth_mode_is_explicit_and_provider_compatible():
     runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
     main = Path("hercules-ai/app/main.py").read_text()
 
-    assert "SUPABASE_PUBLIC_MCP_SCOPES = ()" in runtime
+    assert 'SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")' in runtime
     assert 'MCP_OAUTH_MODE=os.getenv("HERCULES_MCP_OAUTH_MODE","").strip().lower()' in main
     assert 'async def validate_supabase_mcp_token' in main
-    assert 'MCP_OAUTH_USER_PATH="/auth/v1/user"' in main
-    assert '"apikey":MCP_OAUTH_PUBLISHABLE_KEY' in main
+    assert 'MCP_OAUTH_USER_PATH="/auth/v1/oauth/userinfo"' in main
+    assert '"apikey":MCP_OAUTH_PUBLISHABLE_KEY' not in main[main.index("async def validate_supabase_mcp_token"):main.index("async def validate_public_mcp_token")]
     assert 'if MCP_OAUTH_MODE=="supabase":' in main
     assert 'if MCP_OAUTH_MODE=="introspection":' in main
 
@@ -125,7 +125,7 @@ def test_oauth_scopes_are_provider_specific_not_globally_weakened():
     runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
 
     assert 'DEFAULT_PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
-    assert "SUPABASE_PUBLIC_MCP_SCOPES = ()" in runtime
+    assert 'SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")' in runtime
     assert "def public_mcp_scopes()" in runtime
     assert 'mode == "supabase"' in runtime
     assert "PUBLIC_MCP_SCOPES = public_mcp_scopes()" in runtime
@@ -174,3 +174,18 @@ def test_oauth_consent_supports_existing_account_password_review_login():
     assert "signUp" not in consent
     assert "createUser" not in consent
     assert "Password is sent directly to Supabase Auth" in consent
+
+
+def test_supabase_oauth_uses_openid_email_and_standard_userinfo():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert 'SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")' in runtime
+    assert 'MCP_OAUTH_USER_PATH="/auth/v1/oauth/userinfo"' in main
+    assert '"apikey":MCP_OAUTH_PUBLISHABLE_KEY' not in main[
+        main.index("async def validate_supabase_mcp_token"):
+        main.index("async def validate_public_mcp_token")
+    ]
+    assert 'user_subject=str(user.get("sub",""))' in main
+    assert 'email_verified=user.get("email_verified") is True' in main
+    assert 'required_scopes=MCP_OAUTH_REQUIRED_SCOPES' in main

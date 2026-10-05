@@ -28,7 +28,7 @@ MCP_OAUTH_CLIENT_SECRET=os.getenv("HERCULES_MCP_OAUTH_CLIENT_SECRET","").strip()
 MCP_OAUTH_REQUIRED_SCOPES=set(PUBLIC_MCP_SCOPES)
 MCP_OAUTH_MODE=os.getenv("HERCULES_MCP_OAUTH_MODE","").strip().lower()
 MCP_OAUTH_SUPABASE_ORIGIN=os.getenv("HERCULES_MCP_OAUTH_SUPABASE_ORIGIN","").strip().rstrip("/")
-MCP_OAUTH_USER_PATH="/auth/v1/user"
+MCP_OAUTH_USER_PATH="/auth/v1/oauth/userinfo"
 MCP_OAUTH_PUBLISHABLE_KEY=os.getenv("HERCULES_MCP_OAUTH_PUBLISHABLE_KEY","").strip()
 MCP_OAUTH_ISSUER=os.getenv("HERCULES_MCP_OAUTH_ISSUER","").strip()
 MCP_OAUTH_AUDIENCE=os.getenv("HERCULES_MCP_OAUTH_AUDIENCE","authenticated").strip()
@@ -138,7 +138,7 @@ async def validate_supabase_mcp_token(token:str)->bool:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response=await client.get(
                 MCP_OAUTH_SUPABASE_ORIGIN+MCP_OAUTH_USER_PATH,
-                headers={"apikey":MCP_OAUTH_PUBLISHABLE_KEY,"Authorization":f"Bearer {token}"},
+                headers={"Authorization":f"Bearer {token}"},
             )
         if response.status_code!=200:
             return False
@@ -150,9 +150,11 @@ async def validate_supabase_mcp_token(token:str)->bool:
         return False
     return validate_supabase_claims(
         payload,
-        user_id=str(user.get("id","")),
+        user_subject=str(user.get("sub","")),
+        email_verified=user.get("email_verified") is True,
         issuer=MCP_OAUTH_ISSUER,
         audience=MCP_OAUTH_AUDIENCE,
+        required_scopes=MCP_OAUTH_REQUIRED_SCOPES,
         now=time.time(),
     )
 

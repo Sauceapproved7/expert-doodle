@@ -39,9 +39,11 @@ def validate_introspection_claims(
 def validate_supabase_claims(
     payload: Mapping[str, Any],
     *,
-    user_id: str,
+    user_subject: str,
+    email_verified: bool,
     issuer: str,
     audience: str,
+    required_scopes: Set[str],
     now: float,
 ) -> bool:
     if payload.get("iss") != issuer:
@@ -67,8 +69,15 @@ def validate_supabase_claims(
         return False
 
     subject = payload.get("sub")
-    if not isinstance(subject, str) or not subject or subject != user_id:
+    if not isinstance(subject, str) or not subject or subject != user_subject:
         return False
 
     client_id = payload.get("client_id")
-    return isinstance(client_id, str) and bool(client_id.strip())
+    if not isinstance(client_id, str) or not client_id.strip():
+        return False
+
+    if email_verified is not True:
+        return False
+
+    scopes = set(str(payload.get("scope", "")).split())
+    return required_scopes.issubset(scopes)
