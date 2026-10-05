@@ -62,7 +62,7 @@
               "description": "Inspect Vault status",
               "prompt": "Show the latest Hercules Vault status and recent events.",
               "tools_triggered": "hercules.get_vault_summary",
-              "expected_behavior": "Return only the read-only Vault status and recent events exposed by Hercules."
+              "expected_behavior": "Return only the minimized read-only Vault summary: append-only status, mutation authority false, event count, and recent action names; do not expose raw event records, identifiers, timestamps, details, or hashes."
             },
             {
               "description": "List installed models",
