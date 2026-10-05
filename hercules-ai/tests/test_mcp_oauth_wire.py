@@ -1,5 +1,9 @@
 import asyncio
+import sys
+from pathlib import Path
 from types import SimpleNamespace
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.mcp_runtime import OAUTH_ONLY_SECURITY_SCHEMES, oauth_tool_security_middleware
 
