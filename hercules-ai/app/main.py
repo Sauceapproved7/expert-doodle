@@ -221,7 +221,7 @@ async def app_icon_192():
 async def app_icon_512():
     return Response(content=_png_icon(512),media_type="image/png",headers={"Cache-Control":"public, max-age=86400"})
 
-@app.get("/oauth/consent",include_in_schema=False)
+@app.get("/oauth/consent")
 async def oauth_consent():
     if (
         MCP_OAUTH_MODE!="supabase"
