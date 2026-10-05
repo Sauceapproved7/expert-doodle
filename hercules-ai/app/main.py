@@ -1,4 +1,4 @@
-import os, sqlite3, time, uuid, json, asyncio, secrets, struct, zlib, contextlib
+import os, sqlite3, time, uuid, json, asyncio, secrets, struct, zlib, contextlib, base64
 from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse, FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import Literal
 from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, oauth_tool_contract_ready, transport_security
-from .oauth_validation import validate_introspection_claims
+from .oauth_validation import validate_introspection_claims, validate_supabase_claims
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 
@@ -25,6 +25,12 @@ MCP_OAUTH_INTROSPECTION_URL=os.getenv("HERCULES_MCP_OAUTH_INTROSPECTION_URL","")
 MCP_OAUTH_CLIENT_ID=os.getenv("HERCULES_MCP_OAUTH_CLIENT_ID","").strip()
 MCP_OAUTH_CLIENT_SECRET=os.getenv("HERCULES_MCP_OAUTH_CLIENT_SECRET","").strip()
 MCP_OAUTH_REQUIRED_SCOPES=set(PUBLIC_MCP_SCOPES)
+MCP_OAUTH_MODE=os.getenv("HERCULES_MCP_OAUTH_MODE","").strip().lower()
+MCP_OAUTH_SUPABASE_ORIGIN=os.getenv("HERCULES_MCP_OAUTH_SUPABASE_ORIGIN","").strip().rstrip("/")
+MCP_OAUTH_USER_PATH="/auth/v1/user"
+MCP_OAUTH_PUBLISHABLE_KEY=os.getenv("HERCULES_MCP_OAUTH_PUBLISHABLE_KEY","").strip()
+MCP_OAUTH_ISSUER=os.getenv("HERCULES_MCP_OAUTH_ISSUER","").strip()
+MCP_OAUTH_AUDIENCE=os.getenv("HERCULES_MCP_OAUTH_AUDIENCE","authenticated").strip()
 mcp_asgi=hercules_mcp.streamable_http_app(
     streamable_http_path="/",
     stateless_http=True,
@@ -34,7 +40,13 @@ mcp_asgi=hercules_mcp.streamable_http_app(
 
 @contextlib.asynccontextmanager
 async def lifespan(_app:FastAPI):
-    public_oauth_configured=bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_INTROSPECTION_URL and MCP_OAUTH_CLIENT_ID and MCP_OAUTH_CLIENT_SECRET)
+    public_oauth_configured=(
+        MCP_OAUTH_MODE=="introspection"
+        and bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_INTROSPECTION_URL and MCP_OAUTH_CLIENT_ID and MCP_OAUTH_CLIENT_SECRET)
+    ) or (
+        MCP_OAUTH_MODE=="supabase"
+        and bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_SUPABASE_ORIGIN and MCP_OAUTH_PUBLISHABLE_KEY and MCP_OAUTH_ISSUER)
+    )
     oauth_contract_ready=await oauth_tool_contract_ready()
     readiness={"event":"hercules_mcp_readiness",
                "public_oauth_configured":public_oauth_configured,
@@ -50,7 +62,7 @@ async def lifespan(_app:FastAPI):
 
 app=FastAPI(title="Hercules AI Core",version="1.1.0",lifespan=lifespan)
 
-async def validate_public_mcp_token(token:str)->bool:
+async def validate_introspection_mcp_token(token:str)->bool:
     if not (
         MCP_OAUTH_INTROSPECTION_URL
         and MCP_OAUTH_CLIENT_ID
@@ -77,6 +89,49 @@ async def validate_public_mcp_token(token:str)->bool:
         required_scopes=MCP_OAUTH_REQUIRED_SCOPES,
         now=time.time(),
     )
+
+def _decode_jwt_payload(token:str)->dict|None:
+    parts=token.split(".")
+    if len(parts)!=3:
+        return None
+    try:
+        padded=parts[1]+"="*(-len(parts[1])%4)
+        payload=json.loads(base64.urlsafe_b64decode(padded.encode()).decode())
+    except (ValueError,UnicodeDecodeError,json.JSONDecodeError):
+        return None
+    return payload if isinstance(payload,dict) else None
+
+async def validate_supabase_mcp_token(token:str)->bool:
+    if not (MCP_OAUTH_SUPABASE_ORIGIN and MCP_OAUTH_PUBLISHABLE_KEY and MCP_OAUTH_ISSUER):
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response=await client.get(
+                MCP_OAUTH_SUPABASE_ORIGIN+MCP_OAUTH_USER_PATH,
+                headers={"apikey":MCP_OAUTH_PUBLISHABLE_KEY,"Authorization":f"Bearer {token}"},
+            )
+        if response.status_code!=200:
+            return False
+        user=response.json()
+    except (httpx.HTTPError,ValueError):
+        return False
+    payload=_decode_jwt_payload(token)
+    if payload is None or not isinstance(user,dict):
+        return False
+    return validate_supabase_claims(
+        payload,
+        user_id=str(user.get("id","")),
+        issuer=MCP_OAUTH_ISSUER,
+        audience=MCP_OAUTH_AUDIENCE,
+        now=time.time(),
+    )
+
+async def validate_public_mcp_token(token:str)->bool:
+    if MCP_OAUTH_MODE=="supabase":
+        return await validate_supabase_mcp_token(token)
+    if MCP_OAUTH_MODE=="introspection":
+        return await validate_introspection_mcp_token(token)
+    return False
 
 @app.middleware("http")
 async def protect_mcp(request, call_next):

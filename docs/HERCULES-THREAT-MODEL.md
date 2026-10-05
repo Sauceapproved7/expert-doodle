@@ -143,3 +143,12 @@ Controls: constant-time internal-key digest comparison; service-role-only target
 ### Operator security source registry boundary
 
 The existing Forge bearer-authenticated operator API reads a local security-source metadata snapshot, not remote source artifacts. Loading requires the separately pinned catalog SHA-256. Input bytes, source counts, policy enums, HTTPS source URLs, IDs, and relationship targets are validated before search. Search inputs and result counts are bounded; unknown/duplicate query parameters are rejected. Hazardous entries remain quarantined metadata with no fetch or execution authority. Returned records are independent copies. No user-controlled URL, path, catalog checksum, or payload can trigger network retrieval or filesystem traversal. Canonical and alternate source links are informational. Existing no-store response headers and operator credential validation remain in force; catalog failure closes with 503. Freshness observations are historical snapshots, not proof of current source completeness.
+
+
+### Public MCP OAuth provider boundary
+
+26. **ChatGPT/Codex MCP client -> OAuth provider -> Hercules MCP resource server**: an untrusted bearer token crosses an external identity-provider boundary before any of the five public read-only Hercules tools may run. Owner-token authorization remains a separate control path.
+
+Controls: provider mode is explicit and fail-closed; an empty mode authorizes no public OAuth; the generic introspection verifier remains isolated from the Supabase verifier; Supabase mode uses only a publishable project key to ask the project Auth server to validate the bearer token, never a service-role or JWT signing secret; after provider validation Hercules independently checks exact issuer, expected audience, expiration, optional not-before, non-empty OAuth client ID, and subject equality with the provider-validated user record; malformed JWT payloads fail closed; the five public tools remain read-only, non-destructive, closed-world, idempotent, and response-minimized; owner bearer credentials are never returned to or exchanged with the OAuth provider.
+
+Supabase OAuth compatibility is implementation readiness only. It does not prove that OAuth Server, dynamic client registration, asymmetric signing, an authorization/consent UI, OpenAI domain verification, or public OAuth environment configuration is active in production.

@@ -86,7 +86,9 @@ def test_public_tools_advertise_oauth_security_contract():
     runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
     main = Path("hercules-ai/app/main.py").read_text()
 
-    assert 'PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
+    assert 'DEFAULT_PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
+    assert "SUPABASE_PUBLIC_MCP_SCOPES = ()" in runtime
+    assert "PUBLIC_MCP_SCOPES = public_mcp_scopes()" in runtime
     assert '"securitySchemes"' in runtime
     assert '"security_schemes"' not in runtime
     assert '"type": "oauth2"' in runtime
@@ -104,3 +106,26 @@ def test_oauth_tool_contract_self_verifies_and_fails_closed_when_public_oauth_is
     assert '"oauth_tool_contract_ready"' in main
     assert "if public_oauth_configured and not oauth_contract_ready" in main
     assert "Hercules MCP OAuth tool contract is not ready" in main
+
+
+def test_supabase_oauth_mode_is_explicit_and_provider_compatible():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert "SUPABASE_PUBLIC_MCP_SCOPES = ()" in runtime
+    assert 'MCP_OAUTH_MODE=os.getenv("HERCULES_MCP_OAUTH_MODE","").strip().lower()' in main
+    assert 'async def validate_supabase_mcp_token' in main
+    assert 'MCP_OAUTH_USER_PATH="/auth/v1/user"' in main
+    assert '"apikey":MCP_OAUTH_PUBLISHABLE_KEY' in main
+    assert 'if MCP_OAUTH_MODE=="supabase":' in main
+    assert 'if MCP_OAUTH_MODE=="introspection":' in main
+
+
+def test_oauth_scopes_are_provider_specific_not_globally_weakened():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+
+    assert 'DEFAULT_PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
+    assert "SUPABASE_PUBLIC_MCP_SCOPES = ()" in runtime
+    assert "def public_mcp_scopes()" in runtime
+    assert 'mode == "supabase"' in runtime
+    assert "PUBLIC_MCP_SCOPES = public_mcp_scopes()" in runtime

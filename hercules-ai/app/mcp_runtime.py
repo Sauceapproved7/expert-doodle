@@ -6,7 +6,14 @@ from mcp.types import ToolAnnotations
 
 from .mcp_server import call_tool
 
-PUBLIC_MCP_SCOPES = ("hercules.read",)
+DEFAULT_PUBLIC_MCP_SCOPES = ("hercules.read",)
+SUPABASE_PUBLIC_MCP_SCOPES = ()
+
+def public_mcp_scopes() -> tuple[str, ...]:
+    mode = os.getenv("HERCULES_MCP_OAUTH_MODE", "").strip().lower()
+    return SUPABASE_PUBLIC_MCP_SCOPES if mode == "supabase" else DEFAULT_PUBLIC_MCP_SCOPES
+
+PUBLIC_MCP_SCOPES = public_mcp_scopes()
 OAUTH_ONLY_SECURITY_SCHEMES = [
     {"type": "oauth2", "scopes": list(PUBLIC_MCP_SCOPES)}
 ]
