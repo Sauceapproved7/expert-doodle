@@ -26,6 +26,7 @@ export function evaluateSubmissionReadiness(manifest, evidence = {}) {
   if (!evidence.legalApproved) blockers.push("legal_approval_missing");
   if (!isHttpsUrl(evidence.demoUrl)) blockers.push("demo_url_missing");
   if (!evidence.productionScanPassed) blockers.push("production_scan_not_passed");
+  if (!evidence.reviewerCredentialsReady) blockers.push("reviewer_credentials_missing");
   if (positiveCases !== 5 || negativeCases !== 3) blockers.push("review_case_count_invalid");
 
   return {
