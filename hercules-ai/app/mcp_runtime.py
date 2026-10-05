@@ -10,40 +10,10 @@ PUBLIC_MCP_SCOPES = ("hercules.read",)
 OAUTH_ONLY_SECURITY_SCHEMES = [
     {"type": "oauth2", "scopes": list(PUBLIC_MCP_SCOPES)}
 ]
+OAUTH_TOOL_META = {"securitySchemes": OAUTH_ONLY_SECURITY_SCHEMES}
 
 
-class HerculesMCPServer(MCPServer):
-    async def list_tools(self):
-        tools = await super().list_tools()
-        security_schemes = [dict(scheme) for scheme in OAUTH_ONLY_SECURITY_SCHEMES]
-        return [
-            tool.model_copy(
-                update={
-                    "security_schemes": security_schemes,
-                    "meta": {
-                        **(tool.meta or {}),
-                        "securitySchemes": security_schemes,
-                    },
-                }
-            )
-            for tool in tools
-        ]
-
-
-async def oauth_tool_contract_ready() -> bool:
-    tools = await hercules_mcp.list_tools()
-    if len(tools) != 5:
-        return False
-    for tool in tools:
-        wire = tool.model_dump(by_alias=True, exclude_none=True)
-        if wire.get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
-            return False
-        if (wire.get("_meta") or {}).get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
-            return False
-    return True
-
-
-hercules_mcp = HerculesMCPServer(
+hercules_mcp = MCPServer(
     "hercules-mcp",
     version="1.1.0",
     instructions="Bounded read-only Hercules status, planning, model, and Vault verification tools.",
@@ -93,6 +63,7 @@ def _text(name: str, arguments: dict) -> str:
     title="Get Hercules status",
     description="Use when the user asks whether Hercules is running or wants its current service status. Returns a bounded read-only summary and never changes Hercules state.",
     annotations=READ_ONLY_CLOSED_WORLD,
+    meta=OAUTH_TOOL_META,
 )
 def command_status() -> str:
     return _text("hercules.command.status", {})
@@ -103,6 +74,7 @@ def command_status() -> str:
     title="Plan Hercules mission",
     description="Use when the user asks Hercules to plan a goal without executing it. Returns a non-executing staged plan and never deploys or changes state.",
     annotations=READ_ONLY_CLOSED_WORLD,
+    meta=OAUTH_TOOL_META,
 )
 def command_mission(goal: str) -> str:
     return _text("hercules.command.mission", {"goal": goal})
@@ -113,6 +85,7 @@ def command_mission(goal: str) -> str:
     title="Get Hercules Vault summary",
     description="Use when the user asks about Hercules Vault health or recent activity. Returns a minimized summary and recent action names; it never returns raw event records or changes Vault state.",
     annotations=READ_ONLY_CLOSED_WORLD,
+    meta=OAUTH_TOOL_META,
 )
 def command_vault(limit: int = 25) -> str:
     return _text("hercules.command.vault", {"limit": limit})
@@ -123,6 +96,7 @@ def command_vault(limit: int = 25) -> str:
     title="List Hercules models",
     description="Use when the user asks which models Hercules currently reports as installed. Returns model name and size only; if the inventory backend is unavailable, returns an explicit unavailable empty result and never changes model state.",
     annotations=READ_ONLY_CLOSED_WORLD,
+    meta=OAUTH_TOOL_META,
 )
 def command_models() -> str:
     return _text("hercules.command.models", {})
@@ -133,6 +107,7 @@ def command_models() -> str:
     title="Verify Hercules Vault",
     description="Use when the user asks to verify Hercules Vault evidence integrity. Returns validity and event count only and never returns raw hashes or changes Vault state.",
     annotations=READ_ONLY_CLOSED_WORLD,
+    meta=OAUTH_TOOL_META,
 )
 def command_verify() -> str:
     return _text("hercules.command.verify", {})
