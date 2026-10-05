@@ -197,3 +197,11 @@ def test_runtime_reports_asymmetric_openid_signing_readiness():
     assert "async def probe_supabase_asymmetric_signing" in source
     assert '"/auth/v1/.well-known/jwks.json"' in source
     assert '"oauth_asymmetric_signing_ready"' in source
+
+
+def test_runtime_reports_management_token_presence_without_secret_value():
+    source = Path("hercules-ai/app/main.py").read_text()
+
+    assert '"supabase_management_token_configured"' in source
+    assert 'bool(os.getenv("HERCULES_SUPABASE_ACCESS_TOKEN","").strip())' in source
+    assert '"supabase_management_token":' not in source
