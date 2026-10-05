@@ -6,8 +6,44 @@ from mcp.types import ToolAnnotations
 
 from .mcp_server import call_tool
 
+PUBLIC_MCP_SCOPES = ("hercules.read",)
+OAUTH_ONLY_SECURITY_SCHEMES = [
+    {"type": "oauth2", "scopes": list(PUBLIC_MCP_SCOPES)}
+]
 
-hercules_mcp = MCPServer(
+
+class HerculesMCPServer(MCPServer):
+    async def list_tools(self):
+        tools = await super().list_tools()
+        security_schemes = [dict(scheme) for scheme in OAUTH_ONLY_SECURITY_SCHEMES]
+        return [
+            tool.model_copy(
+                update={
+                    "security_schemes": security_schemes,
+                    "meta": {
+                        **(tool.meta or {}),
+                        "securitySchemes": security_schemes,
+                    },
+                }
+            )
+            for tool in tools
+        ]
+
+
+async def oauth_tool_contract_ready() -> bool:
+    tools = await hercules_mcp.list_tools()
+    if len(tools) != 5:
+        return False
+    for tool in tools:
+        wire = tool.model_dump(by_alias=True, exclude_none=True)
+        if wire.get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
+            return False
+        if (wire.get("_meta") or {}).get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
+            return False
+    return True
+
+
+hercules_mcp = HerculesMCPServer(
     "hercules-mcp",
     version="1.1.0",
     instructions="Bounded read-only Hercules status, planning, model, and Vault verification tools.",

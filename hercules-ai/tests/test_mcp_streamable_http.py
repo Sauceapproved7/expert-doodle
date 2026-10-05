@@ -80,3 +80,27 @@ def test_render_external_hostname_is_a_bounded_transport_fallback():
     assert "effective_allowed_hosts" in runtime
     assert "effective_allowed_hosts" in main
     assert '"transport_allowlist_configured":bool(effective_allowed_hosts())' in main
+
+
+def test_public_tools_advertise_oauth_security_contract():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert 'PUBLIC_MCP_SCOPES = ("hercules.read",)' in runtime
+    assert '"securitySchemes"' in runtime
+    assert '"security_schemes"' in runtime
+    assert '"type": "oauth2"' in runtime
+    assert '"scopes_supported": list(PUBLIC_MCP_SCOPES)' in main
+    assert "MCP_OAUTH_REQUIRED_SCOPES=set(PUBLIC_MCP_SCOPES)" in main
+
+
+def test_oauth_tool_contract_self_verifies_and_fails_closed_when_public_oauth_is_enabled():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert "async def oauth_tool_contract_ready" in runtime
+    assert 'wire.get("securitySchemes")' in runtime
+    assert 'wire.get("_meta")' in runtime
+    assert '"oauth_tool_contract_ready"' in main
+    assert "if public_oauth_configured and not oauth_contract_ready" in main
+    assert "Hercules MCP OAuth tool contract is not ready" in main

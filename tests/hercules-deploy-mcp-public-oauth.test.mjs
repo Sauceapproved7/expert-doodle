@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
 const source = await readFile("hercules-ai/app/main.py", "utf8");
+const runtime = await readFile("hercules-ai/app/mcp_runtime.py", "utf8");
 
 test("public MCP OAuth validates tokens through a separate configured verifier", () => {
   assert.match(source, /HERCULES_MCP_OAUTH_INTROSPECTION_URL/);
@@ -13,7 +14,8 @@ test("public MCP OAuth validates tokens through a separate configured verifier",
 });
 
 test("public MCP OAuth binds accepted tokens to the configured resource and scopes", () => {
-  assert.match(source, /HERCULES_MCP_OAUTH_REQUIRED_SCOPES/);
+  assert.match(runtime, /PUBLIC_MCP_SCOPES = \("hercules\.read",\)/);
+  assert.match(source, /MCP_OAUTH_REQUIRED_SCOPES=set\(PUBLIC_MCP_SCOPES\)/);
   assert.match(source, /MCP_RESOURCE/);
   assert.match(source, /"aud"/);
   assert.match(source, /"scope"/);

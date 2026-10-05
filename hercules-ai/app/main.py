@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import Literal
-from .mcp_runtime import effective_allowed_hosts, hercules_mcp, transport_security
+from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, oauth_tool_contract_ready, transport_security
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 
@@ -23,7 +23,7 @@ MCP_AUTHORIZATION_SERVER=os.getenv("HERCULES_MCP_AUTHORIZATION_SERVER","").strip
 MCP_OAUTH_INTROSPECTION_URL=os.getenv("HERCULES_MCP_OAUTH_INTROSPECTION_URL","").strip()
 MCP_OAUTH_CLIENT_ID=os.getenv("HERCULES_MCP_OAUTH_CLIENT_ID","").strip()
 MCP_OAUTH_CLIENT_SECRET=os.getenv("HERCULES_MCP_OAUTH_CLIENT_SECRET","").strip()
-MCP_OAUTH_REQUIRED_SCOPES={value for value in os.getenv("HERCULES_MCP_OAUTH_REQUIRED_SCOPES","").split() if value}
+MCP_OAUTH_REQUIRED_SCOPES=set(PUBLIC_MCP_SCOPES)
 mcp_asgi=hercules_mcp.streamable_http_app(
     streamable_http_path="/",
     stateless_http=True,
@@ -33,12 +33,17 @@ mcp_asgi=hercules_mcp.streamable_http_app(
 
 @contextlib.asynccontextmanager
 async def lifespan(_app:FastAPI):
+    public_oauth_configured=bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_INTROSPECTION_URL and MCP_OAUTH_CLIENT_ID and MCP_OAUTH_CLIENT_SECRET)
+    oauth_contract_ready=await oauth_tool_contract_ready()
     readiness={"event":"hercules_mcp_readiness",
-               "public_oauth_configured":bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_INTROSPECTION_URL and MCP_OAUTH_CLIENT_ID and MCP_OAUTH_CLIENT_SECRET),
+               "public_oauth_configured":public_oauth_configured,
+               "oauth_tool_contract_ready":oauth_contract_ready,
                "owner_token_configured":bool(MCP_TOKEN),
                "domain_challenge_configured":bool(OPENAI_APPS_CHALLENGE),
                "transport_allowlist_configured":bool(effective_allowed_hosts())}
     print(json.dumps(readiness,sort_keys=True),flush=True)
+    if public_oauth_configured and not oauth_contract_ready:
+        raise RuntimeError("Hercules MCP OAuth tool contract is not ready")
     async with hercules_mcp.session_manager.run():
         yield
 
@@ -173,6 +178,7 @@ async def oauth_protected_resource():
     return {
         "resource": MCP_RESOURCE,
         "authorization_servers": [MCP_AUTHORIZATION_SERVER],
+        "scopes_supported": list(PUBLIC_MCP_SCOPES),
         "bearer_methods_supported": ["header"],
     }
 
