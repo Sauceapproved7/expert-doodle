@@ -174,3 +174,18 @@ def test_oauth_consent_supports_existing_account_password_review_login():
     assert "signUp" not in consent
     assert "createUser" not in consent
     assert "Password is sent directly to Supabase Auth" in consent
+
+
+def test_supabase_oauth_uses_openid_email_and_standard_userinfo():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert 'SUPABASE_PUBLIC_MCP_SCOPES = ("openid", "email")' in runtime
+    assert 'MCP_OAUTH_USER_PATH="/auth/v1/oauth/userinfo"' in main
+    assert '"apikey":MCP_OAUTH_PUBLISHABLE_KEY' not in main[
+        main.index("async def validate_supabase_mcp_token"):
+        main.index("async def validate_public_mcp_token")
+    ]
+    assert 'user_subject=str(user.get("sub",""))' in main
+    assert 'email_verified=user.get("email_verified") is True' in main
+    assert 'required_scopes=MCP_OAUTH_REQUIRED_SCOPES' in main
