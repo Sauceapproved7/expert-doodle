@@ -19,7 +19,7 @@ test("public MCP OAuth binds accepted tokens to the configured resource and scop
   assert.match(source, /MCP_OAUTH_REQUIRED_SCOPES=set\(PUBLIC_MCP_SCOPES\)/);
   assert.match(source, /MCP_RESOURCE/);
   assert.match(validation, /payload\.get\("aud"\)/);
-  assert.match(validation, /payload\.get\("scope"/);
+  assert.match(validation, /payload\.get\("scope"\)/);
 });
 
 test("owner bearer token remains a distinct fail-closed authentication path", () => {
