@@ -21,14 +21,19 @@ READ_ONLY_CLOSED_WORLD = ToolAnnotations(
 )
 
 
-def transport_security() -> TransportSecuritySettings | None:
+def effective_allowed_hosts() -> list[str]:
     raw = os.getenv("HERCULES_MCP_ALLOWED_HOSTS", "").strip()
-    if not raw:
-        # Let the SDK apply its localhost-only default. Production hosts remain
-        # unreachable until an explicit allowlist is configured.
-        return None
-    hosts = [value.strip() for value in raw.split(",") if value.strip()]
+    if raw:
+        return [value.strip() for value in raw.split(",") if value.strip()]
+    render_host = os.getenv("RENDER_EXTERNAL_HOSTNAME", "").strip()
+    return [render_host] if render_host else []
+
+
+def transport_security() -> TransportSecuritySettings | None:
+    hosts = effective_allowed_hosts()
     if not hosts:
+        # Let the SDK apply its localhost-only default when neither an explicit
+        # allowlist nor the provider-supplied Render hostname is available.
         return None
     origins = [
         value.strip()
