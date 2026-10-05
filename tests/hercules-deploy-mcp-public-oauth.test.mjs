@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 
 const source = await readFile("hercules-ai/app/main.py", "utf8");
 const runtime = await readFile("hercules-ai/app/mcp_runtime.py", "utf8");
+const validation = await readFile("hercules-ai/app/oauth_validation.py", "utf8");
 
 test("public MCP OAuth validates tokens through a separate configured verifier", () => {
   assert.match(source, /HERCULES_MCP_OAUTH_INTROSPECTION_URL/);
@@ -29,9 +30,10 @@ test("owner bearer token remains a distinct fail-closed authentication path", ()
 
 
 test("public MCP OAuth validates issuer and token time bounds", () => {
-  assert.match(source, /payload\.get\("iss"\)/);
+  assert.match(source, /validate_introspection_claims/);
   assert.match(source, /MCP_AUTHORIZATION_SERVER/);
-  assert.match(source, /payload\.get\("exp"\)/);
-  assert.match(source, /payload\.get\("nbf"\)/);
   assert.match(source, /time\.time\(\)/);
+  assert.match(validation, /payload\.get\("iss"\)/);
+  assert.match(validation, /payload\.get\("exp"\)/);
+  assert.match(validation, /payload\.get\("nbf"\)/);
 });
