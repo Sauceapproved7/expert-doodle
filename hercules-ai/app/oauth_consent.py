@@ -36,7 +36,12 @@ def render_oauth_consent(supabase_origin: str, publishable_key: str) -> str:
     <span class="label">Existing account required</span>
     <p>Enter the email for an existing SauceApproved account. This flow cannot create a new account.</p>
     <input id="email" type="email" autocomplete="email" inputmode="email" placeholder="you@example.com">
-    <button id="send-link" class="approve" type="button">Send sign-in link</button>
+    <input id="password" type="password" autocomplete="current-password" placeholder="Password">
+    <p>Password is sent directly to Supabase Auth and is never received or stored by Hercules.</p>
+    <div class="actions">
+      <button id="sign-in-password" class="approve" type="button">Sign in with password</button>
+      <button id="send-link" class="deny" type="button">Send sign-in link</button>
+    </div>
   </section>
   <section id="consent" class="panel hidden">
     <div class="row"><span class="label">Application</span><span id="client-name"></span></div>
@@ -92,6 +97,23 @@ async function loadAuthorization() {{
   }}
   displayAuthorization(data);
 }}
+
+byId("sign-in-password").addEventListener("click", async () => {{
+  const email = byId("email").value.trim();
+  const password = byId("password").value;
+  if (!email || !password) {{
+    setStatus("Enter your existing account email and password.");
+    return;
+  }}
+  setStatus("Signing in…");
+  const {{ error }} = await client.auth.signInWithPassword({{ email, password }});
+  byId("password").value = "";
+  if (error) {{
+    setStatus("Sign-in failed.");
+    return;
+  }}
+  await loadAuthorization();
+}});
 
 byId("send-link").addEventListener("click", async () => {{
   const email = byId("email").value.trim();
