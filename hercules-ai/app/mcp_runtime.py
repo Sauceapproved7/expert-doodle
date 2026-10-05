@@ -30,6 +30,19 @@ class HerculesMCPServer(MCPServer):
         ]
 
 
+async def oauth_tool_contract_ready() -> bool:
+    tools = await hercules_mcp.list_tools()
+    if len(tools) != 5:
+        return False
+    for tool in tools:
+        wire = tool.model_dump(by_alias=True, exclude_none=True)
+        if wire.get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
+            return False
+        if (wire.get("_meta") or {}).get("securitySchemes") != OAUTH_ONLY_SECURITY_SCHEMES:
+            return False
+    return True
+
+
 hercules_mcp = HerculesMCPServer(
     "hercules-mcp",
     version="1.1.0",
