@@ -57,6 +57,7 @@ async def lifespan(_app:FastAPI):
                "oauth_provider_discovery_ready":oauth_provider_discovery_ready,
                "oauth_dynamic_registration_advertised":oauth_dynamic_registration_advertised,
                "oauth_asymmetric_signing_ready":oauth_asymmetric_signing_ready,
+               "supabase_management_token_configured":bool(os.getenv("HERCULES_SUPABASE_ACCESS_TOKEN","").strip()),
                "owner_token_configured":bool(MCP_TOKEN),
                "domain_challenge_configured":bool(OPENAI_APPS_CHALLENGE),
                "transport_allowlist_configured":bool(effective_allowed_hosts())}
