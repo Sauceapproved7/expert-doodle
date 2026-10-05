@@ -106,3 +106,13 @@ def test_supabase_claims_require_openid_email_scope_and_verified_email():
     assert validate_supabase({**payload, "scope": "email"}, **kwargs) is False
     assert validate_supabase({**payload, "scope": "openid"}, **kwargs) is False
     assert validate_supabase(payload, **{**kwargs, "user_subject": "user-2"}) is False
+
+
+def test_jwks_requires_asymmetric_openid_signing_key():
+    ready = oauth_validation.jwks_has_asymmetric_signing_key
+
+    assert ready({"keys": [{"kty": "RSA", "alg": "RS256", "kid": "rsa-1"}]}) is True
+    assert ready({"keys": [{"kty": "EC", "alg": "ES256", "kid": "ec-1"}]}) is True
+    assert ready({"keys": [{"kty": "oct", "alg": "HS256", "kid": "legacy"}]}) is False
+    assert ready({"keys": []}) is False
+    assert ready({}) is False
