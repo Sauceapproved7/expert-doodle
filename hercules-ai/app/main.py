@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse, FileResponse, Response
 from pydantic import BaseModel, Field
 from typing import Literal
-from .mcp_runtime import hercules_mcp, transport_security
+from .mcp_runtime import effective_allowed_hosts, hercules_mcp, transport_security
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 
@@ -37,7 +37,7 @@ async def lifespan(_app:FastAPI):
                "public_oauth_configured":bool(MCP_RESOURCE and MCP_AUTHORIZATION_SERVER and MCP_OAUTH_INTROSPECTION_URL and MCP_OAUTH_CLIENT_ID and MCP_OAUTH_CLIENT_SECRET),
                "owner_token_configured":bool(MCP_TOKEN),
                "domain_challenge_configured":bool(OPENAI_APPS_CHALLENGE),
-               "transport_allowlist_configured":bool(os.getenv("HERCULES_MCP_ALLOWED_HOSTS","").strip())}
+               "transport_allowlist_configured":bool(effective_allowed_hosts())}
     print(json.dumps(readiness,sort_keys=True),flush=True)
     async with hercules_mcp.session_manager.run():
         yield

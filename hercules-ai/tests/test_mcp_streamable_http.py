@@ -70,3 +70,13 @@ def test_runtime_emits_non_secret_mcp_readiness_evidence():
     assert "MCP_OAUTH_CLIENT_SECRET" in source
     assert "OPENAI_APPS_CHALLENGE" in source
     assert 'print(json.dumps(readiness' in source
+
+
+def test_render_external_hostname_is_a_bounded_transport_fallback():
+    runtime = Path("hercules-ai/app/mcp_runtime.py").read_text()
+    main = Path("hercules-ai/app/main.py").read_text()
+
+    assert "RENDER_EXTERNAL_HOSTNAME" in runtime
+    assert "effective_allowed_hosts" in runtime
+    assert "effective_allowed_hosts" in main
+    assert '"transport_allowlist_configured":bool(effective_allowed_hosts())' in main
