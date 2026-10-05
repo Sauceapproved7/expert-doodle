@@ -163,3 +163,14 @@ def test_runtime_probes_supabase_oauth_discovery_without_secrets():
     assert '"oauth_dynamic_registration_advertised"' in source
     assert 'payload.get("registration_endpoint")' in source
     assert "MCP_OAUTH_CLIENT_SECRET" not in source[source.index("async def probe_supabase_oauth_discovery"):source.index("async def validate_introspection_mcp_token")]
+
+
+def test_oauth_consent_supports_existing_account_password_review_login():
+    consent = Path("hercules-ai/app/oauth_consent.py").read_text()
+
+    assert 'type="password"' in consent
+    assert "signInWithPassword" in consent
+    assert "password" in consent
+    assert "signUp" not in consent
+    assert "createUser" not in consent
+    assert "Password is sent directly to Supabase Auth" in consent
