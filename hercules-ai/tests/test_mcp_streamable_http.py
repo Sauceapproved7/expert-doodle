@@ -152,3 +152,14 @@ def test_oauth_consent_surface_is_controlled_and_fail_closed():
     assert "@supabase/supabase-js@2.57.4" in consent
     assert "service_role" not in consent.lower()
     assert "SUPABASE_SERVICE_ROLE_KEY" not in consent
+
+
+def test_runtime_probes_supabase_oauth_discovery_without_secrets():
+    source = Path("hercules-ai/app/main.py").read_text()
+
+    assert "async def probe_supabase_oauth_discovery" in source
+    assert '"/.well-known/oauth-authorization-server/auth/v1"' in source
+    assert '"oauth_provider_discovery_ready"' in source
+    assert '"oauth_dynamic_registration_advertised"' in source
+    assert 'payload.get("registration_endpoint")' in source
+    assert "MCP_OAUTH_CLIENT_SECRET" not in source[source.index("async def probe_supabase_oauth_discovery"):source.index("async def validate_introspection_mcp_token")]
