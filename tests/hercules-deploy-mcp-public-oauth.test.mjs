@@ -14,12 +14,16 @@ test("public MCP OAuth validates tokens through a separate configured verifier",
   assert.match(validation, /payload\.get\("active"\)/);
 });
 
-test("public MCP OAuth binds accepted tokens to the configured resource and scopes", () => {
-  assert.match(runtime, /PUBLIC_MCP_SCOPES = \("hercules\.read",\)/);
+test("public MCP OAuth preserves provider-specific token binding", () => {
+  assert.match(runtime, /PUBLIC_MCP_SCOPES = \(\)/);
   assert.match(source, /MCP_OAUTH_REQUIRED_SCOPES=set\(PUBLIC_MCP_SCOPES\)/);
   assert.match(source, /MCP_RESOURCE/);
   assert.match(validation, /payload\.get\("aud"\)/);
   assert.match(validation, /payload\.get\("scope"/);
+  assert.match(validation, /validate_supabase_claims/);
+  assert.match(validation, /payload\.get\("client_id"\)/);
+  assert.match(source, /MCP_OAUTH_MODE=="supabase"/);
+  assert.match(source, /MCP_OAUTH_MODE=="introspection"/);
 });
 
 test("owner bearer token remains a distinct fail-closed authentication path", () => {
