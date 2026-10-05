@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 MAIN = Path("hercules-ai/app/main.py").read_text()
