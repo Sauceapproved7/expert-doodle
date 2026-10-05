@@ -2,10 +2,11 @@ import os, sqlite3, time, uuid, json, asyncio, secrets, struct, zlib, contextlib
 from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse, FileResponse, Response
+from fastapi.responses import StreamingResponse, FileResponse, Response, HTMLResponse
 from pydantic import BaseModel, Field
 from typing import Literal
 from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, oauth_tool_contract_ready, transport_security
+from .oauth_consent import render_oauth_consent
 from .oauth_validation import validate_introspection_claims, validate_supabase_claims
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
@@ -219,6 +220,32 @@ async def app_icon_192():
 @app.get("/app-icon-512.png",include_in_schema=False)
 async def app_icon_512():
     return Response(content=_png_icon(512),media_type="image/png",headers={"Cache-Control":"public, max-age=86400"})
+
+@app.get("/oauth/consent")
+async def oauth_consent():
+    if (
+        MCP_OAUTH_MODE!="supabase"
+        or not MCP_OAUTH_SUPABASE_ORIGIN
+        or not MCP_OAUTH_PUBLISHABLE_KEY
+    ):
+        return Response(
+            content='{"detail":"oauth_consent_not_configured"}',
+            status_code=503,
+            media_type="application/json",
+        )
+    return HTMLResponse(
+        content=render_oauth_consent(
+            MCP_OAUTH_SUPABASE_ORIGIN,
+            MCP_OAUTH_PUBLISHABLE_KEY,
+        ),
+        headers={
+            "Cache-Control":"no-store",
+            "Content-Security-Policy":"default-src 'none'; script-src 'unsafe-inline' https://esm.sh; connect-src "+MCP_OAUTH_SUPABASE_ORIGIN+"; style-src 'unsafe-inline'; img-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+            "Referrer-Policy":"no-referrer",
+            "X-Content-Type-Options":"nosniff",
+            "X-Frame-Options":"DENY",
+        },
+    )
 
 @app.get("/.well-known/openai-apps-challenge",include_in_schema=False)
 async def openai_apps_challenge():
