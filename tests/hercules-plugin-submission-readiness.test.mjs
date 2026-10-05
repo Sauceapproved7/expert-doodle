@@ -22,7 +22,9 @@ const baseManifest = {
 
 test("current protected boundaries fail closed with exact blockers", () => {
   const result = evaluateSubmissionReadiness(baseManifest, {
-    oauthProviderReady: false,
+    oauthProviderDiscoveryReady: false,
+    oauthDynamicRegistrationAdvertised: false,
+    runtimeCommitMatchesCanonical: false,
     domainChallengeConfigured: false,
     publisherVerified: false,
     policyAttested: false,
@@ -33,7 +35,9 @@ test("current protected boundaries fail closed with exact blockers", () => {
 
   assert.equal(result.ready, false);
   assert.deepEqual(result.blockers, [
-    "oauth_provider_not_ready",
+    "oauth_provider_discovery_not_ready",
+    "oauth_dynamic_registration_not_advertised",
+    "runtime_commit_unverified",
     "privacy_url_missing",
     "terms_url_missing",
     "domain_challenge_missing",
@@ -52,7 +56,9 @@ test("complete evidence passes without weakening required review cases", () => {
   manifest.extensions["com.openai"].interface.termsOfServiceURL = "https://example.com/terms";
 
   const result = evaluateSubmissionReadiness(manifest, {
-    oauthProviderReady: true,
+    oauthProviderDiscoveryReady: true,
+    oauthDynamicRegistrationAdvertised: true,
+    runtimeCommitMatchesCanonical: true,
     domainChallengeConfigured: true,
     publisherVerified: true,
     policyAttested: true,
@@ -73,7 +79,9 @@ test("wrong review-case counts remain a blocker", () => {
   manifest.extensions["com.openai"].review.test_cases.positive.pop();
 
   const result = evaluateSubmissionReadiness(manifest, {
-    oauthProviderReady: true,
+    oauthProviderDiscoveryReady: true,
+    oauthDynamicRegistrationAdvertised: true,
+    runtimeCommitMatchesCanonical: true,
     domainChallengeConfigured: true,
     publisherVerified: true,
     policyAttested: true,
@@ -85,4 +93,53 @@ test("wrong review-case counts remain a blocker", () => {
 
   assert.equal(result.ready, false);
   assert.ok(result.blockers.includes("review_case_count_invalid"));
+});
+
+
+test("provider discovery, dynamic registration, and exact runtime commit are independent blockers", () => {
+  const manifest = structuredClone(baseManifest);
+  manifest.extensions["com.openai"].interface.privacyPolicyURL = "https://example.com/privacy";
+  manifest.extensions["com.openai"].interface.termsOfServiceURL = "https://example.com/terms";
+
+  const common = {
+    publisherVerified: true,
+    policyAttested: true,
+    legalApproved: true,
+    demoUrl: "https://example.com/reviewer-demo",
+    productionScanPassed: true,
+    reviewerCredentialsReady: true,
+  };
+
+  assert.deepEqual(
+    evaluateSubmissionReadiness(manifest, {
+      ...common,
+      oauthProviderDiscoveryReady: false,
+      oauthDynamicRegistrationAdvertised: true,
+      runtimeCommitMatchesCanonical: true,
+      domainChallengeConfigured: true,
+    }).blockers,
+    ["oauth_provider_discovery_not_ready"],
+  );
+
+  assert.deepEqual(
+    evaluateSubmissionReadiness(manifest, {
+      ...common,
+      oauthProviderDiscoveryReady: true,
+      oauthDynamicRegistrationAdvertised: false,
+      runtimeCommitMatchesCanonical: true,
+      domainChallengeConfigured: true,
+    }).blockers,
+    ["oauth_dynamic_registration_not_advertised"],
+  );
+
+  assert.deepEqual(
+    evaluateSubmissionReadiness(manifest, {
+      ...common,
+      oauthProviderDiscoveryReady: true,
+      oauthDynamicRegistrationAdvertised: true,
+      runtimeCommitMatchesCanonical: false,
+      domainChallengeConfigured: true,
+    }).blockers,
+    ["runtime_commit_unverified"],
+  );
 });

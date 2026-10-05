@@ -15,7 +15,9 @@ export function evaluateSubmissionReadiness(manifest, evidence = {}) {
   const negativeCases = Array.isArray(cases.negative) ? cases.negative.length : 0;
   const blockers = [];
 
-  if (!evidence.oauthProviderReady) blockers.push("oauth_provider_not_ready");
+  if (!evidence.oauthProviderDiscoveryReady) blockers.push("oauth_provider_discovery_not_ready");
+  if (!evidence.oauthDynamicRegistrationAdvertised) blockers.push("oauth_dynamic_registration_not_advertised");
+  if (!evidence.runtimeCommitMatchesCanonical) blockers.push("runtime_commit_unverified");
   if (!isHttpsUrl(ui.websiteURL)) blockers.push("website_url_missing");
   if (!isHttpsUrl(ui.supportURL)) blockers.push("support_url_missing");
   if (!isHttpsUrl(ui.privacyPolicyURL)) blockers.push("privacy_url_missing");
