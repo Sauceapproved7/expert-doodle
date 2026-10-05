@@ -15,7 +15,9 @@ test("public MCP OAuth validates tokens through a separate configured verifier",
 });
 
 test("public MCP OAuth preserves provider-specific token binding", () => {
-  assert.match(runtime, /PUBLIC_MCP_SCOPES = \(\)/);
+  assert.match(runtime, /DEFAULT_PUBLIC_MCP_SCOPES = \("hercules\.read",\)/);
+  assert.match(runtime, /SUPABASE_PUBLIC_MCP_SCOPES = \(\)/);
+  assert.match(runtime, /PUBLIC_MCP_SCOPES = public_mcp_scopes\(\)/);
   assert.match(source, /MCP_OAUTH_REQUIRED_SCOPES=set\(PUBLIC_MCP_SCOPES\)/);
   assert.match(source, /MCP_RESOURCE/);
   assert.match(validation, /payload\.get\("aud"\)/);
