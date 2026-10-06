@@ -157,5 +157,6 @@ def test_supabase_request_path_keeps_userinfo_and_jwks_inside_client_context():
     client_context = function_source[context_start:context_end]
 
     assert "MCP_OAUTH_USER_PATH" in client_context
-    assert '"/auth/v1/.well-known/jwks.json"' in client_context
+    jwks_line = next(line for line in client_context.splitlines() if '"/auth/v1/.well-known/jwks.json"' in line)
+    assert jwks_line.startswith("            MCP_OAUTH_SUPABASE_ORIGIN")
     assert "verify_supabase_jwt_signature(" in function_source
