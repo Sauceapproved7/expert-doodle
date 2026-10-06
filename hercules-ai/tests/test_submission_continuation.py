@@ -53,6 +53,7 @@ def test_submission_controller_automates_verification_after_external_inputs_arri
             "positive_cases_proven": False,
             "demo_recording_ready": True,
             "portal_draft_created": True,
+            "legal_publication_cleared": True,
         }
     )
 
@@ -78,6 +79,7 @@ def test_submission_controller_never_auto_submits_or_publishes():
             "positive_cases_proven": True,
             "demo_recording_ready": True,
             "portal_draft_created": True,
+            "legal_publication_cleared": True,
         }
     )
 
@@ -100,6 +102,7 @@ def test_submission_controller_blocks_when_legal_publication_is_not_cleared():
             "positive_cases_proven": True,
             "demo_recording_ready": True,
             "portal_draft_created": True,
+            "legal_publication_cleared": True,
             "legal_publication_cleared": False,
         }
     )
