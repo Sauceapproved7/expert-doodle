@@ -160,3 +160,14 @@ def test_supabase_request_path_keeps_userinfo_and_jwks_inside_client_context():
     jwks_line = next(line for line in client_context.splitlines() if '"/auth/v1/.well-known/jwks.json"' in line)
     assert jwks_line.startswith("            MCP_OAUTH_SUPABASE_ORIGIN")
     assert "verify_supabase_jwt_signature(" in function_source
+
+
+def test_supabase_request_path_rejects_when_signature_verifier_rejects():
+    source = Path("hercules-ai/app/main.py").read_text()
+    start = source.index("async def validate_supabase_mcp_token")
+    end = source.index("async def validate_public_mcp_token", start)
+    function_source = source[start:end]
+
+    assert "payload=verify_supabase_jwt_signature(" in function_source
+    assert "if payload is None or not isinstance(user,dict):" in function_source
+    assert function_source.index("payload=verify_supabase_jwt_signature(") < function_source.index("return validate_supabase_claims(")
