@@ -1,5 +1,10 @@
+import base64
 import importlib.util
+import json
 from pathlib import Path
+
+import jwt
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 MODULE = Path("hercules-ai/app/oauth_validation.py")
 SPEC = importlib.util.spec_from_file_location("hercules_oauth_validation", MODULE)
@@ -106,6 +111,29 @@ def test_supabase_claims_require_openid_email_scope_and_verified_email():
     assert validate_supabase({**payload, "scope": "email"}, **kwargs) is False
     assert validate_supabase({**payload, "scope": "openid"}, **kwargs) is False
     assert validate_supabase(payload, **{**kwargs, "user_subject": "user-2"}) is False
+
+
+def test_supabase_jwt_signature_verification_rejects_tampered_payload():
+    verify = oauth_validation.verify_supabase_jwt_signature
+    private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    jwk = jwt.algorithms.RSAAlgorithm.to_jwk(private_key.public_key(), as_dict=True)
+    jwk.update({"kid": "rsa-1", "alg": "RS256", "use": "sig"})
+    claims = {
+        "iss": "https://project.supabase.co/auth/v1",
+        "aud": "authenticated",
+        "sub": "user-1",
+        "client_id": "client-1",
+        "scope": "openid email",
+        "exp": 2000,
+        "nbf": 900,
+    }
+    token = jwt.encode(claims, private_key, algorithm="RS256", headers={"kid": "rsa-1"})
+    assert verify(token, {"keys": [jwk]}, issuer=claims["iss"], audience=claims["aud"], now=1000) == claims
+
+    header, payload, signature = token.split(".")
+    tampered = {**claims, "sub": "attacker"}
+    encoded = base64.urlsafe_b64encode(json.dumps(tampered, separators=(",", ":")).encode()).rstrip(b"=").decode()
+    assert verify(".".join((header, encoded, signature)), {"keys": [jwk]}, issuer=claims["iss"], audience=claims["aud"], now=1000) is None
 
 
 def test_jwks_requires_asymmetric_openid_signing_key():
