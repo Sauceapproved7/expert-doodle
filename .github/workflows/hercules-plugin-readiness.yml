@@ -5,8 +5,11 @@ on:
     paths:
       - "plugin.json"
       - "mcp.json"
+      - "assets/hercules-plugin.svg"
       - "skills/hercules-readonly/**"
+      - "hercules-plugin/**"
       - "hercules-ai/**"
+      - "scripts/build_hercules_plugin_zip.py"
       - "scripts/verify-hercules-plugin-submission-readiness.mjs"
       - "tests/hercules-plugin-submission-readiness.test.mjs"
       - ".github/workflows/hercules-plugin-readiness.yml"
@@ -27,6 +30,11 @@ jobs:
       - name: Run Hercules plugin readiness tests
         run: |
           python -m pytest -q hercules-ai/tests/test_openai_plugin_readiness.py
+          python -m pytest -q hercules-ai/tests/test_plugin_zip_builder.py
           python -m pytest -q hercules-ai/tests/test_mcp_oauth_wire.py
           PYTHONPATH=hercules-ai python -m pytest -q hercules-ai/tests/test_mcp_owner_auth_behavior.py
           node --test tests/hercules-plugin-submission-readiness.test.mjs
+      - name: Build bounded OpenAI submission ZIP
+        run: |
+          python scripts/build_hercules_plugin_zip.py --output dist/hercules-openai-plugin.zip
+          unzip -Z1 dist/hercules-openai-plugin.zip
