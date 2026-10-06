@@ -10,6 +10,7 @@ from .oauth_consent import render_oauth_consent
 from .oauth_validation import jwks_has_asymmetric_signing_key, validate_introspection_claims, validate_supabase_claims, verify_supabase_jwt_signature
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
+from .submission_continuation import build_submission_readiness_snapshot
 from .product_quiz import router as product_quiz_router
 
 DB=os.getenv("HERCULES_DB","/data/hercules.db")
@@ -355,6 +356,26 @@ async def oauth_protected_resource():
         "scopes_supported": list(PUBLIC_MCP_SCOPES),
         "bearer_methods_supported": ["header"],
     }
+
+@app.get("/v1/submission/readiness")
+async def submission_readiness():
+    def flag(name: str) -> bool:
+        return os.getenv(name, "").strip().lower() in {"1", "true", "yes"}
+
+    evidence = {
+        "production_commit_verified": flag("HERCULES_SUBMISSION_PRODUCTION_COMMIT_VERIFIED"),
+        "oauth_signature_verification_live": flag("HERCULES_SUBMISSION_OAUTH_SIGNATURE_VERIFIED"),
+        "domain_challenge_configured": bool(OPENAI_APPS_CHALLENGE),
+        "domain_challenge_verified": flag("HERCULES_SUBMISSION_DOMAIN_CHALLENGE_VERIFIED"),
+        "oauth_client_registration_ready": flag("HERCULES_SUBMISSION_OAUTH_CLIENT_REGISTRATION_READY"),
+        "reviewer_oauth_verified": flag("HERCULES_SUBMISSION_REVIEWER_OAUTH_VERIFIED"),
+        "positive_cases_proven": flag("HERCULES_SUBMISSION_POSITIVE_CASES_PROVEN"),
+        "demo_recording_ready": flag("HERCULES_SUBMISSION_DEMO_RECORDING_READY"),
+        "portal_draft_created": flag("HERCULES_SUBMISSION_PORTAL_DRAFT_CREATED"),
+        "legal_publication_cleared": flag("HERCULES_SUBMISSION_LEGAL_PUBLICATION_CLEARED"),
+    }
+    return build_submission_readiness_snapshot(evidence)
+
 
 @app.get("/health")
 async def health():
