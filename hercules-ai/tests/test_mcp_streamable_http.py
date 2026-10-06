@@ -149,7 +149,7 @@ def test_oauth_consent_surface_is_controlled_and_fail_closed():
     assert "authorization_id" in consent
     assert "textContent" in consent
     assert "innerHTML" not in consent
-    assert "@supabase/supabase-js@2.57.4" in consent
+    assert "@supabase/supabase-js@2.80.0" in consent
     assert "service_role" not in consent.lower()
     assert "SUPABASE_SERVICE_ROLE_KEY" not in consent
 
