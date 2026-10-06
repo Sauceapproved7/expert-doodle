@@ -46,3 +46,12 @@ Each accepted benchmark render creates an idempotent `hercules_execution_jobs` r
 - Returned bytes must contain an MP4 `ftyp` signature.
 - Output is copied into private Hercules Storage before success is recorded.
 - No artifact, provider response, or success state is fabricated.
+
+
+## Studio gateway and dispatch repair (2026-10-06)
+
+The preview-cell HTTP handler now calls the existing benchmark implementation for explicit `mode: "benchmark"`; previously the production-capacity gate made that implementation unreachable. Unknown modes fail closed. Production mode retains its independent certification gate.
+
+Studio exposes `GET /api/studio/video/status` and `POST /api/studio/video/benchmark`. Send the existing canonical request envelope and the owner's existing Supabase access token in the Authorization header. The upstream function remains the authority for active owner/admin membership. The gateway rejects production mode, redirects, oversized payloads, and malformed upstream success responses. It does not persist tokens or unlock Studio production start/resume. `benchmarkRegistered` reflects the upstream registry, not a completed render or fresh provider certification. A real authenticated render and certified production capacity remain separate verification requirements.
+
+Implementation and behavior tests are original project-specific work produced with OpenAI Codex assistance; no external runtime dependency or third-party code was added.

@@ -1,4 +1,5 @@
 import {createServer} from "node:http";
+import {createStudioVideoBridge} from "./studio-video-bridge.mjs";
 import {pathToFileURL} from "node:url";
 import {readFile} from "node:fs/promises";
 import {inspectLaunchRunStateFile} from "./run-status.mjs";
@@ -411,7 +412,8 @@ export function createStudioHttpHandler({
   }),
   actions={},
   releaseTruthBacking=[],
-  guardianWatchtowerReader=async()=>null
+  guardianWatchtowerReader=async()=>null,
+  videoBridge=null
 }={}) {
   const manifest=createStudioManifest();
   const releaseTruthLedger=createReleaseTruthEvidenceLedger({backing:releaseTruthBacking});
@@ -426,6 +428,15 @@ export function createStudioHttpHandler({
     const {method="GET",pathname="/"}=request;
     const normalizedMethod=String(method).toUpperCase();
     const normalizedPath=String(pathname || "/").split("?")[0];
+
+    if (normalizedMethod==="GET" && normalizedPath==="/api/studio/video/status") {
+      const result=videoBridge ? await videoBridge.status() : {status:503,body:{ok:false,error:"video_bridge_unavailable"}};
+      return json(result.body,result.status);
+    }
+    if (normalizedMethod==="POST" && normalizedPath==="/api/studio/video/benchmark") {
+      const result=videoBridge ? await videoBridge.benchmark(request) : {status:503,body:{ok:false,error:"video_bridge_unavailable"}};
+      return json(result.body,result.status);
+    }
 
     if (normalizedMethod==="GET" && normalizedPath==="/health") {
       return json({
@@ -830,7 +841,8 @@ export async function startStudioServer({
   verifyGiftPurchase,
   giftReservationStore,
   actions,
-  guardianWatchtowerReader=createStudioGuardianWatchtowerReader()
+  guardianWatchtowerReader=createStudioGuardianWatchtowerReader(),
+  videoBridge=null
 }={}) {
   const statusReader=statePath
     ? async()=>inspectLaunchRunStateFile(statePath).catch(error=>{
@@ -847,7 +859,8 @@ export async function startStudioServer({
     verifyGiftPurchase,
     giftReservationStore,
     actions,
-    guardianWatchtowerReader
+    guardianWatchtowerReader,
+    videoBridge
   });
   const server=createServer(async(req,res)=>{
     try {
@@ -883,7 +896,8 @@ if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   guardianRuntime.start();
   const {server}=await startStudioServer({
     host,port,statePath,launchGiftClockProvider,
-    guardianWatchtowerReader:guardianRuntime.readStatus
+    guardianWatchtowerReader:guardianRuntime.readStatus,
+    videoBridge:createStudioVideoBridge()
   });
   const shutdown=()=>{
     guardianRuntime.stop();

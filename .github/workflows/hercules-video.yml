@@ -6,6 +6,8 @@ on:
     paths:
       - "hercules-video/**"
       - "tests/hercules-video*.test.mjs"
+      - "tests/hercules-preview-cell-video*.test.mjs"
+      - "supabase/functions/hercules-preview-cell/**"
       - "tests/sauceapproved-vintage-camera*.test.mjs"
       - "docs/HERCULES-VIDEO-*.md"
       - ".github/workflows/hercules-video.yml"
@@ -20,10 +22,14 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+
       - name: Enforce repository-wide owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
       - name: Run Hercules Video tests
-        run: node --test tests/hercules-video*.test.mjs tests/sauceapproved-vintage-camera*.test.mjs
+        run: node --test tests/hercules-preview-cell-video*.test.mjs tests/hercules-video*.test.mjs tests/sauceapproved-vintage-camera*.test.mjs
       - name: Enforce provider-neutral owned layers
         shell: bash
         run: |

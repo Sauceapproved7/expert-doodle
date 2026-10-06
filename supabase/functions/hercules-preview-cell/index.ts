@@ -531,7 +531,20 @@ Deno.serve(async(req:Request)=>{
    const a=await operator(req);if(!a)return out({error:'owner_or_admin_required'},401);
    const b=await req.json().catch(()=>({}));
    let request:any;try{request=await createVideoRenderRequest(b)}catch(e){return out({error:e instanceof Error?e.message:'video_request_invalid'},400)}
+   const mode=b?.mode??'production';
+   if(mode!=='benchmark'&&mode!=='production')return out({ok:false,error:'video_mode_invalid',queued:false},400);
    const capacity=await videoCapacity();
+   if(mode==='benchmark'){
+     if(!capacity.benchmarkRendererAvailable)return out({ok:false,error:'benchmark_adapter_unavailable',queued:false},503);
+     try{
+       const result=await runBenchmarkRender(a,request);
+       return out({ok:true,...result,benchmarkOnly:true,productionCapacityCertified:false});
+     }catch(e){
+       const code=e instanceof Error?e.message:'';
+       const invalid=new Set(['benchmark_duration_limit','benchmark_fps_must_be_16','benchmark_resolution_must_be_480p','benchmark_seed_required','benchmark_image_reference_required','benchmark_image_reference_invalid','benchmark_image_reference_host_denied']);
+       return out({ok:false,error:invalid.has(code)?code:'benchmark_render_failed',queued:false},invalid.has(code)?400:502);
+     }
+   }
    if(!capacity.rendererAvailable){
      await db.from('hercules_audit_log').insert({
        organization_id:ORG,actor_user_id:a.user.id,action:'video.render.blocked',
@@ -539,7 +552,7 @@ Deno.serve(async(req:Request)=>{
        changes:{project_id:request.projectId,shot_id:request.shot.id,request_fingerprint:request.requestFingerprint,reason:'no_certified_video_renderer_online'},
        metadata:{engine:'hercules-video',execution_policy:'fail-closed',authorization_bypassed:false,fabricated_output:false}
      });
-     return out({ok:false,error:'video_render_capacity_unavailable',requestFingerprint:request.requestFingerprint,blockingReason:'no_certified_video_renderer_online',queued:false},503);
+     return out({ok:false,error:'video_render_capacity_unavailable',requestFingerprint:request.requestFingerprint,blockingReason:'no_certified_production_video_renderer_online',queued:false},503);
    }
    return out({ok:false,error:'video_dispatch_adapter_not_implemented',requestFingerprint:request.requestFingerprint,queued:false},503);
  }
