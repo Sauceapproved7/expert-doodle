@@ -243,6 +243,9 @@ class MissionRequest(BaseModel):
     goal:str=Field(min_length=1,max_length=2000)
 UI_DIR=Path(__file__).resolve().parent.parent/"ui"
 UI=UI_DIR/"index.html"
+REPO_ROOT=Path(__file__).resolve().parents[2]
+PLUGIN_PRIVACY=REPO_ROOT/"docs/launch/HERCULES-PRIVACY-POLICY-DRAFT.md"
+PLUGIN_TERMS=REPO_ROOT/"docs/launch/HERCULES-TERMS-OF-SERVICE-DRAFT.md"
 
 def _png_icon(size:int)->bytes:
     def pixel(x:int,y:int)->bytes:
@@ -298,6 +301,24 @@ async def plugin_support():
     return HTMLResponse(
         content="""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hercules Support</title></head><body><main><h1>Hercules Support</h1><p>Hercules by SauceApproved enterprise LLC</p><p>For non-sensitive plugin support, bug reports, or documentation issues, use the Hercules repository issue tracker.</p><p><a href="https://github.com/Sauceapproved7/expert-doodle/issues">Open Hercules support</a></p><p>Do not post passwords, API keys, access tokens, private customer data, or security vulnerabilities in a public issue. Use GitHub private vulnerability reporting for security reports when available.</p></main></body></html>""",
         headers={"Cache-Control":"public, max-age=300","Referrer-Policy":"no-referrer","X-Content-Type-Options":"nosniff"},
+    )
+
+
+@app.get("/plugin/privacy")
+async def plugin_privacy():
+    return FileResponse(
+        PLUGIN_PRIVACY,
+        media_type="text/markdown",
+        headers={"Cache-Control":"public, max-age=300","X-Content-Type-Options":"nosniff"},
+    )
+
+
+@app.get("/plugin/terms")
+async def plugin_terms():
+    return FileResponse(
+        PLUGIN_TERMS,
+        media_type="text/markdown",
+        headers={"Cache-Control":"public, max-age=300","X-Content-Type-Options":"nosniff"},
     )
 
 
