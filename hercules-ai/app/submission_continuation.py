@@ -57,3 +57,17 @@ def build_submission_plan(evidence: Mapping[str, Any]) -> dict[str, Any]:
         "external_gates": external_gates,
         "owner_only_actions": owner_only_actions,
     }
+
+
+def build_submission_readiness_snapshot(evidence: Mapping[str, Any]) -> dict[str, Any]:
+    """Return a read-only, fail-closed view of verified submission evidence."""
+    plan = build_submission_plan(evidence)
+    return {
+        "status": plan["status"],
+        "safe_actions": list(plan["safe_actions"]),
+        "external_gates": list(plan["external_gates"]),
+        "owner_only_actions": list(plan["owner_only_actions"]),
+        "read_only": True,
+        "submission_performed": False,
+        "publication_performed": False,
+    }
