@@ -16,6 +16,7 @@ _EXTERNAL_REQUIREMENTS = (
     ("reviewer_oauth_verified", "reviewer_oauth_verification"),
     ("demo_recording_ready", "demo_recording"),
     ("portal_draft_created", "plugin_portal_draft"),
+    ("legal_publication_cleared", "legal_publication_clearance"),
 )
 
 
