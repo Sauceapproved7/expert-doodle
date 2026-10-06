@@ -1,0 +1,37 @@
+[
+  {
+    "id": "sa-premium-hoodie-black",
+    "name": "Sauce Approved Premium Hoodie — Black",
+    "description": "Premium Sauce Approved streetwear hoodie in black.",
+    "category": "hoodie",
+    "tags": [
+      "black",
+      "hoodie",
+      "streetwear",
+      "daily",
+      "layering",
+      "statement",
+      "comfort"
+    ],
+    "price": 79,
+    "url": "https://sauceapproved.com",
+    "available": true
+  },
+  {
+    "id": "sa-premium-hoodie-sports-gray",
+    "name": "Sauce Approved Premium Hoodie — Sports Gray",
+    "description": "Premium Sauce Approved streetwear hoodie in sports gray.",
+    "category": "hoodie",
+    "tags": [
+      "gray",
+      "hoodie",
+      "streetwear",
+      "daily",
+      "layering",
+      "comfort"
+    ],
+    "price": 79,
+    "url": "https://sauceapproved.com",
+    "available": true
+  }
+]
