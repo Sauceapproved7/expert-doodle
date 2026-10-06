@@ -29,10 +29,14 @@ def build_submission_plan(evidence: Mapping[str, Any]) -> dict[str, Any]:
         if not bool(evidence.get(field))
     ]
 
+    internal_gates: list[str] = []
+    if not bool(evidence.get("production_commit_matches_expected")):
+        internal_gates.append("production_commit_drift")
+
     safe_actions: list[str] = []
     owner_only_actions: list[str] = []
 
-    if not external_gates:
+    if not external_gates and not internal_gates:
         if not bool(evidence.get("domain_challenge_verified")):
             safe_actions.append("verify_domain_challenge")
         if not bool(evidence.get("positive_cases_proven")):
@@ -40,6 +44,8 @@ def build_submission_plan(evidence: Mapping[str, Any]) -> dict[str, Any]:
 
     if external_gates:
         status = "blocked_external"
+    elif internal_gates:
+        status = "blocked_internal"
     elif safe_actions:
         status = "automation_ready"
     elif (
@@ -55,6 +61,7 @@ def build_submission_plan(evidence: Mapping[str, Any]) -> dict[str, Any]:
         "status": status,
         "safe_actions": safe_actions,
         "external_gates": external_gates,
+        "internal_gates": internal_gates,
         "owner_only_actions": owner_only_actions,
     }
 
@@ -66,6 +73,7 @@ def build_submission_readiness_snapshot(evidence: Mapping[str, Any]) -> dict[str
         "status": plan["status"],
         "safe_actions": list(plan["safe_actions"]),
         "external_gates": list(plan["external_gates"]),
+        "internal_gates": list(plan["internal_gates"]),
         "owner_only_actions": list(plan["owner_only_actions"]),
         "read_only": True,
         "submission_performed": False,
