@@ -48,7 +48,7 @@ def deterministic_quiz(products:list[dict[str,Any]],answers:list[dict[str,str]])
         hay.update(str(p.get(k,"")).lower() for k in ("name","description","category"))
         return sum(1 for v in wanted if v and v!="any" and any(v in x for x in hay))
     best=max(available,key=lambda p:(score(p),str(p.get("id"))))
-    return {"next_action":"show_recommendation","questions":[],"recommended_product_id":best["id"],"rationale":f"{best['name']} is the closest available catalog match for the preferences you selected."}
+    return {"next_action":"show_recommendation","questions":[],"recommended_product_id":best["id"],"recommended_product":best,"rationale":f"{best['name']} is the closest available catalog match for the preferences you selected."}
 
 QUIZ_SCHEMA={"type":"object","properties":{
  "next_action":{"type":"string","enum":["ask_questions","show_recommendation"]},
@@ -79,6 +79,7 @@ async def model_quiz(products:list[dict[str,Any]],answers:list[dict[str,str]])->
             valid=validate_recommendation(products,parsed.get("recommended_product_id"))
             if not valid: return None
             parsed["recommended_product_id"]=valid
+            parsed["recommended_product"]=next((p for p in products if p.get("id")==valid),None)
         return parsed
     except (httpx.HTTPError,ValueError,TypeError,json.JSONDecodeError):
         return None
