@@ -3,6 +3,10 @@ from __future__ import annotations
 from collections.abc import Mapping, Set
 from typing import Any
 
+import jwt
+
+import jwt
+
 
 def validate_introspection_claims(
     payload: Mapping[str, Any],
@@ -83,6 +87,57 @@ def validate_supabase_claims(
     return required_scopes.issubset(scopes)
 
 
+def verify_supabase_jwt_signature(
+    token: str,
+    jwks: Mapping[str, Any],
+    *,
+    issuer: str,
+    audience: str,
+    now: float,
+) -> dict[str, Any] | None:
+    try:
+        header = jwt.get_unverified_header(token)
+    except jwt.PyJWTError:
+        return None
+    kid = header.get("kid")
+    alg = header.get("alg")
+    if not isinstance(kid, str) or not kid or alg not in {"RS256", "ES256"}:
+        return None
+    keys = jwks.get("keys")
+    if not isinstance(keys, list):
+        return None
+    candidates = [
+        key for key in keys
+        if isinstance(key, Mapping)
+        and key.get("kid") == kid
+        and key.get("alg") == alg
+        and ((key.get("kty") == "RSA" and alg == "RS256") or (key.get("kty") == "EC" and alg == "ES256"))
+    ]
+    if len(candidates) != 1:
+        return None
+    try:
+        public_key = jwt.PyJWK.from_dict(dict(candidates[0])).key
+        payload = jwt.decode(
+            token,
+            public_key,
+            algorithms=[alg],
+            issuer=issuer,
+            audience=audience,
+            options={"verify_exp": False, "verify_nbf": False},
+        )
+    except (jwt.PyJWTError, ValueError, TypeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    exp = payload.get("exp")
+    if not isinstance(exp, (int, float)) or isinstance(exp, bool) or exp <= now:
+        return None
+    nbf = payload.get("nbf")
+    if nbf is not None and (not isinstance(nbf, (int, float)) or isinstance(nbf, bool) or nbf > now):
+        return None
+    return payload
+
+
 def jwks_has_asymmetric_signing_key(payload: Mapping[str, Any]) -> bool:
     keys = payload.get("keys")
     if not isinstance(keys, list):
@@ -95,3 +150,52 @@ def jwks_has_asymmetric_signing_key(payload: Mapping[str, Any]) -> bool:
         if (kty == "RSA" and alg == "RS256") or (kty == "EC" and alg == "ES256"):
             return True
     return False
+
+
+def verify_supabase_jwt_signature(
+    token: str,
+    jwks: Mapping[str, Any],
+    *,
+    issuer: str,
+    audience: str,
+    now: float,
+) -> dict[str, Any] | None:
+    try:
+        header = jwt.get_unverified_header(token)
+    except jwt.PyJWTError:
+        return None
+    alg = header.get("alg")
+    kid = header.get("kid")
+    if alg not in {"RS256", "ES256"} or not isinstance(kid, str) or not kid:
+        return None
+    keys = jwks.get("keys")
+    if not isinstance(keys, list):
+        return None
+    matches = [
+        key for key in keys
+        if isinstance(key, Mapping)
+        and key.get("kid") == kid
+        and key.get("alg") == alg
+        and ((key.get("kty") == "RSA" and alg == "RS256") or (key.get("kty") == "EC" and alg == "ES256"))
+    ]
+    if len(matches) != 1:
+        return None
+    try:
+        key = jwt.PyJWK.from_dict(dict(matches[0])).key
+        payload = jwt.decode(
+            token,
+            key=key,
+            algorithms=[alg],
+            issuer=issuer,
+            audience=audience,
+            options={"require": ["exp", "iss", "aud"], "verify_exp": False, "verify_nbf": False},
+        )
+    except (jwt.PyJWTError, ValueError, TypeError):
+        return None
+    exp = payload.get("exp")
+    if not isinstance(exp, (int, float)) or isinstance(exp, bool) or exp <= now:
+        return None
+    nbf = payload.get("nbf")
+    if nbf is not None and (not isinstance(nbf, (int, float)) or isinstance(nbf, bool) or nbf > now):
+        return None
+    return payload if isinstance(payload, dict) else None
