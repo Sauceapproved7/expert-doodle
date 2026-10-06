@@ -18,3 +18,9 @@ def test_oauth_consent_ui_fails_closed_without_authorization_id():
     page = Path("hercules-ai/ui/oauth/consent.html").read_text()
     assert "if (!authorizationId)" in page
     assert "Invalid authorization request" in page
+
+
+def test_oauth_consent_route_is_served_explicitly():
+    source = Path("hercules-ai/app/main.py").read_text()
+    assert '@app.get("/oauth/consent",include_in_schema=False)' in source
+    assert 'UI_DIR/"oauth"/"consent.html"' in source
