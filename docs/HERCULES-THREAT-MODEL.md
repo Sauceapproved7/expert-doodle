@@ -151,6 +151,8 @@ The existing Forge bearer-authenticated operator API reads a local security-sour
 
 Controls: provider mode is explicit and fail-closed; an empty mode authorizes no public OAuth; the generic introspection verifier remains isolated from the Supabase verifier; Supabase mode uses only a publishable project key to ask the project Auth server to validate the bearer token, never a service-role or JWT signing secret; after provider validation Hercules independently checks exact issuer, expected audience, expiration, optional not-before, non-empty OAuth client ID, and subject equality with the provider-validated user record; malformed JWT payloads fail closed; the five public tools remain read-only, non-destructive, closed-world, idempotent, and response-minimized; owner bearer credentials are never returned to or exchanged with the OAuth provider.
 
+Unauthenticated MCP responses advertise a slash-separated protected-resource metadata URL. CI follows the exact challenge URL back to the metadata route and checks rejection of missing or invalid credentials; discovery does not grant tool authority.
+
 Supabase OAuth compatibility is implementation readiness only. It does not prove that OAuth Server, dynamic client registration, asymmetric signing, an authorization/consent UI, OpenAI domain verification, or public OAuth environment configuration is active in production.
 
 

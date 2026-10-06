@@ -212,7 +212,7 @@ async def protect_mcp(request, call_next):
                 content='{"detail":"Unauthorized"}',
                 status_code=401,
                 media_type="application/json",
-                headers={"WWW-Authenticate":f'Bearer resource_metadata="{str(request.base_url).rstrip("/")}.well-known/oauth-protected-resource"'},
+                headers={"WWW-Authenticate":f'Bearer resource_metadata="{str(request.base_url).rstrip("/")}/.well-known/oauth-protected-resource"'},
             )
     return await call_next(request)
 

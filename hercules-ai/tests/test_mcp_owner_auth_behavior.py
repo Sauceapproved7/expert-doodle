@@ -33,14 +33,24 @@ def test_public_host_without_configured_owner_token_fails_closed(monkeypatch):
 
 
 def test_missing_bearer_token_is_rejected_with_resource_metadata(monkeypatch):
+    monkeypatch.setattr(main, "MCP_RESOURCE", "https://hercules.example/mcp")
+    monkeypatch.setattr(main, "MCP_AUTHORIZATION_SERVER", "https://identity.example/auth")
     response = asyncio.run(
         request_mcp(monkeypatch, token="owner-secret", public_hosted=True)
     )
     assert response.status_code == 401
     assert response.json() == {"detail": "Unauthorized"}
     challenge = response.headers["WWW-Authenticate"]
-    assert challenge.startswith("Bearer resource_metadata=")
-    assert "/.well-known/oauth-protected-resource" in challenge
+    assert challenge == 'Bearer resource_metadata="https://hercules.example/.well-known/oauth-protected-resource"'
+    metadata_url = challenge.split('"')[1]
+    transport = httpx.ASGITransport(app=main.app)
+
+    async def discover():
+        async with httpx.AsyncClient(transport=transport) as client:
+            return await client.get(metadata_url)
+
+    metadata = asyncio.run(discover())
+    assert metadata.status_code == 200
 
 
 def test_wrong_owner_token_is_rejected_when_public_oauth_rejects(monkeypatch):
