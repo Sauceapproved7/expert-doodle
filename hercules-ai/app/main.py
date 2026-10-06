@@ -364,6 +364,7 @@ async def submission_readiness():
 
     evidence = {
         "production_commit_verified": flag("HERCULES_SUBMISSION_PRODUCTION_COMMIT_VERIFIED"),
+        "production_commit_matches_expected": flag("HERCULES_SUBMISSION_PRODUCTION_COMMIT_MATCHES_EXPECTED"),
         "oauth_signature_verification_live": flag("HERCULES_SUBMISSION_OAUTH_SIGNATURE_VERIFIED"),
         "domain_challenge_configured": bool(OPENAI_APPS_CHALLENGE),
         "domain_challenge_verified": flag("HERCULES_SUBMISSION_DOMAIN_CHALLENGE_VERIFIED"),
