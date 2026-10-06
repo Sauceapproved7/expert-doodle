@@ -137,3 +137,9 @@ def test_submission_readiness_snapshot_is_read_only_and_fail_closed():
     assert snapshot["publication_performed"] is False
     assert "legal_publication_clearance" in snapshot["external_gates"]
     assert "openai_domain_challenge" in snapshot["external_gates"]
+
+
+def test_main_exposes_read_only_submission_readiness_route():
+    source = Path("hercules-ai/app/main.py").read_text()
+    assert '@app.get("/v1/submission/readiness")' in source
+    assert "build_submission_readiness_snapshot" in source
