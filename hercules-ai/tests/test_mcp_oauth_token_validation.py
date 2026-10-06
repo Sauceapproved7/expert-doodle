@@ -144,3 +144,14 @@ def test_jwks_requires_asymmetric_openid_signing_key():
     assert ready({"keys": [{"kty": "oct", "alg": "HS256", "kid": "legacy"}]}) is False
     assert ready({"keys": []}) is False
     assert ready({}) is False
+
+
+def test_supabase_request_path_fetches_userinfo_and_jwks_in_same_client_scope():
+    source = Path("hercules-ai/app/main.py").read_text()
+    userinfo = source.index("response=await client.get(")
+    jwks = source.index("jwks_response=await client.get(")
+    verifier = source.index("payload=verify_supabase_jwt_signature(")
+    scope_end = source.index("        if response.status_code!=200:", userinfo)
+
+    assert userinfo < jwks < verifier
+    assert jwks < scope_end
