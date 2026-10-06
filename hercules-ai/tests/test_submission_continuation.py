@@ -103,7 +103,6 @@ def test_submission_controller_blocks_when_legal_publication_is_not_cleared():
             "positive_cases_proven": True,
             "demo_recording_ready": True,
             "portal_draft_created": True,
-            "legal_publication_cleared": True,
             "legal_publication_cleared": False,
         }
     )
