@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from typing import Literal
 from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, oauth_tool_contract_ready, transport_security
 from .oauth_consent import render_oauth_consent
-from .oauth_validation import jwks_has_asymmetric_signing_key, validate_introspection_claims, validate_supabase_claims
+from .oauth_validation import jwks_has_asymmetric_signing_key, validate_introspection_claims, validate_supabase_claims, verify_supabase_jwt_signature
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 from .product_quiz import router as product_quiz_router
@@ -172,9 +172,21 @@ async def validate_supabase_mcp_token(token:str)->bool:
         if response.status_code!=200:
             return False
         user=response.json()
+        jwks_response=await client.get(
+            MCP_OAUTH_SUPABASE_ORIGIN+"/auth/v1/.well-known/jwks.json"
+        )
+        if jwks_response.status_code!=200:
+            return False
+        jwks=jwks_response.json()
     except (httpx.HTTPError,ValueError):
         return False
-    payload=_decode_jwt_payload(token)
+    payload=verify_supabase_jwt_signature(
+        token,
+        jwks,
+        issuer=MCP_OAUTH_ISSUER,
+        audience=MCP_OAUTH_AUDIENCE,
+        now=time.time(),
+    )
     if payload is None or not isinstance(user,dict):
         return False
     return validate_supabase_claims(
