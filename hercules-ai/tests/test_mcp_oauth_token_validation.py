@@ -144,3 +144,18 @@ def test_jwks_requires_asymmetric_openid_signing_key():
     assert ready({"keys": [{"kty": "oct", "alg": "HS256", "kid": "legacy"}]}) is False
     assert ready({"keys": []}) is False
     assert ready({}) is False
+
+
+def test_supabase_request_path_keeps_userinfo_and_jwks_inside_client_context():
+    source = Path("hercules-ai/app/main.py").read_text()
+    start = source.index("async def validate_supabase_mcp_token")
+    end = source.index("async def validate_public_mcp_token", start)
+    function_source = source[start:end]
+
+    context_start = function_source.index("async with httpx.AsyncClient")
+    context_end = function_source.index("    except (httpx.HTTPError,ValueError):")
+    client_context = function_source[context_start:context_end]
+
+    assert "MCP_OAUTH_USER_PATH" in client_context
+    assert '"/auth/v1/.well-known/jwks.json"' in client_context
+    assert "verify_supabase_jwt_signature(" in function_source
