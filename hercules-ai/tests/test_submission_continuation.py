@@ -36,6 +36,7 @@ def test_submission_controller_advances_safe_automated_work_and_stops_at_externa
         "reviewer_oauth_verification",
         "demo_recording",
         "plugin_portal_draft",
+        "legal_publication_clearance",
     }
     assert "submit_for_review" not in plan["safe_actions"]
 
