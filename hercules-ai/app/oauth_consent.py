@@ -55,7 +55,7 @@ def render_oauth_consent(supabase_origin: str, publishable_key: str) -> str:
   <p id="status" role="status" aria-live="polite"></p>
 </main>
 <script type="module">
-import {{ createClient }} from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import {{ createClient }} from "https://esm.sh/@supabase/supabase-js@2.80.0";
 
 const SUPABASE_ORIGIN = {origin};
 const PUBLISHABLE_KEY = {key};
