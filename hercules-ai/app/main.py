@@ -278,6 +278,10 @@ def _png_icon(size:int)->bytes:
 async def command_center():
     return FileResponse(UI)
 
+@app.get("/oauth/consent",include_in_schema=False)
+async def oauth_consent_page():
+    return FileResponse(UI_DIR/"oauth"/"consent.html",media_type="text/html",headers={"Cache-Control":"no-store","X-Content-Type-Options":"nosniff"})
+
 @app.get("/product-quiz.js",include_in_schema=False)
 async def product_quiz_widget():
     return FileResponse(UI_DIR/"product-quiz.js",media_type="application/javascript",headers={"Cache-Control":"public, max-age=300","X-Content-Type-Options":"nosniff"})
