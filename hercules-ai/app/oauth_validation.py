@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Set
 from typing import Any
 
+import jwt
+
 
 def validate_introspection_claims(
     payload: Mapping[str, Any],
@@ -81,6 +83,57 @@ def validate_supabase_claims(
 
     scopes = set(str(payload.get("scope", "")).split())
     return required_scopes.issubset(scopes)
+
+
+def verify_supabase_jwt_signature(
+    token: str,
+    jwks: Mapping[str, Any],
+    *,
+    issuer: str,
+    audience: str,
+    now: float,
+) -> dict[str, Any] | None:
+    try:
+        header = jwt.get_unverified_header(token)
+    except jwt.PyJWTError:
+        return None
+    kid = header.get("kid")
+    alg = header.get("alg")
+    if not isinstance(kid, str) or not kid or alg not in {"RS256", "ES256"}:
+        return None
+    keys = jwks.get("keys")
+    if not isinstance(keys, list):
+        return None
+    candidates = [
+        key for key in keys
+        if isinstance(key, Mapping)
+        and key.get("kid") == kid
+        and key.get("alg") == alg
+        and ((key.get("kty") == "RSA" and alg == "RS256") or (key.get("kty") == "EC" and alg == "ES256"))
+    ]
+    if len(candidates) != 1:
+        return None
+    try:
+        public_key = jwt.PyJWK.from_dict(dict(candidates[0])).key
+        payload = jwt.decode(
+            token,
+            public_key,
+            algorithms=[alg],
+            issuer=issuer,
+            audience=audience,
+            options={"verify_exp": False, "verify_nbf": False},
+        )
+    except (jwt.PyJWTError, ValueError, TypeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    exp = payload.get("exp")
+    if not isinstance(exp, (int, float)) or isinstance(exp, bool) or exp <= now:
+        return None
+    nbf = payload.get("nbf")
+    if nbf is not None and (not isinstance(nbf, (int, float)) or isinstance(nbf, bool) or nbf > now):
+        return None
+    return payload
 
 
 def jwks_has_asymmetric_signing_key(payload: Mapping[str, Any]) -> bool:
