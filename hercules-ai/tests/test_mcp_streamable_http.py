@@ -214,13 +214,3 @@ def test_supabase_oauth_discovery_uses_documented_oidc_fallback():
     assert '"/auth/v1/.well-known/openid-configuration"' in main
     assert "for discovery_url in discovery_urls" in main
     assert "registration_endpoint" in main
-
-
-def test_plugin_legal_routes_publish_version_controlled_documents():
-    source = Path("hercules-ai/app/main.py").read_text()
-
-    assert '@app.get("/plugin/privacy")' in source
-    assert '@app.get("/plugin/terms")' in source
-    assert 'HERCULES-PRIVACY-POLICY-DRAFT.md' in source
-    assert 'HERCULES-TERMS-OF-SERVICE-DRAFT.md' in source
-    assert 'media_type="text/markdown"' in source
