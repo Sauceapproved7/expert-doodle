@@ -170,15 +170,15 @@ async def validate_supabase_mcp_token(token:str)->bool:
                 MCP_OAUTH_SUPABASE_ORIGIN+MCP_OAUTH_USER_PATH,
                 headers={"Authorization":f"Bearer {token}"},
             )
-        if response.status_code!=200:
-            return False
-        user=response.json()
-        jwks_response=await client.get(
-            MCP_OAUTH_SUPABASE_ORIGIN+"/auth/v1/.well-known/jwks.json"
-        )
-        if jwks_response.status_code!=200:
-            return False
-        jwks=jwks_response.json()
+            if response.status_code!=200:
+                return False
+            user=response.json()
+            jwks_response=await client.get(
+                MCP_OAUTH_SUPABASE_ORIGIN+"/auth/v1/.well-known/jwks.json"
+            )
+            if jwks_response.status_code!=200:
+                return False
+            jwks=jwks_response.json()
     except (httpx.HTTPError,ValueError):
         return False
     payload=verify_supabase_jwt_signature(
