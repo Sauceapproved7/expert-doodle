@@ -142,3 +142,27 @@ def test_main_exposes_read_only_submission_readiness_route():
     source = Path("hercules-ai/app/main.py").read_text()
     assert '@app.get("/v1/submission/readiness")' in source
     assert "build_submission_readiness_snapshot" in source
+
+
+def test_submission_controller_blocks_when_production_commit_does_not_match_expected():
+    module = load_module()
+    plan = module.build_submission_plan(
+        {
+            "production_commit_verified": True,
+            "production_commit_matches_expected": False,
+            "oauth_signature_verification_live": True,
+            "domain_challenge_configured": True,
+            "domain_challenge_verified": True,
+            "oauth_client_registration_ready": True,
+            "reviewer_oauth_verified": True,
+            "positive_cases_proven": True,
+            "demo_recording_ready": True,
+            "portal_draft_created": True,
+            "legal_publication_cleared": True,
+        }
+    )
+
+    assert plan["status"] == "blocked_internal"
+    assert plan["safe_actions"] == []
+    assert plan["internal_gates"] == ["production_commit_drift"]
+    assert plan["owner_only_actions"] == []
