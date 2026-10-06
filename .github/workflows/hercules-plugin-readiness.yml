@@ -28,4 +28,5 @@ jobs:
         run: |
           python -m pytest -q hercules-ai/tests/test_openai_plugin_readiness.py
           python -m pytest -q hercules-ai/tests/test_mcp_oauth_wire.py
+          PYTHONPATH=hercules-ai python -m pytest -q hercules-ai/tests/test_mcp_owner_auth_behavior.py
           node --test tests/hercules-plugin-submission-readiness.test.mjs
