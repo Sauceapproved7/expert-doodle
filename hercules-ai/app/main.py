@@ -10,6 +10,7 @@ from .oauth_consent import render_oauth_consent
 from .oauth_validation import jwks_has_asymmetric_signing_key, validate_introspection_claims, validate_supabase_claims
 from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
+from .product_quiz import router as product_quiz_router
 
 DB=os.getenv("HERCULES_DB","/data/hercules.db")
 BASE=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
@@ -68,6 +69,7 @@ async def lifespan(_app:FastAPI):
         yield
 
 app=FastAPI(title="Hercules AI Core",version="1.1.0",lifespan=lifespan)
+app.include_router(product_quiz_router)
 
 async def probe_supabase_oauth_discovery()->tuple[bool,bool]:
     if not MCP_OAUTH_SUPABASE_ORIGIN.startswith("https://"):
@@ -262,6 +264,10 @@ def _png_icon(size:int)->bytes:
 @app.get("/",include_in_schema=False)
 async def command_center():
     return FileResponse(UI)
+
+@app.get("/product-quiz.js",include_in_schema=False)
+async def product_quiz_widget():
+    return FileResponse(UI_DIR/"product-quiz.js",media_type="application/javascript",headers={"Cache-Control":"public, max-age=300","X-Content-Type-Options":"nosniff"})
 
 @app.get("/manifest.webmanifest",include_in_schema=False)
 async def app_manifest():
