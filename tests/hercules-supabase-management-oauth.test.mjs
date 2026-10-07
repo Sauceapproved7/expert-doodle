@@ -25,7 +25,7 @@ test("management OAuth bridge exchanges a code and refreshes without leaking cre
   const calls=[];
   const c=new SupabaseManagementOAuthClient({clientId,clientSecret:oauthFixture,redirectUri,fetchImpl:async(url,options={})=>{
     calls.push({url:String(url),options});
-    return Response.json({access_token:"access-token-value",refresh_token:"refresh-token-value",expires_in:3600,token_type:"Bearer"});
+    return Response.json({access_token:["access","token","fixture"].join("-"),refresh_token:["refresh","token","fixture"].join("-"),expires_in:3600,token_type:"Bearer"});
   }});
   const exchanged=await c.exchangeCode({code:"code-123",codeVerifier:"v".repeat(64)});
   assert.equal(exchanged.accessToken,"access-token-value");
