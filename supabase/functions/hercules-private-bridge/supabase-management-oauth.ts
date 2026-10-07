@@ -70,6 +70,8 @@ async function callback(url:URL){
   const code=String(url.searchParams.get("code")||""),state=String(url.searchParams.get("state")||"");
   if(!code||!state)return json({error:"oauth_callback_parameters_required"},400);
   const current=await row();
+  const {data:stateValid,error:stateError}=await admin.rpc("hercules_supabase_management_validate_callback_state",{p_state:state});
+  if(stateError||stateValid!==true)throw new Error("oauth_state_mismatch");
   const verifier=await secret(current.pkce_verifier_secret_ref);
   const clientSecret=await secret(current.client_secret_secret_ref);
   const tokens=await tokenRequest(String(current.client_id),clientSecret,new URLSearchParams([["grant_type","authorization_code"],["code",code],["redirect_uri",CALLBACK],["code_verifier",verifier]]));
