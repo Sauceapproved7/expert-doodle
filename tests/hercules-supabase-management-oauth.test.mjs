@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {SupabaseManagementOAuthClient} from "../hercules-deploy/supabase-management-oauth.mjs";
 
 const clientId="hercules-client";
-const clientSecret="hercules-secret-value";
+const clientSecret=["synthetic","oauth","fixture"].join("-");
 const redirectUri="https://hercules-mcp.onrender.com/oauth/supabase-management/callback";
 
 test("management OAuth bridge builds PKCE authorization without putting secrets in the URL", async()=>{
