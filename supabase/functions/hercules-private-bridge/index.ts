@@ -10,6 +10,7 @@ import {handleStudioShopifyPaidWebhook,isStudioShopifyPaidWebhook} from './studi
 import {handleCleanerDeviceRequest,isCleanerDeviceAction} from './cleaner-device.ts';
 import {handleSoundWorldLaunchGiftRequest,isSoundWorldLaunchGiftRequest} from './soundworld-launch-gift.ts';
 import {handleBotRuntimeRequest,isBotRuntimeRequest} from './bot-runtime.ts';
+import {handleSupabaseManagementOAuthRequest} from './supabase-management-oauth.ts';
 
 const U=Deno.env.get('SUPABASE_URL')!;
 const A=JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS')||'{}').default||Deno.env.get('SUPABASE_ANON_KEY')||'';
@@ -603,6 +604,7 @@ async function handleSpaceshipCredentialDrop(req:Request,requestUrl:URL){
 Deno.serve(async(req:Request)=>{
   const requestUrl=new URL(req.url);
   if(isBotRuntimeRequest(requestUrl))return handleBotRuntimeRequest(req);
+  if(req.method==='GET' && requestUrl.searchParams.get('supabase_management_oauth_callback')==='1')return handleSupabaseManagementOAuthRequest(req);
   if(isSoundWorldLaunchGiftRequest(requestUrl))return handleSoundWorldLaunchGiftRequest(req,requestUrl,admin);
   if(isStudioShopifyPaidWebhook(requestUrl))return handleStudioShopifyPaidWebhook(req,requestUrl,admin);
   if(isDomainAgentGet(req,requestUrl))return handleDomainAgentRequest(req);
@@ -628,6 +630,7 @@ Deno.serve(async(req:Request)=>{
     if(isDomainAgentAction(probeAction))return handleDomainAgentRequest(req);
     if(isSpaceshipMcpAction(probeAction))return handleSpaceshipMcpRequest(req);
     if(isPersonalBrowserAction(probeAction))return handlePersonalBrowserRequest(req);
+    if(probeAction==='supabase_management_oauth_start')return handleSupabaseManagementOAuthRequest(req);
   }
   if(req.method==='POST' && req.headers.get('x-hercules-internal-key')){
     return handleSpaceshipDnsRequest(req);
