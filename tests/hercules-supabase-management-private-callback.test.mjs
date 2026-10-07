@@ -42,3 +42,13 @@ test("Management OAuth start remains owner-only and credential-free",()=>{
   assert.match(callback,/secretExposure:false/);
   assert.match(callback,/supabase_management_oauth_start/);
 });
+
+
+test("callback validates OAuth state before exchanging the one-time authorization code",()=>{
+  assert.match(callback,/hercules_supabase_management_validate_callback_state/);
+  const preflight=callback.indexOf("hercules_supabase_management_validate_callback_state");
+  const exchange=callback.indexOf("tokenRequest(");
+  assert.ok(preflight>=0,"state preflight RPC must exist");
+  assert.ok(exchange>=0,"token exchange must exist");
+  assert.ok(preflight<exchange,"state preflight must happen before token exchange");
+});
