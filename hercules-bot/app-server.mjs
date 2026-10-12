@@ -12,6 +12,7 @@ import {createAbyssOrchestrator} from "./abyss-orchestrator.mjs";
 import {createAbyssRuntimeBoundary} from "./abyss-runtime-boundary.mjs";
 import {createSmallzOwnerBridge} from "./owner-session-bridge.mjs";
 import {createSmallzRequestAuth} from "./request-auth.mjs";
+import {credentialSetup} from "./credential-setup.mjs";
 
 function json(status,body){return {status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"},body};}
 function safePlan(orchestrator,plan){
@@ -43,7 +44,7 @@ function createServerSideDeployRequest(){
   };
 }
 
-export function createHerculesBotApp({port=Number(process.env.PORT||38801),boundary=createAbyssRuntimeBoundary()}={}){
+export function createHerculesBotApp({port=Number(process.env.PORT||38801),boundary=createAbyssRuntimeBoundary(),credentialFetch=fetch}={}){
   const body=createSimulatedBodyAdapter();
   const mcpWorkEndpoint=process.env.HERCULES_MCP_WORK_URL;
   const ownerBridge=mcpWorkEndpoint?createSmallzOwnerBridge({endpoint:mcpWorkEndpoint}):null;
@@ -66,6 +67,7 @@ export function createHerculesBotApp({port=Number(process.env.PORT||38801),bound
   async function stateFor(principal){return boundary.readControlState(principal)}
   async function handle(req={}){
     const method=String(req.method??"GET").toUpperCase(),url=String(req.url??"/").split("?")[0];
+    if(url==="/connect/spaceship")return credentialSetup(req,{fetchUpstream:credentialFetch});
     if(method==="GET"&&url==="/health")return json(200,{ok:true,service:"smallz",securityBoundary:"owner-auth-and-external-estop",hardware:"disconnected"});
     if(method==="GET"&&url==="/api/auth-config"){
       const authUrl=process.env.SUPABASE_PUBLIC_URL,key=process.env.SUPABASE_PUBLISHABLE_KEY;
@@ -134,9 +136,9 @@ export function createHerculesBotApp({port=Number(process.env.PORT||38801),bound
         let body={};
         if(req.method==="POST"){
           let raw="";for await(const chunk of req){raw+=chunk;if(raw.length>262144)throw Object.assign(new Error("request-too-large"),{statusCode:413});}
-          body=raw?JSON.parse(raw):{};
+          body=String(req.url||'').split('?')[0]==='/connect/spaceship'?raw:(raw?JSON.parse(raw):{});
         }
-        const result=await handle({method:req.method,url:req.url,body,authorization:req.headers.authorization});
+        const result=await handle({method:req.method,url:req.url,body,authorization:req.headers.authorization,origin:req.headers.origin,contentType:req.headers['content-type']});
         res.writeHead(result.status,result.headers);res.end(typeof result.body==="string"?result.body:JSON.stringify(result.body));
       }catch(error){
         const status=error?.statusCode===413?413:400;
