@@ -260,3 +260,9 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Paths: private-bridge/spaceship-mcp.ts and focused discovery tests.
 - Original Hercules integration repair with AI assistance; no new runtime dependency.
 - Exact trusted registration endpoint updated to the currently advertised Spaceship issuer endpoint. Issuer, authorization, token, and registration validation remain fixed and fail closed. Existing Vault credential custody, PKCE, owner consent, and DNS authorization remain enforced.
+
+## Smallz secure setup rendering — 2026-10-12
+
+- Paths: hercules-bot/credential-setup.mjs, Smallz server route, focused tests, and setup documentation.
+- Origin: original Hercules code created with AI assistance. Node built-ins and the existing private bridge are used; no new packaged dependency.
+- Scope: render the existing expiring credential-drop form on the owned Smallz host, forwarding only bounded key/secret fields to a fixed Hercules backend. Provider validation, Vault storage, and DNS authorization remain enforced by that backend.
