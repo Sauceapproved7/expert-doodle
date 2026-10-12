@@ -6,7 +6,7 @@ test("Smallz console establishes Supabase owner session and forwards bearer only
  const html=await readFile(new URL("../hercules-bot/index.html",import.meta.url),"utf8");
  assert.match(html,/@supabase\/supabase-js@2/);
  assert.match(html,/auth\.getSession\(\)/);
- assert.match(html,/session\.access_token/);
+ assert.match(html,/ownerSession\.access_token/);
  assert.match(html,/authorization[^\n]+Bearer/si);
  assert.doesNotMatch(html,/body\s*:\s*JSON\.stringify\([^)]*access_token/si);
  assert.match(html,/signInWithOtp/);

@@ -247,3 +247,10 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Security scope: explicit authorization input, bounded in-memory static inspection, deterministic SHA-256 evidence, bounded printable-string extraction, and explicit no-execution/no-mutation reporting.
 - IDA is documented only as an optional future adapter boundary. IDA and any third-party plugin/runtime remain external and are not claimed as SauceApproved-owned code.
 
+
+## Smallz password access v1 provenance — 2026-10-12
+
+- Paths: hercules-bot/index.html, Smallz access/runtime tests, docs/SMALLZ-PASSWORD-ACCESS-V1.md.
+- Origin: original project-authored implementation with AI assistance.
+- Dependencies: existing externally hosted Supabase Auth client; no new packaged runtime dependency.
+- Scope: existing-account password sign-in and credential cleanup; server owner, external-stop, provider, and launch authority boundaries remain in force.
