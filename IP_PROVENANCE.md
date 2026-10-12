@@ -254,3 +254,9 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Origin: original project-authored implementation with AI assistance.
 - Dependencies: existing externally hosted Supabase Auth client; no new packaged runtime dependency.
 - Scope: existing-account password sign-in and credential cleanup; server owner, external-stop, provider, and launch authority boundaries remain in force.
+
+## Spaceship OAuth discovery compatibility — 2026-10-12
+
+- Paths: private-bridge/spaceship-mcp.ts and focused discovery tests.
+- Original Hercules integration repair with AI assistance; no new runtime dependency.
+- Exact trusted registration endpoint updated to the currently advertised Spaceship issuer endpoint. Issuer, authorization, token, and registration validation remain fixed and fail closed. Existing Vault credential custody, PKCE, owner consent, and DNS authorization remain enforced.
