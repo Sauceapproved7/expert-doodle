@@ -10,7 +10,7 @@ const AUTH_META="https://id.service.spaceship.com/.well-known/oauth-authorizatio
 const MCP_URL="https://mcp.spaceship.com/mcp";
 const AUTHORIZATION_ENDPOINT="https://id.service.spaceship.com/connect/authorize";
 const TOKEN_ENDPOINT="https://id.service.spaceship.com/connect/token";
-const REGISTRATION_ENDPOINT="https://mcp.spaceship.com/register";
+const REGISTRATION_ENDPOINT="https://id.service.spaceship.com/connect/register";
 const SCOPE="openid offline_access mcp.spaceship.com";
 const CALLBACK=U+"/functions/v1/hercules-private-bridge?spaceship_mcp_oauth_callback=1";
 const DOMAIN="sauceapproved.com";
