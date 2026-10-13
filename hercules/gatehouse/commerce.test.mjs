@@ -57,3 +57,15 @@ test("no client claims, test receipts, or webhook signals can authorize delivery
  assert.equal(canDeliverPaidReport({providerRechecked:true,customerAuthorized:true,reportGenerated:true,identityVerified:true}),false);
  assert.equal(canDeliverPaidReport({providerRechecked:false,customerAuthorized:true,reportGenerated:true}),false);
 });
+
+test("missing webhook scope, malformed payloads and mixed carts never unlock access",()=>{
+ const secret="t".repeat(36);
+ const body=JSON.stringify({id:404,financial_status:"paid",currency:"USD",total_price:"49.00",cancelled_at:null,refunds:[],
+  line_items:[{sku:"HG-DIAGNOSTIC-49",variant_id:67754351460672,quantity:1,price:"49.00"},{sku:"EXTRA",variant_id:55,quantity:1,price:"0.00"}]});
+ const hmac=createHmac("sha256",secret).update(body).digest("base64");
+ const args={rawBody:body,hmac,webhookSecret:secret,shopDomain:"sauceapproved-2.myshopify.com",expectedShopDomain:"sauceapproved-2.myshopify.com"};
+ assert.equal(assessPaidOrderWebhook(args).status,"unverified");
+ assert.equal(assessPaidOrderWebhook({...args,shopDomain:"other.myshopify.com"}).status,"unverified");
+ assert.equal(assessPaidOrderWebhook({...args,webhookSecret:""}).status,"unverified");
+ assert.equal(assessPaidOrderWebhook({...args,rawBody:"not JSON"}).status,"unverified");
+});
