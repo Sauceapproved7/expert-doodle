@@ -40,8 +40,8 @@ test("budget violation and absent proof always fail closed",()=>{
   for(const item of [
     null,{},{...good,cpuQuotaMicros:25000},{...good,memoryLimitBytes:1073741824},
     {...good,peakMemoryBytes:500000000},{...good,elapsedMs:18000},
-    {...good,elapsedMs:null},{...good,generatedText:""},
-    {...good,generatedText:42},
+    {...good,elapsedMs:null},{...good,modelReply:null},
+    {...good,modelReply:{model:"wrong",choices:[{finish_reason:"stop",message:{role:"assistant",content:"4"}}]}},
   ]){
     assert.equal(evaluateFreeModelBudget(item).furtherLabEligible,false);
     assert.equal(evaluateFreeModelBudget(item).productionInferenceVerified,false);
@@ -55,7 +55,10 @@ test("log parsing requires exact cgroup observations, no duplicate fields",()=>{
     "HERCULES_MEMORY_LIMIT=536870912",
     "HERCULES_MEMORY_PEAK=355000000",
     "HERCULES_ELAPSED_MS=9000",
-    "HERCULES_MODEL_REPLY_BASE64="+Buffer.from("HTTP/1.1 200 OK\\r\\nContent-Type: application/json\\r\\nConnection: close\\r\\n\\r\\n"+JSON.stringify(good.modelReply)).toString("base64"),
+    "HERCULES_MODEL_REPLY_BASE64="+Buffer.from(
+      ["HTTP/1.1 200 OK","Content-Type: application/json","Connection: close","",""].join(String.fromCharCode(13,10))
+        +JSON.stringify(good.modelReply)
+    ).toString("base64"),
   ].join("\n");
   assert.equal(parseFreeModelBudgetLog(raw).modelReply.model,"hercules-trial");
   assert.throws(()=>parseFreeModelBudgetLog(raw+"\nHERCULES_CPU_QUOTA=10000"),/duplicate/);
