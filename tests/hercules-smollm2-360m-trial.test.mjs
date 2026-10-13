@@ -51,5 +51,9 @@ test("bounded no-credential CI workflow uses exact external content-addressed mo
   assert.match(yaml,/permissions:\s*\n\s*contents: read/);
   assert.match(yaml,/\/tmp\/hercules-360m\//);
   assert.match(yaml,/127\.0\.0\.1/);
+  const downloadCap=/--max-filesize\s+(\d+)/.exec(yaml);
+  assert.ok(downloadCap,"download size must be bounded");
+  assert.ok(Number(downloadCap[1]) >= HERCULES_360M_MODEL.bytes,
+    "download bound must accommodate the exact verified 360M model");
   assert.doesNotMatch(yaml,/OPENAI_API_KEY|HF_TOKEN|render\.com\/api|railway\.app\/graphql|supabase\.co\/functions/);
 });
