@@ -31,3 +31,17 @@ node scripts/verify-owner-code-only.mjs
 node scripts/verify-hercules-execution-contract.mjs
 node scripts/security-baseline.mjs
 ```
+
+## Actual completed isolated CPU result — October 13, 2026
+
+GitHub job `115433320527` completed successfully as an **experiment**, not a production qualification. The exact checksum-pinned Qwen2.5-0.5B Q3_K_S model returned three correct real assistant completions under the measured Docker 0.10-CPU quota and 512-MiB cgroup memory limit:
+
+| Prompt | Actual response | Elapsed |
+| --- | --- | ---: |
+| 2 + 2 | `4` | 4,102 ms |
+| Larger: 7 or 12 | `12` | 3,500 ms |
+| Capital of France | `Paris` | 2,202 ms |
+
+**Critical failure:** The model process peak RSS was **570,011,648 bytes (~543.6 MiB)**, exceeding the cgroup's 536,870,912-byte (512-MiB) limit and leaving no 128-MiB headroom. The separately observed cgroup peak was 225,280,000 bytes, but the evaluator deliberately uses the more conservative **max(process RSS, cgroup peak)**. Memory readings can differ because of memory mapping and accounting; this lab cannot establish that the full live Hercules model+Node workload fits. The observed diagnosis is `qualityCandidateForFurtherLab=false`, `memoryWithinLimit=false`, `memoryHeadroomOk=false` despite `correctAnswers=3`.
+
+Thus **do not install this Q3_K_S candidate on Render Free or activate public chat**. Do not weaken the memory threshold to accommodate the model. A smaller pinned quantization or a separately verified larger no-extra-cost authorized host needs its own independent measurement. The workflow success means the evidence procedure completed, not that the candidate passed.
