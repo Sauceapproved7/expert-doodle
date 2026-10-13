@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {assessColdLoad, QWEN_COLD_LIMITS} from "../scripts/hercules-qwen-cold-load.mjs";
+import {assessColdLoad, parseColdLoadLog, QWEN_COLD_LIMITS} from "../scripts/hercules-qwen-cold-load.mjs";
 
 const correct={
   exitCode:0,oomKilled:false,coldCopyCompleted:true,
@@ -66,4 +66,19 @@ test("cold-load workflow forces external model file into no-network charged tmpf
   ])assert.ok(y.includes(s),"missing "+s);
   assert.match(y,/permissions:\s*\n\s*contents: read/);
   assert.doesNotMatch(y,/HF_TOKEN|OPENAI_API_KEY|RENDER_API_KEY|railway\.app\/graphql|supabase\.co\/functions/);
+});
+
+
+test("partial evidence and an observed OOM are reported without model qualification",()=>{
+  const raw=["HERCULES_CPU_QUOTA=10000","HERCULES_CPU_PERIOD=100000",
+    "HERCULES_MEMORY_LIMIT=536870912","HERCULES_COLD_COPY_COMPLETE=0"].join("\n");
+  const evidence=parseColdLoadLog(raw,{exitCode:137,oomKilled:true});
+  assert.equal(evidence.oomKilled,true);
+  assert.equal(assessColdLoad(evidence).outcome,"oom");
+  assert.equal(assessColdLoad(evidence).eligibleForMoreLab,false);
+});
+
+test("duplicate or invalid cold evidence cannot be silently accepted",()=>{
+  assert.throws(()=>parseColdLoadLog("HERCULES_CPU_QUOTA=10000\nHERCULES_CPU_QUOTA=10000",{exitCode:1,oomKilled:false}),/duplicate/);
+  assert.throws(()=>parseColdLoadLog("HERCULES_CPU_QUOTA=oops",{exitCode:1,oomKilled:false}),/invalid/);
 });
