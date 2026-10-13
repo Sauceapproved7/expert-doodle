@@ -1,5 +1,10 @@
 # Hercules Threat Model
 
+## Smallz server-side read-only release evidence command
+
+The owned, local-only command `scripts/hercules-smallz-evidence-read.mjs` reads two separate server-environment credential slots but never exposes them in normalized output. Provider scopes must be constrained at the external provider; a variable name does not establish least privilege. There is no public HTTP endpoint, owner-session bypass, custom URL, command execution, deploy, rollback or provider-write capability. If either credential is missing, the command makes no network requests; malformed/oversized provider responses and unexpected errors hold closed without echoing raw content. All reported evidence is advisory, not a signed or independently attested release receipt. Remaining trust boundaries include integrity of the host runtime, custody and real permissions of provider tokens, remote TLS endpoints and independent owner-authenticated runtime verification. No new trusted signing boundary is claimed.
+
+
 ## Studio hosted activation relay
 
 The public Studio `/activate` route renders HTML only from the fixed Hercules project and Studio access selector. Browser POST requires the exact owned Studio Origin and JSON; only bounded email-link requests or bearer-authenticated Studio claims reach the fixed backend. Arbitrary targets, redirects, unsupported actions, oversized bodies/responses, and unexpected markup fail closed. Upstream cookies and headers are discarded. No service-role credentials are available to this relay. Responses are no-store, framing is denied, and CSP limits script and connection sources. Supabase validates sessions and the existing service-role-only claim RPC enforces buyer identity and product isolation. Auth callback allowlist configuration and actual email delivery require separate production verification. No commerce gate is inferred from rendering success.

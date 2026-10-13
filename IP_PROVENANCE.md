@@ -1,3 +1,11 @@
+## Hercules Smallz server-only evidence command — October 13, 2026
+
+- Original first-party SauceApproved AI-assisted Node 22 code: `hercules-deploy/smallz-evidence-command.mjs`, `scripts/hercules-smallz-evidence-read.mjs`, `tests/hercules-deploy-smallz-evidence-command.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-EVIDENCE-COMMAND-V1.md`.
+- Reuses original owned Smallz GET-only provider readers and evidence bridge; no vendor source, runtime package, model weights or credentials incorporated.
+- The command has no HTTP listener, public route, side-effecting provider method, URL option, database write, payment or release authorization. It requires two separately provided server-only env credentials and fails closed without them. Env slot names alone do not prove read-only scope.
+- TDD RED commit `2dcdc95b4a570a3f5e5fb4fe82bb1ba0a4e0bb83` failed on the missing module while 112 existing Deploy Plane tests passed; GREEN commit `552b2b87a304cea8b10a23702e514b345b8dd613` passed 119/119 Deploy Plane tests.
+- No credential readback, live production provider GET proof, deploy, autoDeploy setting change, paid plan or customer data mutation was performed.
+
 
 ## Hercules Smallz authenticated REST read transport — October 13, 2026
 
