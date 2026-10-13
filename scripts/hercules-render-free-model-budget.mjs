@@ -15,17 +15,20 @@ export function evaluateFreeModelBudget(evidence){
   const period=evidence?.cpuPeriodMicros;
   const maxMemory=evidence?.memoryLimitBytes;
   const peak=evidence?.peakMemoryBytes;
+  const modelProcessRss=evidence?.modelProcessPeakRssBytes;
   const elapsed=evidence?.elapsedMs;
   const reply=evidence?.modelReply;
   const quotaVerified=Number.isSafeInteger(cpu)&&Number.isSafeInteger(period)&&
     period>0 && cpu>0 && cpu/period===RENDER_FREE_LIMITS.cpuFraction &&
     maxMemory===RENDER_FREE_LIMITS.memoryBytes;
-  const measurementValid=Number.isSafeInteger(peak)&&peak>0&&
+  const measurementValid=Number.isSafeInteger(modelProcessRss)&&modelProcessRss>0&&
+    Number.isSafeInteger(peak)&&peak>0&&
     Number.isSafeInteger(elapsed)&&elapsed>0 &&
     Number.isSafeInteger(maxMemory)&&maxMemory>0;
-  const memoryWithinLimit=measurementValid&&peak<=RENDER_FREE_LIMITS.memoryBytes;
+  const conservativePeak=measurementValid?Math.max(peak,modelProcessRss):null;
+  const memoryWithinLimit=measurementValid&&conservativePeak<=RENDER_FREE_LIMITS.memoryBytes;
   const memoryHeadroomOk=measurementValid&&
-    (RENDER_FREE_LIMITS.memoryBytes-peak)>=RENDER_FREE_LIMITS.memoryHeadroomBytes;
+    (RENDER_FREE_LIMITS.memoryBytes-conservativePeak)>=RENDER_FREE_LIMITS.memoryHeadroomBytes;
   const responseUnder15s=measurementValid&&elapsed<=RENDER_FREE_LIMITS.maxResponseMs;
   // Only a structured, completed response from the exact loaded model counts.
   // A CLI startup banner or a successful process exit is not proof of inference.
@@ -45,6 +48,8 @@ export function evaluateFreeModelBudget(evidence){
     memoryHeadroomOk:Boolean(memoryHeadroomOk),
     responseUnder15s:Boolean(responseUnder15s),
     peakMemoryBytes:measurementValid?peak:null,
+    modelProcessPeakRssBytes:measurementValid?modelProcessRss:null,
+    conservativePeakBytes:conservativePeak,
     elapsedMs:measurementValid?elapsed:null,
     generatedTextExcerpt:measuredRealText?generated.trim().slice(0,180):null,
     furtherLabEligible:Boolean(quotaVerified&&memoryWithinLimit&&
@@ -63,7 +68,7 @@ export function parseFreeModelBudgetLog(source){
   const fields=new Map();
   const required=new Set([
     "HERCULES_CPU_QUOTA","HERCULES_CPU_PERIOD","HERCULES_MEMORY_LIMIT",
-    "HERCULES_MEMORY_PEAK","HERCULES_ELAPSED_MS","HERCULES_MODEL_REPLY_BASE64"
+    "HERCULES_MEMORY_PEAK","HERCULES_PROCESS_PEAK_RSS_BYTES","HERCULES_ELAPSED_MS","HERCULES_MODEL_REPLY_BASE64"
   ]);
   for(const line of source.split(/\r?\n/)){
     if(!line.startsWith("HERCULES_"))continue;
@@ -126,6 +131,7 @@ export function parseFreeModelBudgetLog(source){
     cpuPeriodMicros:int("HERCULES_CPU_PERIOD"),
     memoryLimitBytes:int("HERCULES_MEMORY_LIMIT"),
     peakMemoryBytes:int("HERCULES_MEMORY_PEAK"),
+    modelProcessPeakRssBytes:int("HERCULES_PROCESS_PEAK_RSS_BYTES"),
     elapsedMs:int("HERCULES_ELAPSED_MS"),
     modelReply,
   });
