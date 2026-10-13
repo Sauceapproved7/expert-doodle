@@ -9,7 +9,7 @@ export function buildGatehouseHostReview(plan,{action="start",now=Date.now()}={}
   reject("gatehouse_action_invalid");
  if(!Number.isSafeInteger(now)||now<=0)
   reject("gatehouse_clock_invalid");
- assertSandboxHostPlan(plan);
+ try{assertSandboxHostPlan(plan)}catch{reject("gatehouse_plan_invalid")}
  const blockers=Object.freeze([
   "independent_provider_and_cost_unverified",
   "owner_machine_identity_unverified",
