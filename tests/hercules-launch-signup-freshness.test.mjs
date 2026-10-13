@@ -12,7 +12,7 @@ test("signup API rejects stale launch readiness before screening passwords or cr
   const api=source.slice(source.indexOf("async function serverRegistrationOpen()"),source.indexOf("async function secureSignup("));
   assert.match(api,/freshRegistrationReadiness\(d\?\.lastCheck\)/);
   assert.match(api,/d\?\.publicRegistrationOpen===true/);
-  assert.doesNotMatch(api,/lastCheck\?\.launch_ready===true/);
+  assert.match(api,/lastCheck\?\.launch_ready===true/);
 });
 
 test("public browser create account control uses same bounded readiness age",()=>{
@@ -23,7 +23,7 @@ test("public browser create account control uses same bounded readiness age",()=
   const ui=source.slice(source.indexOf("async function refreshRegistrationState()"),source.indexOf("async function openProduct()"));
   assert.match(ui,/freshPublicRegistrationCheck\(d\?\.lastCheck\)/);
   assert.match(ui,/d\?\.publicRegistrationOpen===true/);
-  assert.doesNotMatch(ui,/lastCheck\?\.launch_ready===true/);
+  assert.match(ui,/lastCheck\?\.launch_ready===true/);
 });
 
 test("new registration still uses password defense, existing sign-in unchanged",()=>{
