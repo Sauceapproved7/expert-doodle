@@ -84,7 +84,7 @@ test("CI verifies real systemd parser without enabling or starting services",()=
   const ci=readFileSync(new URL("../.github/workflows/hercules-qwen15-private-systemd.yml",import.meta.url),"utf8");
   assert.match(ci,/systemd-analyze verify/);
   assert.match(ci,/mktemp -d/);
-  assert.match(ci,/ExecStart=\\/usr\\/bin\\/true/);
+  assert.match(ci,/ExecStart=\/usr\/bin\/true/);
   assert.match(ci,/hercules-qwen15-private\.service/);
   assert.doesNotMatch(ci,/\bsystemctl\s+(?:enable|start|restart|daemon-reload)\b/);
   assert.match(ci,/node --test tests\/hercules-qwen15-systemd-unit\.test\.mjs/);
