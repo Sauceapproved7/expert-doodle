@@ -109,7 +109,7 @@ jobs:
               )
               elapsed="$(( $(date +%s%3N) - started ))"
               peak="$(cat /sys/fs/cgroup/memory.peak)"
-              model_rss_kb="$(awk '$1=="VmHWM:" {print $2}' "/proc/$server_pid/status")"
+              model_rss_kb="$(grep "^VmHWM:" "/proc/$server_pid/status" | tr -s " " | cut -d " " -f2)"
               test -n "$model_rss_kb"
               test "$model_rss_kb" -gt 0
               model_rss_bytes="$((model_rss_kb * 1024))"
