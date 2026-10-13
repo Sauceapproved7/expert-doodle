@@ -9,6 +9,7 @@ import {customerAccessBridge} from "./customer-bridge.mjs";
 import {createCustomerAuthenticator} from "./customer-auth.mjs";
 import {portalReadiness} from "./customer-portal-model.mjs";
 import {assessFulfillment,makeSampleReport,renderPrintableSample} from "./fulfillment.mjs";
+import {renderIllustrativeDiagnostic} from "./website-diagnostic.mjs";
 import {assessLaunch,sentinelAlerts,revenueRadar,recoveryPlan,simulateCheckout,
  newEvidenceLedger,appendEvidence,verifyEvidenceLedger,timeMachine,validateTarget} from "./core.mjs";
 
@@ -189,6 +190,10 @@ export function createServer(config={}){
    if(cookieToken&&!customerHeaders.authorization)customerHeaders.authorization="Bearer "+cookieToken;
    const reply=await customerBridge.handle({headers:customerHeaders},"list");
    return send(res,reply.status,reply.body);
+  }
+  if(path==="/commercial/website-diagnostic-preview"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   return send(res,200,renderIllustrativeDiagnostic(),"text/html; charset=utf-8");
   }
   if(path==="/api/commercial/fulfillment-readiness"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
