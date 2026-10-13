@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from task_gateway import TaskGateway
+from codex_bridge import configured_executor, ExecutorUnavailable
 
 TOKEN = os.environ.get("HERCULES_MOBILE_TOKEN", "")
 PORT = int(os.environ.get("PORT", "8765"))
@@ -30,11 +31,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/health":
-            return self._json(200, {"service": "hercules-mobile", "status": "online", "codex": "disconnected"})
+            return self._json(200, {"service": "hercules-mobile", "status": "online", "codex": "configured" if configured_executor() else "disconnected"})
         if self.path == "/status":
             if not self._authorized():
                 return self._json(401, {"error": "unauthorized"})
-            return self._json(200, {"executor": "not_registered", "submission": "disabled"})
+            return self._json(200, {"executor": "configured" if configured_executor() else "not_registered", "submission": "enabled" if configured_executor() else "disabled"})
         if self.path == "/":
             body = INDEX.read_bytes()
             self.send_response(200)
@@ -66,7 +67,10 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(400, {"error": "invalid_json"})
         if not isinstance(payload, dict):
             return self._json(400, {"error": "invalid_payload"})
-        result = TaskGateway(TOKEN).submit(self.headers.get("Authorization", ""), payload.get("instruction"))
+        try:
+            result = TaskGateway(TOKEN, configured_executor()).submit(self.headers.get("Authorization", ""), payload.get("instruction"))
+        except (ExecutorUnavailable, ValueError):
+            return self._json(503, {"error": "executor_unavailable"})
         status = result.pop("status")
         return self._json(status, result)
 
