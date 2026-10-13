@@ -1,3 +1,9 @@
+## Hercules Codex Doctor v1 — October 13, 2026
+
+- First-party SauceApproved source: \`hercules-runtime/codex-readiness.mjs\`, \`scripts/hercules-codex-doctor.mjs\`, \`tests/hercules-codex-doctor.test.mjs\`, and \`docs/HERCULES-CODEX-DOCTOR-V1.md\`; existing implementation enforcement CI adds the dedicated Node test.
+- Authored with AI assistance using Node.js standard libraries and original Hercules policy semantics. No copied third-party code, packages, binaries, weights, user data, vendor secrets, or external runtime licenses added.
+- The Doctor is read-only and offline. Local prerequisites do not prove cloud Codex registration, terminal/GitHub mount, check execution, deploy authority, checkout, payouts, or production readiness. Proposed-file risk reports are advisory and confer no authority. No service, provider, payment, DNS, customer enrollment, or live store state is changed.
+
 ## DA-45 Qwen cold-load cgroup memory audit — 2026-10-13
 
 - Original SauceApproved first-party evidence: `scripts/hercules-qwen-cold-load.mjs`, `tests/hercules-qwen-cold-load.test.mjs`, `.github/workflows/hercules-qwen-cold-load.yml`, and `docs/HERCULES-QWEN-COLD-LOAD-V1.md`. AI-assisted authoring disclosed; original JavaScript and shell, no third-party code copied into the repository.
