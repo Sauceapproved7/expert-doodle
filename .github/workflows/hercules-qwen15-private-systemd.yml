@@ -1,0 +1,21 @@
+name: Hercules Qwen 1.5B Private Service Unit
+on:
+  pull_request:
+    paths:
+      - "deploy/hercules-qwen15/hercules-qwen15-private.service"
+      - "docs/HERCULES-QWEN15-PRIVATE-SYSTEMD.md"
+      - "tests/hercules-qwen15-systemd-unit.test.mjs"
+      - ".github/workflows/hercules-qwen15-private-systemd.yml"
+permissions:
+  contents: read
+jobs:
+  validate-private-service-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Validate private, fail-closed service unit
+        run: |
+          node --test tests/hercules-qwen15-systemd-unit.test.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
