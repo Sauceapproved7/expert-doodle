@@ -112,7 +112,7 @@ test("bad refunded, canceled, test, wrong variant, nonpaid orders are excluded",
  {...order(),totalRefundedSet:{shopMoney:{amount:"0.01",currencyCode:"USD"}}},
  {...order(),lineItems:{pageInfo:{hasNextPage:false},nodes:[{...line(),variant:{id:"gid://shopify/ProductVariant/1"}}]}}
  ];
- const r=await createNativeShopifyReader({enabled:true,ownerAuthenticated:true,accessToken:token,fetcher:async()=>fake(payload(bad))}).run();
+ const r=await createNativeShopifyReader({enabled:true,ownerAuthenticated:true,accessToken:token,fetcher:async()=>fake(payload(bad.map((entry,index)=>({...entry,id:"gid://shopify/Order/"+(500+index)}))))}).run();
  assert.equal(r.status,200);assert.equal(r.body.candidateCount,0);assert.equal(r.body.ordersScanned,5);
  assert.equal(r.body.deliveryAuthorized,false);
 });
