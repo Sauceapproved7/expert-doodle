@@ -15,7 +15,7 @@ test("Gatehouse Shopify has distinct owner-only read_order connection, no mutati
  assert.match(configure,/identity\.membership\.role.*owner/);
  assert.match(configure,/clientId!==GATEHOUSE_SHOPIFY_CLIENT_ID/);
  assert.match(configure,/exchangeGatehouseShopifyGrant/);
- assert.match(configure,/checkGatehouseShopifyOrderReadback/);
+ assert.match(configure,/verifyGatehouseShopifyOrderPermission/);
  assert.match(configure,/\.from\('gatehouse_shopify_readonly_connections'\)/);
  assert.doesNotMatch(configure,/upsertConnection\(|webhookSubscriptionCreate|observeShopifyDomains|observeShopifyLaunch|stripeRequest|mutation /);
  assert.doesNotMatch(configure,/\.from\('hercules_provider_connections'\)/);
@@ -27,6 +27,13 @@ test("Shopify token response must include read_orders and bounded expiry; cannot
  assert.match(source,/expires_in/);
  assert.match(source,/redirect:'error'/);
  assert.match(source,/const SHOPIFY_API_HOST='azymhc-x0\.myshopify\.com'/);
+});
+test("Initial grant uses only read_orders and shop identity, no rich product fields",()=>{
+ const precheck=source.slice(source.indexOf("async function verifyGatehouseShopifyOrderPermission"),
+  source.indexOf("async function checkGatehouseShopifyOrderReadback"));
+ assert.match(precheck,/orders\(first:1\)/);
+ assert.match(precheck,/shop\{id myshopifyDomain\}/);
+ assert.doesNotMatch(precheck,/lineItems|product\s*\{|variant\s*\{|mutation/);
 });
 test("Live order verification attests fixed shop and checks exact product, price, refund before only aggregate counts",()=>{
  assert.match(source,/const GATEHOUSE_SHOPIFY_ORDER_QUERY=/);
