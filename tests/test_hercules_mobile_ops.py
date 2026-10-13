@@ -32,7 +32,9 @@ class PublicProbeTests(unittest.TestCase):
         result = ops_status.probe(target, no_health)
         self.assertEqual(result["state"], "responding")
         self.assertEqual(len(visited), 2)
-        self.assertEqual(ops_status.probe(target, lambda url: 503)["state"], "degraded")
+        self.assertEqual(ops_status.probe(target, lambda url: 502)["state"], "unconfirmed")
+        self.assertEqual(ops_status.probe(target, lambda url: 503)["state"], "unconfirmed")
+        self.assertEqual(ops_status.probe(target, lambda url: 500)["state"], "degraded")
         self.assertEqual(ops_status.probe(target, lambda url: 401)["state"], "protected")
 
     def test_timeout_is_not_reported_as_offline(self):
