@@ -31,7 +31,7 @@ test('database RPC enforces server-side consent, limits and no duplicate enumera
  assert.match(rpc,/jsonb_build_object\('ok',true,'status','interest_recorded_unverified'\)/i);
  assert.match(rpc,/pg_try_advisory_xact_lock/i);
  assert.match(rpc,/created_at\s*>=\s*now\(\)\s*-\s*interval '24 hours'/i);
- assert.match(rpc,/count\s*>=\s*200/i);
+ assert.match(rpc,/entries\s*>=\s*200/i);
  assert.match(rpc,/on conflict \(email\) do nothing/i);
  assert.match(rpc,/status.*'unverified'/is);
  assert.match(rpc,/revoke all on function public\.hercules_cloud_join_founders\(text,boolean,text,text\) from public/i);
