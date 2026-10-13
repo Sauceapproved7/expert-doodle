@@ -1,0 +1,54 @@
+name: Hercules Experimental Chat Bridge
+on:
+  pull_request:
+    paths:
+      - 'hercules-models/experimental-chat-bridge.mjs'
+      - 'hercules-models/experimental-chat-cli.mjs'
+      - 'tests/hercules-experimental-chat-bridge.test.mjs'
+      - '.github/workflows/hercules-experimental-chat-bridge.yml'
+      - 'docs/HERCULES-EXPERIMENTAL-CHAT-BRIDGE-V1.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  experimental-compat-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Test experimental chat bridge auth and SSE behavior
+        run: node --test tests/hercules-experimental-chat-bridge.test.mjs
+      - name: Run actual Hercules-native neural candidate (observational, not quality certification)
+        run: |
+          node --input-type=module <<'NODE'
+          import {HerculesEmbeddedCoreNeuralV03} from "./hercules-models/embedded-core-neural-v0.3.mjs";
+          const model=await HerculesEmbeddedCoreNeuralV03.load();
+          const prompts=[
+            "Hercules test of simple language continuation.",
+            "The canonical repository is",
+            "Hercules validates every",
+            "What is two plus two?",
+            "Hercules keeps model identity",
+          ];
+          const samples=prompts.map(prompt=>{
+            const out=model.infer({prompt,maxTokens:24},{task:"general"});
+            if(typeof out.continuation!=="string" || !Array.isArray(out.tokenIds) ||
+               out.tokenIds.length>24 || out.version!=="0.3-candidate"){
+              throw new Error("native experimental checkpoint cannot execute");
+            }
+            return {
+              prompt,observedTokenCount:out.tokenIds.length,
+              nonEmptyText:out.continuation.trim().length>0,
+              sampleText:out.continuation.slice(0,220),
+            };
+          });
+          console.log(JSON.stringify({
+            candidate:"hercules-core-neural-v03",
+            samples,chatQualityVerified:false,productionReady:false
+          }));
+          NODE
+      - name: Verify Hercules ownership, security and execution gates
+        run: |
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
