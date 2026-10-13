@@ -52,3 +52,16 @@ Gatehouse retains at most **120 requested public connectivity observations in RA
 - No paid data store, secret, checkout mutation or new network permission is needed.
 
 The public history viewer reports **only the last sampled change**. It does not estimate uptime percentages, claim a failure is caused by the service itself, or report verified revenue.
+
+
+## v1.3 — Device Vault (browser-local, best effort)
+The Gatehouse dashboard now combines the existing on-demand `/api/public-history` with **on-device IndexedDB** to preserve a sanitized copy of public connectivity observations across Render process restarts, when the same browser continues retaining its local storage. Nothing is sent to a storage vendor or to the storefront. It stores only the four allowlisted public service names, timestamps and `reachable`/`unreachable` states, not customer/payment/payout/credential data.
+
+- Capped at **720 sampled observations**, **30 days**. Duplicates are merged by timestamp; unknown or suspicious fields are discarded.
+- Automatic refresh occurs every **five minutes only while the Gatehouse tab is open and visible**, with one-minute server request caching. A mobile browser may suspend background tabs at any time; this does not establish a 24/7 monitor.
+- **Export device archive** downloads a portable JSON backup with explicit `providerAttested:false`, `productionAuthorized:false`, `verifiedSales:null` and `continuousMonitoring:false`; this is not a signed or tamper-proof ledger.
+- **Clear device history** erases the device's public samples only after a user confirms; it never touches provider records or hosted services.
+- IndexedDB is not guaranteed to survive private browsing, device storage eviction, or data clearing. If it is unavailable, export of sampled in-memory observations remains possible and is explicitly labeled nonpersistent.
+- Server-side public history remains ephemeral. Durable *server-side* storage and verified Shopify/Stripe revenue collection are **not** implemented.
+
+No launch permissions, live payments, payouts, DNS, deployments or webhook integrations are introduced in this upgrade.
