@@ -121,3 +121,43 @@ test("private owner-host source terminates abnormally on unexpected model exit",
   assert.match(source,/listenModelPlaneService/);
   assert.doesNotMatch(source,/process\.exit\(0\).*(?:server|child).*error/i);
 });
+
+test("ARM64 live engine workflow invokes a real systemd Qwen recovery probe",()=>{
+  const ci=readFileSync(new URL("../.github/workflows/hercules-arm64-qwen15-comparison.yml",import.meta.url),"utf8");
+  assert.match(ci,/name: Prove owner-private Qwen itself restarts under native systemd/);
+  assert.match(ci,/bash scripts\/hercules-qwen15-native-systemd-probe\.sh/);
+  assert.doesNotMatch(ci,/systemctl (?:enable|preset) /);
+});
+test("real systemd probe uses isolated owner-gated unit without billing, public traffic or fixed secrets",()=>{
+  const script=readFileSync(new URL("../scripts/hercules-qwen15-native-systemd-probe.sh",import.meta.url),"utf8");
+  for(const marker of [
+    "systemctl daemon-reload","systemctl start","systemctl stop",
+    "systemctl show","RestartSec=30s","HERCULES_MODEL_TOKEN",
+    "HERCULES_QWEN15_PRIVATE_TRIAL=true","ConditionPathExists=",
+    "MemoryMax=4G","CPUQuota=200%","User=nobody",
+    "http://127.0.0.1:38900/health","http://127.0.0.1:18776/health",
+    "node scripts/hercules-qwen15-private-live-smoke.mjs",
+    "systemd_real_qwen_recovery_verified"
+  ])assert.ok(script.includes(marker),marker);
+  assert.match(script,/kill -KILL "\$model_child_pid"/);
+  assert.match(script,/sudo journalctl -u/);
+  assert.match(script,/trap .*cleanup/);
+  assert.doesNotMatch(script,/https?:\/\/(?!127\.0\.0\.1)|systemctl enable|systemctl preset|ai_ok\s*=\s*true|RENDER_API_KEY|SHOPIFY_API_KEY|railway\.app/);
+});
+test("real model unit is copied rather than relaxing original security policy",()=>{
+  const script=readFileSync(new URL("../scripts/hercules-qwen15-native-systemd-probe.sh",import.meta.url),"utf8");
+  assert.match(script,/deploy\/hercules-qwen15\/hercules-qwen15-private\.service/);
+  assert.match(script,/ProtectHome=yes/);
+  assert.match(script,/PrivateTmp=yes/);
+  assert.match(script,/IPAddressDeny=any/);
+  assert.match(script,/IPAddressAllow=localhost/);
+  assert.match(script,/BindReadOnlyPaths=/);
+  assert.match(script,/rm -f/);
+});
+test("lab documents no live host, no billing and limited recovery proof",()=>{
+  const doc=readFileSync(new URL("../docs/HERCULES-QWEN15-REAL-SYSTEMD-CI.md",import.meta.url),"utf8");
+  for(const term of ["ephemeral","not a production host","no extra hosting",
+    "owner authorization","Devbrain","actual Qwen","bounded restart",
+    "production main"])
+    assert.ok(doc.toLowerCase().includes(term.toLowerCase()),term);
+});
