@@ -21,6 +21,7 @@ const chatAdapter = createLocalChatAdapter({
   enabled: process.env.HERCULES_LOCAL_CHAT_ENABLED === "true",
   endpoint: process.env.HERCULES_LOCAL_CHAT_ENDPOINT || "http://127.0.0.1:11434",
   model: process.env.HERCULES_LOCAL_CHAT_MODEL || "",
+  protocol: process.env.HERCULES_LOCAL_CHAT_PROTOCOL || "ollama",
 });
 const candidateEvaluationEnabled =
   process.env.HERCULES_MODEL_ENABLE_CANDIDATES === "true";
