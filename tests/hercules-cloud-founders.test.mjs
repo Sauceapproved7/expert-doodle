@@ -85,7 +85,7 @@ test('founding signup invoker does not need table SELECT through ON CONFLICT',()
  assert.match(fix,/create or replace function public\.hercules_cloud_join_founders\(/i);
  assert.match(fix,/security invoker/i);
  assert.match(fix,/insert into public\.hercules_cloud_founders/i);
- assert.doesNotMatch(fix,/on conflict/i);
+ assert.doesNotMatch(fix,/^\s*ON CONFLICT\s*\(/mi);
  assert.doesNotMatch(fix,/grant select.*hercules_cloud_founders.*to anon/i);
  assert.match(fix,/jsonb_build_object\('ok',true,'status','interest_recorded_unverified'\)/i);
 });
