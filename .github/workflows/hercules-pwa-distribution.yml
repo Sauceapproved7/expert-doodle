@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'hercules-ai/ui/service-worker.js'
+      - 'hercules-ai/ui/index.html'
+      - 'tests/hercules-iphone-model-connection.test.mjs'
       - 'tests/hercules-pwa-service-worker.test.mjs'
       - 'docs/HERCULES-IOS-DISTRIBUTION-AND-FREE-GROWTH-V1.md'
       - '.github/workflows/hercules-pwa-distribution.yml'
@@ -10,6 +12,8 @@ on:
     branches: [main]
     paths:
       - 'hercules-ai/ui/service-worker.js'
+      - 'hercules-ai/ui/index.html'
+      - 'tests/hercules-iphone-model-connection.test.mjs'
       - 'tests/hercules-pwa-service-worker.test.mjs'
       - '.github/workflows/hercules-pwa-distribution.yml'
   workflow_dispatch:
@@ -21,7 +25,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Verify offline privacy and routing
-        run: node --test tests/hercules-pwa-service-worker.test.mjs
+        run: node --test tests/hercules-pwa-service-worker.test.mjs tests/hercules-iphone-model-connection.test.mjs
       - name: Verify Hercules execution contract
         run: node scripts/verify-hercules-execution-contract.mjs
       - name: Verify owner-code and security boundaries
