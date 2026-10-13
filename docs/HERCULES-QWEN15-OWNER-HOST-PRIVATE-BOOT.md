@@ -20,3 +20,19 @@ Execute \`node scripts/hercules-qwen15-owner-host.mjs\` **on the authorized ARM6
 The short synthetic 27-question benchmark itself remains insufficient for full customer traffic: further security, privacy, concurrency, rate-limit, uptime, failover, sustained load and live authenticated routing tests and explicit owner approval are necessary. No fake Devbrain green, auto-enrollment, checkout/payout/domain change, Render/Railway restarts, or main-branch merge.
 
 This proposed code resides only in isolated stacked PR #1007. Existing production remains unchanged.
+
+
+## Container-aware resource admission (DA-45 hardening)
+
+The launcher inspects **effective resources**, not merely physical-host resources.
+On Linux it reads cgroup v2 memory.max + memory.current and cpu.max, or legacy
+cgroup v1 memory limit/usage and CPU CFS quota/period, if present.
+It combines the CPU quota with os.availableParallelism(), and cgroup memory
+remaining/limit with os.freemem()/totalmem(). A 512 MiB/0.1 CPU container
+on a 128 GiB machine **must be denied**, not mistaken for an eligible host.
+Partial, malformed or permission-blocked cgroup metrics fail closed.
+
+This preflight improves false-positive resistance, but it is **not** an
+account billing or cloud-provider ownership assertion. Additional host
+availability, network isolation, load tests and production release gates
+remain mandatory, and public/Devbrain approval remains false.
