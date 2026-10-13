@@ -5,8 +5,10 @@ import {buildTenantSiteRow,publicAccountState,assessDelivery} from "./client-onb
 const BASE="https://xbwuablxhhwsaoomsoco.supabase.co";
 const UID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function outcome(status,body){return {status,body}}
-export function customerAccessBridge({enabled=false,publishableKey="",fetcher=fetch}={}){
- const ready=enabled===true&&typeof publishableKey==="string"&&publishableKey.startsWith("sb_publishable_");
+export function customerAccessBridge({enabled=false,reportsEnabled=false,publishableKey="",fetcher=fetch}={}){
+ const hasKey=typeof publishableKey==="string"&&publishableKey.startsWith("sb_publishable_");
+ const ready=enabled===true&&hasKey;
+ const reportsReady=reportsEnabled===true&&hasKey;
  async function remote(path,method,token,body){
   const headers={"apikey":publishableKey,"authorization":"Bearer "+token,"accept":"application/json"};
   if(body!==undefined){headers["content-type"]="application/json";headers["prefer"]="return=representation"}
@@ -25,9 +27,32 @@ export function customerAccessBridge({enabled=false,publishableKey="",fetcher=fe
   return {id:user.id,token};
  }
  async function handle(req,action){
-  if(!ready)return outcome(503,{error:"customer-intake-not-open",...assessDelivery()});
+  if(action==="reports"){
+   if(!reportsReady)return outcome(503,{error:"report-inbox-not-open",...assessDelivery()});
+  }else if(!ready)return outcome(503,{error:"customer-intake-not-open",...assessDelivery()});
   const owner=await resolveUser(req).catch(()=>null);
   if(!owner)return outcome(401,{error:"authenticated-customer-required"});
+  if(action==="reports"){
+   try{
+    // PostgREST is granted SELECT on these five metadata columns ONLY.
+    // RLS independently enforces auth.uid() = owner_user_id, including on direct API access.
+    const url="/rest/v1/gatehouse_customer_reports?select=id%2Csite_id%2Cowner_user_id%2Cdelivery_state%2Ccreated_at&owner_user_id=eq."+
+     encodeURIComponent(owner.id)+"&order=created_at.desc&limit=25";
+    const result=await remote(url,"GET",owner.token);
+    if(!result.ok||!Array.isArray(result.data)||result.data.length>25||
+      result.data.some(v=>!v||!UID.test(v.id||"")||!UID.test(v.site_id||"")||
+       v.owner_user_id!==owner.id||v.delivery_state!=="withheld"||
+       typeof v.created_at!=="string"||v.created_at.length>60||
+       !Number.isFinite(Date.parse(v.created_at))))
+      return outcome(503,{error:"private-report-storage-unavailable"});
+    return outcome(200,{
+      reports:result.data.map(v=>({id:v.id,siteId:v.site_id,
+       deliveryState:"withheld",createdAt:v.created_at})),
+      count:result.data.length,reportContentVisible:false,
+      deliveryAuthorized:false,verifiedPaidOrder:false
+    });
+   }catch{return outcome(503,{error:"private-report-storage-unavailable"})}
+  }
   if(action==="create"){
    let row;
    try{row=buildTenantSiteRow({userId:owner.id,submitted:req.body})}
