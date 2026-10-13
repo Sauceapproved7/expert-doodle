@@ -5,6 +5,7 @@ import {assessColdLoad, QWEN_COLD_LIMITS} from "../scripts/hercules-qwen-cold-lo
 
 const correct={
   exitCode:0,oomKilled:false,coldCopyCompleted:true,
+  cpuQuotaMicros:10000,cpuPeriodMicros:100000,
   chargedModelBytes:338000000,
   memoryLimitBytes:536870912,peakMemoryBytes:376000000,
   elapsedMs:7500,reply:{model:"hercules-trial",choices:[{
@@ -16,6 +17,7 @@ test("do not treat a missing, failed or OOM-killed cold model as memory-qualifie
   for(const observed of [
     null, {}, {...correct,exitCode:137,oomKilled:true},
     {...correct,exitCode:1,oomKilled:false},
+    {...correct,cpuQuotaMicros:50000},
     {...correct,coldCopyCompleted:false},
     {...correct,chargedModelBytes:null},
     {...correct,chargedModelBytes:10000000},
@@ -35,6 +37,7 @@ test("legitimate cold cgroup memory and correct answer only qualify further rese
   const r=assessColdLoad(correct);
   assert.equal(r.eligibleForMoreLab,true);
   assert.equal(r.memoryHeadroomOk,true);
+  assert.equal(r.quotaVerified,true);
   assert.equal(r.correctAnswer,true);
   assert.equal(r.coldCopyVerified,true);
   assert.equal(r.productionInferenceVerified,false);
