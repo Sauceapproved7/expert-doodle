@@ -2,19 +2,19 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { streamJsonl, stableStringify, verifyShopifyWebhookHmac } from '../_shared/shopify-bulk-jsonl.mjs';
 
-const URL = Deno.env.get('SUPABASE_URL')!;
-const ANON = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY')!;
-const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const ANON = Deno.env.get('SUPABASE_ANON_KEY') || Deno.env.get('SUPABASE_PUBLISHABLE_KEY') || JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') || '{}').default;
+const SERVICE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}').default;
 const STORE = 'sauceapproved-2.myshopify.com';
 const API_VERSION = '2026-10';
-const CALLBACK = URL + '/functions/v1/hercules-shopify-webhook/bulk';
-const DB = createClient(URL, SERVICE, { auth: { persistSession: false } });
+const CALLBACK = SUPABASE_URL + '/functions/v1/hercules-shopify-webhook/bulk';
+const DB = createClient(SUPABASE_URL, SERVICE, { auth: { persistSession: false } });
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' }
 });
 
 async function owner(req: Request) {
-  const client = createClient(URL, ANON, {
+  const client = createClient(SUPABASE_URL, ANON, {
     global: { headers: { Authorization: req.headers.get('authorization') || '' } },
     auth: { persistSession: false }
   });
@@ -30,7 +30,7 @@ async function owner(req: Request) {
 
 async function connection(organizationId?: string) {
   let q = DB.from('hercules_provider_connections')
-    .select('organization_id,client_id,client_secret_ref,signing_secret_ref,status')
+    .select('organization_id,client_id,secret_ref,signing_secret_ref,status')
     .eq('provider', 'shopify').eq('account_key', STORE).eq('status', 'active');
   if (organizationId) q = q.eq('organization_id', organizationId);
   const { data, error } = await q.limit(2);
@@ -52,7 +52,7 @@ async function secret(ref: string | null) {
 }
 
 async function accessToken(conn: any) {
-  const clientSecret = await secret(conn.client_secret_ref);
+  const clientSecret = await secret(conn.secret_ref);
   const response = await fetch('https://' + STORE + '/admin/oauth/access_token', {
     method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'client_credentials', client_id: conn.client_id, client_secret: clientSecret }),

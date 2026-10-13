@@ -1,5 +1,11 @@
 # Hercules IP Provenance & Canonical Source
 
+## Shopify webhook runtime repair — 2026-10-13
+
+- Paths: Shopify webhook and bulk-reconciliation Edge Functions, runtime regression tests, reconciliation CI, and runtime repair documentation.
+- Origin: original Hercules repair with AI assistance using existing Supabase infrastructure and Node built-ins; no new runtime package or third-party source.
+- Scope: preserve the global URL parser, support the platform's legacy and modern API-key bindings, and read the existing provider credential column. Native HMAC, signed-bridge freshness/nonce checks, owner authorization, and paid-entitlement gates remain in place.
+
 ## Standalone browser owner handoff and context capacity — 2026-10-13
 
 - Paths: standalone browser server/client, owner-handoff and context-capacity regression tests, and browser workflow/runbook.

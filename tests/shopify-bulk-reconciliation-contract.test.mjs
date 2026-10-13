@@ -71,7 +71,7 @@ test('bulk correction is local state only and does not invoke paid-order effects
 
 
 test('bulk reconciliation is routed through the existing Shopify webhook function slot', () => {
-  assert.ok(endpoint.includes("CALLBACK = URL + '/functions/v1/hercules-shopify-webhook/bulk'"));
+  assert.ok(endpoint.includes("CALLBACK = SUPABASE_URL + '/functions/v1/hercules-shopify-webhook/bulk'"));
   assert.ok(endpoint.includes('export async function handleBulkReconciliationRequest'));
   assert.ok(endpoint.includes('if (import.meta.main) Deno.serve(handleBulkReconciliationRequest)'));
   assert.ok(webhook.includes("import { handleBulkReconciliationRequest } from '../hercules-shopify-bulk-reconciliation/index.ts'"));
