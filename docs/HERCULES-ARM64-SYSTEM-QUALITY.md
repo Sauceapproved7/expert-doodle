@@ -1,0 +1,17 @@
+# DA-45 — Expanded native ARM64 Qwen system-instruction quality matrix
+
+This third independent evidence-collection experiment extends PR #1002's proven 0/3 versus 3/3 HELLO-format pilot without modifying the original nine-case baseline or the separate six-request HELLO experiment.
+
+On the same pinned, ephemeral public GitHub ARM64 runner, the lab sends **18 additional real local prompts**: all nine original benchmark questions under one *generic* system-level formatting guide, plus nine novel fixed holdouts covering addition, multiplication, geography, yes/no comparison, three distinct case-sensitive output tokens, and two appropriate abstentions. The system instruction contains **no expected holdout answers**. No customer data, actual secret, new paid provider, host, runtime deploy or registration is involved.
+
+The evaluator verifies genuine completed model/stop identity, 2 threads on native ARM64, 18 unique fixed responses, bounded content/latency, measured model-process peak RSS, and both substantive and byte-exact answers. The only positive conclusion is \`systemPromptCandidateForFurtherLab=true\`, which requires **9/9 core semantic, 9/9 core exact-format, 9/9 holdout semantic, 9/9 holdout byte-exact, 4/4 core-plus-holdout abstentions**, and p95 <=15,000 ms. Any missing or invalid response fails closed. Passing this tiny synthetic test is still not evidence of scalable, safe, reliable or commercially approved AI.
+
+The original strict nine-question report remains separately evaluated, including its negative \`furtherArmLabEligible=false\` for the original prompt strategy. The new report always says \`furtherArmLabEligible=false\` and keeps all OCI, public chat, payment, production routing, public signup and launch approval flags false even if the narrow new hypothesis passes.
+
+**Dependencies and provenance:** original first-party JavaScript/Node and test logic, reuse of existing benchmark definitions. External Qwen2.5-0.5B-Instruct GGUF Apache-2.0 checksum-pinned weights and pinned llama.cpp are downloaded to temporary GitHub CI storage, not added to repository or owned by SauceApproved. Real host, provider cost/free status, owner approval, Devbrain repair, production inference and durable model service remain separately unverified.
+
+**Local tests:** \`node --test tests/hercules-arm64-system-quality-matrix.test.mjs\` and repository owner/security gates; CI runs original nine, six HELLO, and new 18 real prompt requests. A green job is evidence collection only.
+
+**Precision repair after first CI:** The reusable legacy 360M quality scorer tolerates punctuation/case on `HELLO` and `SKY` in its general semantic/format counts; this matrix now demands *byte-exact* uppercase tokens for the two user requests that explicitly say `exactly`. Dedicated negative regression cases guard `Hello!`, `HELLO.`, lowercase `hello`, `SKY.`, and lowercase `sky`. The original legacy evaluator remains unchanged for historical benchmark comparability; production release flags remain false.
+
+**Measurement refinement:** For the two fixed numeric holdouts, an expression such as `16 + 7 = 23` is marked *substantively correct* but *not byte-exact* for a digits-only request. Wrong answers such as `16 + 7 = 24` remain substantively incorrect. This separation prevents conflating model reasoning with instruction-following compliance. The security/production verdict is unchanged.
