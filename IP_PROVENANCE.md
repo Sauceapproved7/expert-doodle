@@ -1,3 +1,11 @@
+## Real model-plane authentication proof — DA-45, 2026-10-13
+
+- Original AI-assisted SauceApproved source: `scripts/hercules-live-model-plane-proof.mjs`, `tests/hercules-live-model-plane-proof.test.mjs`, `.github/workflows/hercules-live-model-plane-proof.yml`, and `docs/HERCULES-REAL-MODEL-AUTH-PROOF.md`.
+- Runtime ownership: uses Hercules' existing original bearer-authenticated model-plane service and local-chat adapter, with Node built-ins and no third-party JavaScript dependencies.
+- Temporary evaluation inputs: Apache-2.0 SmolLM2-360M-Instruct model quantized by `bartowski` (GGUF at exact revision/SHA256 documented in the lab workflow), `ggml-org/llama.cpp` pinned upstream C++ source. Both are third-party **external** infrastructure; neither is committed, copied or claimed as SauceApproved-created weights/code.
+- Security/commerce: temporary loopback runner only; no credentials/real customer text, vendor model API, production deploy, payment, public registration or checkout state changes.
+- Verification: real model input-output evidence through an authorized Hercules chat request, plus an explicit negative authorization probe, with a separate fail-closed declaration that commercial and production AI qualification remain false.
+
 ## Local llama.cpp protocol adapter — DA-45, October 13, 2026
 
 - Scope: existing original Hercules `hercules-models/local-chat.mjs` plus `hercules-models/control-cli.mjs`, `tests/hercules-models-local-chat.test.mjs` and `docs/HERCULES-LOCAL-CHAT-EXPERIMENT-V1.md`.
