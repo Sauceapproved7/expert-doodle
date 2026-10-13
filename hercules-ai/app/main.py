@@ -12,6 +12,7 @@ from .sovereign import choose_model, mission_plan
 from .speed import speed_profile
 from .submission_continuation import build_submission_readiness_snapshot
 from .product_quiz import router as product_quiz_router
+from .floodgates import router as floodgates_router
 
 DB=os.getenv("HERCULES_DB","/data/hercules.db")
 BASE=os.getenv("HERCULES_MODEL_BASE_URL","http://ollama:11434").rstrip("/")
@@ -71,6 +72,7 @@ async def lifespan(_app:FastAPI):
 
 app=FastAPI(title="Hercules AI Core",version="1.1.0",lifespan=lifespan)
 app.include_router(product_quiz_router)
+app.include_router(floodgates_router)
 
 async def probe_supabase_oauth_discovery()->tuple[bool,bool]:
     if not MCP_OAUTH_SUPABASE_ORIGIN.startswith("https://"):

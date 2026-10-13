@@ -1,0 +1,26 @@
+name: Hercules Floodgates Focused Tests
+on:
+  pull_request:
+    paths:
+      - 'hercules/floodgates/**'
+      - 'hercules-ai/app/floodgates.py'
+      - 'hercules-ai/app/main.py'
+      - 'hercules-ai/tests/test_floodgates_route.py'
+      - '.github/workflows/hercules-floodgates-focused.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  floodgates-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Test original read-only adapter
+        run: node --test hercules/floodgates/floodgates-readonly.test.mjs
+      - name: Install Python runtime test dependencies
+        run: python -m pip install -r hercules-ai/requirements.txt pytest
+      - name: Test fail-closed FastAPI route
+        run: PYTHONPATH=hercules-ai python -m pytest -q hercules-ai/tests/test_floodgates_route.py
