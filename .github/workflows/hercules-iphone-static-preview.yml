@@ -1,0 +1,23 @@
+name: Hercules iPhone Static Preview
+on:
+  pull_request:
+    paths:
+      - 'scripts/build_hercules_iphone_static_preview.py'
+      - 'tests/test_hercules_iphone_static_preview.py'
+      - 'docs/HERCULES-IPHONE-STATIC-PREVIEW-V1.md'
+      - '.github/workflows/hercules-iphone-static-preview.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 -m unittest discover -s tests -p 'test_hercules_iphone_static_preview.py' -v
+      - run: python3 scripts/build_hercules_iphone_static_preview.py
+      - run: |
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
