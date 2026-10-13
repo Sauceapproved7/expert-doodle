@@ -5,7 +5,7 @@ import {resolve,dirname,join} from 'node:path';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const source=join(root,'hercules-deploy/cloud');
 const output=join(root,'dist/hercules-cloud');
-const assets=['index.html','styles.css','app.mjs'];
+const assets=['index.html','styles.css','app.mjs','founders.html','founders.css','founders.mjs'];
 await rm(output,{recursive:true,force:true});
 await mkdir(output,{recursive:true});
 for(const file of assets)await cp(join(source,file),join(output,file));
