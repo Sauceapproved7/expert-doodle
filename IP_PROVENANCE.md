@@ -1,3 +1,9 @@
+## Native ARM64 Qwen inference feasibility lab — DA-45, October 13, 2026
+
+- Original first-party SauceApproved/Hercules code, tests, docs and CI workflow: `scripts/hercules-arm64-inference-lab.mjs`, `tests/hercules-arm64-inference-lab.test.mjs`, `.github/workflows/hercules-arm64-inference-lab.yml`, `docs/HERCULES-ARM64-INFERENCE-LAB-V1.md`. Prepared with AI assistance, uses Node standard library and existing owned repository governance.
+- Licensed external lab-only inputs: Apache-2.0 `bartowski/Qwen2.5-0.5B-Instruct-GGUF` quantization at `eadd1b868ae382c989d828189bdb8e5d34dc675c` with SHA256 `468787b643ef9081a75c6e7bd98da987f46583250248e0a0a7aca173308e8d34`; upstream `ggml-org/llama.cpp` source pinned at commit `d81235049384534c167caea52b85a694f6103d14`. No model checkpoint, external C++ source, or distribution binary committed; external authors' ownership and license remain separate.
+- Native standard GitHub-hosted public Arm64 runner evaluates bounded synthetic non-customer prompts, measured process RSS, and answer accuracy using two inference threads. This is not a billed external model API, purchased host, verified Oracle tenancy, training claim, Render/Railway deploy, production inference authority, payment or public-launch change.
+
 ## DA-45 Qwen cold-load cgroup memory audit — 2026-10-13
 
 - Original SauceApproved first-party evidence: `scripts/hercules-qwen-cold-load.mjs`, `tests/hercules-qwen-cold-load.test.mjs`, `.github/workflows/hercules-qwen-cold-load.yml`, and `docs/HERCULES-QWEN-COLD-LOAD-V1.md`. AI-assisted authoring disclosed; original JavaScript and shell, no third-party code copied into the repository.
