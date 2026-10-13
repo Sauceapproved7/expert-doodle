@@ -8,6 +8,8 @@ on:
     paths:
       - "scripts/hercules-launch-gate-live-observer.mjs"
       - "tests/hercules-launch-gate-live-observer.test.mjs"
+      - "tests/hercules-launch-gate-freshness.test.mjs"
+      - "supabase/migrations/*hercules_launch_gate_freshness*.sql"
       - ".github/workflows/hercules-launch-gate-live-watch.yml"
       - ".github/workflows/hercules-release-gate-v1.yml"
 
@@ -24,7 +26,9 @@ jobs:
         with:
           node-version: "22"
       - name: Test fail-closed Hercules launch-gate observer
-        run: node --test tests/hercules-launch-gate-live-observer.test.mjs
+        run: |
+          node --test tests/hercules-launch-gate-live-observer.test.mjs
+          node --test tests/hercules-launch-gate-freshness.test.mjs
       - name: Observe live launch-gate freshness without credentials or mutation
         if: ${{ github.event_name != 'pull_request' }}
         run: node scripts/hercules-launch-gate-live-observer.mjs
