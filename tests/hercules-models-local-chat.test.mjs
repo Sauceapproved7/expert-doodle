@@ -134,3 +134,73 @@ test("model-plane chat returns a real local provider answer without claiming lau
     await backend.close();
   }
 });
+
+
+test("DA-45: isolated llama.cpp compatibility uses exact inventory and actual completions",async()=>{
+  const backend=await serve(async(req,text)=>{
+    if(req.method==="GET"&&req.url==="/v1/models") {
+      return {body:{object:"list",data:[{id:"hercules-trial"}]}};
+    }
+    if(req.method==="POST"&&req.url==="/v1/chat/completions"){
+      const body=JSON.parse(text);
+      assert.equal(body.model,"hercules-trial");
+      assert.equal(body.stream,false);
+      assert.equal(body.temperature,0);
+      assert.equal(body.max_tokens,32);
+      assert.deepEqual(body.messages,[{role:"user",content:"Who built Hercules?"}]);
+      return {body:{model:"hercules-trial",choices:[{
+        index:0,message:{role:"assistant",content:"SauceApproved."},
+        finish_reason:"stop"
+      }]}};
+    }
+    return {status:404,body:{error:"unsupported"}};
+  });
+  try {
+    const adapter=createLocalChatAdapter({
+      enabled:true,protocol:"llama-cpp",endpoint:backend.origin,
+      model:"hercules-trial"
+    });
+    assert.equal(adapter.status().protocol,"llama-cpp");
+    const result=await adapter.chat({prompt:"Who built Hercules?",maxOutputTokens:32});
+    assert.equal(result.outputText,"SauceApproved.");
+    assert.equal(result.inferenceVerified,true);
+    assert.equal(result.publicReleaseApproved,false);
+    assert.deepEqual(backend.requests.map(x=>x.path),["/v1/models","/v1/chat/completions"]);
+  }finally{await backend.close();}
+});
+
+test("DA-45: nonexistent llama.cpp model never reaches text generation",async()=>{
+  const backend=await serve(async()=>({body:{object:"list",data:[{id:"another-model"}]}}));
+  try{
+    const adapter=createLocalChatAdapter({
+      enabled:true,protocol:"llama-cpp",endpoint:backend.origin,model:"hercules-trial"
+    });
+    await assert.rejects(adapter.chat({prompt:"hello"}),{code:"local_chat_model_unavailable"});
+    assert.equal(backend.requests.length,1);
+  }finally{await backend.close();}
+});
+
+test("DA-45: malformed or incomplete llama.cpp replies cannot pass inference",async()=>{
+  const bad=[
+    {model:"wrong",choices:[{message:{role:"assistant",content:"false"},finish_reason:"stop"}]},
+    {model:"hercules-trial",choices:[{message:{role:"assistant",content:""},finish_reason:"stop"}]},
+    {model:"hercules-trial",choices:[{message:{role:"assistant",content:"partial"},finish_reason:"length"}]},
+    {model:"hercules-trial",choices:[]},
+  ];
+  for(const response of bad){
+    const backend=await serve(async(req)=>req.url==="/v1/models"
+      ?{body:{data:[{id:"hercules-trial"}]}}:{body:response});
+    try{
+      const adapter=createLocalChatAdapter({
+        enabled:true,protocol:"llama-cpp",endpoint:backend.origin,model:"hercules-trial"
+      });
+      await assert.rejects(adapter.chat({prompt:"hello"}),{code:"local_chat_inference_invalid"});
+    }finally{await backend.close();}
+  }
+});
+
+test("DA-45: unsupported protocols never silently fall back to remote providers",()=>{
+  assert.throws(()=>createLocalChatAdapter({protocol:"remote-openai"}),/protocol/i);
+  const inactive=createLocalChatAdapter({protocol:"llama-cpp"});
+  assert.equal(inactive.status().enabled,false);
+});
