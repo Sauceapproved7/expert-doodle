@@ -11,7 +11,7 @@ The read-only admission checker is `scripts/hercules-public-launch-admission.mjs
 Pushing a tag matching `hercules-public-v*` triggers the `Hercules Release Gate v1` workflow. Its public-launch job:
 
 1. runs the owner-code, policy and fail-closed contract tests;
-2. looks only for `releases/public-launch/evidence.json`;
+2. verifies the tagged commit has exactly one parent and changes only `releases/public-launch/evidence.json`;
 3. checks that the evidence packet binds to the exact **parent source commit** of the evidence-only release commit, then rejects mismatched SHA, invalid schema, non-production evidence, stale or future-dated evidence, or any false/missing required check;
 4. exits nonzero and does not authorize a launch unless every check passes.
 
