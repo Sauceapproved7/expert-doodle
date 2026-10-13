@@ -1,4 +1,5 @@
 import {createServer} from "node:http";
+import {studioActivation} from "./studio-activation.mjs";
 import {createStudioVideoBridge} from "./studio-video-bridge.mjs";
 import {pathToFileURL} from "node:url";
 import {readFile} from "node:fs/promises";
@@ -400,6 +401,7 @@ ${model ? statusBadge("Final output",model.evidence.finalization.closed ? "verif
 }
 
 export function createStudioHttpHandler({
+  activationFetch=fetch,
   statusReader=async()=>null,
   executionBridgeProvider=async()=>({connected:false,reason:"execution_bridge_unavailable"}),
   authorizeOperator=async()=>false,
@@ -428,6 +430,10 @@ export function createStudioHttpHandler({
     const {method="GET",pathname="/"}=request;
     const normalizedMethod=String(method).toUpperCase();
     const normalizedPath=String(pathname || "/").split("?")[0];
+
+    if (normalizedPath==="/activate") {
+      return studioActivation(request,{fetchUpstream:activationFetch});
+    }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/video/status") {
       const result=videoBridge ? await videoBridge.status() : {status:503,body:{ok:false,error:"video_bridge_unavailable"}};

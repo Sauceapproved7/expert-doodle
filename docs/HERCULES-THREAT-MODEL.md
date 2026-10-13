@@ -1,5 +1,9 @@
 # Hercules Threat Model
 
+## Studio hosted activation relay
+
+The public Studio `/activate` route renders HTML only from the fixed Hercules project and Studio access selector. Browser POST requires the exact owned Studio Origin and JSON; only bounded email-link requests or bearer-authenticated Studio claims reach the fixed backend. Arbitrary targets, redirects, unsupported actions, oversized bodies/responses, and unexpected markup fail closed. Upstream cookies and headers are discarded. No service-role credentials are available to this relay. Responses are no-store, framing is denied, and CSP limits script and connection sources. Supabase validates sessions and the existing service-role-only claim RPC enforces buyer identity and product isolation. Auth callback allowlist configuration and actual email delivery require separate production verification. No commerce gate is inferred from rendering success.
+
 Status: security hardening baseline
 Date: 2026-09-24
 
