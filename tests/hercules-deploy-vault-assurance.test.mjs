@@ -1,4 +1,4 @@
-import {createHash as moduleCryptoCreateHash} from 'node:crypto';
+import {createHash} from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createAuthorityLease} from '../hercules-authority/authority-lease.mjs';
@@ -152,7 +152,6 @@ test('Release Passport holds on ambiguous duplicate CI check identities and over
   assert.equal(assessReleasePassport(huge).status,'HOLD');
 });
 test('Passport verifier refuses a recomputed digest of an authority-escalated or forged evidence record',()=>{
-  const {createHash}=requireCrypto();
   const canonical=value=>Array.isArray(value)?value.map(canonical)
     :value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]))
     :value;
@@ -176,4 +175,3 @@ test('Passport verifier refuses a recomputed digest of an authority-escalated or
     assert.equal(verifyReleasePassport(sealed).valid,false,JSON.stringify(forged));
   }
 });
-function requireCrypto(){return {createHash:moduleCryptoCreateHash};}
