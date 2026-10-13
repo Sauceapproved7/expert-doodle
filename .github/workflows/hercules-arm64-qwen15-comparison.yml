@@ -1,0 +1,124 @@
+name: Hercules Native ARM64 Qwen 1.5B Separate Quality Laboratory
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/hercules-arm64-qwen15-comparison.yml"
+      - "scripts/hercules-arm64-qwen15-comparison.mjs"
+      - "tests/hercules-arm64-qwen15-comparison.test.mjs"
+      - "scripts/hercules-arm64-system-quality-matrix.mjs"
+      - "docs/HERCULES-ARM64-QWEN15-COMPARISON.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  qwen15-real-inference:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 25
+    steps:
+      - name: Checkout Hercules original evaluator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check fail-closed evaluator and owner/security rules
+        run: |
+          node --test tests/hercules-arm64-qwen15-comparison.test.mjs tests/hercules-arm64-system-quality-matrix.test.mjs
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+      - name: Checkout fixed engine commit in ephemeral workspace
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ggml-org/llama.cpp
+          ref: d81235049384534c167caea52b85a694f6103d14
+          path: .thirdparty-ephemeral/llama.cpp
+          persist-credentials: false
+      - name: Compile native ARM64 engine only
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          test "$(git -C .thirdparty-ephemeral/llama.cpp rev-parse HEAD)" = d81235049384534c167caea52b85a694f6103d14
+          cmake -S .thirdparty-ephemeral/llama.cpp -B /tmp/hercules-qwen15-build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF
+          cmake --build /tmp/hercules-qwen15-build --target llama-server -j 4
+      - name: Download checksum-pinned external Apache-2.0 larger model
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hercules-qwen15
+          curl --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 480 --max-filesize 1100000000 \
+            --output /tmp/hercules-qwen15/candidate.gguf \
+            'https://huggingface.co/bartowski/Qwen2.5-1.5B-Instruct-GGUF/resolve/ec7a7a1a4d6ff0f562a01d41672912bacd9a56b3/Qwen2.5-1.5B-Instruct-Q4_K_M.gguf'
+          test "$(stat -c %s /tmp/hercules-qwen15/candidate.gguf)" -ge 900000000
+          test "$(stat -c %s /tmp/hercules-qwen15/candidate.gguf)" -le 1050000000
+          echo '1adf0b11065d8ad2e8123ea110d1ec956dab4ab038eab665614adba04b6c3370  /tmp/hercules-qwen15/candidate.gguf' | sha256sum -c -
+      - name: Measure 27 actual replies without public network serving
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/hercules-qwen15-build/bin/llama-server \
+            --model /tmp/hercules-qwen15/candidate.gguf \
+            --alias hercules-15b-arm-trial --host 127.0.0.1 --port 18776 \
+            --ctx-size 1024 --parallel 1 --threads 2 --no-webui \
+            > /tmp/hercules-qwen15/server.log 2>&1 &
+          model_pid=$!
+          trap 'kill "$model_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 80); do
+            if curl -fsS --max-time 2 http://127.0.0.1:18776/health >/dev/null 2>&1; then ready=1; break; fi
+            if ! kill -0 "$model_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          node --input-type=module <<'NODE'
+          import {writeFileSync} from "node:fs";
+          import {BENCHMARK_CASES} from "./scripts/hercules-360m-quality-benchmark.mjs";
+          import {SYSTEM_HOLDOUT_CASES,systemQualityMessages} from "./scripts/hercules-arm64-system-quality-matrix.mjs";
+          const alias="hercules-15b-arm-trial";
+          const baseUrl="http://127.0.0.1:18776/v1/chat/completions";
+          async function actualAnswer(id,messages){
+            const started=Date.now();
+            const response=await fetch(baseUrl,{
+              method:"POST",headers:{"content-type":"application/json"},
+              body:JSON.stringify({model:alias,stream:false,temperature:0,
+                messages,max_tokens:48}),signal:AbortSignal.timeout(30000)
+            });
+            if(!response.ok)throw new Error("Qwen15 real reply failed HTTP "+response.status+" "+id);
+            const json=await response.json();
+            const choice=json?.choices?.[0];
+            const answer={id,model:json?.model,finishReason:choice?.finish_reason,
+              output:choice?.message?.content,
+              elapsedMs:Math.max(1,Date.now()-started)};
+            console.log(JSON.stringify({
+              id,elapsedMs:answer.elapsedMs,
+              responseExcerpt:id==="private"||id==="sys-private"||
+                id==="sys-holdout-private"?"[redacted-sensitive-test]":
+                typeof answer.output==="string"?answer.output.slice(0,120):null
+            }));
+            return answer;
+          }
+          const baselineAnswers=[];
+          for(const c of BENCHMARK_CASES){
+            baselineAnswers.push(await actualAnswer(c.id,[{role:"user",content:c.prompt}]));
+          }
+          const systemAnswers=[];
+          for(const c of [...BENCHMARK_CASES,...SYSTEM_HOLDOUT_CASES]){
+            systemAnswers.push(await actualAnswer("sys-"+c.id,systemQualityMessages(c.prompt)));
+          }
+          writeFileSync("/tmp/hercules-qwen15/answers.json",
+            JSON.stringify({baselineAnswers,systemAnswers}));
+          NODE
+          peak_kb="$(awk '$1=="VmHWM:" {print $2}' "/proc/$model_pid/status")"
+          test -n "$peak_kb"
+          test "$peak_kb" -gt 0
+          HERCULES_RSS_BYTES="$((peak_kb * 1024))" \
+          HERCULES_ARCH="$(node -p 'process.arch')" node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from "node:fs";
+          const answers=JSON.parse(readFileSync("/tmp/hercules-qwen15/answers.json","utf8"));
+          const evidence={
+            ...answers,arch:process.env.HERCULES_ARCH,requestedThreads:2,
+            measuredPeakRssBytes:Number(process.env.HERCULES_RSS_BYTES),
+            // The preceding sha256sum -c verified this exact pinned hash.
+            modelSha256:"1adf0b11065d8ad2e8123ea110d1ec956dab4ab038eab665614adba04b6c3370"
+          };
+          writeFileSync("/tmp/hercules-qwen15/evidence.json",JSON.stringify(evidence));
+          NODE
+          node scripts/hercules-arm64-qwen15-comparison.mjs --evaluate /tmp/hercules-qwen15/evidence.json
+          echo 'Quality laboratory only: no persistent ARM64 machine or production AI approval.'
