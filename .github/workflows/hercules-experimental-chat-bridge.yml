@@ -18,6 +18,25 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Test experimental chat bridge auth and SSE behavior
         run: node --test tests/hercules-experimental-chat-bridge.test.mjs
+      - name: Run actual Hercules-native neural candidate (observational, not quality certification)
+        run: |
+          node --input-type=module <<'NODE'
+          import {HerculesEmbeddedCoreNeuralV03} from "./hercules-models/embedded-core-neural-v0.3.mjs";
+          const model=await HerculesEmbeddedCoreNeuralV03.load();
+          const input="Hercules test of simple language continuation.";
+          const out=model.infer({prompt:input,maxTokens:24},{task:"general"});
+          if(typeof out.continuation!=="string" || !Array.isArray(out.tokenIds) ||
+             out.tokenIds.length>24 || out.version!=="0.3-candidate"){
+            throw new Error("native experimental checkpoint cannot execute");
+          }
+          console.log(JSON.stringify({
+            candidate:"hercules-core-neural-v03",version:out.version,
+            observedTokenCount:out.tokenIds.length,
+            nonEmptyText:out.continuation.trim().length>0,
+            sampleText:out.continuation.slice(0,220),
+            chatQualityVerified:false,productionReady:false
+          }));
+          NODE
       - name: Verify Hercules ownership, security and execution gates
         run: |
           node scripts/verify-hercules-execution-contract.mjs
