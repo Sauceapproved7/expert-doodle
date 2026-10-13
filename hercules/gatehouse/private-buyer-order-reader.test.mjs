@@ -128,6 +128,44 @@ test("no match and truncated lookback do not claim no lifetime order, delivery s
  assert.equal(r.body.allOrdersVerified,false);
  assert.equal(r.body.deliveryAuthorized,false);
 });
+test("expired, future, mismatched or unverified private buyer intents never contact Shopify",async()=>{
+ const s=setup();let requests=0;
+ const fetcher=async()=>{requests++;throw Error("private invalid inputs must never reach provider")};
+ const invalid=[
+  {now:now+86400001},
+  {intentRow:{...s.input.intentRow,expires_at:"invalid"}},
+  {intentRow:{...s.input.intentRow,expires_at:new Date(now+3*86400000).toISOString()}},
+  {intentRow:{...s.input.intentRow,reference_hash:"a".repeat(64)}},
+  {intentRow:{...s.input.intentRow,reference_hash:"invalid-hash"}},
+  {buyerReference:"GH1-"+"Z".repeat(32)},
+  {identity:{...s.input.identity,emailConfirmedAt:null}},
+  {identity:{...s.input.identity,emailConfirmedAt:new Date(now+9000).toISOString()}},
+  {identity:{...s.input.identity,email:"not-an-email"}}
+ ];
+ for(const change of invalid){
+  const result=await createPrivateBuyerOrderReader({...s.input,...change,fetcher}).run();
+  assert.equal(result.status,503,JSON.stringify(change));
+  assert.equal(result.body.shopAuthenticated,false);
+  assert.equal(result.body.candidateMayBeRecorded,false);
+  assert.equal(result.body.privateRow,null);
+  assert.equal(result.body.deliveryAuthorized,false);
+ }
+ assert.equal(requests,0);
+});
+test("a matching order on a truncated ten-order page cannot reserve a candidate",async()=>{
+ const s=setup(),p=page([s.order]);
+ p.data.orders.pageInfo.hasNextPage=true;
+ const result=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(p)}).run();
+ assert.equal(result.status,200);
+ assert.equal(result.body.shopAuthenticated,true);
+ assert.equal(result.body.ordersScanned,1);
+ assert.equal(result.body.hasNextPage,true);
+ assert.equal(result.body.candidateMayBeRecorded,false);
+ assert.equal(result.body.privateRow,null);
+ assert.equal(result.body.allOrdersVerified,false);
+ assert.equal(result.body.deliveryAuthorized,false);
+ assert.notEqual(result.body.status,"private-candidate-proposal-only");
+});
 test("buyer readback is a bounded private read-only query, never sends PII to a public return",()=>{
  assert.match(PRIVATE_BUYER_ORDER_QUERY,/shop \{ id myshopifyDomain \}/);
  assert.match(PRIVATE_BUYER_ORDER_QUERY,/customAttributes \{ key value \}/);
