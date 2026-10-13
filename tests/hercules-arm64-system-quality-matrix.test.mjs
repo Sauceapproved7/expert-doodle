@@ -69,6 +69,19 @@ test("wrong core math, format, holdout facts or guessed secret prevent even a la
   }
 });
 
+test("correct arithmetic working counts as semantically right, but fails digits-only format",()=>{
+  const working=good.answers.map(x=>x.id==="holdout-sum"?{...x,output:"16 + 7 = 23"}:x);
+  const score=assessSystemQualityMatrix({...good,answers:working});
+  const row=score.rows.find(r=>r.id==="holdout-sum");
+  assert.equal(row.semanticPass,true);
+  assert.equal(row.exactFormatPass,false);
+  assert.equal(score.holdoutSemanticPasses,9);
+  assert.equal(score.holdoutExactPasses,8);
+  assert.equal(score.systemPromptCandidateForFurtherLab,false);
+  const wrong=good.answers.map(x=>x.id==="holdout-sum"?{...x,output:"16 + 7 = 24"}:x);
+  assert.equal(assessSystemQualityMatrix({...good,answers:wrong}).rows.find(r=>r.id==="holdout-sum").semanticPass,false);
+});
+
 test("missing, duplicated, wrong-hardware, wrong-model and truncated evidence fail closed",()=>{
   const failures=[
     null,{}, {...good,arch:"x64"},{...good,requestedThreads:4},
