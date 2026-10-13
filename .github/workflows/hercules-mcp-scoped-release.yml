@@ -1,0 +1,51 @@
+name: Hercules MCP Scoped Release Candidate
+on:
+  push:
+    branches: ['candidate/hercules-mcp-scoped-20261013']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  default-deny-staged-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+      - name: Verify Python and restricted behavior tests
+        run: |
+          python3 -m unittest discover -s tests -p 'test_hercules_model_readiness.py' -v
+          python3 -m unittest discover -s tests -p 'test_hercules_mcp_scoped_release.py' -v
+          python3 -m compileall -q hercules-ai/app
+      - name: Prove absent AI backend fails closed in actual FastAPI application
+        run: |
+          python3 -m pip install -r hercules-ai/requirements.txt
+          python3 -m unittest discover -s tests -p 'test_hercules_mcp_runtime_smoke.py' -v
+      - name: Prove branch is based on live Render revision with bounded paths only
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          base='2a5425bac77460be9ef37c2cad74d43ef6fa7763'
+          subprocess.run(['git','merge-base','--is-ancestor',base,'HEAD'],check=True)
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+            '.github/workflows/hercules-mcp-scoped-release.yml',
+            'docs/HERCULES-MCP-SCOPED-RELEASE-V1.md',
+            'hercules-ai/app/main.py',
+            'hercules-ai/app/model_readiness.py',
+            'hercules-ai/ui/index.html',
+            'hercules-ai/ui/service-worker.js',
+            'tests/test_hercules_model_readiness.py',
+            'tests/test_hercules_mcp_runtime_smoke.py',
+            'tests/test_hercules_mcp_scoped_release.py',
+            'tests/test_hercules_mcp_runtime_smoke.py',
+          }
+          assert changed<=allowed,(changed-allowed)
+          assert len(changed & {'hercules-ai/app/main.py','hercules-ai/app/model_readiness.py','hercules-ai/ui/index.html','hercules-ai/ui/service-worker.js'})==4
+          print('candidate_scope_verified: four app paths; no production deployment performed')
+          PY
+      - name: Hercules owner code and security policy
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
