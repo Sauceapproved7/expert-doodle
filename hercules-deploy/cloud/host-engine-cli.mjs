@@ -8,6 +8,7 @@ import {resolve,isAbsolute} from "node:path";
 import {execFile,execFileSync} from "node:child_process";
 import {assertSandboxHostPlan} from "./host-agent.mjs";
 import {runHostEngineOperation} from "./host-engine.mjs";
+import {loadOwnerTrustAnchor} from "./owner-trust-anchor.mjs";
 
 const MAX_FILE=64*1024;
 const sanitizedError=code=>{
@@ -50,9 +51,9 @@ if(process.env.HERCULES_HOST_ENGINE_SANDBOX_ENABLED!=="true") {
   const socketStat=await lstat(socket);
   if(!socketStat.isSocket()||socketStat.uid!==uid||(socketStat.mode&0o077)!==0)
    throw Error("host_socket_unverified");
-  const keyPath=process.env.HERCULES_HOST_ENGINE_OWNER_PUBLIC_KEY_FILE;
-  const ownerPublicKey=await readRestricted(keyPath,uid,{asJson:false});
-  if(!ownerPublicKey.startsWith("-----BEGIN PUBLIC KEY-----"))throw Error("owner_verification_key_untrusted");
+  // Trust comes from immutable root-managed /etc, not from operator-controlled
+  // env variables or an operator-writable key file.
+  const ownerPublicKey=await loadOwnerTrustAnchor({runningUid:uid});
 
   const release=await readFile("/etc/os-release",{encoding:"utf8"});
   const os=machineInfo(release);

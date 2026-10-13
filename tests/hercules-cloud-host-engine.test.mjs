@@ -149,7 +149,7 @@ test("standalone operator defaults off and does not leak inherited owner secrets
   const r=spawnSync(process.execPath,[bin.pathname,"start"],{
    encoding:"utf8",timeout:7000,
    env:{...process.env,HERCULES_HOST_ENGINE_SANDBOX_ENABLED:enabled,
-    HERCULES_HOST_ENGINE_OWNER_PUBLIC_KEY_FILE:"OWNER-SECRET-KEY-LOCAL"}
+    HERCULES_HOST_ENGINE_TRUST_ANCHOR_IGNORE:"OWNER-SECRET-KEY-LOCAL"}
   });
   assert.equal(r.status,1);
   assert.doesNotMatch(r.stdout+r.stderr,/OWNER-SECRET-KEY-LOCAL/);
@@ -159,7 +159,7 @@ test("standalone operator defaults off and does not leak inherited owner secrets
 test("Host Engine CLI has no public listener and only the declared Docker subprocess",()=>{
  const cli=readFileSync(new URL("../hercules-deploy/cloud/host-engine-cli.mjs",import.meta.url),"utf8");
  assert.ok(cli.includes("HERCULES_HOST_ENGINE_SANDBOX_ENABLED"));
- assert.ok(cli.includes("HERCULES_HOST_ENGINE_OWNER_PUBLIC_KEY_FILE"));
+ assert.ok(cli.includes("loadOwnerTrustAnchor("));
  for(const forbidden of ["createServer(","listen(","fetch(","eval(","http.request("])
   assert.equal(cli.includes(forbidden),false,forbidden);
 });
