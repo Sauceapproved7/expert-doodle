@@ -65,7 +65,8 @@ export function renderPrintableSample(report){
  const rows=(report?.observations||[])
  .filter(x=>KNOWN.has(x?.service)&&CONNECTIVITY.has(x?.connectivity))
  .map(x=>'<tr><td>'+x.service+'</td><td>'+(x.connectivity==="reachable"?"Reachable":"No response")+'</td></tr>').join("");
- const stamp=typeof report?.testedAt==="string" && /^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d/.test(report.testedAt)
+ const time=typeof report?.testedAt==="string"?Date.parse(report.testedAt):NaN;
+ const stamp=Number.isFinite(time)&&new Date(time).toISOString()===report.testedAt
   ?report.testedAt:"No verified observation";
  return '<!doctype html><html lang="en"><head><meta charset="utf-8">'+
   '<meta name="viewport" content="width=device-width,initial-scale=1">'+
