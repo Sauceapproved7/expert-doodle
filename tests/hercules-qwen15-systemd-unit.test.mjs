@@ -98,3 +98,26 @@ test("native real-model CI drills owner-host stop and verifies all loopback port
   assert.match(ci,/wait "\$private_pid"/);
   assert.doesNotMatch(ci,/\bsystemctl\s+(?:enable|start)\b/);
 });
+
+test("native ARM64 run must prove a model-child crash fails the private wrapper closed",()=>{
+  const ci=readFileSync(new URL("../.github/workflows/hercules-arm64-qwen15-comparison.yml",import.meta.url),"utf8");
+  for(const token of [
+    'crash_parent_pid=$!',
+    '/proc/$crash_parent_pid/task/$crash_parent_pid/children',
+    'kill -KILL "$model_child_pid"',
+    'wait "$crash_parent_pid"',
+    'private_child_crash_failclosed_verified',
+    'http://127.0.0.1:38900/health',
+    'http://127.0.0.1:18776/health',
+    'test "$crash_exit_code" -ne 0'
+  ])assert.ok(ci.includes(token),token);
+  assert.doesNotMatch(ci,/systemctl\s+(enable|start|restart)/);
+  assert.doesNotMatch(ci,/ai_ok\s*=\s*true|RENDER_API_KEY|SHOPIFY_API_KEY/);
+});
+test("private owner-host source terminates abnormally on unexpected model exit",()=>{
+  const source=readFileSync(new URL("../scripts/hercules-qwen15-owner-host.mjs",import.meta.url),"utf8");
+  assert.match(source,/server\.once\("exit"/);
+  assert.match(source,/process\.exit\(1\)/);
+  assert.match(source,/listenModelPlaneService/);
+  assert.doesNotMatch(source,/process\.exit\(0\).*(?:server|child).*error/i);
+});
