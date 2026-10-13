@@ -1,0 +1,25 @@
+name: Hercules Experimental Chat Bridge
+on:
+  pull_request:
+    paths:
+      - 'hercules-models/experimental-chat-bridge.mjs'
+      - 'hercules-models/experimental-chat-cli.mjs'
+      - 'tests/hercules-experimental-chat-bridge.test.mjs'
+      - '.github/workflows/hercules-experimental-chat-bridge.yml'
+      - 'docs/HERCULES-EXPERIMENTAL-CHAT-BRIDGE-V1.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  experimental-compat-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Test experimental chat bridge auth and SSE behavior
+        run: node --test tests/hercules-experimental-chat-bridge.test.mjs
+      - name: Verify Hercules ownership, security and execution gates
+        run: |
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
