@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createNativeShopifyReader,NATIVE_SHOPIFY_QUERY} from "./native-shopify-reader.mjs";
-const shopId="gid://shopify/Shop/100002726208",shopDomain="sauceapproved-2.myshopify.com";
+const shopId="gid://shopify/Shop/100002726208",shopDomain="azymhc-x0.myshopify.com";
 const token="temporary-test-token-value-32chars";
 const line=()=>({sku:"HG-DIAGNOSTIC-49",quantity:1,
  product:{id:"gid://shopify/Product/15424049283392"},
@@ -40,7 +40,7 @@ test("valid owner-authorized native order page verifies canonical store, sanitiz
  assert.equal(out.body.customerEntitlementGranted,false);
  assert.equal(out.body.payoutVerified,false);
  assert.equal(calls.length,1);
- assert.equal(calls[0].url,"https://sauceapproved-2.myshopify.com/admin/api/2026-10/graphql.json");
+ assert.equal(calls[0].url,"https://azymhc-x0.myshopify.com/admin/api/2026-10/graphql.json");
  assert.equal(calls[0].init.method,"POST");
  assert.equal(calls[0].init.redirect,"error");
  assert.equal(calls[0].init.headers["X-Shopify-Access-Token"],token);
@@ -51,7 +51,7 @@ test("valid owner-authorized native order page verifies canonical store, sanitiz
 });
 test("invalid Shopify shop ID or domain disallows order results",async()=>{
  for(const change of [{id:"gid://shopify/Shop/123"},{myshopifyDomain:"malicious.myshopify.com"},
-  {myshopifyDomain:"sauceapproved.com"},{id:null},{myshopifyDomain:null}]){
+  {myshopifyDomain:"sauceapproved.com"},{myshopifyDomain:"sauceapproved-2.myshopify.com"},{id:null},{myshopifyDomain:null}]){
   const p=payload([]);Object.assign(p.data.shop,change);
   const r=await createNativeShopifyReader({enabled:true,ownerAuthenticated:true,accessToken:token,fetcher:async()=>fake(p)}).run();
   assert.equal(r.status,503);assert.equal(r.body.shopAuthenticated,false);
