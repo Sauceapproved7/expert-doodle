@@ -4,8 +4,8 @@ export const POLICY_TYPES=Object.freeze(['SHIPPING_POLICY','LEGAL_NOTICE','REFUN
 const PREFLIGHT=`query HerculesLegalPolicyPreflight { shop { myshopifyDomain shopPolicies { type body } } currentAppInstallation { accessScopes { handle } } }`;
 const UPDATE=`mutation HerculesPolicyUpdate($shopPolicy:ShopPolicyInput!) { shopPolicyUpdate(shopPolicy:$shopPolicy) { shopPolicy { type body } userErrors { field message } } }`;
 function fail(name){throw new Error(name);}
-function domain(value){const s=String(value||'').trim().toLowerCase();if(!/^[a-z0-9][a-z0-9-]*\\.myshopify\\.com$/.test(s))fail('invalid_shop_domain');return s;}
-function checkBody(value){if(typeof value!=='string'||value.trim().length<25||Buffer.byteLength(value,'utf8')>512*1024||/<p>\\s*yes\\s*<\\/p>/i.test(value)||/\\[(?:INSERT|LINK|TODO)[^\\]]*\\]|\\b(?:DRAFT|NOT APPROVED|PLACEHOLDER)\\b/i.test(value))fail('policy_placeholder');return value;}
+function domain(value){const s=String(value||'').trim().toLowerCase();if(!/^[a-z0-9][a-z0-9-]*\.myshopify\.com$/.test(s))fail('invalid_shop_domain');return s;}
+function checkBody(value){if(typeof value!=='string'||value.trim().length<25||Buffer.byteLength(value,'utf8')>512*1024||/<p>\s*yes\s*<\/p>/i.test(value)||/\[(?:INSERT|LINK|TODO)[^\]]*\]|\b(?:DRAFT|NOT APPROVED|PLACEHOLDER)\b/i.test(value))fail('policy_placeholder');return value;}
 function sha(value){return createHash('sha256').update(value,'utf8').digest('hex');}
 
 export function planApprovedPolicySync({shopDomain,expectedShopDomain,grantedScopes,existingPolicies,approvedPolicies,approvalHashes,ownerApproved=false}={}){
@@ -31,7 +31,7 @@ export function planApprovedPolicySync({shopDomain,expectedShopDomain,grantedSco
 
 async function graphql({shop,apiVersion,accessToken,query,variables={},fetchImpl}){
  if(typeof fetchImpl!=='function')fail('fetch_required');
- if(!/^\\d{4}-\\d{2}$/.test(String(apiVersion||'')))fail('invalid_api_version');
+ if(!/^\d{4}-\d{2}$/.test(String(apiVersion||'')))fail('invalid_api_version');
  if(typeof accessToken!=='string'||accessToken.length<5)fail('access_token_required');
  const endpoint=`https://${domain(shop)}/admin/api/${apiVersion}/graphql.json`;
  const res=await fetchImpl(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Shopify-Access-Token':accessToken},body:JSON.stringify({query,variables})});
