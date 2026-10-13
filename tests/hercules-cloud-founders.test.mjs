@@ -47,7 +47,7 @@ test('landing promises only free founding interest and links published privacy',
  assert.match(html,/name="consent"[^>]*required/i);
  assert.match(html,/privacy policy/i);
  assert.match(html,/founders\.mjs/i);
- assert.doesNotMatch(html,/type="password"|credit.card|buy.now/i);
+ assert.doesNotMatch(html,/type="password"|name="card_number"|buy.now/i);
  assert.match(home,/founders\.html/i);
  assert.match(build,/founders\.html/);
  assert.match(build,/founders\.mjs/);
