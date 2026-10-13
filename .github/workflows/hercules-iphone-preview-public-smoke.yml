@@ -1,0 +1,27 @@
+name: Hercules iPhone Preview Public Smoke
+on:
+  pull_request:
+    paths:
+      - 'scripts/probe_hercules_iphone_preview.py'
+      - 'tests/test_hercules_iphone_preview_public.py'
+      - '.github/workflows/hercules-iphone-preview-public-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 -m unittest discover -s tests -p 'test_hercules_iphone_preview_public.py' -v
+      - run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+  public-preview-smoke:
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 scripts/probe_hercules_iphone_preview.py
