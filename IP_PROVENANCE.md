@@ -1,3 +1,10 @@
+## Real-model authenticated Hercules chat integration trial — 2026-10-13
+
+- Owned files: `scripts/hercules-real-modelplane-e2e.mjs`, `tests/hercules-real-modelplane-e2e.test.mjs`, updates to `.github/workflows/hercules-smollm2-360m-trial.yml` and `docs/HERCULES-SMOLLM2-360M-TRIAL.md`.
+- Original first-party JavaScript instrumentation authored with AI assistance using Node built-ins and existing Hercules model-plane APIs. No copied third-party code or runtime dependencies.
+- An existing pinned Apache-2.0 third-party quantized SmolLM2-360M model and pinned llama.cpp are used only inside an ephemeral public-GitHub standard runner. They are not bundled, claimed as SauceApproved-owned weights or deployed.
+- No live service, account, billing, public registration, commerce, payment, credential or production route changes; the real generated reply proves a lab request, not verified consumer AI quality or launch approval.
+
 ## Constrained CPU model evidence — October 13, 2026
 
 - New owner-code paths: `scripts/hercules-360m-constrained-cpu.mjs`, `tests/hercules-360m-constrained-cpu.test.mjs`, `.github/workflows/hercules-360m-constrained-cpu.yml` and `docs/HERCULES-360M-CONSTRAINED-CPU-LAB.md`; original implementation with AI assistance.
