@@ -1,6 +1,6 @@
 ## Hercules Codex Doctor v1 — October 13, 2026
 
-- First-party SauceApproved source: \`hercules-runtime/codex-readiness.mjs\`, \`scripts/hercules-codex-doctor.mjs\`, \`tests/hercules-codex-doctor.test.mjs\`, and \`docs/HERCULES-CODEX-DOCTOR-V1.md\`; existing implementation enforcement CI adds the dedicated Node test.
+- First-party SauceApproved source: `hercules-runtime/codex-readiness.mjs`, `scripts/hercules-codex-doctor.mjs`, `tests/hercules-codex-doctor.test.mjs`, and `docs/HERCULES-CODEX-DOCTOR-V1.md`; existing implementation enforcement CI adds the dedicated Node test.
 - Authored with AI assistance using Node.js standard libraries and original Hercules policy semantics. No copied third-party code, packages, binaries, weights, user data, vendor secrets, or external runtime licenses added.
 - The Doctor is read-only and offline. Local prerequisites do not prove cloud Codex registration, terminal/GitHub mount, check execution, deploy authority, checkout, payouts, or production readiness. Proposed-file risk reports are advisory and confer no authority. No service, provider, payment, DNS, customer enrollment, or live store state is changed.
 
