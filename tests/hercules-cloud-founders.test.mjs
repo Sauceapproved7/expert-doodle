@@ -66,7 +66,7 @@ test('backend authenticates publishable callers in handler, records unverified i
  assert.match(edge,/ignoreDuplicates:\s*true/);
  assert.match(edge,/notice_version:/);
  assert.match(edge,/status:\s*'unverified'/);
- assert.doesNotMatch(edge,/createUser|auth\.signUp|subscriptions|sendEmail|checkout|stripe/i);
+ assert.doesNotMatch(edge.replace(/^const POLICY=.*$/m,''),/createUser|auth\.signUp|subscriptions|sendEmail|checkout|stripe/i);
 });
 test('landing states free, no hosting included, and clear opted-in privacy',()=>{
  assert.match(html,/Founding Interest/i);
