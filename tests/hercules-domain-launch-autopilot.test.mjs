@@ -75,3 +75,54 @@ test("tick selects started_at into the provider run record",()=>{
   assert.match(tick,/select trace_id,status,error,started_at,completed_at,summary/);
   assert.doesNotMatch(tick,/select trace_id,status,error,created_at,completed_at,summary/);
 });
+
+
+const repairedSql=await readFile(
+  new URL("../supabase/migrations/20261013125000_hercules_domain_launch_autopilot_monotonic_shopify_v2.sql",import.meta.url),
+  "utf8"
+);
+
+test("DA-44: verified completed Shopify cutover outranks an absent Spaceship credential",()=>{
+  const observed=repairedSql.indexOf("from public.hercules_shopify_domain_cutover");
+  const auth=repairedSql.indexOf("v_auth := public.hercules_spaceship_authorization_status()");
+  assert.ok(observed>0 && auth>observed,"verified Shopify snapshot must be examined before registrar credentials");
+  const verified=repairedSql.slice(observed,auth);
+  for(const proof of [
+    "v_shopify_cutover.stage = 'complete'",
+    "v_shopify_cutover.current_primary_host = 'sauceapproved.com'",
+    "v_shopify_cutover.current_primary_ssl_enabled is true",
+    "v_shopify_cutover.intended_domain_present is true",
+    "v_shopify_cutover.intended_domain_ssl_enabled is true",
+    "v_shopify_cutover.last_observed_at is not null",
+    "set stage='complete'",
+    "'stage','complete'"
+  ]) assert.ok(verified.includes(proof),"missing authoritative completion proof: "+proof);
+});
+
+test("DA-44: stale Shopify observation never returns a green readiness result",()=>{
+  const observed=repairedSql.indexOf("from public.hercules_shopify_domain_cutover");
+  const auth=repairedSql.indexOf("v_auth := public.hercules_spaceship_authorization_status()");
+  const verified=repairedSql.slice(observed,auth);
+  assert.match(verified,/last_observed_at >= v_now - interval '24 hours'/);
+  assert.match(verified,/last_observed_at <= v_now \+ interval '1 minute'/);
+  assert.match(verified,/'ok',v_shopify_observation_fresh/);
+  assert.match(verified,/'action',case when v_shopify_observation_fresh/);
+});
+
+test("DA-44: contradictory cutover does not keep a prior complete stage eligible",()=>{
+  const observed=repairedSql.indexOf("from public.hercules_shopify_domain_cutover");
+  const auth=repairedSql.indexOf("v_auth := public.hercules_spaceship_authorization_status()");
+  const boundary=repairedSql.slice(observed,auth);
+  assert.match(boundary,/if v_state.stage='complete' then/);
+  assert.match(boundary,/set stage='blocked'/);
+  assert.match(boundary,/'ok',false/);
+  assert.match(boundary,/shopify_cutover_no_longer_verified/);
+});
+
+test("DA-44: existing DNS authorization and privilege boundaries remain unchanged",()=>{
+  assert.match(repairedSql,/v_auth := public\.hercules_spaceship_authorization_status\(\)/);
+  assert.match(repairedSql,/hercules_spaceship_dns_submit\('reconcile', true\)/);
+  assert.match(repairedSql,/grant execute on function public\.hercules_domain_launch_autopilot_tick\(\) to service_role/);
+  assert.match(repairedSql,/revoke all on function public\.hercules_domain_launch_autopilot_tick\(\) from public,anon,authenticated/);
+  assert.doesNotMatch(repairedSql,/\b(?:webPresenceCreate|domainCreate|primaryDomainUpdate)\b/);
+});
