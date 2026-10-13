@@ -15,6 +15,9 @@ PATHS = (
 )
 BODY_LIMIT = 1024 * 1024
 TIMEOUT_SECONDS = 8
+# One fixed read-only warm-up for free instances; every verification request
+# still checks its own response. The 3-minute CI job remains bounded.
+WARMUP_TIMEOUT_SECONDS = 75
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -30,7 +33,7 @@ class NoRedirect(request.HTTPRedirectHandler):
         return None
 
 
-def public_get(path):
+def public_get(path, *, timeout=TIMEOUT_SECONDS):
     """Fetch a pinned, uncredentialed HTTPS origin; never follow redirects."""
     if path not in PATHS:
         raise ValueError("unapproved_path")
@@ -41,11 +44,16 @@ def public_get(path):
         headers={"User-Agent": "Hercules-iPhone-Release-Evidence/1.0", "Accept": "*/*"},
     )
     try:
-        with opener.open(req, timeout=TIMEOUT_SECONDS) as response:
+        with opener.open(req, timeout=timeout) as response:
             return ProbeResponse(response.status, response.headers.get("Content-Type", ""), response.read(BODY_LIMIT + 1))
     except error.HTTPError as exc:
         with exc:
             return ProbeResponse(exc.code, exc.headers.get("Content-Type", ""), exc.read(BODY_LIMIT + 1))
+
+
+def public_warmup():
+    """Wake the pinned public service once; readiness is evaluated separately."""
+    return public_get("/health", timeout=WARMUP_TIMEOUT_SECONDS)
 
 
 def _json(response):
@@ -102,7 +110,14 @@ def _assess(path, response):
     return "unapproved_path"
 
 
-def run_probe(fetcher=public_get):
+def run_probe(fetcher=public_get, *, wake=None):
+    # Do not count warm-up as a successful check. A cold-start timeout must not
+    # bypass any of the fixed seven public readiness checks.
+    if wake is not None:
+        try:
+            wake()
+        except (error.URLError, TimeoutError, OSError, ValueError):
+            pass
     checks = []
     for path in PATHS:
         try:
@@ -125,7 +140,7 @@ def run_probe(fetcher=public_get):
 
 
 def main():
-    result = run_probe()
+    result = run_probe(wake=public_warmup)
     print(json.dumps(result, indent=2))
     return 0 if result["network_surface_ready"] else 1
 

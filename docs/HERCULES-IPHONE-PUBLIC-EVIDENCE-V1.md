@@ -8,6 +8,8 @@ The public Hercules AI shell is an installable iPhone web app (PWA), not a nativ
 
 The Hercules-owned Python standard-library script at scripts/hercules_iphone_launch_probe.py uses only the fixed HTTPS origin https://hercules-mcp.onrender.com. It does not accept a user-selected host or URL, follow redirects, send cookies or credentials, post customer information, write data, or alter deployments. Responses are bounded, and output includes only HTTP status and sanitized reason codes.
 
+One uncredentialed `GET /health` is allowed up to 75 seconds to wake a cold Render free instance. The warm-up is never counted as a passed readiness check, never follows redirects, and cannot override any of the seven independently verified response/AI model checks. The entire live probe remains bounded by a three-minute GitHub job timeout. This reduces misleading cold-start failures without weakening the model-backend requirement.
+
 It verifies:
 - Hercules public HTML includes the installable manifest and service-worker references.
 - The standalone manifest contains the expected icon URLs.
