@@ -115,7 +115,7 @@ export function assessQwen15OwnerHost(evidence){
   const e=evidence??{};
   const arm=e.arch==="arm64";
   const cgroupsVerified=e.cgroupInspectionOk!==false;
-  const enoughCpus=Number.isInteger(e.cpuCount)&&e.cpuCount>=2;
+  const enoughCpus=Number.isFinite(e.cpuCount)&&e.cpuCount>=2;
   const total=Number.isSafeInteger(e.totalMemBytes)&&e.totalMemBytes>=MIN_TOTAL_BYTES;
   const free=Number.isSafeInteger(e.freeMemBytes)&&e.freeMemBytes>=MIN_FREE_BYTES;
   const size=Number.isSafeInteger(e.modelBytes)&&e.modelBytes>=MIN_MODEL_BYTES&&e.modelBytes<=MAX_MODEL_BYTES;
