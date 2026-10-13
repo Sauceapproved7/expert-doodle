@@ -5,6 +5,8 @@ const U=Deno.env.get('SUPABASE_URL')!;
 const A=Deno.env.get('SUPABASE_ANON_KEY')!;
 const S=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const STORE='sauceapproved-2.myshopify.com';
+// Provider registry alias above stays unchanged; Admin API calls use Shopify's attested original domain.
+const SHOPIFY_API_HOST='azymhc-x0.myshopify.com';
 const SHOP_GID='gid://shopify/Shop/100002726208';
 const SHOP_ALIASES=new Set([
   STORE,
@@ -108,8 +110,9 @@ async function upsertConnection(admin:any,org:string,provider:string,key:string,
 }
 
 async function shopifyGraphql(token:string,query:string,variables:any={}){
-  const response=await fetch(`https://${STORE}/admin/api/2026-07/graphql.json`,{
+  const response=await fetch(`https://${SHOPIFY_API_HOST}/admin/api/2026-07/graphql.json`,{
     method:'POST',
+    redirect:'error',
     headers:{
       'content-type':'application/json',
       'x-shopify-access-token':token
@@ -130,8 +133,9 @@ async function shopifyGraphql(token:string,query:string,variables:any={}){
 }
 
 async function exchangeShopifyToken(clientId:string,clientSecret:string){
-  const response=await fetch(`https://${STORE}/admin/oauth/access_token`,{
+  const response=await fetch(`https://${SHOPIFY_API_HOST}/admin/oauth/access_token`,{
     method:'POST',
+    redirect:'error',
     headers:{'content-type':'application/x-www-form-urlencoded'},
     body:new URLSearchParams({
       grant_type:'client_credentials',
