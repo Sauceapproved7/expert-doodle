@@ -76,3 +76,30 @@ test("portal sign-in page discloses disabled auth without exposing cookies or ad
   const css=await fetch(base+"/access.css");assert.equal(css.status,200);
  });
 });
+
+test("cookie-based customer site onboarding still requires same-origin consent and owner-bound RLS",async()=>{
+ const writes=[];
+ const authFetcher=async()=>({ok:true,status:200,json:async()=>({id:uuid,is_anonymous:false})});
+ const customerFetcher=async(url,options)=>{
+  if(String(url).endsWith("/auth/v1/user"))return {ok:true,status:200,json:async()=>({id:uuid,is_anonymous:false})};
+  writes.push({url,options});
+  return {ok:true,status:201,json:async()=>[{id:"bbbbbbbb-2222-4333-8444-aaaaaaaaaaaa",stage:"awaiting-domain-control"}]};
+ };
+ await live({probeUrls:[],accessToken:"",customerAuthEnabled:true,customerEnabled:true,
+  customerPublishableKey:key,authFetcher,customerFetcher},async base=>{
+  const body={website:"https://example.com",authorized:true,consentVersion:"gatehouse-diagnostic-v1",
+   owner_user_id:"forged-user",paidOrderVerified:true};
+  const cookie="__Host-gh_customer_session="+jwt;
+  const bad=await fetch(base+"/api/customer/sites",{method:"POST",headers:{"content-type":"application/json",cookie,origin:"https://attacker.example","x-gatehouse-request":"1"},body:JSON.stringify(body)});
+  assert.equal(bad.status,403);
+  const good=await fetch(base+"/api/customer/sites",{method:"POST",headers:{"content-type":"application/json",cookie,origin,"x-gatehouse-request":"1"},body:JSON.stringify(body)});
+  assert.equal(good.status,201);
+  assert.equal((await good.json()).purchaseEnabled,false);
+  assert.equal(writes.length,1);
+  const sent=JSON.parse(writes[0].options.body);
+  assert.equal(sent.owner_user_id,uuid);
+  assert.equal(sent.origin,"https://example.com");
+  assert.ok(!JSON.stringify(sent).includes("forged-user"));
+  assert.ok(!JSON.stringify(sent).includes("paidOrderVerified"));
+ });
+});
