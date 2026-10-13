@@ -48,9 +48,9 @@ test("empty and excessively long input rejected",()=>{
  assert.throws(()=>answerFromVault(index(),"x".repeat(600)),/query/i);
 });
 test("no arbitrary file inclusion, duplicate paths or unsafe traversals",()=>{
- assert.throws(()=>buildVaultIndex([{path:"../../vault/secret.json",content:"Secret key"}]),/path/i);
+ assert.throws(()=>buildVaultIndex([{path:"../../vault/secret.json",content:"Secret key"},docs[0]]),/path/i);
  assert.throws(()=>buildVaultIndex([docs[0],docs[0]]),/duplicate/i);
- assert.throws(()=>buildVaultIndex([{path:"docs/bad.md",content:"bearer xyz-secret-123"}]),/sensitive/i);
+ assert.throws(()=>buildVaultIndex([{path:"docs/bad.md",content:"bearer xyz-secret-123"},docs[0]]),/sensitive/i);
 });
 test("retrieval output contains only allowlisted citation paths and does not execute source instructions",()=>{
  const poisoned=buildVaultIndex([
@@ -106,8 +106,8 @@ test("reject oversized body, invalid content-type, unsupported paths, and extra 
 });
 test("source corpus loader enforces nonempty, bounded documents",()=>{
  assert.throws(()=>buildVaultIndex([]),/document/i);
- assert.throws(()=>buildVaultIndex([{path:"docs/empty.md",content:"  "}]),/empty/i);
- assert.throws(()=>buildVaultIndex([{path:"docs/large.md",content:"x".repeat(120000)}]),/large/i);
+ assert.throws(()=>buildVaultIndex([{path:"docs/empty.md",content:"  "},docs[0]]),/empty/i);
+ assert.throws(()=>buildVaultIndex([{path:"docs/large.md",content:"x".repeat(120000)},docs[0]]),/large/i);
 });
 test("staging server CLI cannot start without explicit experimental opt-in",()=>{
  const cli=fileURLToPath(new URL("../hercules-vault/control-cli.mjs",import.meta.url));
