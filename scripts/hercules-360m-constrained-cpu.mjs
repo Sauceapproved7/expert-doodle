@@ -12,12 +12,17 @@ export function evaluateConstrainedCpuEvidence(evidence){
   const memoryLimitVerified=evidence?.memoryMaxBytes===CONSTRAINTS.memoryMaxBytes;
   const peak=evidence?.memoryPeakBytes;
   const validPeak=Number.isSafeInteger(peak)&&peak>0&&peak<=CONSTRAINTS.memoryMaxBytes;
+  // A pre-cached mmap'd GGUF can have pages charged to the runner's cgroup
+  // rather than the container; VmHWM is independent process-resident proof.
+  const processRss=evidence?.modelProcessPeakRssBytes;
+  const modelProcessPeakRssVerified=Number.isSafeInteger(processRss)&&processRss>0&&
+    processRss<=CONSTRAINTS.memoryMaxBytes;
   const noOomKills=evidence?.oomKills===0;
   const report=evaluate360mQuality({
-    peakRssKb:validPeak?Math.ceil(peak/1024):null,
+    peakRssKb:modelProcessPeakRssVerified?Math.ceil(processRss/1024):null,
     answers:evidence?.answers,
   });
-  const complete=Boolean(cpuQuotaVerified&&memoryLimitVerified&&validPeak&&noOomKills&&
+  const complete=Boolean(cpuQuotaVerified&&memoryLimitVerified&&validPeak&&modelProcessPeakRssVerified&&noOomKills&&
     report.measurementComplete);
   return Object.freeze({
     schema:"hercules.model-quality.resource-constrained.v1",
@@ -26,6 +31,8 @@ export function evaluateConstrainedCpuEvidence(evidence){
     cpuQuotaVerified,
     memoryLimitVerified,
     noOomKills,
+    modelProcessPeakRssVerified,
+    observedProcessPeakRssBytes:modelProcessPeakRssVerified?processRss:null,
     simulatedCpuShares:0.15,
     limitMemoryBytes:CONSTRAINTS.memoryMaxBytes,
     observedCgroupMemoryPeakBytes:validPeak?peak:null,
@@ -55,6 +62,7 @@ function readConstrainedEvidence(dir){
     cpuMax:read("cpu.max"),
     memoryMaxBytes:Number(read("memory.max")),
     memoryPeakBytes:Number(read("memory.peak")),
+    modelProcessPeakRssBytes:Number(read("model-process-vmhwm-kb.txt"))*1024,
     oomKills:Number(oom[1]),
     answers:BENCHMARK_CASES.map(({id})=>{
       const data=JSON.parse(read(id+".json"));
