@@ -118,12 +118,17 @@ test("two distinct paid orders claiming same reference are ambiguous and cannot 
  assert.equal(r.body.privateRow,null);
 });
 test("no match and truncated lookback do not claim no lifetime order, delivery stays held",async()=>{
- const s=setup();const p=page([]);
- p.data.orders.pageInfo.hasNextPage=true;
- const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(p)}).run();
+ const s=setup(),pages=[0,1,2].map(n=>{
+  const p=page([{...s.order,id:"gid://shopify/Order/"+(300+n),customAttributes:[]}]);
+  p.data.orders.pageInfo={hasNextPage:true,endCursor:"cursor-no-match-"+n};
+  return p;
+ });
+ let calls=0;
+ const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(pages[calls++])}).run();
+ assert.equal(calls,3);
  assert.equal(r.status,200);
  assert.equal(r.body.candidateMayBeRecorded,false);
- assert.equal(r.body.ordersScanned,0);
+ assert.equal(r.body.ordersScanned,3);
  assert.equal(r.body.hasNextPage,true);
  assert.equal(r.body.allOrdersVerified,false);
  assert.equal(r.body.deliveryAuthorized,false);
@@ -152,13 +157,18 @@ test("expired, future, mismatched or unverified private buyer intents never cont
  }
  assert.equal(requests,0);
 });
-test("a matching order on a truncated ten-order page cannot reserve a candidate",async()=>{
- const s=setup(),p=page([s.order]);
- p.data.orders.pageInfo.hasNextPage=true;
- const result=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(p)}).run();
+test("a matching order in incomplete three-page history cannot reserve a candidate",async()=>{
+ const s=setup(),pages=[0,1,2].map(n=>{
+  const p=page([n===0?s.order:{...s.order,id:"gid://shopify/Order/"+(400+n),customAttributes:[]}]);
+  p.data.orders.pageInfo={hasNextPage:true,endCursor:"cursor-matching-"+n};
+  return p;
+ });
+ let calls=0;
+ const result=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(pages[calls++])}).run();
+ assert.equal(calls,3);
  assert.equal(result.status,200);
  assert.equal(result.body.shopAuthenticated,true);
- assert.equal(result.body.ordersScanned,1);
+ assert.equal(result.body.ordersScanned,3);
  assert.equal(result.body.hasNextPage,true);
  assert.equal(result.body.candidateMayBeRecorded,false);
  assert.equal(result.body.privateRow,null);
