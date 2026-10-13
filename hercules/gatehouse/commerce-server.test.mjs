@@ -50,3 +50,22 @@ test("all payment and customer intake mutations are unavailable",async()=>{
   assert.equal((await fetch(base+"/api/dashboard")).status,503);
  });
 });
+
+test("Gatehouse commercial hero uses original SauceApproved boy-in-cup art without a purchased-service claim",async()=>{
+ await withServer({accessToken:"",probeUrls:[]},async base=>{
+  const response=await fetch(base+"/commercial");
+  const html=await response.text();
+  assert.match(html,/class="c-mascot-art"/);
+  assert.match(html,/sauceapproved-original-boy-in-cup-gatehouse\.png/);
+  assert.match(html,/alt="Original SauceApproved logo: boy in blue SA cap inside a gold-dripping cup with Sauce Approved lettering"/);
+  assert.match(html,/SAUCEAPPROVED/);
+  assert.doesNotMatch(html,/Hercules warrior|heroic statue|24\/7 Website Monitoring|Get Started/);
+  assert.match(html,/Not yet available for purchase/);
+  assert.doesNotMatch(html,/checkout\.stripe\.com|<form[^>]+action=/);
+  assert.match(response.headers.get("content-security-policy"),/img-src 'self' data: https:\/\/cdn\.shopify\.com/);
+  assert.doesNotMatch(response.headers.get("content-security-policy"),/img-src \*/);
+  const css=await(await fetch(base+"/commercial.css")).text();
+  assert.match(css,/\.c-hero-inner/);
+  assert.match(css,/object-fit:\s*contain/);
+ });
+});
