@@ -27,7 +27,9 @@ Personalized or custom-made merchandise, gift cards, and certain clearance/sale 
 
 ## 6. Return shipping charges
 
-The cost or label arrangements for eligible discretionary returns will be explained when the request is approved. We will not promise a prepaid label in every case until the actual provider agreement is verified. Customer rights for defective or incorrect products are not restricted by this statement.
+Return postage and any restocking or handling charges must be clearly disclosed before purchase wherever required; the final policy must state the exact amount or percentage of each applicable fee, **or clearly state that there are no such fees**. The actual discretionary-return fee schedule is not yet verified and must be settled before this draft is published. Do not promise a prepaid label in every case unless the provider capability is verified. Customer rights for defective or incorrect products are not restricted by this statement.
+
+**Connecticut disclosure gate:** Connecticut General Statutes § 42-110aa requires a conspicuously displayed online return/exchange policy to specify the refund type (cash, payment credit, or store credit), time limits, fee amounts expressed in dollars or percent, and other conditions. The draft's uncertainty on fees is not acceptable for final publication. Confirm whether routine exchanges are offered or unavailable and specify that clearly. Source: https://prdext2.cga.ct.gov/2025/pub/chap_735c.htm
 
 ## 7. Refund method and timing
 
