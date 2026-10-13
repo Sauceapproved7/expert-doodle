@@ -4,7 +4,7 @@ application_url = "https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercule
 embedded = true
 
 [access_scopes]
-scopes = "read_orders"
+scopes = "read_orders,write_legal_policies"
 
 [auth]
 redirect_urls = []

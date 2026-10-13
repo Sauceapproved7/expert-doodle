@@ -18,7 +18,7 @@ test("production deploy config exists and stays bound to the existing Hercules a
   const production=await read("shopify/hercules/shopify.app.production.toml");
   assert.match(production,/client_id\s*=\s*"1ed12710f0b797a7a3328c1cf4e8b1f9"/);
   assert.match(production,/name\s*=\s*"Hercules"/);
-  assert.match(production,/scopes\s*=\s*"read_orders"/);
+  assert.match(production,/scopes\s*=\s*"read_orders,write_legal_policies"/);
   assert.doesNotMatch(production,/client_secret|access_token|bridge_token|signing_secret|COMMERCE_ENABLED/i);
 });
 
@@ -29,4 +29,16 @@ test("Shopify autodeploy stays scoped to the existing Hercules app and never unl
   assert.match(workflow,/shopify\/hercules/);
   assert.doesNotMatch(workflow,/COMMERCE_ENABLED\s*[:=]\s*true/i);
   assert.doesNotMatch(workflow,/client_secret|access_token|bridge_token|signing_secret/i);
+});
+
+
+test("Hercules app can request only its existing order-read and legal-policy-write scopes",async()=>{
+  const development=await read("shopify/hercules/shopify.app.toml");
+  const production=await read("shopify/hercules/shopify.app.production.toml");
+  for(const [name,configuration] of [["development",development],["production",production]]){
+    const declared=configuration.match(/^scopes\s*=\s*"([^"]+)"$/m)?.[1];
+    assert.ok(declared, `missing scope declaration in ${name}`);
+    assert.deepEqual(declared.split(",").sort(),["read_orders","write_legal_policies"]);
+    assert.doesNotMatch(configuration,/COMMERCE_ENABLED\s*=\s*true|client_secret|access_token|bridge_token|signing_secret/i);
+  }
 });
