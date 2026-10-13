@@ -179,7 +179,7 @@ async function readScopedBudget(host,dirs,reader){
     freeMemBytes:out.freeMemBytes
   });
 }
-async function readCgroupBudget(host,reader=readCgroupText){
+export async function readQwen15CgroupBudget(host,reader=readCgroupText){
   const entries=await Promise.all(CGROUP_PATHS.map(async path=>{
     try{return [path,await reader(path)];}
     catch{return [path,"unreadable"];}
@@ -263,7 +263,7 @@ export async function inspectQwen15LocalHost({modelPath,engineBinary,systemProbe
     totalMemBytes:totalmem(),freeMemBytes:freemem()
   });
   const local=probe();
-  const budget=await readCgroupBudget(local,cgroupReadText);
+  const budget=await readQwen15CgroupBudget(local,cgroupReadText);
   const modelStat=await stat(model);
   const modelFileRegular=modelStat.isFile();
   let executable=false;

@@ -2,7 +2,7 @@
 // Prints no environment variables, credentials, private model data, or prompt.
 import {readFile} from "node:fs/promises";
 import {arch,availableParallelism,totalmem,freemem} from "node:os";
-import {deriveQwen15CgroupBudget} from "../hercules-models/qwen15-owner-host.mjs";
+import {deriveQwen15CgroupBudget,readQwen15CgroupBudget} from "../hercules-models/qwen15-owner-host.mjs";
 const paths=[
   "/sys/fs/cgroup/memory.max",
   "/sys/fs/cgroup/memory.current",
@@ -19,6 +19,7 @@ const entries=await Promise.all(paths.map(async p=>{
 const files=Object.fromEntries(entries);
 const host={arch:arch(),cpuCount:availableParallelism(),totalMemBytes:totalmem(),freeMemBytes:freemem()};
 const derived=deriveQwen15CgroupBudget(host,files);
+const scopedDerived=await readQwen15CgroupBudget(host);
 const procData={};
 for(const p of ["/proc/self/cgroup","/proc/1/cgroup","/proc/1/comm"]){
   try{procData[p]=(await readFile(p,"utf8")).trim().slice(0,240);}
@@ -42,10 +43,10 @@ if(id?.startsWith("/")&&!id.split("/").includes("..")){
 }
 process.stdout.write(JSON.stringify({
   schema:"hercules.qwen15.ephemeral-arm-cgroup-observation.v1",
-  host,detectedControllerValues:files,derived,procData,scopedControllerValues:scoped,
+  host,detectedControllerValues:files,derived,scopedDerived,procData,scopedControllerValues:scoped,
   productionInferenceVerified:false,
   hostOwnershipVerified:false,
   ownerBillingVerified:false,
   publicReleaseApproved:false
 })+"\n");
-if(!derived.cgroupInspectionOk)process.exitCode=2;
+if(!scopedDerived.cgroupInspectionOk)process.exitCode=2;
