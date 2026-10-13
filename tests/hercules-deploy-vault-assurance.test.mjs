@@ -1,3 +1,4 @@
+import {createHash as moduleCryptoCreateHash} from 'node:crypto';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createAuthorityLease} from '../hercules-authority/authority-lease.mjs';
@@ -124,3 +125,55 @@ test('Recovery Lab and assurance functions produce deterministic evidence on rep
   assert.deepEqual(runVaultAdversarialLab(),runVaultAdversarialLab());
   assert.equal(assessReleasePassport(release()).passportSha256,assessReleasePassport(release()).passportSha256);
 });
+
+
+test('Release Passport holds on any extra failing, cancelled, skipped or malformed CI check',()=>{
+  for(const status of ['failure','cancelled','skipped','pending','unknown']){
+    const x=release();
+    x.ci.checks.push({name:'release-gate',status});
+    const result=assessReleasePassport(x);
+    assert.equal(result.status,'HOLD',status);
+    assert.ok(result.reasonCodes.includes('CI_CHECK_SET_NOT_CLEAN'));
+  }
+  for(const extra of [null,'injected',{}, {name:'release-gate',status:'success',executionAuthority:true}]){
+    const x=release();
+    x.ci.checks.push(extra);
+    assert.equal(assessReleasePassport(x).status,'HOLD');
+  }
+});
+test('Release Passport holds on ambiguous duplicate CI check identities and oversized check sets',()=>{
+  const x=release();
+  x.ci.checks.push({name:'extra',status:'success'},{name:'extra',status:'success'});
+  const p=assessReleasePassport(x);
+  assert.equal(p.status,'HOLD');
+  assert.ok(p.reasonCodes.includes('CI_CHECK_SET_NOT_CLEAN'));
+  const huge=release();
+  huge.ci.checks=Array.from({length:65},(_,i)=>({name:'check'+i,status:'success'}));
+  assert.equal(assessReleasePassport(huge).status,'HOLD');
+});
+test('Passport verifier refuses a recomputed digest of an authority-escalated or forged evidence record',()=>{
+  const {createHash}=requireCrypto();
+  const canonical=value=>Array.isArray(value)?value.map(canonical)
+    :value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])]))
+    :value;
+  const reseal=value=>{
+    const {passportSha256,...body}=value;
+    return {...body,passportSha256:createHash('sha256').update(JSON.stringify(canonical(body))).digest('hex')};
+  };
+  const p=assessReleasePassport(release());
+  assert.equal(verifyReleasePassport(p).valid,true);
+  for(const forged of [
+    {...p,releaseApproved:true,executionAuthority:true},
+    {...p,ownerAuthorizationVerified:true},
+    {...p,providerIndependentlyAuthenticated:true},
+    {...p,schema:'hercules.proof.fabricated'},
+    {...p,checkedRequirements:['tests']},
+    {...p,status:'HOLD',reasonCodes:[]},
+    {...p,status:'EVIDENCE_CONSISTENT_UNATTESTED',reasonCodes:['APPROVED']},
+    {...p,credential:'secret-injected'},
+  ]){
+    const sealed=reseal(forged);
+    assert.equal(verifyReleasePassport(sealed).valid,false,JSON.stringify(forged));
+  }
+});
+function requireCrypto(){return {createHash:moduleCryptoCreateHash};}
