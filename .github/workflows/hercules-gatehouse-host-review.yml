@@ -1,0 +1,25 @@
+name: Hercules Gatehouse Host Review
+on:
+  pull_request:
+    paths:
+      - 'hercules/gatehouse/host-review.mjs'
+      - 'tests/hercules-gatehouse-host-review.test.mjs'
+      - '.github/workflows/hercules-gatehouse-host-review.yml'
+      - 'docs/HERCULES-GATEHOUSE-HOST-REVIEW-V1.md'
+permissions:
+  contents: read
+jobs:
+  read-only-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Gatehouse read-only sandbox handoff tests
+        run: |
+          node --test tests/hercules-gatehouse-host-review.test.mjs
+          node --test hercules/gatehouse/gatehouse.test.mjs
+          node --test tests/hercules-cloud-owner-permit.test.mjs tests/hercules-cloud-host-engine.test.mjs
+      - name: Owner code and security baselines
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
