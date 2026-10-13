@@ -1,3 +1,4 @@
+import {spawnSync} from 'node:child_process';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {runSmallzReleaseReadAudit} from '../hercules-deploy/smallz-read-audit.mjs';
@@ -113,4 +114,19 @@ test('extra caller fields cannot invent owner proof, approval or write authority
   assert.equal(output.ownerAuthorizationVerified,false);
   assert.equal(output.releaseApproved,false);
   assert.equal(output.executionAuthority,false);
+});
+
+
+test('one-shot audit operator command is disabled without consent and fails closed when credentials are missing',()=>{
+  const baseEnv={PATH:process.env.PATH||'',HERCULES_SMALLZ_READ_AUDIT_ENABLED:'false'};
+  const command=['scripts/hercules-smallz-read-audit.mjs'];
+  const disabled=spawnSync(process.execPath,command,{cwd:process.cwd(),env:baseEnv,encoding:'utf8',timeout:3000});
+  assert.equal(disabled.status,0,disabled.stderr);
+  assert.equal(JSON.parse(disabled.stdout).status,'DISABLED');
+  const missing=spawnSync(process.execPath,command,{cwd:process.cwd(),env:{...baseEnv,HERCULES_SMALLZ_READ_AUDIT_ENABLED:'true'},encoding:'utf8',timeout:3000});
+  assert.equal(missing.status,2,missing.stderr);
+  const result=JSON.parse(missing.stdout);
+  assert.deepEqual(result.reasonCodes,['DEDICATED_READ_CREDENTIALS_REQUIRED']);
+  assert.equal(result.executionAuthority,false);
+  assert.equal(result.productionChanged,false);
 });
