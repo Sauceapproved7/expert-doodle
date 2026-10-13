@@ -2,13 +2,14 @@ import os, sqlite3, time, uuid, json, asyncio, secrets, struct, zlib, contextlib
 from pathlib import Path
 import httpx
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse, FileResponse, Response, HTMLResponse
+from fastapi.responses import StreamingResponse, FileResponse, Response, HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field
 from typing import Literal
 from .mcp_runtime import PUBLIC_MCP_SCOPES, effective_allowed_hosts, hercules_mcp, oauth_tool_contract_ready, transport_security
 from .oauth_consent import render_oauth_consent
 from .oauth_validation import jwks_has_asymmetric_signing_key, validate_introspection_claims, validate_supabase_claims, verify_supabase_jwt_signature
 from .sovereign import choose_model, mission_plan
+from .model_readiness import evaluate_model_inventory
 from .speed import speed_profile
 from .submission_continuation import build_submission_readiness_snapshot
 from .product_quiz import router as product_quiz_router
@@ -383,6 +384,29 @@ async def submission_readiness():
 @app.get("/health")
 async def health():
     return {"ok":True,"service":"hercules-ai","model":DEFAULT,"mcp":"/mcp"}
+
+
+@app.get("/ready")
+async def model_backend_readiness():
+    # This is model-inventory readiness only: no claims of chat inference,
+    # production safety, store launch or public marketing eligibility.
+    try:
+        async with httpx.AsyncClient(timeout=5,follow_redirects=False) as client:
+            r=await client.get(f"{BASE}/api/tags")
+            r.raise_for_status()
+            data=r.json()
+    except (httpx.HTTPError, ValueError, TypeError):
+        return JSONResponse(status_code=503,content={
+            "schema":"hercules.model-backend-readiness.v1",
+            "model_inventory_ready":False,
+            "chat_inference_verified":False,
+            "public_release_approved":False,
+            "reason":"model_backend_unavailable",
+        })
+    status=evaluate_model_inventory(data, DEFAULT)
+    if not status["model_inventory_ready"]:
+        return JSONResponse(status_code=503,content=status)
+    return status
 
 
 @app.get("/v1/models")
