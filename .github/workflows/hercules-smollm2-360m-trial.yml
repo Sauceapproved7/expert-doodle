@@ -6,6 +6,11 @@ on:
       - "scripts/hercules-smollm2-360m-trial.mjs"
       - "tests/hercules-real-model-trial.test.mjs"
       - "docs/HERCULES-SMOLLM2-360M-TRIAL.md"
+      - "scripts/hercules-real-modelplane-e2e.mjs"
+      - "tests/hercules-real-modelplane-e2e.test.mjs"
+      - "tests/hercules-smollm2-360m-trial.test.mjs"
+      - "hercules-models/local-chat.mjs"
+      - "hercules-models/service.mjs"
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,6 +24,8 @@ jobs:
       - name: Test fail-closed evaluator before real inference
         run: |
           node --test tests/hercules-real-model-trial.test.mjs
+          node --test tests/hercules-smollm2-360m-trial.test.mjs
+          node --test tests/hercules-real-modelplane-e2e.test.mjs
           node scripts/verify-hercules-execution-contract.mjs
           node scripts/verify-owner-code-only.mjs
           node scripts/security-baseline.mjs
@@ -90,5 +97,6 @@ jobs:
           }
           NODE
           node scripts/hercules-smollm2-360m-trial.mjs --evaluate /tmp/hercules-360m
+          node scripts/hercules-real-modelplane-e2e.mjs --lab
           echo 'Experiment only: never grants launch, commerce, or production model authority.'
           # No model weights or prompts uploaded as Actions artifacts.
