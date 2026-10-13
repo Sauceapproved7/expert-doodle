@@ -34,3 +34,9 @@ node scripts/verify-hercules-execution-contract.mjs
 node scripts/verify-owner-code-only.mjs
 node scripts/security-baseline.mjs
 ```
+
+## Verified first nine-question baseline
+
+An earlier **identical** four-file test on PR #995 produced nine valid genuine ARM64 Qwen answers, **8/9 semantic correctness**, **8/9 exact format**, both abstentions passed, peak process RSS **413,900,800 bytes**, and observed p95 latency **910 ms** on the GitHub runner. The model did not follow the exact HELLO instruction and instead returned a conversational greeting. Accordingly `furtherArmLabEligible=false`. This remains a test-runner result, not an OCI host benchmark. PR #995 was closed unmerged due concurrent main changes; this replacement must run its own checks.
+
+The repository also fixed an unrelated Cleaner test false positive in merged PR #997 before this branch. Any real-model or CI success must not be construed as authorization to deploy, bill, or enable public Hercules registration.
