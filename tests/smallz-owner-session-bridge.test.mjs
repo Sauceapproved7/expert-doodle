@@ -1,4 +1,3 @@
-import "./smallz-browser-boundary-regression.test.mjs";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {createSmallzOwnerBridge} from "../hercules-bot/owner-session-bridge.mjs";
