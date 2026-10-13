@@ -14,6 +14,9 @@ export const QWEN_COLD_LIMITS=Object.freeze({
 export function assessColdLoad(observation){
   const x=observation&&typeof observation==="object"?observation:{};
   const validExit=Number.isSafeInteger(x.exitCode)&&x.exitCode===0&&!x.oomKilled;
+  const quotaVerified=Number.isSafeInteger(x.cpuQuotaMicros)&&x.cpuQuotaMicros>0&&
+    Number.isSafeInteger(x.cpuPeriodMicros)&&x.cpuPeriodMicros>0&&
+    x.cpuQuotaMicros/x.cpuPeriodMicros===QWEN_COLD_LIMITS.cpuFraction;
   const mem=Number.isSafeInteger(x.peakMemoryBytes)?x.peakMemoryBytes:null;
   const limit=x.memoryLimitBytes;
   const charged=Number.isSafeInteger(x.chargedModelBytes)?x.chargedModelBytes:null;
@@ -21,7 +24,7 @@ export function assessColdLoad(observation){
   const coldCopyVerified=x.coldCopyCompleted===true&&charged!==null&&
     charged>=QWEN_COLD_LIMITS.minChargedModelBytes&&
     charged<=QWEN_COLD_LIMITS.memoryLimitBytes;
-  const evidenceValid=validExit&&coldCopyVerified&&
+  const evidenceValid=validExit&&quotaVerified&&coldCopyVerified&&
     limit===QWEN_COLD_LIMITS.memoryLimitBytes&&
     mem!==null&&mem>0&&time!==null&&time>0;
   const memoryHeadroomOk=evidenceValid&&
@@ -44,6 +47,7 @@ export function assessColdLoad(observation){
     correctAnswer&&elapsedWithin15s);
   return Object.freeze({
     outcome:x.oomKilled===true?"oom":validExit?"completed":"inconclusive",
+    quotaVerified:Boolean(quotaVerified),
     coldCopyVerified:Boolean(coldCopyVerified),
     memoryHeadroomOk:Boolean(memoryHeadroomOk),
     correctAnswer:Boolean(correctAnswer),
