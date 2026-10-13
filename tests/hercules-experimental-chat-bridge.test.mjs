@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {once} from "node:events";
+import {spawnSync} from "node:child_process";
+import {fileURLToPath} from "node:url";
 import {createServer as createCandidateBridge} from "../hercules-models/experimental-chat-bridge.mjs";
 
 const TOKEN="owner-test-token-"+"a".repeat(40);
@@ -125,4 +127,15 @@ test("no unapproved methods/paths and invalid token configuration fail closed",a
       assert.equal(r.status,404);
     }
   }finally{await run.close()}
+});
+
+test("experiment CLI refuses to bind unless explicitly enabled",()=>{
+  const cli=fileURLToPath(new URL("../hercules-models/experimental-chat-cli.mjs",import.meta.url));
+  const run=spawnSync(process.execPath,[cli],{
+    env:{...process.env,HERCULES_EXP_CHAT_EXPERIMENT_ENABLED:"false",HERCULES_EXP_CHAT_HOST:"127.0.0.1"},
+    encoding:"utf8",timeout:12000
+  });
+  assert.notEqual(run.status,0);
+  assert.match(run.stderr,/experimental bridge disabled/i);
+  assert.doesNotMatch(run.stdout,/owner-test-token|service.*chat-bridge/);
 });
