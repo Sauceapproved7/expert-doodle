@@ -112,7 +112,7 @@ test("schema holds claims as private, unfulfilled rows with customer-owned forei
  assert.match(sql,/foreign key \(site_id, owner_user_id\)/i);
  assert.match(sql,/status text not null default 'awaiting-provider-readback'/i);
  assert.match(sql,/check \(status = 'awaiting-provider-readback'\)/i);
- assert.match(sql,/unique \(reference_hash\)/i);
+ assert.match(sql,/reference_hash text not null unique/i);
  assert.doesNotMatch(sql,/^\s*grant[^\n]*to (?:anon|authenticated)/im);
  assert.doesNotMatch(sql,/^\s*alter table .*disable row level security/im);
 });
