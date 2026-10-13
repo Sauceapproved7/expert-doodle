@@ -77,3 +77,31 @@ test("no-network workflow must use pinned model, readonly container, and bounded
   assert.match(workflow,/permissions:\s*\n\s*contents: read/);
   assert.doesNotMatch(workflow,/HF_TOKEN|RENDER_API_KEY|OPENAI_API_KEY|railway\.app\/graphql|supabase\.co\/functions/);
 });
+
+
+test("DA-45: mathematical correctness is independent of exact numeral formatting",()=>{
+  const sentences=valid.responses.map(row=>({...row,
+    reply:{model:"hercules-trial",choices:[{finish_reason:"stop",
+      message:{role:"assistant",content:row.id==="addition"?"2 + 2 = 4":
+        row.id==="compare"?"12":"5 minus 3 equals 2."}
+    }]}
+  }));
+  const verdict=evaluateMathPromptDiagnostic({...valid,responses:sentences});
+  assert.equal(verdict.diagnosticComplete,true);
+  assert.equal(verdict.baseline.correct,3);
+  assert.equal(verdict.system.correct,3);
+  assert.equal(verdict.baseline.formatCorrect,1);
+  assert.equal(verdict.system.formatCorrect,1);
+  assert.equal(verdict.allQuestionsCorrect,true);
+  assert.equal(verdict.publicReleaseApproved,false);
+});
+
+test("DA-45: a correct partial expression plus a wrong conclusion never counts",()=>{
+  const wrong=valid.responses.map(row=>row.id==="subtraction"&&row.mode==="baseline"?
+    {...row,reply:{model:"hercules-trial",choices:[{finish_reason:"stop",message:{
+      role:"assistant",content:"5 minus 3 equals 2, but my answer is 8"
+    }}]}}:row);
+  const verdict=evaluateMathPromptDiagnostic({...valid,responses:wrong});
+  assert.equal(verdict.baseline.correct,2);
+  assert.equal(verdict.allQuestionsCorrect,false);
+});
