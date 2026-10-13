@@ -17,7 +17,7 @@ const request={
 const sandbox={
  kind:'owned_linux',reference:'sandbox-01',environment:'sandbox',
  verified:true,verifiedAt:'2026-10-13T14:09:00.000Z',
- runtime:'rootless_docker',incrementalMonthlyCostUsd:0,
+ runtime:'rootless_docker',runtimeUid:1000,incrementalMonthlyCostUsd:0,
  allowlistedImages:[image]
 };
 const key='k'.repeat(48);
@@ -29,7 +29,8 @@ function fakeRunner(){
  const runCommand=async(file,args)=>{
    calls.push({file,args});
    assert.equal(file,'docker');
-   if(args[0]==='info')return {exitCode:0,stdout:'[\"name=rootless\"]',stderr:''};
+   assert.deepEqual(args.slice(0,2),['--host','unix:///run/user/1000/docker.sock']);
+   if(args[2]==='info')return {exitCode:0,stdout:'[\"name=rootless\"]',stderr:''};
    if(args[0]==='container'&&args[1]==='inspect')
      return {exitCode:0,stdout:'true\n',stderr:''};
    return {exitCode:0,stdout:'',stderr:''};
@@ -49,6 +50,8 @@ test('requires pre-existing owner-attested zero-cost rootless isolated host',()=
    [{...sandbox,incrementalMonthlyCostUsd:null}],
    [{...sandbox,incrementalMonthlyCostUsd:'0'}],
    [{...sandbox,runtime:'docker'}],
+   [{...sandbox,runtimeUid:0}],
+   [{...sandbox,runtimeUid:999999}],
    [{...sandbox,verifiedAt:'2026-10-13T13:00:00Z'}],
    [{...sandbox,reference:'sandbox-02'}],
    [{...sandbox,verifiedAt:'2026-10-13T15:00:00Z'}],
@@ -69,6 +72,7 @@ test('immutable docker plan is rootless sandbox, no network, no volumes, no port
  assert.equal(plan.executionAuthorized,false);
  assert.equal(plan.productionAuthorized,false);
  assert.equal(plan.costChangeUsd,0);
+ assert.equal(plan.rootlessSocket,'unix:///run/user/1000/docker.sock');
  assert.match(plan.containerName,/^hc-[a-f0-9]{24}$/);
  const args=plan.commands.create;
  assert.deepEqual(args.slice(0,2),['container','create']);
@@ -123,7 +127,7 @@ test('valid owner grant only starts an already-local immutable image and verifie
  assert.equal(proof.runningVerified,true);
  assert.equal(proof.productionAuthorized,false);
  assert.equal(proof.containerName,plan.containerName);
- assert.deepEqual(calls.map(x=>x.args.slice(0,2)),[['info','--format'],['container','create'],['container','start'],['container','inspect']]);
+ assert.deepEqual(calls.map(x=>x.args.slice(2,4)),[['info','--format'],['container','create'],['container','start'],['container','inspect']]);
  assert.equal(JSON.stringify(proof).includes(key),false);
 });
 test('same signed permit cannot be executed twice through a durable replay store interface',async()=>{
@@ -132,25 +136,25 @@ test('same signed permit cannot be executed twice through a durable replay store
  await executeSandboxHostPlan(plan,params);
  await assert.rejects(()=>executeSandboxHostPlan(plan,params),/permit_replayed/);
  assert.equal(runner.calls.length,5);
- assert.equal(runner.calls.at(-1).args[0],'info');
+ assert.equal(runner.calls.at(-1).args[2],'info');
 });
 test('failed verification attempts bounded cleanup and does not claim success',async()=>{
  const plan=create(),permit=signer(plan),calls=[];
  const runner=async(file,args)=>{
   calls.push(args);
-  if(args[0]==='info')return {exitCode:0,stdout:'["name=rootless"]',stderr:''};
+  if(args[2]==='info')return {exitCode:0,stdout:'["name=rootless"]',stderr:''};
   if(args[1]==='inspect')return {exitCode:0,stdout:'false\n',stderr:''};
   return {exitCode:0,stdout:'',stderr:''};
  };
  await assert.rejects(()=>executeSandboxHostPlan(plan,{permit,signingKey:key,now:time,runCommand:runner,consumeNonce:nonceStore()}),/sandbox_launch_unverified/);
- assert.deepEqual(calls.at(-1),plan.commands.rollback);
+ assert.deepEqual(calls.at(-1).slice(2),plan.commands.rollback);
 });
 test('rollback requires separate signed action bound to same container and cannot remove foreign names',async()=>{
  const plan=create(),permit=signer(plan,'rollback'),runner=fakeRunner();
  const proof=await rollbackSandboxHostPlan(plan,{permit,signingKey:key,now:time,runCommand:runner.runCommand,consumeNonce:nonceStore()});
  assert.equal(proof.rolledBack,true);
  assert.equal(proof.productionAuthorized,false);
- assert.deepEqual(runner.calls[1].args,plan.commands.rollback);
+ assert.deepEqual(runner.calls[1].args.slice(2),plan.commands.rollback);
  await assert.rejects(()=>rollbackSandboxHostPlan(plan,{permit:signer(plan),signingKey:key,now:time,runCommand:runner.runCommand,consumeNonce:nonceStore()}),/permit_action_mismatch/);
 });
 
@@ -159,7 +163,7 @@ test('rootful Docker daemon is refused before any container action or replay con
  let used=false;
  const runCommand=async(file,args)=>{
   calls.push(args);
-  return {exitCode:0,stdout:args[0]==='info'?'["name=seccomp"]':'true'};
+  return {exitCode:0,stdout:args[2]==='info'?'["name=seccomp"]':'true'};
  };
  await assert.rejects(()=>executeSandboxHostPlan(plan,{
   permit,signingKey:key,now:time,runCommand,
@@ -167,5 +171,5 @@ test('rootful Docker daemon is refused before any container action or replay con
  }),/rootless_docker_unverified/);
  assert.equal(used,false);
  assert.equal(calls.length,1);
- assert.equal(calls[0][0],'info');
+ assert.equal(calls[0][2],'info');
 });
