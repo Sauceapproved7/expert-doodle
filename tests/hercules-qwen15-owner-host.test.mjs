@@ -117,3 +117,14 @@ test("private launcher refuses to start without explicit owner authorization",as
   assert.match(result.stderr,/owner_private_trial_disabled/);
   assert.doesNotMatch(result.stdout,/privateTrial|ok/);
 });
+
+test("owner-code policy explicitly declares an external llama.cpp binary process boundary",async()=>{
+  const {readFile}=await import("node:fs/promises");
+  const policy=JSON.parse(await readFile(new URL("../governance/owner-code-policy.json",import.meta.url),"utf8"));
+  const boundary=policy.childProcessBoundaries.find(x=>x.path==="scripts/hercules-qwen15-owner-host.mjs");
+  assert.equal(boundary?.kind,"external-model-adapter");
+  assert.deepEqual(boundary?.dependencies,["llama-cpp"]);
+  const dependency=policy.externalInfrastructure.find(x=>x.id==="llama-cpp");
+  assert.equal(dependency?.ownership,"third-party-model-infrastructure");
+  assert.equal(dependency?.packagedAsHerculesCode,false);
+});
