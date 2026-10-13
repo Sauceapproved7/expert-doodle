@@ -53,6 +53,9 @@ function assertPlan(plan){
    ||hash(canonicalPlan(plan))!==plan.planDigest)fail('plan_integrity_invalid');
  return plan;
 }
+export function assertSandboxHostPlan(plan){
+ return assertPlan(plan);
+}
 function payload(permit){
  return JSON.stringify({
   schema:permit.schema,action:permit.action,
