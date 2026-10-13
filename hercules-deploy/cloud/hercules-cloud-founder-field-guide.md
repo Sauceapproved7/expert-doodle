@@ -22,7 +22,7 @@ Hercules Cloud is an original, owner-sovereign deployment platform in active dev
 Check the following as a planning exercise. It is **self-reported**, not a compliance or production certification.
 
 - [ ] **Host ownership:** You can identify the actual Linux host, root administrator and maintenance owner.
-- [ ] **Independent cost verification:** The provider plan, current spend and possible metered overages are independently checked.
+- [ ] **Cost verification:** The provider plan, current spend and possible metered overages are independently checked.
 - [ ] **Rootless Docker:** Your sandbox runtime isolates containers and is verified to run without root privileges.
 - [ ] **Pinned artifacts:** Every image/build is tied to an exact source commit and SHA-256 fingerprint.
 - [ ] **Private credentials:** No shared service keys in client source, public logs, shell histories or chat messages.
