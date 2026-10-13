@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {mkdtemp,rm,lstat,mkdir,writeFile,chmod} from "node:fs/promises";
 import {tmpdir} from "node:os";
 import {join} from "node:path";
+import {spawnSync} from "node:child_process";
+import {readFileSync} from "node:fs";
 import {createSandboxHostPlan,createSandboxPermit} from "../hercules-deploy/cloud/host-agent.mjs";
 import {runHostEngineOperation,assertHostEngineOperator} from "../hercules-deploy/cloud/host-engine.mjs";
 
@@ -136,3 +138,24 @@ test("no machine, no subprocess adapter, or inaccessible replay directory is nev
   await assert.rejects(()=>runHostEngineOperation({...q,root:change.root??root,action:"start",enableSandbox:true}));
  }
 }));
+
+test("standalone operator defaults off and does not leak inherited owner secrets",()=>{
+ const bin=new URL("../hercules-deploy/cloud/host-engine-cli.mjs",import.meta.url);
+ for(const enabled of ["false","true"]){
+  const r=spawnSync(process.execPath,[bin.pathname,"start"],{
+   encoding:"utf8",timeout:7000,
+   env:{...process.env,HERCULES_HOST_ENGINE_SANDBOX_ENABLED:enabled,
+    HERCULES_HOST_ENGINE_OWNER_KEY_FILE:"OWNER-SECRET-KEY-LOCAL"}
+  });
+  assert.equal(r.status,1);
+  assert.doesNotMatch(r.stdout+r.stderr,/OWNER-SECRET-KEY-LOCAL/);
+  assert.match(r.stderr,/host_engine_disabled|host_engine_unverified_or_action_denied/);
+ }
+});
+test("Host Engine CLI has no public listener and only the declared Docker subprocess",()=>{
+ const cli=readFileSync(new URL("../hercules-deploy/cloud/host-engine-cli.mjs",import.meta.url),"utf8");
+ assert.ok(cli.includes("HERCULES_HOST_ENGINE_SANDBOX_ENABLED"));
+ assert.ok(cli.includes("HERCULES_HOST_ENGINE_OWNER_KEY_FILE"));
+ for(const forbidden of ["createServer(","listen(","fetch(","eval(","http.request("])
+  assert.equal(cli.includes(forbidden),false,forbidden);
+});

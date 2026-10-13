@@ -19,7 +19,44 @@ jobs:
         run: |
           node --test tests/hercules-cloud-host-engine.test.mjs
           node --test tests/hercules-cloud-host-agent.test.mjs tests/hercules-cloud-host-local.test.mjs tests/hercules-cloud-oci-a1-readiness.test.mjs
+      - name: Verify default-off host operator binaries
+        run: |
+          node --check hercules-deploy/cloud/host-engine.mjs
+          node --check hercules-deploy/cloud/host-engine-cli.mjs
+          if node hercules-deploy/cloud/host-engine-cli.mjs start; then exit 1; fi
       - name: Ownership, security and provenance
         run: |
           node scripts/verify-owner-code-only.mjs
           node scripts/security-baseline.mjs
+
+  disposable-linux-container:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Exercise real restricted Docker sandbox and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE='node:22.23.3-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402'
+          docker info >/dev/null
+          docker pull "$IMAGE"
+          NAME="hc-e2e-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          docker container create --name "$NAME" --pull never \
+            --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --pids-limit 64 \
+            --memory 128m --cpus 0.5 --user 65532:65532 \
+            --restart no --tmpfs /tmp:rw,noexec,nosuid,size=16m \
+            --log-driver none "$IMAGE" \
+            node -e 'setInterval(()=>{},1000)'
+          docker container start "$NAME" >/dev/null
+          test "$(docker container inspect --format '{{.State.Running}}' "$NAME")" = true
+          docker container inspect --format '{{json .HostConfig}}' "$NAME" \
+            | python3 -c 'import json,sys; j=json.load(sys.stdin); assert j["NetworkMode"]=="none"; assert j["ReadonlyRootfs"] is True; assert j["Privileged"] is False; assert "ALL" in j["CapDrop"]; assert j["NanoCpus"]==500000000; assert j["Memory"]==134217728'
+          docker container rm --force "$NAME" >/dev/null
+          trap - EXIT
+          if docker container inspect "$NAME" >/dev/null 2>&1; then
+            echo 'Sandbox removal not proven' >&2; exit 1
+          fi
+          echo '{"schema":"hercules.cloud.ci-sandbox.v1","started":true,"restricted":true,"removed":true,"rootlessAgentVerified":false,"ownerHostVerified":false,"productionApproved":false}'
