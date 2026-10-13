@@ -272,3 +272,12 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Paths: hercules-bot/launch.html, /launch route, focused route test and documentation.
 - Origin: original project-authored page with AI assistance; Node/browser built-ins only. The existing product photo is loaded from the user's Shopify CDN, not packaged as software or claimed as new original media.
 - Scope: a script-free public navigation page linking the current Shopify storefront, authenticated Smallz console, and Studio. It adds no payment flow, registrar authority, release approval, or new service.
+
+## Smallz isolated identity release candidate — October 13, 2026
+
+- This **candidate branch is anchored to the deployed Smallz base commit** ac4ebb822e421e4cc3a3b6bbea28330552304d95. It is not the canonical \`main\`, has no automatic deployment authority, and must not be mistaken for a production cutover.
+- First-party AI-assisted SauceApproved material copied from already reviewed PR #1020: hercules-bot/app-server.mjs, hercules-runtime/smallz-release-proof.mjs and their two regression tests, plus release documentation and a CI-only exact Render build check.
+- Independent comparison of app-server.mjs from PR #1020 against the deployed app-server.mjs reconstructs byte-for-byte identity **after removing only** the new import, injected environment parameter and owner-only identity route. The original Smallz owner-auth and browser-bridge dependencies are unchanged at their live baseline.
+- No third-party source code, vendor dependency, weights, binary, secret, customer data, new infrastructure or commercial integration is introduced. Node 22 built-ins and pinned GitHub Actions already present at the base commit are used.
+- Draft pull request to the old-commit baseline only is a regression/evidence vehicle, not a request to merge this divergent release branch into current main, redeploy Smallz, reconfigure auto-deploy or release commercially. A future exact-SHA Render cutover requires legitimate provider authority and live validation.
+
