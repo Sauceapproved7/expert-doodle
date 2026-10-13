@@ -90,10 +90,9 @@ async function secret(secretRef: string) {
   return String(payload);
 }
 
-async function credentials(allowDisabledInspection = false) {
-  const statusFilter = allowDisabledInspection ? "status=in.(configured,disabled)" : "status=eq.configured";
+async function credentials() {
   const rows = await rest(
-    "hercules_spaceship_dns_credentials?singleton=eq.true&" + statusFilter + "&select=api_key_secret_ref,api_secret_secret_ref,status&limit=1"
+    "hercules_spaceship_dns_credentials?singleton=eq.true&status=eq.configured&select=api_key_secret_ref,api_secret_secret_ref&limit=1"
   ) as Array<{api_key_secret_ref?:string; api_secret_secret_ref?:string}>;
 
   const row = Array.isArray(rows) ? rows[0] : null;
@@ -159,12 +158,12 @@ function spaceshipMcpClient(req:Request){
   };
 }
 
-async function providerClient(req:Request, inspectOnly = false){
+async function providerClient(req:Request){
   if(await mcpOauthConfigured()){
     return {mode:"mcp_oauth",client:spaceshipMcpClient(req)};
   }
   try{
-    let {apiKey,apiSecret}=await credentials(inspectOnly);
+    let {apiKey,apiSecret}=await credentials();
     let client=new SpaceshipDnsClient({apiKey,apiSecret,allowedDomains:[DOMAIN],fetchImpl:fetch});
 
     try{
@@ -190,7 +189,6 @@ async function providerClient(req:Request, inspectOnly = false){
       throw swappedError;
     }
 
-    if(inspectOnly) return {mode:"external_api_readonly_recovery",client:swapped};
     const normalized=await rest("rpc/hercules_spaceship_dns_configure_credentials",{
       method:"POST",
       headers:{"content-type":"application/json"},
@@ -313,7 +311,7 @@ export async function handleSpaceshipDnsRequest(req: Request) {
   await createRun(traceId, action, replaceCustomConflicts);
 
   try {
-    const {client,mode} = await providerClient(req, inspectAction);
+    const {client,mode} = await providerClient(req);
     const config=dnsConfig(action);
     const current = await client.listRecords(DOMAIN);
     const preflight = config.planner(current.items);
