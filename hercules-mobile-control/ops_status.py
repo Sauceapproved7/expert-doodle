@@ -57,6 +57,8 @@ def probe(target, http_code=_request_code):
         state, detail = "protected", "HTTP endpoint requires authorization"
     elif code == 429:
         state, detail = "limited", "Endpoint rate-limited the request"
+    elif code in (502, 503):
+        state, detail = "unconfirmed", "Gateway error; instance may be waking or unreachable. Recheck after a minute."
     elif code >= 500:
         state, detail = "degraded", "Server returned an error"
     else:
