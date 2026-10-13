@@ -59,3 +59,27 @@ export function makeSampleReport(summary={}){
   paymentProcessorTested:false,refundTested:false,
   warning:"A read-only example of publicly observable service reachability, not an actual customer scan or commercial deliverable."};
 }
+
+/** Printable zero-trust public sample. Values come only from fixed allowlisted enums. */
+export function renderPrintableSample(report){
+ const rows=(report?.observations||[])
+ .filter(x=>KNOWN.has(x?.service)&&CONNECTIVITY.has(x?.connectivity))
+ .map(x=>'<tr><td>'+x.service+'</td><td>'+(x.connectivity==="reachable"?"Reachable":"No response")+'</td></tr>').join("");
+ const stamp=typeof report?.testedAt==="string" && /^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d/.test(report.testedAt)
+  ?report.testedAt:"No verified observation";
+ return '<!doctype html><html lang="en"><head><meta charset="utf-8">'+
+  '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+  '<title>Hercules Gatehouse — Sample Diagnostic Report</title>'+
+  '<link rel="stylesheet" href="/report.css"></head><body><main>'+
+  '<div class="kicker">SAUCEAPPROVED / HERCULES GATEHOUSE</div>'+
+  '<h1>SAMPLE REPORT — NOT A CUSTOMER SCAN</h1>'+
+  '<p class="warning">Public Hercules endpoint reachability only. This is not a paid deliverable, website audit, proof of security, uptime guarantee, or refund/settlement evidence.</p>'+
+  '<p><strong>Observed:</strong> '+stamp+'</p>'+
+  '<table><thead><tr><th>Hercules service</th><th>Network response</th></tr></thead><tbody>'+
+  (rows||'<tr><td colspan="2">No public endpoint observations collected</td></tr>')+
+  '</tbody></table><h2>Fulfillment state: HOLD</h2>'+
+  '<p>No verified paid customer order. No customer domain scanned. No delivery permission.</p>'+
+  '<p>Future real reports require signed customer authorization, verified paid Shopify order read-back, public-domain safety screening, and a secure delivery channel.</p>'+
+  '<footer>Report is a sanitized illustrative sample. Production checkout, refunds, payouts and launch authorizations remain unchanged.</footer>'+
+  '</main></body></html>';
+}
