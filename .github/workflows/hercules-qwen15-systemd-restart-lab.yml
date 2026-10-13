@@ -71,7 +71,18 @@ jobs:
             if (( i % 10 == 1 )); then
               echo "systemd_recovery_observation: state=$state substate=$substate result=$result restarts=$restart_count"
             fi
+            service_state="$state"
+            start_limit_evidenced=0
             if [[ "$result" = "start-limit-hit" ]]; then
+              start_limit_evidenced=1
+            elif [[ "$result" = "exit-code" && "$service_state" = "failed" && "$restart_count" = "$burst" ]]; then
+              # On this Ubuntu systemd version the Result remains exit-code,
+              # even when the native journal confirms the start-limit block.
+              if sudo journalctl -u "$unit_name" -n 25 --no-pager --output=cat | grep -Fq "Start request repeated too quickly"; then
+                start_limit_evidenced=1
+              fi
+            fi
+            if test "$start_limit_evidenced" = 1; then
               verified=1
               break
             fi
