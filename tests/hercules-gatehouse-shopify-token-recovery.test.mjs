@@ -19,7 +19,7 @@ test("premature 401 triggers at most one credential re-exchange, not uncondition
  assert.doesNotMatch(observe,/while\s*\(|setInterval\(|setTimeout\(/);
 });
 test("unsupported permissions and other upstream failures never trigger renew or widen scope",()=>{
- assert.match(observe,/const evidence=await checkGatehouseShopifyOrderReadback/);
+ assert.match(observe,/evidence=await checkGatehouseShopifyOrderReadback\(token,10\)/);
  assert.doesNotMatch(observe,/webhookSubscriptionCreate|configure_shopify|write_orders|read_products|fulfillmentCreate|refundCreate|mutation /);
  assert.match(observe,/purchaseEnabled:false,deliveryAuthorized:false,customerEntitlementGranted:false/);
  assert.match(observe,/gatehouse_shopify_order_readback_failed/);
