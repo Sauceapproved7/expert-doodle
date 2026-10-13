@@ -7,8 +7,8 @@ import {evaluateConstrainedCpuEvidence, CONSTRAINTS} from "../scripts/hercules-3
 const answerById={arithmetic:"4",capital:"Paris",instruction:"HELLO",subtraction:"4",
   multiplication:"15",comparison:"No",echo:"SKY",unknown:"I don't know.",private:"I don't know."};
 const fixture=()=>({
- cpuMax:"15000 100000",memoryMaxBytes:536870912,memoryPeakBytes:455000000,
- oomKills:0,
+ cpuMax:"15000 100000",memoryMaxBytes:536870912,memoryPeakBytes:106369024,
+ modelProcessPeakRssBytes:374296576,oomKills:0,
  answers:BENCHMARK_CASES.map(item=>({id:item.id,output:answerById[item.id],elapsedMs:2500}))
 });
 
@@ -20,6 +20,8 @@ test("enforces a real 0.15 vCPU cgroup and 512 MiB memory cap without claiming c
  assert.equal(result.cpuQuotaVerified,true);
  assert.equal(result.memoryLimitVerified,true);
  assert.equal(result.noOomKills,true);
+ assert.equal(result.modelProcessPeakRssVerified,true);
+ assert.equal(result.observedProcessPeakRssBytes,374296576);
  assert.equal(result.resourceTrialCompleted,true);
  assert.equal(result.runtimeMeasuredOnRealRender,false);
  assert.equal(result.publicReleaseApproved,false);
@@ -91,9 +93,32 @@ test("workflow pins external binaries, verifies cgroup quotas and prevents publi
   "--cpus 0.15","--memory 512m","--memory-swap 512m",
   "--network host","--read-only","--cap-drop ALL",
   "15000 100000","536870912","memory.peak",
-  "memory.events","127.0.0.1","--no-webui",
+  "memory.events","VmHWM","model-process-vmhwm-kb.txt","127.0.0.1","--no-webui",
   "scripts/hercules-360m-constrained-cpu.mjs",
  ])assert.ok(yaml.includes(phrase),"missing limit or provenance control: "+phrase);
  assert.match(yaml,/permissions:\s*\n\s*contents: read/);
  assert.doesNotMatch(yaml,/OPENAI_API_KEY|HERCULES_VAULT_ASSISTANT_TOKEN|render\.com\/api|railway\.app\/graphql/);
+});
+
+test("file-backed GGUF cache can make cgroup peak look much smaller than process RSS",()=>{
+ const report=evaluateConstrainedCpuEvidence(fixture());
+ assert.equal(report.observedCgroupMemoryPeakBytes,106369024);
+ assert.equal(report.observedProcessPeakRssBytes,374296576);
+ assert.equal(report.modelProcessPeakRssVerified,true);
+ assert.equal(report.resourceTrialCompleted,true);
+ assert.equal(report.runtimeMeasuredOnRealRender,false);
+});
+
+test("missing or overlimit real-process RSS blocks credible memory evidence",()=>{
+ for(const overrides of [
+  {modelProcessPeakRssBytes:undefined},
+  {modelProcessPeakRssBytes:null},
+  {modelProcessPeakRssBytes:0},
+  {modelProcessPeakRssBytes:536870913},
+  {modelProcessPeakRssBytes:"374296576"},
+ ]) {
+   const report=evaluateConstrainedCpuEvidence({...fixture(),...overrides});
+   assert.equal(report.resourceTrialCompleted,false,JSON.stringify(overrides));
+   assert.equal(report.publicReleaseApproved,false);
+ }
 });
