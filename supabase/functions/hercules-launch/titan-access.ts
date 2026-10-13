@@ -1,5 +1,6 @@
 import {createClient} from 'npm:@supabase/supabase-js@2';
 
+const TITAN_URL='https://sauceapproved-studio.onrender.com/titan';
 const PRODUCT_CODE='hercules-titan-founding-access';
 const ENTITLEMENT_VERSION='titan-shopify-founding-access-v1';
 const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -25,7 +26,7 @@ export function isTitanAccessPage(url:URL){
 }
 
 export function titanAccessPage(ctx:{U:string;K:string}){
-  const cfg=JSON.stringify({url:ctx.U,key:ctx.K,titanUrl:ctx.U+'/functions/v1/hercules-launch'}).replace(/</g,'\\u003c');
+  const cfg=JSON.stringify({url:ctx.U,key:ctx.K,titanUrl:TITAN_URL}).replace(/</g,'\\u003c');
   const html=`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hercules Titan Access</title><style>:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#090909;color:#f5f5f5;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}.wrap{max-width:620px;margin:auto;padding:38px 18px}.brand{font-weight:900;letter-spacing:.1em}.card{margin-top:18px;border:1px solid #333;border-radius:18px;background:#151515;padding:24px}h1{font-size:28px;margin:.2em 0}.muted{color:#bbb}input,button,a.cta{width:100%;padding:14px;border-radius:11px;font:inherit}input{border:1px solid #444;background:#0d0d0d;color:#fff;margin:12px 0}button,a.cta{border:0;background:#fff;color:#111;font-weight:800;text-align:center;text-decoration:none;display:block}.ok{color:#bdf7ca}.err{color:#ffd0d0}.hidden{display:none}</style></head>
 <body><main class="wrap"><div class="brand">SAUCEAPPROVED · HERCULES TITAN</div><section class="card"><h1>Activate Founding Access</h1><p class="muted">Use the email from your paid Shopify order. Hercules stores only an email hash in the purchase-entitlement ledger.</p><form id="request"><input id="email" type="email" autocomplete="email" required placeholder="Checkout email"><button type="submit">Send secure access link</button></form><p id="state" class="muted">A paid Titan Founding Access purchase is required.</p><a id="open" class="cta hidden" href="#">Open Hercules Titan</a></section></main>
@@ -41,7 +42,7 @@ export async function titanAccessRequest(body:any,ctx:{U:string;K:string;S:strin
   const {data}=await admin.from('hercules_studio_purchase_entitlements').select('id,status').eq('product_code',PRODUCT_CODE).eq('buyer_email_sha256',buyer_email_sha256).in('status',['paid_pending_claim','claimed']).limit(1).maybeSingle();
   if(!data)return json({ok:true,instructionsSent:true});
   const auth=createClient(ctx.U,ctx.K,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
-  await auth.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:ctx.U+'/functions/v1/hercules-launch?titan_access=1'}});
+  await auth.auth.signInWithOtp({email,options:{shouldCreateUser:true,emailRedirectTo:'https://sauceapproved-studio.onrender.com/activate'}});
   return json({ok:true,instructionsSent:true});
 }
 
@@ -62,5 +63,5 @@ export async function titanAccessClaim(req:Request,ctx:{U:string;K:string;S:stri
     if(code==='email_entitlement_mismatch')return json({ok:false,error:code},409);
     return json({ok:false,error:code},409);
   }
-  return json({ok:true,access:{entitlementId:claim.entitlement_id,organizationId:claim.organization_id,productCode:claim.product_code,planCode:claim.plan_code||'founding-access',entitlementVersion:claim.entitlement_version||ENTITLEMENT_VERSION,reused:claim.reused===true},titanUrl:ctx.U+'/functions/v1/hercules-launch'});
+  return json({ok:true,access:{entitlementId:claim.entitlement_id,organizationId:claim.organization_id,productCode:claim.product_code,planCode:claim.plan_code||'founding-access',entitlementVersion:claim.entitlement_version||ENTITLEMENT_VERSION,reused:claim.reused===true},titanUrl:TITAN_URL});
 }

@@ -46,10 +46,10 @@ form{margin-top:24px}label{display:block;color:#d4cfc5;font-size:12px;font-weigh
 <body><main class="wrap">
 <header class="top"><div class="brand">SAUCEAPPROVED <b>/ HERCULES</b></div><div class="statuschip"><i></i> SECURE STUDIO GATE</div></header>
 <div class="shell">
-<section class="hero"><div class="eyebrow">Private production system</div><h1>Build different.<em>Move different.</em></h1><p class="lead">Your SauceApproved Studio workspace is protected behind verified Founding Pilot entitlement. One secure gate into the Hercules production floor.</p><div class="rail"><span>ISOLATED WORKSPACE</span><span>ENTITLEMENT VERIFIED</span><span>HERCULES OWNED</span></div></section>
-<section class="card"><div class="cardnum">ACCESS / 01</div><h2>Activate your Founding Pilot</h2><p class="muted">Use the same email address used for your Shopify purchase. Hercules stores only an email hash in the entitlement ledger.</p>
+<section class="hero"><div class="eyebrow">Private production system</div><h1>Build different.<em>Move different.</em></h1><p class="lead">Activate your purchased Studio or Titan workspace with your checkout email. One secure gate into the Hercules production floor.</p><div class="rail"><span>ISOLATED WORKSPACE</span><span>ENTITLEMENT VERIFIED</span><span>HERCULES OWNED</span></div></section>
+<section class="card"><div class="cardnum">ACCESS / 01</div><h2>Activate your purchase</h2><p class="muted">Use the same email address used for your Shopify purchase. Hercules stores only an email hash in the entitlement ledger.</p>
 <form id="request"><label for="email">CHECKOUT EMAIL</label><input id="email" type="email" autocomplete="email" required placeholder="you@example.com"><button type="submit">Send secure access link →</button></form>
-<p id="state" class="muted statebox">A paid Studio purchase is required.</p>
+<p id="state" class="muted statebox">A paid Studio or Titan purchase is required.</p>
 <a id="open" class="cta hidden" href="#">Open SauceApproved Studio →</a></section>
 </div><footer class="foot"><span>SAUCEAPPROVED STUDIO</span><span>SECURE ACCESS • FAIL-CLOSED • PRIVATE BY DEFAULT</span></footer></main>
 <script type="module">
@@ -58,13 +58,14 @@ const cfg=${cfg},sb=createClient(cfg.url,cfg.key,{auth:{persistSession:true,auto
 async function claim(){
  const {data:{session}}=await sb.auth.getSession(); if(!session)return false;
  state.textContent="Verifying paid Studio entitlement…";
- const r=await fetch(location.pathname+location.search,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+session.access_token},body:JSON.stringify({action:"studio_purchase_claim"})});
- const x=await r.json().catch(()=>({}));
- if(!r.ok||!x.ok){state.className="err";state.textContent=x.error==="email_entitlement_mismatch"?"No paid Studio entitlement matches this signed-in email. Use the email from checkout.":"Studio activation could not be completed.";return true}
+ let r=await fetch(location.pathname+location.search,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+session.access_token},body:JSON.stringify({action:"studio_purchase_claim"})});
+ let x=await r.json().catch(()=>({}));
+ if(r.status===409&&x.error==="email_entitlement_mismatch"){r=await fetch(location.pathname+location.search,{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+session.access_token},body:JSON.stringify({action:"titan_purchase_claim"})});x=await r.json().catch(()=>({}));}
+ if(!r.ok||!x.ok){state.className="err";state.textContent=x.error==="email_entitlement_mismatch"?"No paid Studio or Titan entitlement matches this signed-in email. Use the email from checkout.":"Studio activation could not be completed.";return true}
  history.replaceState(null,"",location.pathname+"?studio_access=1");
- form.classList.add("hidden");state.className="ok";state.textContent="Studio access is active. Your isolated Hercules workspace is ready.";open.href=x.studioUrl||cfg.studioUrl;open.classList.remove("hidden");return true;
+ form.classList.add("hidden");state.className="ok";state.textContent="Studio access is active. Your isolated Hercules workspace is ready.";open.href=x.titanUrl||x.studioUrl||cfg.studioUrl;open.textContent=x.titanUrl?"Open Hercules Titan →":"Open SauceApproved Studio →";state.textContent=x.titanUrl?"Titan access is active.":"Studio access is active.";open.classList.remove("hidden");return true;
 }
-form.addEventListener("submit",async e=>{e.preventDefault();state.className="muted";state.textContent="Checking purchase eligibility…";const r=await fetch(location.pathname+location.search,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"studio_access_request",email:document.getElementById("email").value})});await r.json().catch(()=>({}));state.textContent="If this email matches an eligible Studio purchase, a secure sign-in link is on the way. Check your inbox.";});
+form.addEventListener("submit",async e=>{e.preventDefault();state.className="muted";state.textContent="Checking purchase eligibility…";const r=await fetch(location.pathname+location.search,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({action:"studio_access_request",email:document.getElementById("email").value})});await r.json().catch(()=>({}));state.textContent="If this email matches an eligible Studio or Titan purchase, a secure sign-in link is on the way. Check your inbox.";});
 await claim();
 </script></body></html>`;
   return new Response(html,{status:200,headers:{

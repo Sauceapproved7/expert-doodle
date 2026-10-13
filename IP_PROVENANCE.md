@@ -284,3 +284,9 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Paths: hercules-bot/launch.html, /launch route, focused route test and documentation.
 - Origin: original project-authored page with AI assistance; Node/browser built-ins only. The existing product photo is loaded from the user's Shopify CDN, not packaged as software or claimed as new original media.
 - Scope: a script-free public navigation page linking the current Shopify storefront, authenticated Smallz console, and Studio. It adds no payment flow, registrar authority, release approval, or new service.
+
+## Titan hosted delivery continuity — 2026-10-13
+
+- Paths: Studio activation relay/server, Hercules Studio/Titan access modules, focused tests, and delivery documentation.
+- Original project-authored repair with AI assistance; Node/browser built-ins and existing externally hosted Supabase client only. No packaged third-party code.
+- Reuses the canonical Hercules workspace and existing product-isolated claim RPCs. Auth, tenant, public-registration, commercial, payment, and legal controls remain authoritative in their existing backends.
