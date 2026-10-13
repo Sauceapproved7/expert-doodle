@@ -1,3 +1,10 @@
+## Render Free 0.1 CPU quantized model lab — DA-45, 2026-10-13
+
+- First-party original AI-assisted SauceApproved evidence code: `scripts/hercules-render-free-model-budget.mjs`, `tests/hercules-render-free-model-budget.test.mjs`, `.github/workflows/hercules-render-free-model-budget.yml`, `docs/HERCULES-RENDER-FREE-BUDGET-V1.md`.
+- Ephemeral third-party **test-only** inputs: Apache-2.0 SmolLM2-360M-Instruct GGUF from `bartowski` at immutable commit `7be6f65f1db715fe5dc5a4634c0d459b4eed42ec` (SHA256 `2fa3f013dcdd7b99f9b237717fa0b12d75bbb89984cc1274be1471a465bac9c2`); upstream `ggml-org/llama.cpp` pinned at `d81235049384534c167caea52b85a694f6103d14`; official Ubuntu container pinned at a recorded digest. No external weights, binary image or vendor source committed or claimed as Hercules-owned work.
+- Read-only, no-network 0.1 CPU/512 MiB cgroup resource-bound benchmark on the existing public GitHub Actions runner only. No commercial release authority, Render deploy, Railway startup, checkout or public signup changes.
+- Model availability/quality and copyright remain separate claims; the evaluator never returns a positive customer/production/release approval.
+
 ## Constrained CPU model evidence — October 13, 2026
 
 - New owner-code paths: `scripts/hercules-360m-constrained-cpu.mjs`, `tests/hercules-360m-constrained-cpu.test.mjs`, `.github/workflows/hercules-360m-constrained-cpu.yml` and `docs/HERCULES-360M-CONSTRAINED-CPU-LAB.md`; original implementation with AI assistance.
