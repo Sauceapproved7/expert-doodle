@@ -102,6 +102,11 @@ jobs:
             test "$elapsed_ms" -gt 0
             printf '%s\n' "$elapsed_ms" > "/tmp/hercules-360m/$trial.latency-ms.txt"
           done
+          # File-backed mmap pages can be charged outside this container cgroup.
+          # Capture the model PID's high-water resident RSS independently.
+          docker exec hercules-constrained-360m cat /proc/1/status \
+            | awk '$1=="VmHWM:" {print $2}' > /tmp/hercules-360m/model-process-vmhwm-kb.txt
+          test -s /tmp/hercules-360m/model-process-vmhwm-kb.txt
           docker exec hercules-constrained-360m cat /sys/fs/cgroup/memory.peak > /tmp/hercules-360m/memory.peak
           docker exec hercules-constrained-360m cat /sys/fs/cgroup/memory.events > /tmp/hercules-360m/memory.events
           test "$(docker inspect --format '{{.State.OOMKilled}}' hercules-constrained-360m)" = false
