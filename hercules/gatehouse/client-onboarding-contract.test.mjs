@@ -36,3 +36,9 @@ test("new backend does not claim paid report delivery or exposed site scanning",
  assert.match(edge,/assessDelivery\(/);
  assert.match(edge,/reportDeliveryEnabled/);
 });
+
+test("commercial enrollment remains disabled unless separately approved at runtime",()=>{
+ assert.match(edge,/GATEHOUSE_CUSTOMER_INTAKE_APPROVED/);
+ assert.match(edge,/customer-intake-not-open/);
+ assert.match(edge,/!==\s*'true'/);
+});
