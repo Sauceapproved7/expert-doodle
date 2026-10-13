@@ -1,0 +1,32 @@
+name: Hercules iPhone public release evidence
+on:
+  pull_request:
+    paths:
+      - 'scripts/hercules_iphone_launch_probe.py'
+      - 'tests/test_hercules_iphone_launch_probe.py'
+      - 'docs/HERCULES-IPHONE-PUBLIC-EVIDENCE-V1.md'
+      - '.github/workflows/hercules-iphone-release-probe.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  no-secret-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Public probe unit tests (no external network)
+        run: python3 -m unittest discover -s tests -p 'test_hercules_iphone_launch_probe.py' -v
+      - name: Hercules execution and ownership checks
+        run: |
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+  public-readonly-evidence:
+    needs: no-secret-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check exact HTTPS host, installable shell and actual model inventory
+        run: python3 scripts/hercules_iphone_launch_probe.py
