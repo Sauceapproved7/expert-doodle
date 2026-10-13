@@ -2,6 +2,7 @@ import http from "node:http";
 import {timingSafeEqual} from "node:crypto";
 import {HerculesModelRegistry} from "./registry.mjs";
 import {HerculesModelRouter} from "./router.mjs";
+import {createLocalChatAdapter} from "./local-chat.mjs";
 
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -39,6 +40,7 @@ function requireToken(req, token) {
 export function createModelPlaneService({
   models,
   token,
+  chatAdapter = createLocalChatAdapter(),
   nativeOnly = true,
   embeddedRuntimes = {},
   candidates = [],
@@ -46,6 +48,9 @@ export function createModelPlaneService({
   candidateEvaluationEnabled = false,
 }) {
   if (!Array.isArray(models)) throw new TypeError("models array is required");
+  if (!chatAdapter || typeof chatAdapter.chat !== "function" || typeof chatAdapter.status !== "function") {
+    throw new TypeError("local chat adapter contract required");
+  }
   if (typeof token !== "string" || token.length < 16) {
     throw new TypeError("control token must be at least 16 characters");
   }
@@ -85,6 +90,19 @@ export function createModelPlaneService({
       }
 
       requireToken(req, token);
+
+      if (req.method === "GET" && url.pathname === "/v1/chat/readiness") {
+        return send(res, 200, chatAdapter.status());
+      }
+
+      if (req.method === "POST" && url.pathname === "/v1/chat") {
+        const body = await readBody(req);
+        const result = await chatAdapter.chat({
+          prompt: body.prompt,
+          maxOutputTokens: body.maxOutputTokens ?? 128,
+        });
+        return send(res, 200, result);
+      }
 
       if (req.method === "GET" && url.pathname === "/v1/models") {
         return send(res, 200, {models: registry.list()});
@@ -196,7 +214,9 @@ export function createModelPlaneService({
       const status = error?.statusCode ?? (
         /no eligible Hercules model/.test(error?.message ?? "") ? 409 : 400
       );
-      return send(res, status, {error: status >= 500 ? "internal_error" : error.message});
+      const publicError = status >= 500 && /^local_chat_[a-z_]+$/.test(error?.code ?? "")
+        ? error.code : status >= 500 ? "internal_error" : error.message;
+      return send(res, status, {error: publicError});
     }
   });
 }
@@ -204,6 +224,7 @@ export function createModelPlaneService({
 export function listenModelPlaneService({
   models,
   token,
+  chatAdapter = createLocalChatAdapter(),
   nativeOnly = true,
   embeddedRuntimes = {},
   candidates = [],
@@ -215,6 +236,7 @@ export function listenModelPlaneService({
   const server = createModelPlaneService({
     models,
     token,
+    chatAdapter,
     nativeOnly,
     embeddedRuntimes,
     candidates,
