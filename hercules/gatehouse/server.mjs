@@ -29,12 +29,12 @@ function cookieOf(req,name){
  const value=String(req.headers.cookie||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(name+"="));
  return value?value.slice(name.length+1):"";
 }
-function send(res,status,value,type="application/json; charset=utf-8"){
+function send(res,status,value,type="application/json; charset=utf-8",extraHeaders={}){
  const body=typeof value==="string"?value:JSON.stringify(value);
  res.writeHead(status,{"content-type":type,"cache-control":"no-store",
   "x-content-type-options":"nosniff","x-frame-options":"DENY",
   "referrer-policy":"no-referrer","permissions-policy":"camera=(), microphone=(), geolocation=()",
-  "content-security-policy":"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"});
+  "content-security-policy":"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",...extraHeaders});
  res.end(body);
 }
 function parseBody(req){return new Promise((resolve,reject)=>{
@@ -59,9 +59,31 @@ export function createServer(config={}){
  const probeUrls=config.probeUrls??defaultProbes;
  const targets=probeUrls.filter(p=>{try{return stableServices.includes(p.name)&&Boolean(validateTarget(p.url))}catch{return false}});
  let publicCache=null,publicCacheTime=0,publicInFlight=null;
+ const historyLimit=120;
+ let historyDropped=false;
+ const history=[];
+ const cacheTtlMs=Number.isFinite(config.cacheTtlMs) && config.cacheTtlMs>=0?config.cacheTtlMs:60000;
+ const historyView=()=>({
+  scope:"public-connectivity-only",sampleCount:history.length,truncated:historyDropped,
+  authoritative:false,continuousMonitoring:false,
+  retention:"Last 120 requested observations in process memory; reset on restart.",
+  samples:history.map(x=>({sampledAt:x.sampledAt,signals:x.signals.map(s=>({...s}))}))
+ });
+ const evidenceCapsule=()=>{
+  let chain=newEvidenceLedger();
+  for(const sample of history)for(const signal of sample.signals)
+   chain=appendEvidence(chain,{kind:"connectivity",service:signal.name,state:signal.status,
+     at:sample.sampledAt,provenance:"public-readonly-health-probe"});
+  return {schema:"hercules.gatehouse.public-evidence.v1",scope:"public-connectivity-only",
+   exportedAt:new Date().toISOString(),providerAttested:false,productionAuthorized:false,
+   payoutVerified:false,persistence:"download-required",sampleCount:history.length,
+   historyTruncated:historyDropped,integrity:verifyEvidenceLedger(chain),entries:chain,
+   limitation:"Unsigned public endpoint reachability observations, not continuous uptime, verified transactions, or production authorization. Server memory resets on restart."};
+ };
+
  const publicSummary=async()=>{
   const now=Date.now();
-  if(publicCache && now-publicCacheTime<60000)return publicCache;
+  if(publicCache && now-publicCacheTime<cacheTtlMs)return publicCache;
   if(publicInFlight)return publicInFlight;
   publicInFlight=Promise.all(targets.map(p=>probeStatus(p,fetcher))).then(probed=>{
    publicCache={mode:"public-connectivity-only",refreshedAt:new Date().toISOString(),
@@ -69,6 +91,9 @@ export function createServer(config={}){
     moneyMoved:false,productionAuthorized:false,
     notice:"Public HTTPS reachability only. Does not verify sales, payments, payouts, or release approval."};
    publicCacheTime=Date.now();
+   history.push({sampledAt:publicCache.refreshedAt,signals:publicCache.signals.map(s=>({...s}))});
+   if(history.length>historyLimit){history.shift();historyDropped=true;}
+
    return publicCache;
   }).finally(()=>{publicInFlight=null});
   return publicInFlight;
@@ -89,6 +114,15 @@ export function createServer(config={}){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
    try{return send(res,200,await publicSummary())}
    catch{return send(res,503,{error:"Public connectivity checks temporarily unavailable"})}
+  }
+  if(path==="/api/public-history"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   return send(res,200,historyView());
+  }
+  if(path==="/api/public-evidence"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   return send(res,200,evidenceCapsule(),"application/json; charset=utf-8",
+    {"content-disposition":"attachment; filename=hercules-gatehouse-public-evidence.json"});
   }
   if(method==="POST"&&path==="/api/login"){
    if(!token)return send(res,503,{error:"owner-credential-not-configured"});
