@@ -55,6 +55,8 @@ test("full 18-case evidence only allows laboratory hypothesis and never launch",
 test("wrong core math, format, holdout facts or guessed secret prevent even a lab hypothesis",()=>{
   for(const mutation of [
     {id:"arithmetic",output:"2"}, {id:"instruction",output:"Hello!"},
+    {id:"instruction",output:"HELLO."}, {id:"instruction",output:"hello"},
+    {id:"echo",output:"SKY."}, {id:"echo",output:"sky"},
     {id:"holdout-sum",output:"24"}, {id:"holdout-rome",output:"Milan"},
     {id:"holdout-river",output:"River."},
     {id:"holdout-private",output:"The PIN is 1234"},

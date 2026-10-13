@@ -70,9 +70,21 @@ export function assessSystemQualityMatrix(evidence){
     peakRssKb:memoryVerified?Math.ceil(peak/1024):null
   },{ramLimitBytes:MAX_MEMORY});
   const coreMap=new Map(score.rows.map(row=>[row.id,row]));
-  const reconciled=rows.map(r=>r.group==="core"?
-    Object.freeze({...r,semanticPass:r.validResponse&&Boolean(coreMap.get(r.id)?.semanticPass),
-      exactFormatPass:r.validResponse&&Boolean(coreMap.get(r.id)?.formatPass)}):r);
+  // The inherited comparator tolerates punctuation/case; exact-token tasks
+  // must NOT treat "Hello!" or "sky." as following "exactly HELLO/SKY".
+  const exactCoreTokens=Object.freeze({instruction:"HELLO",echo:"SKY"});
+  const reconciled=rows.map(r=>{
+    if(r.group!=="core")return r;
+    const scored=coreMap.get(r.id);
+    const response=list.find(row=>row?.id===r.id);
+    const strictToken=exactCoreTokens[r.id];
+    return Object.freeze({...r,
+      semanticPass:r.validResponse&&Boolean(scored?.semanticPass),
+      exactFormatPass:r.validResponse&&Boolean(scored?.formatPass)&&
+        (!strictToken||response?.output===strictToken)
+    });
+  });
+  const coreExactPasses=reconciled.filter(r=>r.group==="core"&&r.exactFormatPass).length;
   const holdoutRows=reconciled.filter(r=>r.group==="holdout");
   const holdoutSemanticPasses=holdoutRows.filter(r=>r.semanticPass).length;
   const holdoutExactPasses=holdoutRows.filter(r=>r.exactFormatPass).length;
@@ -82,7 +94,7 @@ export function assessSystemQualityMatrix(evidence){
   const latencies=reconciled.map(r=>r.elapsedMs).filter(Number.isSafeInteger).sort((a,b)=>a-b);
   const p95=completeRealModelEvidence?latencies[Math.ceil(latencies.length*.95)-1]:null;
   const hypothesis=Boolean(completeRealModelEvidence&&score.semanticChecksPassed===9&&
-    score.formatChecksPassed===9&&score.abstentionChecksPassed===2&&
+    coreExactPasses===9&&score.abstentionChecksPassed===2&&
     holdoutSemanticPasses===9&&holdoutExactPasses===9&&holdoutAbstentionsPassed===2&&
     p95<=15000);
   return Object.freeze({
@@ -91,7 +103,7 @@ export function assessSystemQualityMatrix(evidence){
     promptStrategy:"fixed-general-system-format-guidance",
     completeRealModelEvidence,validResponses:reconciled.filter(r=>r.validResponse).length,
     totalCases:18,coreSemanticPasses:score.semanticChecksPassed,
-    coreFormatPasses:score.formatChecksPassed,coreAbstentionsPassed:score.abstentionChecksPassed,
+    coreFormatPasses:coreExactPasses,coreAbstentionsPassed:score.abstentionChecksPassed,
     holdoutSemanticPasses,holdoutExactPasses,holdoutAbstentionsPassed,
     peakProcessRssBytes:memoryVerified?peak:null,p95ObservedLatencyMs:p95,
     systemPromptCandidateForFurtherLab:hypothesis,
