@@ -211,7 +211,8 @@ test("second-page real Shopify order is found with an authenticated cursor only 
 test("three pages are the ceiling and a fourth unobserved page always withholds candidate",async()=>{
  const s=setup(),requests=[];
  const make=(number,hasNextPage)=>{
-  const p=page([{...s.order,id:"gid://shopify/Order/"+number}]);
+  const p=page([{...s.order,id:"gid://shopify/Order/"+number,
+   customAttributes:number===100?s.order.customAttributes:[]}]);
   p.data.orders.pageInfo={hasNextPage,endCursor:"page-"+number};
   return p;
  };
