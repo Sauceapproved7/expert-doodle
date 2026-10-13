@@ -3,8 +3,7 @@
  * The diff is never printed, sent to a provider, or executed.
  */
 import {createHash} from 'node:crypto';
-import {execFileSync} from 'node:child_process';
-import {appendFileSync} from 'node:fs';
+import {appendFileSync, readSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 
@@ -96,6 +95,20 @@ export function analyzeDiff(diff) {
   };
 }
 
+function readBoundedStdin() {
+  const buffer = Buffer.alloc(64 * 1024);
+  const parts = [];
+  let bytes = 0;
+  while (true) {
+    const count = readSync(0, buffer, 0, buffer.length, null);
+    if (!count) break;
+    bytes += count;
+    if (bytes > MAX_DIFF_BYTES) throw new RangeError('diff exceeds limit');
+    parts.push(Buffer.from(buffer.subarray(0, count)));
+  }
+  return Buffer.concat(parts).toString('utf8');
+}
+
 function reportSummary(report) {
   const lines = [
     '## Hercules Independent Diff Triage',
@@ -117,10 +130,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1
   try {
     const base = process.env.HERCULES_REVIEW_BASE_SHA || '';
     if (!/^[a-f0-9]{40}$|^[a-f0-9]{64}$/.test(base)) throw new Error('missing verified base SHA');
-    const diff = execFileSync('git', [
-      '-c', 'core.quotepath=false', 'diff', '--no-ext-diff', '--no-textconv',
-      '--no-renames', '--unified=0', base, 'HEAD', '--',
-    ], {encoding: 'utf8', maxBuffer: MAX_DIFF_BYTES + 1, timeout: 15_000});
+    const diff = readBoundedStdin();
     const report = analyzeDiff(diff);
     console.log(JSON.stringify(report, null, 2));
     if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, reportSummary(report), 'utf8');
