@@ -1,0 +1,29 @@
+name: Hercules Independent Diff Triage
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-diff-triage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout submitted diff (read-only)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
+
+      - name: Run zero-provider reviewer tests
+        run: node --test tests/hercules-independent-review.test.mjs
+
+      - name: Triage proposed changes without external models
+        env:
+          HERCULES_REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
+        run: |
+          set -o pipefail
+          [[ "$HERCULES_REVIEW_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          git -c core.quotepath=false diff --no-ext-diff --no-textconv --no-renames --unified=0 "$HERCULES_REVIEW_BASE_SHA" HEAD -- | node scripts/hercules-independent-review.mjs
