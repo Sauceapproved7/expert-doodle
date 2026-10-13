@@ -1,0 +1,41 @@
+name: Hercules Owned Circle Static Launch
+
+on:
+  pull_request:
+    paths:
+      - "hercules-deploy/owned-circle/free-site/**"
+      - "tests/hercules-owned-circle-free-site.test.mjs"
+      - "scripts/build_hercules_owned_circle_static.mjs"
+      - ".github/workflows/hercules-owned-circle-static.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-deploy/owned-circle/free-site/**"
+      - "tests/hercules-owned-circle-free-site.test.mjs"
+      - "scripts/build_hercules_owned_circle_static.mjs"
+      - ".github/workflows/hercules-owned-circle-static.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  owner-built-app:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Verify privacy and honest customer status
+        run: |
+          node --test tests/hercules-owned-circle-free-site.test.mjs tests/hercules-owned-circle-release.test.mjs
+          node --check hercules-deploy/owned-circle/free-site/app.mjs
+      - name: Package independent static site
+        run: |
+          node scripts/build_hercules_owned_circle_static.mjs
+          test -s dist/hercules-owned-circle/index.html
+          test -s dist/hercules-owned-circle/app.css
+          test -s dist/hercules-owned-circle/app.mjs
+      - name: Preserve owner source policy
+        run: node scripts/verify-owner-code-only.mjs
