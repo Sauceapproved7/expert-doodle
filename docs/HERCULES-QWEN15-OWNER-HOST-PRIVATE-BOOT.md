@@ -20,3 +20,10 @@ Execute \`node scripts/hercules-qwen15-owner-host.mjs\` **on the authorized ARM6
 The short synthetic 27-question benchmark itself remains insufficient for full customer traffic: further security, privacy, concurrency, rate-limit, uptime, failover, sustained load and live authenticated routing tests and explicit owner approval are necessary. No fake Devbrain green, auto-enrollment, checkout/payout/domain change, Render/Railway restarts, or main-branch merge.
 
 This proposed code resides only in isolated stacked PR #1007. Existing production remains unchanged.
+
+
+## Exact private-model identity before API admission
+
+The launcher no longer accepts an arbitrary HTTP \`200\` from \`127.0.0.1:18776/health\` as model readiness. It waits for **both** healthy llama.cpp \`/health\` with \`status: "ok"\` and \`/v1/models\` containing exactly one model whose \`id\` equals the configured \`hercules-15b-arm-trial\` alias, then starts the owner-bearer-authenticated Hercules listener on \`127.0.0.1:38900\`. Loading, wrong model, malformed inventory, non-200, redirects, network failures and timeouts refuse admission. No token or response body is logged. At most 90 bounded retries during startup, then cleanup and fail-closed exit.
+
+The preinstalled local GGUF is still checksum-verified separately before engine spawn. HTTP model inventory is **not** cryptographic proof of provenance or independently verified production model safety. A successful private localhost handshake does not open customer access, issue Devbrain approvals, or establish hosting costs.

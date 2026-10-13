@@ -4,7 +4,7 @@ import {spawn} from "node:child_process";
 import {createLocalChatAdapter} from "../hercules-models/local-chat.mjs";
 import {listenModelPlaneService} from "../hercules-models/service.mjs";
 import {
-  inspectQwen15LocalHost,makeQwen15PrivateLaunchPlan
+  inspectQwen15LocalHost,makeQwen15PrivateLaunchPlan,probeQwen15EngineIdentity
 } from "../hercules-models/qwen15-owner-host.mjs";
 
 if(process.env.HERCULES_QWEN15_PRIVATE_TRIAL!=="true"){
@@ -47,10 +47,7 @@ let ready=false;
 for(let i=0;i<90;i++){
   if(exiting||server.exitCode!==null)break;
   try{
-    const response=await fetch("http://127.0.0.1:18776/health",{
-      redirect:"error",signal:AbortSignal.timeout(1500)
-    });
-    if(response.ok){ready=true;break;}
+    if(await probeQwen15EngineIdentity()){ready=true;break;}
   }catch{}
   await new Promise(resolve=>setTimeout(resolve,1000));
 }
