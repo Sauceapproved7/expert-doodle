@@ -23,6 +23,22 @@ function csrf(headers){
 export function createCustomerAuthenticator({enabled=false,publishableKey="",fetcher=fetch,now=Date.now}={}){
  const ready=enabled===true&&typeof publishableKey==="string"&&publishableKey.startsWith("sb_publishable_");
  const sends=new Map(),attempts=new Map();
+ // Per-instance provider-call ceilings complement the per-address/email limits.
+ // These are NOT durable or distributed; upstream provider throttles are still required.
+ const budget={
+  send:{since:null,hits:0,windowMs:60_000,max:20},
+  verify:{since:null,hits:0,windowMs:15*60_000,max:60}
+ };
+ function withinProviderBudget(kind){
+  const b=budget[kind],current=now();
+  if(!Number.isFinite(current))return false;
+  if(b.since===null||current<b.since||current-b.since>=b.windowMs){
+   b.since=current;b.hits=0;
+  }
+  if(b.hits>=b.max)return false;
+  b.hits+=1;
+  return true;
+ }
  function withinLimit(map,kind,address,mail,windowMs,maximum){
   const current=now();
   const digest=createHash("sha256").update(kind+"|"+String(address||"none")+"|"+mail).digest("hex");
@@ -69,7 +85,7 @@ export function createCustomerAuthenticator({enabled=false,publishableKey="",fet
   if(action==="request-code"){
    if(!emailValid(body?.email))return error(422,"valid-email-required");
    const mail=body.email.toLowerCase();
-   if(!withinLimit(sends,"send",remoteAddress,mail,60_000,1))return error(429,"request-too-frequent");
+   if(!withinLimit(sends,"send",remoteAddress,mail,60_000,1)||!withinProviderBudget("send"))return error(429,"request-too-frequent");
    try{
     const response=await upstream("/auth/v1/otp","POST",{email:mail,create_user:false});
     if(response.status>=500)return error(503,"email-service-unavailable");
@@ -79,7 +95,7 @@ export function createCustomerAuthenticator({enabled=false,publishableKey="",fet
   if(action==="verify-code"){
    if(!emailValid(body?.email)||typeof body?.code!=="string"||!/^[0-9]{6,8}$/.test(body.code))
     return error(422,"invalid-email-or-code");
-   if(!withinLimit(attempts,"verify",remoteAddress,body.email.toLowerCase(),15*60_000,5))
+   if(!withinLimit(attempts,"verify",remoteAddress,body.email.toLowerCase(),15*60_000,5)||!withinProviderBudget("verify"))
     return error(429,"too-many-verification-attempts");
    try{
     const proof=await upstream("/auth/v1/verify","POST",
