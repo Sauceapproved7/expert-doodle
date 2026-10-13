@@ -12,6 +12,7 @@ const good={
   cpuPeriodMicros:100000,
   memoryLimitBytes:536870912,
   peakMemoryBytes:355000000,
+  modelProcessPeakRssBytes:370000000,
   elapsedMs:9000,
   modelReply:{model:"hercules-trial",choices:[{message:{role:"assistant",content:"The answer is 4."},finish_reason:"stop"}]},
 };
@@ -39,7 +40,8 @@ test("a measured controlled run can qualify only for a further lab, not producti
 test("budget violation and absent proof always fail closed",()=>{
   for(const item of [
     null,{},{...good,cpuQuotaMicros:25000},{...good,memoryLimitBytes:1073741824},
-    {...good,peakMemoryBytes:500000000},{...good,elapsedMs:18000},
+    {...good,peakMemoryBytes:500000000},{...good,modelProcessPeakRssBytes:500000000},
+    {...good,modelProcessPeakRssBytes:null},{...good,elapsedMs:18000},
     {...good,elapsedMs:null},{...good,modelReply:null},
     {...good,modelReply:{model:"wrong",choices:[{finish_reason:"stop",message:{role:"assistant",content:"4"}}]}},
   ]){
@@ -54,6 +56,7 @@ test("log parsing requires exact cgroup observations, no duplicate fields",()=>{
     "HERCULES_CPU_PERIOD=100000",
     "HERCULES_MEMORY_LIMIT=536870912",
     "HERCULES_MEMORY_PEAK=355000000",
+    "HERCULES_PROCESS_PEAK_RSS_BYTES=370000000",
     "HERCULES_ELAPSED_MS=9000",
     "HERCULES_MODEL_REPLY_BASE64="+Buffer.from(
       ["HTTP/1.1 200 OK","Content-Type: application/json","Connection: close","",""].join(String.fromCharCode(13,10))
