@@ -61,7 +61,7 @@ test('new database stores no passwords, activates no customer or hosting entitle
 test('backend authenticates publishable callers in handler, records unverified interest only and rate caps submissions',()=>{
  assert.match(edge,/withSupabase\(\{\s*auth:\s*'publishable'\s*\}/);
  assert.match(edge,/foundingCapacityReached/);
- assert.match(edge,/ctx\.supabaseAdmin/);
+ assert.match(edge,/ctx\?\.supabaseAdmin/);
  assert.match(edge,/head:\s*true/);
  assert.match(edge,/ignoreDuplicates:\s*true/);
  assert.match(edge,/notice_version:/);
