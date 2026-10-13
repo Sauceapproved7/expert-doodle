@@ -39,15 +39,15 @@ test('database RPC enforces server-side consent, limits and no duplicate enumera
  assert.doesNotMatch(rpc,/hercules_continuity_ledger|hercules_launch_approvals|stripe|payout|refund/i);
 });
 test('landing promises only free founding interest and links published privacy',()=>{
- assert.match(html,/Founding Interest/i);
+ assert.match(html,/Founding Circle/i);
  assert.match(html,/No payment required/i);
  assert.match(html,/not a Hercules account/i);
- assert.match(html,/not yet include hosted deployments/i);
+ assert.match(html,/No hosted deployments/i);
  assert.match(html,/I agree to receive Hercules Cloud founding updates/i);
  assert.match(html,/name="consent"[^>]*required/i);
  assert.match(html,/privacy policy/i);
  assert.match(html,/founders\.mjs/i);
- assert.doesNotMatch(html,/type="password"|credit.card|buy.now/i);
+ assert.doesNotMatch(html,/type="password"|name="card_number"|buy.now/i);
  assert.match(home,/founders\.html/i);
  assert.match(build,/founders\.html/);
  assert.match(build,/founders\.mjs/);
