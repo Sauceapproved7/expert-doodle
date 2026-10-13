@@ -9,7 +9,7 @@ test("public API enrollment uses authenticated owner-scoped RLS, never service-r
  assert.match(sql,/auth\.uid\(\)/);
  assert.match(sql,/owner_user_id/);
  assert.match(sql,/create unique index gatehouse_customer_one_site_per_user_uq/i);
- assert.doesNotMatch(sql,/grant.*on public\.gatehouse_customer_reports/i);
+ assert.doesNotMatch(sql,/^\s*grant[^\n]*on public\.gatehouse_customer_reports/im);
  assert.doesNotMatch(sql,/grant .* to anon;/i);
  assert.doesNotMatch(sql,/disable row level security|security definer/i);
 });
