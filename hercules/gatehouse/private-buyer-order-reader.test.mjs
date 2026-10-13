@@ -154,12 +154,17 @@ test("two distinct paid orders claiming same reference are ambiguous and cannot 
  assert.equal(r.body.privateRow,null);
 });
 test("no match and truncated lookback do not claim no lifetime order, delivery stays held",async()=>{
- const s=setup();const p=page([]);
- p.data.orders.pageInfo.hasNextPage=true;
- const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(p)}).run();
+ const s=setup(),pages=[0,1,2].map(n=>{
+  const p=page([{...s.order,id:"gid://shopify/Order/"+(300+n),customAttributes:[]}]);
+  p.data.orders.pageInfo={hasNextPage:true,endCursor:"cursor-no-match-"+n};
+  return p;
+ });
+ let calls=0;
+ const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(pages[calls++])}).run();
+ assert.equal(calls,3);
  assert.equal(r.status,200);
  assert.equal(r.body.candidateMayBeRecorded,false);
- assert.equal(r.body.ordersScanned,0);
+ assert.equal(r.body.ordersScanned,3);
  assert.equal(r.body.hasNextPage,true);
  assert.equal(r.body.allOrdersVerified,false);
  assert.equal(r.body.deliveryAuthorized,false);
@@ -188,13 +193,18 @@ test("expired, future, mismatched or unverified private buyer intents never cont
  }
  assert.equal(requests,0);
 });
-test("a matching order on a truncated ten-order page cannot reserve a candidate",async()=>{
- const s=setup(),p=page([s.order]);
- p.data.orders.pageInfo.hasNextPage=true;
- const result=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(p)}).run();
+test("a matching order in incomplete three-page history cannot reserve a candidate",async()=>{
+ const s=setup(),pages=[0,1,2].map(n=>{
+  const p=page([n===0?s.order:{...s.order,id:"gid://shopify/Order/"+(400+n),customAttributes:[]}]);
+  p.data.orders.pageInfo={hasNextPage:true,endCursor:"cursor-matching-"+n};
+  return p;
+ });
+ let calls=0;
+ const result=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(pages[calls++])}).run();
+ assert.equal(calls,3);
  assert.equal(result.status,200);
  assert.equal(result.body.shopAuthenticated,true);
- assert.equal(result.body.ordersScanned,1);
+ assert.equal(result.body.ordersScanned,3);
  assert.equal(result.body.hasNextPage,true);
  assert.equal(result.body.candidateMayBeRecorded,false);
  assert.equal(result.body.privateRow,null);
@@ -202,6 +212,100 @@ test("a matching order on a truncated ten-order page cannot reserve a candidate"
  assert.equal(result.body.deliveryAuthorized,false);
  assert.notEqual(result.body.status,"private-candidate-proposal-only");
 });
+
+test("second-page real Shopify order is found with an authenticated cursor only after complete readback",async()=>{
+ const s=setup(),requests=[];
+ const p1=page(Array.from({length:10},(_,i)=>({...s.order,id:"gid://shopify/Order/"+(100+i),customAttributes:[]})));
+ p1.data.orders.pageInfo={hasNextPage:true,endCursor:"opaque-shopify-cursor-p1"};
+ const p2=page([s.order]);
+ const fetcher=async(url,options)=>{
+  requests.push({url,options});
+  return fake(requests.length===1?p1:p2);
+ };
+ const r=await createPrivateBuyerOrderReader({...s.input,fetcher}).run();
+ assert.equal(r.status,200);
+ assert.equal(r.body.candidateMayBeRecorded,true);
+ assert.equal(r.body.ordersScanned,11);
+ assert.equal(r.body.hasNextPage,false);
+ assert.equal(r.body.deliveryAuthorized,false);
+ assert.equal(r.body.providerVerified,false);
+ assert.equal(requests.length,2);
+ const first=JSON.parse(requests[0].options.body).variables;
+ const second=JSON.parse(requests[1].options.body).variables;
+ assert.equal(first.first,10);
+ assert.equal(first.after,null);
+ assert.equal(second.first,10);
+ assert.equal(second.after,"opaque-shopify-cursor-p1");
+ for(const call of requests) {
+  assert.equal(call.url,"https://azymhc-x0.myshopify.com/admin/api/2026-10/graphql.json");
+  assert.equal(call.options.headers["X-Shopify-Access-Token"],token);
+  assert.equal(call.options.redirect,"error");
+  assert.equal(call.options.method,"POST");
+ }
+ assert.doesNotMatch(JSON.stringify(r.body),/buyer@example|GH1-|gid:\/\/shopify\/Order|test-only-provider-token|opaque-shopify-cursor/);
+});
+test("three pages are the ceiling and a fourth unobserved page always withholds candidate",async()=>{
+ const s=setup(),requests=[];
+ const make=(number,hasNextPage)=>{
+  const p=page([{...s.order,id:"gid://shopify/Order/"+number,
+   customAttributes:number===100?s.order.customAttributes:[]}]);
+  p.data.orders.pageInfo={hasNextPage,endCursor:"page-"+number};
+  return p;
+ };
+ const pages=[make(100,true),make(101,true),make(102,true)];
+ const r=await createPrivateBuyerOrderReader({...s.input,
+  fetcher:async(_url,opt)=>{requests.push(JSON.parse(opt.body).variables);return fake(pages[requests.length-1]);}
+ }).run();
+ assert.equal(requests.length,3);
+ assert.deepEqual(requests.map(x=>x.after),[null,"page-100","page-101"]);
+ assert.equal(r.status,200);
+ assert.equal(r.body.status,"incomplete-provider-lookback");
+ assert.equal(r.body.ordersScanned,3);
+ assert.equal(r.body.hasNextPage,true);
+ assert.equal(r.body.allOrdersVerified,false);
+ assert.equal(r.body.candidateMayBeRecorded,false);
+ assert.equal(r.body.privateRow,null);
+ assert.equal(r.body.deliveryAuthorized,false);
+});
+test("candidate in first page cannot escape conflicting second-page order",async()=>{
+ const s=setup(),calls=[];
+ const p1=page([s.order]);
+ p1.data.orders.pageInfo={hasNextPage:true,endCursor:"cursor-1"};
+ const p2=page([{...s.order,id:"gid://shopify/Order/43"}]);
+ const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async(_u,opts)=>{
+  calls.push(JSON.parse(opts.body).variables);return fake(calls.length===1?p1:p2);
+ }}).run();
+ assert.equal(calls.length,2);
+ assert.equal(r.status,503);
+ assert.equal(r.body.candidateMayBeRecorded,false);
+ assert.equal(r.body.privateRow,null);
+ assert.equal(r.body.deliveryAuthorized,false);
+});
+test("missing or repeated Shopify next-page cursor and duplicate cross-page order fail closed",async()=>{
+ const s=setup();
+ for(const mode of ["missing","empty","control","repeat","cross-page-duplicate"]){
+  const p1=page([s.order]);
+  p1.data.orders.pageInfo={hasNextPage:true,endCursor:mode==="missing"?null:mode==="empty"?"":mode==="control"?"bad\ncursor":"first-cursor"};
+  const p2=page([{...s.order,id:mode==="cross-page-duplicate"?s.order.id:"gid://shopify/Order/43",customAttributes:[]}]);
+  p2.data.orders.pageInfo={hasNextPage:mode==="repeat",endCursor:"first-cursor"};
+  let calls=0;
+  const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(++calls===1?p1:p2)}).run();
+  assert.equal(r.status,503,mode);
+  assert.equal(r.body.candidateMayBeRecorded,false);
+  assert.equal(r.body.privateRow,null);
+  assert.equal(r.body.deliveryAuthorized,false);
+  assert.equal(r.body.shopAuthenticated,false);
+  assert.ok(calls<=2,mode);
+ }
+});
+test("no new Shopify cursor on second page if first page is final",async()=>{
+ const s=setup();let count=0;
+ const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>{count++;return fake(page([s.order]));}}).run();
+ assert.equal(r.status,200);
+ assert.equal(r.body.candidateMayBeRecorded,true);
+ assert.equal(count,1);
+});
+
 test("buyer readback is a bounded private read-only query, never sends PII to a public return",()=>{
  assert.match(PRIVATE_BUYER_ORDER_QUERY,/shop \{ id myshopifyDomain \}/);
  assert.match(PRIVATE_BUYER_ORDER_QUERY,/customAttributes \{ key value \}/);
