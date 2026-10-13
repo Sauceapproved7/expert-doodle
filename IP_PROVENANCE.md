@@ -1,3 +1,9 @@
+## Hercules Codex repository operator skill — October 13, 2026
+
+- Original first-party AI-assisted SauceApproved agent instructions: `.agents/skills/hercules-codex-operator/SKILL.md`, verified by `tests/hercules-codex-operator-skill.test.mjs` in the existing implementation enforcement CI.
+- Follows official repository skill metadata and discovery format, without copying external code. Node standard-library-only checks; no new third-party dependencies, licenses, or distribution obligations.
+- Instruction-only skill: no new secrets, provider access, Codex environment publication authority, browser permissions, billing, DNS, Shopify, payout, or production deployment. Environment publication remains a separate account action.
+
 ## Hercules Codex Cloud repository handoff — October 13, 2026
 
 - First-party, AI-assisted original SauceApproved source: `governance/hercules-codex-cloud-profile-v1.json`, `hercules-runtime/codex-cloud-profile.mjs`, `scripts/hercules-codex-cloud-handoff.mjs`, `tests/hercules-codex-cloud-handoff.test.mjs`, and `docs/HERCULES-CODEX-CLOUD-HANDOFF-V1.md`.
