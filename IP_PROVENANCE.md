@@ -1,3 +1,10 @@
+## Hercules Runtime Witness v1 — October 13, 2026
+
+- Original first-party SauceApproved Node.js code, authored with AI assistance: hercules-runtime/runtime-witness.mjs, scripts/hercules-runtime-witness.mjs, tests/hercules-runtime-witness.test.mjs, and docs/HERCULES-RUNTIME-WITNESS-V1.md; attached to existing implementation-enforcement CI.
+- No added dependencies, third-party code, binary files, secrets, customer data or model weights. Uses Node built-ins and unauthenticated read-only bounded public GET requests only upon an explicit CLI flag.
+- Tests use synthetic responses and red-before-green failure/recovery scenarios. CI does not probe public sites. Public HTML availability cannot prove deployed SHA, authenticated functional health, commercial readiness, live payments, release approval or Codex Cloud environment publication.
+- No provider credentials, billing, DNS, deployments, checkout, bank payouts, account privileges or permission changes.
+
 ## Codex Doctor cross-platform path and high-impact-file hardening — October 13, 2026
 
 - Original first-party AI-assisted Hercules changes to `hercules-runtime/codex-readiness.mjs`, `tests/hercules-codex-doctor.test.mjs`, and the existing Doctor documentation. Node built-ins only; no dependencies, third-party code, model weights, downloaded binaries or secrets.
