@@ -1,3 +1,12 @@
+
+## Hercules Smallz authenticated REST read transport — October 13, 2026
+
+- Original first-party SauceApproved source: hercules-deploy/smallz-provider-readers.mjs and tests/hercules-deploy-smallz-provider-readers.test.mjs. No third-party libraries, weights, customer records or vendor code incorporated.
+- Hardened GET-only transport for pinned server-side GitHub/Render APIs; normalizes responses for existing advisory Smallz Evidence Bridge. Caller supplies credentials through authorized server-side custody; never returned or written.
+- Fixed destinations, four-second timeout, no redirects, streaming 64 KiB limit, no provider write operations, owner authorization or release execution.
+- RED test-first commit 6c29d4df07f3308d550bb7101f09c7b15e9bf532 failed due to the intentionally absent module (105 existing Deploy Plane tests passed). GREEN implementation c5224c424fa187ef4dc119a3ff93b27d1bd744b0 passed 112/112 tests.
+- No new service, paid hosting, provider write permissions, API keys, deployment, release approval or production configuration changed.
+
 ## Hercules Smallz read-only evidence bridge — October 13, 2026
 
 - Original SauceApproved AI-assisted Node 22 source: `hercules-deploy/smallz-evidence-bridge.mjs`, `tests/hercules-deploy-smallz-evidence-bridge.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-EVIDENCE-BRIDGE-V1.md`.
