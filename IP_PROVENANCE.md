@@ -1,3 +1,9 @@
+## Vault Passport fail-closed regression hardening — October 13, 2026
+
+- Expanded original first-party SauceApproved assurance tests to reproduce and repair misleading green release evidence when extra CI checks fail or are malformed, and to reject recomputed integrity digests carrying forged release/owner/execution-authority flags.
+- GitHub Actions TDD RED at `053f1baf680dff422f6fddb10352d4448c76752e`: 96 passed, 3 failed (expected). GREEN at `11b6c79b69b0eddc4d2fbefd39eef1315fa6b0c5`: 99 passed, 0 failed. No live service modification, permission grants, keys, new dependencies or hosting costs.
+- Checksums alone remain insufficient to authenticate a remote provider or sign a production release.
+
 ## Hercules Vault Triple Assurance — October 13, 2026
 
 - Original first-party SauceApproved AI-assisted Node.js source: hercules-deploy/vault-assurance.mjs, tests/hercules-deploy-vault-assurance.test.mjs, and docs/HERCULES-DEPLOY-VAULT-TRIPLE-ASSURANCE-V1.md.
