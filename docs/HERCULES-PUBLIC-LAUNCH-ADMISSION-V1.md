@@ -11,8 +11,8 @@ The read-only admission checker is `scripts/hercules-public-launch-admission.mjs
 Pushing a tag matching `hercules-public-v*` triggers the `Hercules Release Gate v1` workflow. Its public-launch job:
 
 1. runs the owner-code, policy and fail-closed contract tests;
-2. looks only for `releases/public-launch/<exact GitHub commit SHA>.json`;
-3. rejects missing files, mismatched SHA, invalid schema, non-production evidence, stale or future-dated evidence, or any false/missing required release check;
+2. verifies the tagged commit has exactly one parent and changes only `releases/public-launch/evidence.json`;
+3. checks that the evidence packet binds to the exact **parent source commit** of the evidence-only release commit, then rejects mismatched SHA, invalid schema, non-production evidence, stale or future-dated evidence, or any false/missing required check;
 4. exits nonzero and does not authorize a launch unless every check passes.
 
 The packet structure is:
@@ -22,7 +22,7 @@ The packet structure is:
   "schema": "sauceapproved.hercules.public-launch-admission",
   "version": 1,
   "environment": "production",
-  "sourceCommit": "<the exact 40-character lowercase commit SHA>",
+  "sourceCommit": "<40-character lowercase SHA of the parent source commit>",
   "checkedAt": "<ISO-8601 UTC timestamp including milliseconds>",
   "evidence": {
     "build": {},
@@ -37,7 +37,7 @@ The packet structure is:
 }
 ```
 
-All evidence properties listed in `governance/hercules-release-gate-v1.json` must be **true**. Missing fields are blockers. Evidence must be no older than 60 minutes and no more than 60 seconds in the future, relative to workflow execution. The JSON packet is capped at 64 KiB.
+All evidence properties listed in `governance/hercules-release-gate-v1.json` must be **true**. Missing fields are blockers. Evidence must be no older than 60 minutes and no more than 60 seconds in the future, relative to workflow execution. The JSON packet is capped at 64 KiB. To avoid a circular commit hash, first finalize source code, then create a separate single-parent commit that changes **only** `releases/public-launch/evidence.json` and references that source commit. Tag the evidence-only commit with `hercules-public-v*`. GitHub Actions verifies the exact parent SHA and evidence-only diff. A tag on an arbitrary commit fails closed.
 
 ### Evidence trust boundary
 
@@ -51,8 +51,8 @@ In particular, tagging a commit never opens registration or activates payment. L
 node scripts/hercules-release-gate.mjs --verify-policy
 node --test tests/hercules-release-gate-v1.test.mjs tests/hercules-public-launch-admission.test.mjs
 node scripts/hercules-public-launch-admission.mjs \
-  --evidence releases/public-launch/<exact-sha>.json \
-  --commit <exact-sha>
+  --evidence releases/public-launch/evidence.json \
+  --commit <parent-source-sha>
 ```
 
 The CLI reports the exact blockers and fails closed with a nonzero exit code.

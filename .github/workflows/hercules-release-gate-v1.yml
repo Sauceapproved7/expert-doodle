@@ -42,13 +42,26 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
-      - name: Verify candidate evidence against the exact tagged source commit
+        with:
+          fetch-depth: 2
+      - name: Verify evidence-only release commit and source-bound readiness
         shell: bash
         run: |
           set -euo pipefail
-          evidence="releases/public-launch/${GITHUB_SHA}.json"
+          evidence="releases/public-launch/evidence.json"
           if [[ ! -f "$evidence" ]]; then
-            echo "::error::Missing fresh release evidence for ${GITHUB_SHA}; public launch remains held."
+            echo "::error::Missing public release evidence; public launch remains held."
             exit 1
           fi
-          node scripts/hercules-public-launch-admission.mjs --evidence "$evidence" --commit "$GITHUB_SHA"
+          parent_count="$(git rev-list --parents -n 1 "$GITHUB_SHA" | awk '{print NF-1}')"
+          if [[ "$parent_count" -ne 1 ]]; then
+            echo "::error::Public release evidence commit must have exactly one parent."
+            exit 1
+          fi
+          source_commit="$(git rev-parse "$GITHUB_SHA^")"
+          changes="$(git diff --name-only "$source_commit" "$GITHUB_SHA")"
+          if [[ "$changes" != "$evidence" ]]; then
+            echo "::error::Release commit must change only the public launch evidence file."
+            exit 1
+          fi
+          node scripts/hercules-public-launch-admission.mjs --evidence "$evidence" --commit "$source_commit"

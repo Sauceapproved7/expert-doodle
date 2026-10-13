@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {evaluatePublicLaunchAdmission} from "../scripts/hercules-public-launch-admission.mjs";
+import {readFile} from "node:fs/promises";
+import {evaluatePublicLaunchAdmission, evaluatePublicLaunchAdmissionFile} from "../scripts/hercules-public-launch-admission.mjs";
 
 const SHA = "a".repeat(40);
 const NOW = Date.parse("2026-10-13T12:00:00.000Z");
@@ -82,4 +83,22 @@ test("one missing technical check always remains a blocker", () => {
   const result = evaluatePublicLaunchAdmission(packet({evidence}), {expectedCommit: SHA, now: NOW});
   assert.equal(result.ok, false);
   assert.ok(result.blockers.includes("security.codeql"));
+});
+
+test("evidence file cannot escape the one sanctioned release-evidence path", async () => {
+  await assert.rejects(
+    evaluatePublicLaunchAdmissionFile("releases/public-launch/" + SHA + ".json", SHA, {now: NOW}),
+    /evidence_path_must_match_release_commit/
+  );
+});
+
+test("tag workflow enforces single-parent evidence-only commit before release admission", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/hercules-release-gate-v1.yml", import.meta.url), "utf8");
+  assert.match(workflow, /fetch-depth: 2/);
+  assert.match(workflow, /git rev-list --parents/);
+  assert.match(workflow, /parent_count/);
+  assert.match(workflow, /git rev-parse/);
+  assert.match(workflow, /git diff --name-only/);
+  assert.ok(workflow.includes("releases/public-launch/evidence.json"));
+  assert.match(workflow, /--commit "\$source_commit"/);
 });

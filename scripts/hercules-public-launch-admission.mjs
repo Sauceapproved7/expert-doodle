@@ -59,7 +59,7 @@ export function evaluatePublicLaunchAdmission(packet, {expectedCommit, now=Date.
 
 export async function evaluatePublicLaunchAdmissionFile(evidencePath, expectedCommit, {now=Date.now()}={}) {
   if(!COMMIT.test(String(expectedCommit??""))) throw new Error("expected_commit_invalid");
-  const allowedPath=path.join(repoRoot,"releases","public-launch",expectedCommit+".json");
+  const allowedPath=path.join(repoRoot,"releases","public-launch","evidence.json");
   if(path.resolve(String(evidencePath??""))!==allowedPath) throw new Error("evidence_path_must_match_release_commit");
   const metadata=await stat(allowedPath);
   if(!metadata.isFile() || metadata.size>MAX_PACKET_BYTES) throw new Error("evidence_file_invalid");
@@ -73,7 +73,7 @@ async function main() {
   const expectedCommit=args[args.indexOf("--commit")+1];
   if(!args.includes("--evidence") || !args.includes("--commit") ||
      !evidencePath || !expectedCommit) {
-    throw new Error("usage: node scripts/hercules-public-launch-admission.mjs --evidence <releases/public-launch/<sha>.json> --commit <sha>");
+    throw new Error("usage: node scripts/hercules-public-launch-admission.mjs --evidence releases/public-launch/evidence.json --commit <parent-source-sha>");
   }
   const result=await evaluatePublicLaunchAdmissionFile(evidencePath,expectedCommit);
   console.log(JSON.stringify(result,null,2));
