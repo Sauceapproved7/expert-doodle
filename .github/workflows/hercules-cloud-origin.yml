@@ -1,0 +1,44 @@
+name: Hercules Cloud Origin Safety
+
+on:
+  pull_request:
+    paths:
+      - "hercules-deploy/cloud/**"
+      - "tests/hercules-cloud-*.test.mjs"
+      - "scripts/build_hercules_cloud_preview.mjs"
+      - ".github/workflows/hercules-cloud-origin.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-deploy/cloud/**"
+      - "tests/hercules-cloud-*.test.mjs"
+      - "scripts/build_hercules_cloud_preview.mjs"
+      - ".github/workflows/hercules-cloud-origin.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  origin-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Test owner-controlled Hercules Cloud preflight and interface
+        run: node --test tests/hercules-cloud-control-plane.test.mjs tests/hercules-cloud-original-ui.test.mjs
+      - name: Validate script syntax
+        run: |
+          node --check hercules-deploy/cloud/server.mjs
+          node --check hercules-deploy/cloud/preflight.mjs
+          node --check hercules-deploy/cloud/app.mjs
+      - name: Package original static preview
+        run: |
+          node scripts/build_hercules_cloud_preview.mjs
+          test -s dist/hercules-cloud/index.html
+          test -s dist/hercules-cloud/styles.css
+          test -s dist/hercules-cloud/app.mjs
+      - name: Validate rights and restricted imports
+        run: node scripts/verify-owner-code-only.mjs
