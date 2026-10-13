@@ -41,6 +41,13 @@ const deny=reason=>({status:503,body:{
 }});
 const tokenOk=t=>typeof t==="string"&&t.length>=20&&t.length<=4096
  &&/^[\x21-\x7e]+$/.test(t)&&!/[\s"'<>]/.test(t);
+const protectedEmailDenied=errors=>Array.isArray(errors)&&errors.some(error=>{
+ const message=typeof error?.message==="string"?error.message:"";
+ const pathHasEmail=Array.isArray(error?.path)&&error.path.includes("email");
+ const accessDenied=error?.extensions?.code==="ACCESS_DENIED"
+  ||/not approved|access denied|protected customer data/i.test(message);
+ return accessDenied&&(pathHasEmail||/\bemail field\b/i.test(message));
+});
 function inputOk({identity,intentRow,buyerReference,requestedSiteId,secret,now}){
  if(!identity||!intentRow
   ||!UUID.test(identity.id||"")||!UUID.test(requestedSiteId||"")
@@ -81,7 +88,10 @@ export function createPrivateBuyerOrderReader({
    });
    if(!response?.ok||response.status!==200)return deny("shopify-api-unavailable");
    const envelope=await response.json();
-   if(envelope?.errors?.length||envelope?.data?.shop?.id!==SHOP_ID
+   if(envelope?.errors?.length)
+    return deny(protectedEmailDenied(envelope.errors)?
+     "shopify-protected-customer-email-unavailable":"shopify-shop-attestation-unavailable");
+   if(envelope?.data?.shop?.id!==SHOP_ID
     ||envelope?.data?.shop?.myshopifyDomain!==SHOP_DOMAIN)
     return deny("shopify-shop-attestation-unavailable");
    const page=envelope.data.orders;
