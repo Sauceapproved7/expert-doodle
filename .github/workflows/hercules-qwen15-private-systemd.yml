@@ -17,5 +17,6 @@ jobs:
       - name: Validate private, fail-closed service unit
         run: |
           node --test tests/hercules-qwen15-systemd-unit.test.mjs
+          systemd-analyze verify deploy/hercules-qwen15/hercules-qwen15-private.service
           node scripts/verify-owner-code-only.mjs
           node scripts/security-baseline.mjs

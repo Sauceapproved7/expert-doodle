@@ -158,3 +158,22 @@ jobs:
             echo 'Owner credential unexpectedly appeared in private process log'; exit 1
           fi
           echo 'Private CI trial passed. No permanent VM, public chat, Devbrain or production approval.'
+          # Exercise real owner-host graceful termination; process and local ports must disappear.
+          kill -TERM "$private_pid"
+          private_shutdown_verified=0
+          for i in $(seq 1 40); do
+            if ! kill -0 "$private_pid" 2>/dev/null; then
+              private_shutdown_verified=1; break
+            fi
+            sleep 0.25
+          done
+          test "$private_shutdown_verified" = 1
+          wait "$private_pid"
+          if curl -fsS --max-time 2 http://127.0.0.1:38900/health >/dev/null 2>&1; then
+            echo 'Private control service still accepting traffic after stop'; exit 1
+          fi
+          if curl -fsS --max-time 2 http://127.0.0.1:18776/health >/dev/null 2>&1; then
+            echo 'Private model child still accepting traffic after stop'; exit 1
+          fi
+          echo 'private_shutdown_verified: control and model listeners both closed.'
+
