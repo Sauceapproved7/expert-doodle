@@ -1,0 +1,25 @@
+name: Hercules Cloud Host Engine V1
+on:
+  pull_request:
+    paths:
+      - 'hercules-deploy/cloud/host-engine.mjs'
+      - 'hercules-deploy/cloud/host-engine-cli.mjs'
+      - 'tests/hercules-cloud-host-engine.test.mjs'
+      - 'docs/HERCULES-CLOUD-HOST-ENGINE-V1.md'
+      - '.github/workflows/hercules-cloud-host-engine-v1.yml'
+permissions:
+  contents: read
+jobs:
+  host-engine-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Host Engine explicit owner permit, rootless and replay contract
+        run: |
+          node --test tests/hercules-cloud-host-engine.test.mjs
+          node --test tests/hercules-cloud-host-agent.test.mjs tests/hercules-cloud-host-local.test.mjs tests/hercules-cloud-oci-a1-readiness.test.mjs
+      - name: Ownership, security and provenance
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
