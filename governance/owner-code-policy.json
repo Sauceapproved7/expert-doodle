@@ -252,6 +252,13 @@
       "dependencies": [
         "python"
       ]
+    },
+    {
+      "path": "scripts/hercules-qwen15-owner-host.mjs",
+      "kind": "external-model-adapter",
+      "dependencies": [
+        "llama-cpp"
+      ]
     }
   ],
   "shellCommandBoundaries": [
@@ -401,6 +408,12 @@
       "id": "devcontainer-cli",
       "name": "Microsoft Dev Containers CLI used only for CI image validation",
       "ownership": "third-party-ci-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "llama-cpp",
+      "name": "Pinned external llama.cpp model inference engine (preinstalled owner host)",
+      "ownership": "third-party-model-infrastructure",
       "packagedAsHerculesCode": false
     }
   ]

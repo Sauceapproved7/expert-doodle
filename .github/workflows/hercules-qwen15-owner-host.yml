@@ -1,0 +1,25 @@
+name: Hercules Qwen 1.5B Private Host Bootstrap Tests
+on:
+  pull_request:
+    paths:
+      - "hercules-models/qwen15-owner-host.mjs"
+      - "scripts/hercules-qwen15-owner-host.mjs"
+      - "tests/hercules-qwen15-owner-host.test.mjs"
+      - "tests/hercules-qwen15-startup-identity.test.mjs"
+      - "tests/hercules-qwen15-cgroup-budget.test.mjs"
+      - "docs/HERCULES-QWEN15-OWNER-HOST-PRIVATE-BOOT.md"
+      - ".github/workflows/hercules-qwen15-owner-host.yml"
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify isolated host preflight logic (no model required)
+        run: |
+          node --test tests/hercules-qwen15-owner-host.test.mjs tests/hercules-qwen15-cgroup-budget.test.mjs tests/hercules-qwen15-startup-identity.test.mjs
+          node --check scripts/hercules-qwen15-owner-host.mjs
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
