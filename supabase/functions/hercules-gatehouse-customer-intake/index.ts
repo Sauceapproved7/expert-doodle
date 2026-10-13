@@ -48,6 +48,8 @@ async function authenticatedUser(req:Request){
  return user;
 }
 Deno.serve(async(req:Request)=>{
+ if(Deno.env.get('GATEHOUSE_CUSTOMER_INTAKE_APPROVED')!=='true')
+  return response(503,{error:'customer-intake-not-open',...assessDelivery()});
  const path=new URL(req.url).pathname.split('/').filter(Boolean).at(-1);
  if(req.method!=='GET'&&req.method!=='POST')return response(405,{error:'method-not-allowed'});
  const user=await authenticatedUser(req).catch(()=>null);
