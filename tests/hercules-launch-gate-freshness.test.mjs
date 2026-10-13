@@ -33,3 +33,10 @@ test("DA-11 restore selects the existing rotated_at key timestamp, not a nonexis
   assert.match(restored,/select private\.hercules_launch_gate_refresh_submit\(\);/i);
   assert.doesNotMatch(restored,/\b(?:drop|truncate)\s+(?:table|schema)\b/i);
 });
+
+test("refresh credential lookup uses the real internal key rotation column",()=>{
+  // Production hercules_internal_service_keys columns are purpose, key_sha256,
+  // enabled, rotated_at, metadata and secret_ref. updated_at does not exist.
+  assert.match(migration,/order by rotated_at desc/i);
+  assert.doesNotMatch(migration,/order by updated_at desc/i);
+});
