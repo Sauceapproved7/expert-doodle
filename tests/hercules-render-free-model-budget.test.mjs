@@ -13,7 +13,7 @@ const good={
   memoryLimitBytes:536870912,
   peakMemoryBytes:355000000,
   elapsedMs:9000,
-  generatedText:"The answer is 4.",
+  modelReply:{model:"hercules-trial",choices:[{message:{role:"assistant",content:"The answer is 4."},finish_reason:"stop"}]},
 };
 
 test("Render's actual Free web service budget is 0.1 CPU and 512 MiB RAM",()=>{
@@ -55,11 +55,17 @@ test("log parsing requires exact cgroup observations, no duplicate fields",()=>{
     "HERCULES_MEMORY_LIMIT=536870912",
     "HERCULES_MEMORY_PEAK=355000000",
     "HERCULES_ELAPSED_MS=9000",
-    "HERCULES_GENERATED_BASE64="+Buffer.from("4").toString("base64"),
+    "HERCULES_MODEL_REPLY_BASE64="+Buffer.from("HTTP/1.1 200 OK\\r\\nContent-Type: application/json\\r\\nConnection: close\\r\\n\\r\\n"+JSON.stringify(good.modelReply)).toString("base64"),
   ].join("\n");
-  assert.equal(parseFreeModelBudgetLog(raw).generatedText,"4");
+  assert.equal(parseFreeModelBudgetLog(raw).modelReply.model,"hercules-trial");
   assert.throws(()=>parseFreeModelBudgetLog(raw+"\nHERCULES_CPU_QUOTA=10000"),/duplicate/);
   assert.throws(()=>parseFreeModelBudgetLog(raw.replace("HERCULES_MEMORY_PEAK=355000000","HERCULES_MEMORY_PEAK=not-number")),/invalid/);
+});
+
+
+test("a startup banner or wrong model can never prove actual inference",()=>{
+  assert.equal(evaluateFreeModelBudget({...good,modelReply:{text:"Loading model... \\nASCII"}}).furtherLabEligible,false);
+  assert.equal(evaluateFreeModelBudget({...good,modelReply:{model:"hercules-trial",choices:[]}}).furtherLabEligible,false);
 });
 
 test("workflow enforces Docker CPU quota, 512MiB memory, no network and time limit",()=>{
