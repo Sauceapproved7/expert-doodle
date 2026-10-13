@@ -82,3 +82,15 @@ The `assessPaidOrderWebhook` pure helper validates a properly scoped signed Shop
 **Still required before first paid customer:** independently verified paid checkout/reversal procedures; an authenticated customer authorization and intake path; a safe customer-domain probe constrained against SSRF/DNS rebinding; durable separated request/report storage; provable email or customer-portal delivery; refund/cancellation support; approved commercial terms/privacy. Subscription plans additionally need independent scheduled monitoring, metering, billing schedules, cancellation and client data isolation. Keep the Shopify product **DRAFT** until all first-sale prerequisites are verified. Do not invent payment verification from the demo or the live Stripe connection.
 
 No new database, new cost, DNS modification, production release, Shopify product publish, billing or payout action was introduced here.
+
+## Gatehouse order-to-report proof plan (preview v1.5)
+
+The commercial page now links to `GET /commercial/report-preview`, a printable, well-labeled **sample** built only from the existing four Hercules allowlisted public health probes. It never checks an arbitrary customer domain, sends a report to a customer, or proves uptime or a transaction.
+
+`GET /api/commercial/fulfillment-readiness` returns a public fail-closed commercial hold and an explicit list of evidence missing before any customer can buy or receive the $49 website health diagnostic. It does not accept or store customer data or payment credentials.
+
+`fulfillment.mjs` provides a *shape validator* for a prospective authenticated Shopify Admin **read-back** of the exact single-variant diagnostic order; it rejects different products, currencies, prices, statuses, mixed carts, refunds and cancellations. Merely supplying such a matching object is **not independent payment proof**; the validator always reports `canFulfill:false` until a separately authorized, live Shopify server-side reader and customer entitlement system exist.
+
+Both endpoints are GET only. No payment checkout, refund, subscription, email dispatch, customer claim, DNS test, deployment or provider write operations were added. The Shopify product remains draft. Future enablement requires customer ownership verification, robust SSRF-safe domain probes, durable per-customer storage, verified paid order re-read, receipt-to-customer identity reconciliation, proof of actual report delivery, terms/privacy approval, and a controlled end-to-end test. Plans remain proposal only.
+
+Run tests with `node --test hercules/gatehouse/*.test.mjs`. The independent Gatehouse preview Render service is configured with automatic deploy **off**; this code can be tested on its feature branch without merging to `main` or disturbing live Shopify or Studio operations.
