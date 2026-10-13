@@ -99,6 +99,6 @@ test("tag workflow enforces single-parent evidence-only commit before release ad
   assert.match(workflow, /parent_count/);
   assert.match(workflow, /git rev-parse/);
   assert.match(workflow, /git diff --name-only/);
-  assert.match(workflow, /releases\\/public-launch\\/evidence\\.json/);
+  assert.ok(workflow.includes("releases/public-launch/evidence.json"));
   assert.match(workflow, /--commit "\$source_commit"/);
 });
