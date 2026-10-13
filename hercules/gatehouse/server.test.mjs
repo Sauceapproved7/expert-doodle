@@ -96,3 +96,16 @@ test("public summary is GET-only and never bypasses private dashboard",async()=>
   assert.equal((await fetch(base+"/api/dashboard")).status,503);
  });
 });
+
+test("browser vault modules are served as first-party scripts with no private API bypass",async()=>{
+ await withServer({accessToken:"",probeUrls:[]},async base=>{
+  for(const file of ["/local-archive.mjs","/device-vault.mjs"]){
+   const r=await fetch(base+file);
+   assert.equal(r.status,200);
+   assert.match(r.headers.get("content-type"),/text\/javascript/);
+   assert.match(r.headers.get("content-security-policy"),/script-src 'self'/);
+   assert.equal(r.headers.get("cache-control"),"no-store");
+  }
+  assert.equal((await fetch(base+"/api/dashboard")).status,503);
+ });
+});
