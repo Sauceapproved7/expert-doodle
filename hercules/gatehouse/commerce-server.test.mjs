@@ -16,6 +16,9 @@ test("the commercial preview presents an offer but never a payment link or subsc
   const html=await page.text();
   assert.match(html,/Not yet available for purchase/);
   assert.doesNotMatch(html,/<form[^>]+action=/);
+  assert.doesNotMatch(html,/<style>| style="/);
+  assert.match(html,/<link rel="stylesheet" href="\/commercial.css">/);
+  assert.equal((await fetch(base+"/commercial.css")).status,200);
   assert.doesNotMatch(html,/buy\.stripe\.com|checkout\.stripe\.com|shopify\.com\/checkout/);
   const catalog=await(await fetch(base+"/api/commercial/catalog")).json();
   assert.equal(catalog.diagnostic.purchaseEnabled,false);
