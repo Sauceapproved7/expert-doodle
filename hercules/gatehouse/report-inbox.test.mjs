@@ -76,7 +76,7 @@ test("missing JWT, anonymous sessions, provider errors and invalid record shape 
  const b=customerAccessBridge({reportsEnabled:true,publishableKey:key,fetcher:async(url)=>
   String(url).endsWith("/auth/v1/user")
    ?{ok:true,status:200,json:async()=>({id:uid,is_anonymous:false})}
-   :{ok:true,status:200,json:async()=>({reports:[row]})});
+   :{ok:true,status:200,json:async()=>({reports:[row]})}});
  assert.equal((await b.handle({headers:{authorization:"Bearer "+token}},"reports")).status,503);
 });
 test("live report listing accepts only authenticated GET and never enables download or checkout",async()=>{
