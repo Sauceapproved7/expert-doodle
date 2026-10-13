@@ -101,7 +101,7 @@ export async function studioAccessRequest(body:any,ctx:{U:string;K:string;S:stri
     email,
     options:{
       shouldCreateUser:true,
-      emailRedirectTo:ctx.U+'/functions/v1/hercules-launch?studio_access=1'
+      emailRedirectTo:'https://sauceapproved-studio.onrender.com/activate'
     }
   });
   return json({ok:true,instructionsSent:true});

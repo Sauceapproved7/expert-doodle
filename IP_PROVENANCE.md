@@ -1,5 +1,11 @@
 # Hercules IP Provenance & Canonical Source
 
+## Studio hosted activation relay — 2026-10-13
+
+- Paths: hercules-video/studio-activation.mjs, Studio server routing, hosted activation tests, Studio access callback, and rollout documentation.
+- Origin: original Hercules repair with AI assistance; Node built-ins and existing Hercules endpoints only, with no new packaged runtime dependency.
+- Scope: render the fixed Studio activation page on the owned host, relay two bounded actions, and use a fixed hosted sign-in callback. Supabase Auth and paid-entitlement checks remain authoritative; no payment, publication, pricing, or Titan gate is changed.
+
 **Status:** Active governance record  
 **Effective date:** 2026-09-22  
 **Repository:** `Sauceapproved7/expert-doodle`  
