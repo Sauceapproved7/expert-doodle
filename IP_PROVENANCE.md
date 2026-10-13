@@ -1,3 +1,11 @@
+## 0.1 CPU real model truth gate — DA-45, 2026-10-13
+
+- Owned, AI-assisted first-party additions: scripts/hercules-render-free-model-budget.mjs, tests/hercules-render-free-model-budget.test.mjs, .github/workflows/hercules-render-free-model-budget.yml, docs/HERCULES-RENDER-FREE-BUDGET-V1.md.
+- Source: a clean current-main branch of PR #963's 0.1-CPU evidence; new pure arithmetic-correctness regression. No vendor weights in the Git tree.
+- Ephemeral third-party test assets: Apache-2.0 bartowski/SmolLM2-360M-Instruct-GGUF Q4_K_M (SHA256 2fa3f013dcdd7b99f9b237717fa0b12d75bbb89984cc1274be1471a465bac9c2), ggml-org/llama.cpp pinned d81235049384534c167caea52b85a694f6103d14, and digest-pinned disposable Ubuntu container.
+- Scope: CPU lab on existing standard public GitHub runner, no new subscriptions, customer prompts, Render/Railway deploy or commerce/public-release authorization. External weights remain externally licensed.
+- Evidence correction: real assistant output 2 was incorrectly treated as eligible for the synthetic 2+2 prompt; corrected evaluator refuses wrong answers and keeps production flags false.
+
 ## Real-model authenticated Hercules chat integration trial — 2026-10-13
 
 - Owned files: `scripts/hercules-real-modelplane-e2e.mjs`, `tests/hercules-real-modelplane-e2e.test.mjs`, updates to `.github/workflows/hercules-smollm2-360m-trial.yml` and `docs/HERCULES-SMOLLM2-360M-TRIAL.md`.
