@@ -105,11 +105,16 @@ async function issuePasswordTicket(purpose:"signup"|"change_password",email:stri
   if(!r.ok)throw new Error("password_screening_ticket_"+r.status);
   return String(JSON.parse(text));
 }
+function freshRegistrationReadiness(check:any,now=Date.now()){
+  const timestamp=Date.parse(String(check?.checked_at||""));
+  return check?.launch_ready===true && Number.isFinite(timestamp)
+    && timestamp>=now-30*60*1000 && timestamp<=now+60*1000;
+}
 async function serverRegistrationOpen(){
   const r=await fetch(U+"/functions/v1/hercules-launch-gate",{headers:K?{apikey:K}:{},signal:AbortSignal.timeout(10000)}).catch(()=>null);
   if(!r?.ok)return false;
   const d=await r.json().catch(()=>null);
-  return Boolean(d?.lastCheck?.launch_ready===true&&d?.publicRegistrationOpen===true);
+  return Boolean(d?.lastCheck?.launch_ready===true&&d?.publicRegistrationOpen===true&&freshRegistrationReadiness(d?.lastCheck));
 }
 async function secureSignup(email:string,password:string){
   if(!await serverRegistrationOpen())return {status:403,body:{ok:false,error:"public_registration_closed"}};
@@ -648,7 +653,8 @@ async function fetchFn(name,options){
   return d;
 }
 function switchRoot(target){show("landing",target==="landing");show("auth",target==="auth");show("app",target==="app");show("publicNav",target!=="app");show("appActions",target==="app")}
-async function refreshRegistrationState(){try{const r=await fetch(U+"/functions/v1/hercules-launch-gate",{headers:{apikey:K},cache:"no-store"});const d=await r.json().catch(()=>({}));publicSignupOpen=Boolean(r.ok&&d?.lastCheck?.launch_ready===true&&d?.publicRegistrationOpen===true)}catch{publicSignupOpen=false}const sw=$("authSwitch");if(sw&&authMode==="signin"){sw.disabled=!publicSignupOpen;sw.textContent=publicSignupOpen?"Create account":"Early access — sign-in only"}return publicSignupOpen}
+function freshPublicRegistrationCheck(check){const now=Date.now(),t=Date.parse(String(check?.checked_at||""));return check?.launch_ready===true&&Number.isFinite(t)&&t>=now-30*60*1000&&t<=now+60*1000}
+async function refreshRegistrationState(){try{const r=await fetch(U+"/functions/v1/hercules-launch-gate",{headers:{apikey:K},cache:"no-store"});const d=await r.json().catch(()=>({}));publicSignupOpen=Boolean(r.ok&&d?.lastCheck?.launch_ready===true&&d?.publicRegistrationOpen===true&&freshPublicRegistrationCheck(d?.lastCheck))}catch{publicSignupOpen=false}const sw=$("authSwitch");if(sw&&authMode==="signin"){sw.disabled=!publicSignupOpen;sw.textContent=publicSignupOpen?"Create account":"Early access — sign-in only"}return publicSignupOpen}
 async function openProduct(){const s=(await sb.auth.getSession()).data.session;if(s){await bootApp();return}switchRoot("auth");const open=await refreshRegistrationState();if(!open)setNotice("authMsg","Public account creation is not open yet. Existing authorized users can sign in.","warn")}
 $("openHercules").onclick=()=>{track("cta_open_product",{surface:"nav"});openProduct()};$("systemOpen").onclick=()=>{track("cta_open_product",{surface:"system"});openProduct()};$("backHome").onclick=()=>switchRoot("landing");
 $("heroProof").onclick=()=>track("proof_demo_interest",{surface:"hero"});

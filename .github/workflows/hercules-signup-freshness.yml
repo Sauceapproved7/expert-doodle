@@ -1,0 +1,32 @@
+name: Hercules Signup Freshness Alignment
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-launch/index.ts"
+      - "tests/hercules-launch-signup-freshness.test.mjs"
+      - ".github/workflows/hercules-signup-freshness.yml"
+  push:
+    branches: [main]
+    paths:
+      - "supabase/functions/hercules-launch/index.ts"
+      - "tests/hercules-launch-signup-freshness.test.mjs"
+      - ".github/workflows/hercules-signup-freshness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  signup-freshness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Verify signup freshness plus existing release security invariants
+        run: |
+          node --test tests/hercules-launch-signup-freshness.test.mjs tests/hercules-public-registration-gate.test.mjs tests/hercules-explicit-public-release-gate.test.mjs
+      - name: Verify owner-code contract
+        run: node scripts/verify-owner-code-only.mjs
