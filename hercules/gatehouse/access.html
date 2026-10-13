@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#091223">
+<title>SauceApproved Gatehouse | Customer Access</title>
+<meta name="description" content="SauceApproved Gatehouse secure customer account access — pre-launch preview.">
+<link rel="stylesheet" href="/access.css"></head><body>
+<div class="a-wrap">
+<header class="a-header"><a href="/portal" class="a-logo-type">SAUCE APPROVED <span>/ GATEHOUSE</span></a><a href="/portal" class="a-back">← Customer portal</a></header>
+<main class="a-card">
+<div class="a-art"><img src="https://cdn.shopify.com/s/files/1/1000/0272/6208/files/sauceapproved-original-boy-in-cup-gatehouse.png?v=1791900742" alt="Original SauceApproved logo: boy in the blue SA cap inside a gold-dripping cup with Sauce Approved lettering" width="1024" height="1536"></div>
+<div class="a-content"><div class="a-kicker">SAUCEAPPROVED CUSTOMER ACCESS</div><h1>Your Gatehouse.<br><em>Your evidence.</em></h1>
+<p class="a-lead">Secure email-code sign-in is being prepared for existing customer accounts. No extra account provider or new payment account is required.</p>
+<div class="a-hold" id="auth-banner" role="status">Enrollment is not open yet. No email will be sent while the access gate is closed.</div>
+<form id="email-code-form" autocomplete="on">
+<label for="customer-email">Email address</label>
+<input type="email" id="customer-email" name="email" placeholder="you@business.com" autocomplete="email" maxlength="254" required disabled>
+<button type="submit" id="send-email-code" disabled>Send secure sign-in code</button>
+</form>
+<form id="verify-code-form" autocomplete="off">
+<label for="customer-code">Email verification code</label>
+<input id="customer-code" name="code" inputmode="numeric" pattern="[0-9]{6,8}" maxlength="8" placeholder="Six-digit code" required disabled>
+<button type="submit" id="verify-email-code" disabled>Verify sign-in</button>
+</form>
+<p id="auth-message" class="a-message" aria-live="polite">Customer login is not yet enabled. Nothing is transmitted or stored by this page while disabled.</p>
+<button class="a-logout" type="button" id="customer-logout" hidden>Sign out securely</button>
+<div class="a-footnote"><strong>Privacy by design.</strong> Sign-in credentials are not stored in the browser's local storage or placed in URLs. Site verification, paid reports, subscriptions and customer onboarding will remain closed until separately approved and tested.</div>
+<a class="a-sample" href="/commercial/report-preview">See the example diagnostic →</a>
+</div></main>
+<footer>© SauceApproved enterprise LLC · Gatehouse authentication preview · No sales or customer data collection while gated.</footer>
+</div><script type="module" src="/access.mjs"></script></body></html>
