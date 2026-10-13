@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 19,
+  "version": 20,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -251,6 +251,14 @@
       "kind": "external-infrastructure-adapter",
       "dependencies": [
         "python"
+      ]
+    },
+    {
+      "path": "hercules-deploy/cloud/host-engine-cli.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "docker",
+        "nodejs"
       ]
     }
   ],
