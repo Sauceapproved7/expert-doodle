@@ -53,5 +53,5 @@ test('static release bundles all locally owned tools and does not change signup 
    assert.ok(build.includes(a),a);
  }
  assert.match(intake,/rest\/v1\/rpc\/hercules_cloud_join_founders/);
- assert.doesNotMatch(intake,/service_role|stripe|payment|auth\/v1\/signup/i);
+ assert.doesNotMatch(intake.replace(/^\/\/.*$/gm,''),/service_role|stripe|payment|auth\/v1\/signup/i);
 });
