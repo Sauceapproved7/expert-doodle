@@ -37,3 +37,11 @@ A review-required path does not mean the file is prohibited, only that it crosse
 All Doctor source and tests are original SauceApproved JavaScript authored with AI assistance, without new dependencies or copied code. The Doctor reads only local file metadata and command-line arguments. It has no shell, network, API client, secret access, telemetry, or write capabilities.
 
 Only the existing canonical repository governance, tests, reviews, owner approvals, and independently verified provider state govern merging or launching changes. A draft PR is not a deployment. Updating the Doctor cannot itself register a Codex environment: that is a separately managed platform connection.
+
+## Hardened change-path advisory (October 13, 2026)
+
+The Doctor now conservatively marks changes to Hercules agent instructions, CI configuration, build manifests, verification scripts, runtime/model/authentication code, and hosting/provider infrastructure as **review_required**, not **isolated**. Added coverage includes `.agents/`, `.github/`, `scripts/`, `hercules-runtime/`, `hercules-models/`, `render/`, `infra/`, `shopify/` and other high-impact paths.
+
+Its cross-platform path validation rejects ambiguous aliases before classification: drive-relative/alternate-data-stream colons, encoded octets, home-prefixed forms, Git internals, Windows reserved device filenames, trailing dots or spaces, and bidirectional control characters. Additional private-key formats are flagged for review without reading their contents.
+
+This remains an **advisory with no authorization capability**. Ordinary documentation/test files remain eligible for an isolated classification; a review_required label calls for inspection, not automatic denial. The result does not grant merge authority or imply that Codex Cloud has been published. Three new regression tests cover the protected boundaries, hostile path spellings, and unchanged ordinary-file behavior.

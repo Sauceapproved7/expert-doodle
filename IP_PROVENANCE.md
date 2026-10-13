@@ -1,3 +1,9 @@
+## Codex Doctor cross-platform path and high-impact-file hardening — October 13, 2026
+
+- Original first-party AI-assisted Hercules changes to `hercules-runtime/codex-readiness.mjs`, `tests/hercules-codex-doctor.test.mjs`, and the existing Doctor documentation. Node built-ins only; no dependencies, third-party code, model weights, downloaded binaries or secrets.
+- Tested with RED-before-GREEN path-classification regressions. Adds conservative agent/config/runtime/infrastructure review advisories, rejects ambiguous path aliases, and flags additional private-key filename extensions without opening files.
+- This tool is read-only, offline and advisory. No production permission, checkout change, deployment, Codex Cloud account publication, authentication, billing or credential access is added.
+
 ## Hercules Codex repository operator skill — October 13, 2026
 
 - Original first-party AI-assisted SauceApproved agent instructions: `.agents/skills/hercules-codex-operator/SKILL.md`, verified by `tests/hercules-codex-operator-skill.test.mjs` in the existing implementation enforcement CI.

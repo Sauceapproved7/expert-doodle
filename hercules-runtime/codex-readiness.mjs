@@ -12,29 +12,42 @@ export const REQUIRED_PATHS = Object.freeze([
   'tests/hercules-implementation-enforcement.test.mjs',
 ]);
 
+// Advisory coverage for build inputs, agent instructions, infrastructure and authority code.
+// This is not a substitute for repository governance or merge review.
 const GUARDED_PREFIXES = Object.freeze([
-  '.github/workflows/',
-  'governance/',
-  'deploy/',
-  'supabase/',
-  'hercules-bank/',
-  'hercules-hurc/',
-  'hercules-authority/',
-  'staging-plane/',
+  '.agents/', '.devcontainer/', '.github/', '.vscode/',
+  'governance/', 'deploy/', 'infra/', 'netlify/', 'render/', 'shopify/',
+  'supabase/', 'scripts/', 'hercules-runtime/', 'hercules-models/',
+  'hercules-identity/', 'hercules-deploy/', 'hercules-service-agent/',
+  'hercules-browser-gateway-v2/', 'hercules-ai/', 'hercules-vault/',
+  'hercules-bank/', 'hercules-hurc/', 'hercules-authority/', 'staging-plane/',
 ]);
-const GUARDED_EXACT = new Set(['agents.md', 'contributing.md', 'ip_provenance.md', 'security.md']);
+const GUARDED_EXACT = new Set([
+  'agents.md', 'contributing.md', 'ip_provenance.md', 'security.md',
+  '.mcp.json', '.gitignore', '.gitattributes', '.gitmodules',
+  'dockerfile', 'containerfile', 'makefile', 'justfile',
+  'package.json', 'package-lock.json', 'pnpm-lock.yaml', 'yarn.lock',
+  'bun.lock', 'bun.lockb', 'compose.yaml', 'compose.yml',
+  'docker-compose.yaml', 'docker-compose.yml',
+]);
+const WINDOWS_DEVICE = /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/u;
 
 function classifyPath(value) {
-  if (typeof value !== 'string' || value.length === 0 || value.length > 512 || /[\u0000-\u001f\u007f]/u.test(value)) {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 512 || /[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/u.test(value)) {
     return { path: typeof value === 'string' ? value : null, risk: 'blocked', reason: 'invalid_path' };
   }
   const path = value.replaceAll('\\', '/');
-  if (path.startsWith('/') || /^[a-z]:\//iu.test(path) || path.split('/').some((part) => part === '..' || part === '.' || part.length === 0)) {
-    return { path, risk: 'blocked', reason: 'non_relative_or_traversing_path' };
-  }
   const normalized = path.toLowerCase();
   const components = normalized.split('/');
-  if (components.some((part) => part === '.env' || part.startsWith('.env.') || /\.(?:pem|key|p12)$/u.test(part))) {
+  // Reject aliases that may be interpreted differently by Git, shells and Windows.
+  if (path.startsWith('/') || path.includes(':') || path === '~' || path.startsWith('~/')
+      || /%[0-9a-f]{2}/iu.test(path)
+      || components.some((part) => part === '..' || part === '.' || part.length === 0
+        || part === '.git' || part.endsWith('.') || part.endsWith(' ')
+        || WINDOWS_DEVICE.test(part))) {
+    return { path, risk: 'blocked', reason: 'non_relative_or_traversing_path' };
+  }
+  if (components.some((part) => part === '.env' || part.startsWith('.env.') || /\.(?:pem|key|p12|pfx|p8|pkcs12|jks|keystore|age)$/u.test(part))) {
     return { path, risk: 'review_required', reason: 'sensitive_or_secret_material' };
   }
   if (GUARDED_EXACT.has(normalized) || GUARDED_PREFIXES.some((prefix) => normalized.startsWith(prefix))) {
