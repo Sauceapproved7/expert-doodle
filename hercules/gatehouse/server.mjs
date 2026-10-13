@@ -5,6 +5,7 @@ import {createHmac,timingSafeEqual} from "node:crypto";
 import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
 import {CATALOG,buildDemoReport} from "./commerce.mjs";
+import {customerAccessBridge} from "./customer-bridge.mjs";
 import {assessFulfillment,makeSampleReport,renderPrintableSample} from "./fulfillment.mjs";
 import {assessLaunch,sentinelAlerts,revenueRadar,recoveryPlan,simulateCheckout,
  newEvidenceLedger,appendEvidence,verifyEvidenceLedger,timeMachine,validateTarget} from "./core.mjs";
@@ -65,6 +66,11 @@ export function createServer(config={}){
  const fetcher=config.fetcher??fetch;
  const probeUrls=config.probeUrls??defaultProbes;
  const targets=probeUrls.filter(p=>{try{return stableServices.includes(p.name)&&Boolean(validateTarget(p.url))}catch{return false}});
+ const customerBridge=customerAccessBridge({
+  enabled:config.customerEnabled??(process.env.GATEHOUSE_CUSTOMER_INTAKE_APPROVED==="true"),
+  publishableKey:config.customerPublishableKey??process.env.GATEHOUSE_SUPABASE_PUBLISHABLE_KEY??"",
+  fetcher:config.customerFetcher??fetch
+ });
  let publicCache=null,publicCacheTime=0,publicInFlight=null;
  const historyLimit=120;
  let historyDropped=false;
@@ -117,6 +123,17 @@ export function createServer(config={}){
   if(method==="GET"&&path==="/health")
    return send(res,200,{service:"hercules-gatehouse",status:"running",mode:"isolated-read-only",
     credentialsConfigured:Boolean(token),productionAuthorized:false});
+  if(path==="/api/customer/sites"){
+   if(method!=="GET"&&method!=="POST")return send(res,405,{error:"Method not allowed"});
+   if(method==="POST"){
+    if(req.headers["content-type"]?.split(";")[0]!=="application/json")return send(res,415,{error:"JSON required"});
+    let data;try{data=await parseBody(req)}catch{return send(res,400,{error:"Invalid JSON"})}
+    const reply=await customerBridge.handle({headers:req.headers,body:data},"create");
+    return send(res,reply.status,reply.body);
+   }
+   const reply=await customerBridge.handle({headers:req.headers},"list");
+   return send(res,reply.status,reply.body);
+  }
   if(path==="/api/commercial/fulfillment-readiness"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
    return send(res,200,assessFulfillment());
