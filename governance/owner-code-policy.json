@@ -1,6 +1,6 @@
 {
   "schema": "sauceapproved.hercules.owner-code-policy",
-  "version": 19,
+  "version": 20,
   "declaredRightsHolder": "Sauceapproved7",
   "canonicalRepository": "Sauceapproved7/expert-doodle",
   "runtimeRoots": [
@@ -252,6 +252,13 @@
       "dependencies": [
         "python"
       ]
+    },
+    {
+      "path": "scripts/hercules-independent-review.mjs",
+      "kind": "external-infrastructure-adapter",
+      "dependencies": [
+        "git"
+      ]
     }
   ],
   "shellCommandBoundaries": [
@@ -401,6 +408,12 @@
       "id": "devcontainer-cli",
       "name": "Microsoft Dev Containers CLI used only for CI image validation",
       "ownership": "third-party-ci-infrastructure",
+      "packagedAsHerculesCode": false
+    },
+    {
+      "id": "git",
+      "name": "Git CLI for read-only bounded local diff evidence",
+      "ownership": "third-party-development-infrastructure",
       "packagedAsHerculesCode": false
     }
   ]
