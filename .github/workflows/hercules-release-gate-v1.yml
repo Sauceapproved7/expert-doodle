@@ -6,6 +6,8 @@ on:
       - "governance/hercules-release-gate-v1.json"
       - "scripts/hercules-release-gate.mjs"
       - "scripts/hercules-public-launch-admission.mjs"
+      - "scripts/hercules-launch-gate-live-observer.mjs"
+      - "tests/hercules-launch-gate-live-observer.test.mjs"
       - "tests/hercules-public-launch-admission.test.mjs"
       - "tests/hercules-release-gate-v1.test.mjs"
       - "docs/HERCULES-RELEASE-GATE-V1.md"
@@ -33,7 +35,7 @@ jobs:
       - name: Verify release gate policy
         run: node scripts/hercules-release-gate.mjs --verify-policy
       - name: Test fail-closed release gate contract and public admission
-        run: node --test tests/hercules-release-gate-v1.test.mjs tests/hercules-public-launch-admission.test.mjs
+        run: node --test tests/hercules-release-gate-v1.test.mjs tests/hercules-public-launch-admission.test.mjs tests/hercules-launch-gate-live-observer.test.mjs
 
   public-launch-admission:
     if: startsWith(github.ref, 'refs/tags/hercules-public-v')
@@ -44,6 +46,8 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 2
+      - name: Verify live Hercules launch-gate freshness
+        run: node scripts/hercules-launch-gate-live-observer.mjs
       - name: Verify evidence-only release commit and source-bound readiness
         shell: bash
         run: |
