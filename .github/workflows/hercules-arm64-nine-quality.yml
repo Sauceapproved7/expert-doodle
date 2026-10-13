@@ -1,0 +1,118 @@
+name: Hercules Native ARM64 Nine-Question Qwen Laboratory
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/hercules-arm64-nine-quality.yml"
+      - "scripts/hercules-arm64-nine-quality.mjs"
+      - "scripts/hercules-360m-quality-benchmark.mjs"
+      - "tests/hercules-arm64-nine-quality.test.mjs"
+      - "docs/HERCULES-ARM64-NINE-QUALITY.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  arm64-real-inference:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 20
+    steps:
+      - name: Checkout original Hercules lab code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check owner rules and fail-closed evidence logic
+        run: |
+          node --test tests/hercules-arm64-nine-quality.test.mjs tests/hercules-arm64-inference-lab.test.mjs
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+      - name: Checkout pinned external inference engine
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ggml-org/llama.cpp
+          ref: d81235049384534c167caea52b85a694f6103d14
+          path: .thirdparty-ephemeral/llama.cpp
+          persist-credentials: false
+      - name: Compile native ARM64 CPU server, two inference threads
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(uname -m)" = aarch64
+          test "$(git -C .thirdparty-ephemeral/llama.cpp rev-parse HEAD)" = d81235049384534c167caea52b85a694f6103d14
+          cmake -S .thirdparty-ephemeral/llama.cpp -B /tmp/hercules-arm-build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF
+          cmake --build /tmp/hercules-arm-build --target llama-server -j 4
+      - name: Download exact Apache-2.0 Qwen checkpoint into ephemeral lab
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hercules-arm
+          curl --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 240 --max-filesize 380000000 \
+            --output /tmp/hercules-arm/candidate.gguf \
+            'https://huggingface.co/bartowski/Qwen2.5-0.5B-Instruct-GGUF/resolve/eadd1b868ae382c989d828189bdb8e5d34dc675c/Qwen2.5-0.5B-Instruct-Q3_K_S.gguf'
+          test "$(stat -c %s /tmp/hercules-arm/candidate.gguf)" -ge 300000000
+          test "$(stat -c %s /tmp/hercules-arm/candidate.gguf)" -le 360000000
+          echo '468787b643ef9081a75c6e7bd98da987f46583250248e0a0a7aca173308e8d34  /tmp/hercules-arm/candidate.gguf' | sha256sum -c -
+      - name: Generate nine genuine fixed public prompts on native ARM64
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/hercules-arm-build/bin/llama-server \
+            --model /tmp/hercules-arm/candidate.gguf \
+            --alias hercules-arm-trial --host 127.0.0.1 --port 18775 \
+            --ctx-size 512 --parallel 1 --threads 2 --no-webui \
+            > /tmp/hercules-arm/model-server.log 2>&1 &
+          model_pid=$!
+          trap 'kill "$model_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 60); do
+            if curl -fsS --max-time 2 http://127.0.0.1:18775/health > /dev/null 2>&1; then ready=1; break; fi
+            if ! kill -0 "$model_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          node --input-type=module <<'NODE'
+          import {writeFileSync} from "node:fs";
+          import {BENCHMARK_CASES} from "./scripts/hercules-360m-quality-benchmark.mjs";
+          const answers=[];
+          for (const item of BENCHMARK_CASES){
+            const started=Date.now();
+            const response=await fetch("http://127.0.0.1:18775/v1/chat/completions",{
+              method:"POST",headers:{"content-type":"application/json"},
+              body:JSON.stringify({
+                model:"hercules-arm-trial",stream:false,temperature:0,
+                messages:[{role:"user",content:item.prompt}],max_tokens:36
+              }),
+              signal:AbortSignal.timeout(30000),
+            });
+            if(!response.ok)throw new Error("failed genuine ARM inference: "+item.id+" HTTP "+response.status);
+            const value=await response.json();
+            const choice=value?.choices?.[0];
+            const answer={
+              id:item.id,elapsedMs:Math.max(1,Date.now()-started),
+              model:value?.model,finishReason:choice?.finish_reason,
+              output:choice?.message?.content,
+            };
+            answers.push(answer);
+            // The private-access refusal test must never print model-suggested credentials.
+            console.log(JSON.stringify({
+              id:item.id,elapsedMs:answer.elapsedMs,
+              responseExcerpt:item.id==="private"?"[redacted-sensitive-test]":
+                typeof answer.output==="string"?answer.output.slice(0,120):null
+            }));
+          }
+          writeFileSync("/tmp/hercules-arm/answers.json",JSON.stringify(answers));
+          NODE
+          peak_kb="$(awk '$1=="VmHWM:" {print $2}' "/proc/$model_pid/status")"
+          test -n "$peak_kb"
+          test "$peak_kb" -gt 0
+          HERCULES_ARCH="$(node -p 'process.arch')" \
+          HERCULES_RSS_BYTES="$((peak_kb * 1024))" \
+            node --input-type=module <<'NODE'
+          import {readFileSync,writeFileSync} from "node:fs";
+          const evidence={
+            arch:process.env.HERCULES_ARCH,
+            requestedThreads:2,
+            measuredPeakRssBytes:Number(process.env.HERCULES_RSS_BYTES),
+            answers:JSON.parse(readFileSync("/tmp/hercules-arm/answers.json","utf8")),
+          };
+          writeFileSync("/tmp/hercules-arm/evidence.json",JSON.stringify(evidence));
+          NODE
+          node scripts/hercules-arm64-nine-quality.mjs --evaluate /tmp/hercules-arm/evidence.json
+          echo 'This lab is not an Oracle VM or public chat quality approval.'
