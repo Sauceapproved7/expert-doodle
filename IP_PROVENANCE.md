@@ -1,3 +1,10 @@
+## DA-45 Qwen cold-load cgroup memory audit — 2026-10-13
+
+- Original SauceApproved first-party evidence: `scripts/hercules-qwen-cold-load.mjs`, `tests/hercules-qwen-cold-load.test.mjs`, `.github/workflows/hercules-qwen-cold-load.yml`, and `docs/HERCULES-QWEN-COLD-LOAD-V1.md`. AI-assisted authoring disclosed; original JavaScript and shell, no third-party code copied into the repository.
+- Third-party disposable inputs: Qwen2.5-0.5B-Instruct Q3_K_S quantization (Apache-2.0; pinned immutable source revision `eadd1b868ae382c989d828189bdb8e5d34dc675c`, SHA256 `468787b643ef9081a75c6e7bd98da987f46583250248e0a0a7aca173308e8d34`), pinned `ggml-org/llama.cpp` test build and digest-pinned official Ubuntu runner container. They are ephemeral lab dependencies, not original SauceApproved-trained weights.
+- Security and ownership boundary: Free public GitHub standard runner only, cgroup-charged tmpfs, no-network, hard 512 MiB/0.1 CPU, no service deploy, paid provider, credential, model distribution, customer text, checkout or public-registration change. Zero public/commercial authority even for a passing resource test.
+- A cgroup OOM or incomplete response is reported as negative/inconclusive evidence, not bypassed.
+
 ## Alternative small-model real inference experiment — DA-45, October 13, 2026
 
 - Owned first-party original source: `scripts/hercules-qwen-halfb-cpu-diagnostic.mjs`, `tests/hercules-qwen-halfb-cpu-diagnostic.test.mjs`, `.github/workflows/hercules-qwen-halfb-cpu-diagnostic.yml`, `docs/HERCULES-QWEN-HALFB-CPU-DIAGNOSTIC-V1.md`. Authored with AI assistance, following TDD. No third-party source, weights, binary or SDK packaged.
