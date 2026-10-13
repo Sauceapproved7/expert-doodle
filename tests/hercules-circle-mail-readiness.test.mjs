@@ -57,3 +57,18 @@ test('no sender credentials or private DNS TXT record text disclosed in output',
  assert.ok(!report.includes('private@example.com'));
  assert.equal(JSON.parse(report).readyToSendConfirmation,false);
 });
+
+
+test('authoritative DNS no-data responses count as confirmed absence, not network outage',async()=>{
+ const emptyErr=Object.assign(new Error('no DNS records'),{code:'ENODATA'});
+ const noData={
+  async resolveMx(){throw emptyErr},
+  async resolveTxt(){throw emptyErr}
+ };
+ const state=await inspectCircleMailDomain({resolver:noData});
+ assert.equal(state.mxPresent,false);
+ assert.equal(state.spfPresent,false);
+ assert.equal(state.dmarcPresent,false);
+ assert.equal(state.observationsComplete,true);
+ assert.equal(state.readyToSendConfirmation,false);
+});
