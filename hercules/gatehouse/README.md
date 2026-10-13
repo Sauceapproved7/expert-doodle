@@ -122,3 +122,15 @@ The Edge Function uses a server-only service key to access only newly prefixed G
 **Launch boundary:** Backend intake is not yet a public registration/login UI, domain ownership proof, paid-order attestation or successful report delivery. The $49 Shopify product stays DRAFT. Verified customer signup, encrypted/session-secure end-user UI, consent policy approval, actual DNS-pinned challenge verification, trusted Shopify paid-order readback and a proven private report-delivery route remain prerequisites to take real money.
 
 **Operational sequencing:** Validate exact GitHub CI, apply only the additive table migration, deploy the separate Edge Function with `verify_jwt=true`, then verify owner JWT denial and authorized requests. No existing public Gatehouse page should request this function without an authenticated owner/customer session.
+
+## Free-hosting fallback for customer intake — Render + Supabase Auth/RLS
+
+**Provider limit encountered:** Supabase rejected a *new* Edge Function on this project with `Max number of functions reached for project, please upgrade Plan or disable spend cap`. We did **not** upgrade, remove other functions, change billing, or touch their behavior.
+
+Instead, the existing isolated **free Render Gatehouse** HTTP listener can host `GET/POST /api/customer/sites` with the first-party `customer-bridge.mjs`. The bridge validates a supplied signed-in Supabase JWT against a fixed existing Supabase Auth endpoint. All insert/list requests use the public **publishable key**, that user's JWT, the fixed existing project URL, and PostgREST RLS. It does not use a service-role credential, accept client-supplied owner IDs, expose private reports, follow network redirects, or query unrelated Hercules tables.
+
+The separate additive `supabase/gatehouse_customer_direct_rls.sql` grants **only SELECT and INSERT** on `gatehouse_customer_sites` to authenticated users after a strict `owner_user_id = auth.uid()` RLS insert policy, with one-site-per-user index and current consent timestamp/version checks. Reports remain ungranted and permanently withheld. No arbitrary scans, checkout, transaction ingestion, email delivery, subscription billing, or public direct payments are enabled.
+
+**Default HOLD remains:** The Render route returns 503 unless `GATEHOUSE_CUSTOMER_INTAKE_APPROVED=true` and `GATEHOUSE_SUPABASE_PUBLISHABLE_KEY` is configured. The public key is non-secret but should be injected as Render environment configuration, not hardcoded into the repository. **Do not enable enrollment** until appropriate website/privacy policies, rate limits and customer authentication UX are reviewed. A successful authenticated site submission is still only self-attested consent; actual domain control, payment and delivery are *not* verified.
+
+This route is a cost-avoiding fallback, not a bypass of the user's launch or payment gates.
