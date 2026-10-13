@@ -29,6 +29,8 @@ jobs:
           node-version: "22"
       - name: Test owner-controlled Hercules Cloud preflight and interface
         run: node --test tests/hercules-cloud-control-plane.test.mjs tests/hercules-cloud-original-ui.test.mjs tests/hercules-cloud-circle.test.mjs tests/hercules-cloud-founders.test.mjs
+      - name: Test live Founding Circle rejection without creating leads
+        run: node --test tests/hercules-cloud-founders-public-negative.test.mjs
       - name: Validate script syntax
         run: |
           node --check hercules-deploy/cloud/server.mjs
