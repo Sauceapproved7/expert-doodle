@@ -88,5 +88,8 @@ test("workflow enforces Docker CPU quota, 512MiB memory, no network and time lim
     "270590880"
   ]) assert.ok(yaml.includes(term),"missing isolation guard "+term);
   assert.match(yaml,/permissions:\s*\n\s*contents: read/);
+  assert.match(yaml,/POST \/v1\/chat\/completions/);
+  assert.match(yaml,/HERCULES_MODEL_REPLY_BASE64/);
+  assert.doesNotMatch(yaml,/llama-cli|HERCULES_GENERATED_BASE64/);
   assert.doesNotMatch(yaml,/OPENAI_API_KEY|HF_TOKEN|RENDER_API_KEY|railway\.app\/graphql|supabase\.co\/functions/);
 });
