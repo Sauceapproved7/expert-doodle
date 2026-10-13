@@ -66,13 +66,23 @@ jobs:
           for i in $(seq 1 135); do
             result="$(sudo systemctl show "$unit_name" -p Result --value)"
             restart_count="$(sudo systemctl show "$unit_name" -p NRestarts --value)"
+            state="$(sudo systemctl show "$unit_name" -p ActiveState --value)"
+            substate="$(sudo systemctl show "$unit_name" -p SubState --value)"
+            if (( i % 10 == 1 )); then
+              echo "systemd_recovery_observation: state=$state substate=$substate result=$result restarts=$restart_count"
+            fi
             if [[ "$result" = "start-limit-hit" ]]; then
               verified=1
               break
             fi
             sleep 1
           done
-          test "$verified" = 1
+          if test "$verified" != 1; then
+            echo "systemd_recovery_unverified: native manager never reported start-limit-hit."
+            sudo systemctl show "$unit_name" -p Result -p ActiveState -p SubState -p NRestarts -p StartLimitBurst -p StartLimitIntervalUSec --no-pager
+            sudo journalctl -u "$unit_name" -n 20 --no-pager --output=short || true
+            exit 1
+          fi
           [[ "$restart_count" =~ ^[0-9]+$ ]]
           test "$restart_count" -ge 2
           test "$restart_count" -le 3
