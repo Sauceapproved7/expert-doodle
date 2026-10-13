@@ -39,7 +39,7 @@ test('early tester request is private and unverified until separately proven',()
  assert.match(sql,/create policy hercules_circle_early_request_insert/i);
  assert.match(sql,/create or replace function private\.hercules_circle_early_guard/i);
  assert.match(sql,/security definer/i);
- assert.match(sql,/revoke all on function private\.hercules_circle_early_guard\(\) from public,anon,authenticated/i);
+ assert.match(sql,/revoke all on function private\.hercules_circle_early_guard\(\)\s+from public,anon,authenticated/i);
  assert.match(sql,/security invoker/i);
  assert.match(sql,/create or replace function public\.hercules_circle_request_early/i);
  assert.match(sql,/pg_try_advisory_xact_lock/i);
