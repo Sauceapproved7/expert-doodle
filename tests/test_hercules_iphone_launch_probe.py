@@ -85,5 +85,33 @@ class IphoneLaunchProbeTests(unittest.TestCase):
             self.assertNotIn("?", path)
 
 
+    def test_warmup_runs_once_before_all_fixed_public_checks(self):
+        events = []
+        inventory = responses()
+        def wake():
+            events.append("wakeup")
+        def fetch(path):
+            events.append(path)
+            return inventory[path]
+        result = probe.run_probe(fetch, wake=wake)
+        self.assertTrue(result["network_surface_ready"])
+        self.assertEqual(events, ["wakeup", *probe.PATHS])
+        self.assertFalse(result["marketing_authorized"])
+
+    def test_warmup_timeout_cannot_hide_missing_model(self):
+        inventory = responses(model_count=0)
+        def wake():
+            raise TimeoutError("backend warmup failed")
+        result = probe.run_probe(lambda path: inventory[path], wake=wake)
+        self.assertFalse(result["network_surface_ready"])
+        self.assertIn("no_eligible_model", [check["reason"] for check in result["checks"]])
+
+    def test_extended_warmup_uses_pinned_health_only_without_redirect(self):
+        with patch.object(probe, "public_get", return_value=responses()["/health"]) as get:
+            probe.public_warmup()
+        get.assert_called_once_with("/health", timeout=probe.WARMUP_TIMEOUT_SECONDS)
+        self.assertGreater(probe.WARMUP_TIMEOUT_SECONDS, probe.TIMEOUT_SECONDS)
+        self.assertLessEqual(probe.WARMUP_TIMEOUT_SECONDS, 75)
+
 if __name__ == "__main__":
     unittest.main()
