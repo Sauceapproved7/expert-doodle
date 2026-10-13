@@ -103,3 +103,56 @@ test("logout clears cookie with secure attributes without ever querying provider
  assert.match(r.setCookie,/Max-Age=0/);
  assert.match(r.setCookie,/HttpOnly; Secure; SameSite=Strict/);
 });
+
+
+test("rotating email addresses cannot generate unbounded code sends in one window",async()=>{
+ let now=1000000,requests=0;
+ const a=auth({now:()=>now,fetcher:async url=>{
+  requests++;
+  assert.match(url,/\/auth\/v1\/otp$/);
+  return {ok:true,status:200,json:async()=>({})};
+ }});
+ for(let i=0;i<20;i++){
+  const r=await a.handle({action:"request-code",method:"POST",headers:baseHeaders,
+   body:{email:"recipient"+i+"@example.com"},remoteAddress:"198.51.100.100"});
+  assert.equal(r.status,200);
+ }
+ const blocked=await a.handle({action:"request-code",method:"POST",headers:baseHeaders,
+  body:{email:"recipient20@example.com"},remoteAddress:"203.0.113.200"});
+ assert.equal(blocked.status,429);
+ assert.equal(blocked.body.error,"request-too-frequent");
+ assert.equal(requests,20);
+ now+=60000;
+ const allowed=await a.handle({action:"request-code",method:"POST",headers:baseHeaders,
+  body:{email:"recipient21@example.com"},remoteAddress:"203.0.113.200"});
+ assert.equal(allowed.status,200);
+ assert.equal(requests,21);
+});
+test("rotating verification identities cannot trigger unbounded upstream code checks",async()=>{
+ let requests=0;
+ const a=auth({fetcher:async url=>{
+  assert.match(url,/\/auth\/v1\/verify$/);
+  requests++;return {ok:false,status:403,json:async()=>({})};
+ }});
+ for(let i=0;i<60;i++){
+  const r=await a.handle({action:"verify-code",method:"POST",headers:baseHeaders,
+   body:{email:"verify"+i+"@example.com",code:"123456"},remoteAddress:"198.51.100."+String((i%20)+1)});
+  assert.equal(r.status,401);
+ }
+ const blocked=await a.handle({action:"verify-code",method:"POST",headers:baseHeaders,
+  body:{email:"verify60@example.com",code:"123456"},remoteAddress:"203.0.113.1"});
+ assert.equal(blocked.status,429);
+ assert.equal(blocked.body.error,"too-many-verification-attempts");
+ assert.equal(requests,60);
+});
+test("disabled customer auth never consumes an upstream rate budget",async()=>{
+ let calls=0;
+ const a=createCustomerAuthenticator({enabled:false,publishableKey:key,fetcher:async()=>{calls++;throw Error("unreachable")}});
+ for(let i=0;i<30;i++){
+  const r=await a.handle({action:"request-code",method:"POST",headers:baseHeaders,
+   body:{email:"disabled"+i+"@example.com"}});
+  assert.equal(r.status,503);
+  assert.equal(r.body.error,"customer-auth-not-open");
+ }
+ assert.equal(calls,0);
+});
