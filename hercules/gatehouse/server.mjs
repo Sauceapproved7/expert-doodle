@@ -5,6 +5,7 @@ import {createHmac,timingSafeEqual} from "node:crypto";
 import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
 import {CATALOG,buildDemoReport} from "./commerce.mjs";
+import {assessFulfillment,makeSampleReport,renderPrintableSample} from "./fulfillment.mjs";
 import {assessLaunch,sentinelAlerts,revenueRadar,recoveryPlan,simulateCheckout,
  newEvidenceLedger,appendEvidence,verifyEvidenceLedger,timeMachine,validateTarget} from "./core.mjs";
 
@@ -15,7 +16,8 @@ const files={"/":{name:"index.html",type:"text/html; charset=utf-8"},
  "/local-archive.mjs":{name:"local-archive.mjs",type:"text/javascript; charset=utf-8"},
  "/device-vault.mjs":{name:"device-vault.mjs",type:"text/javascript; charset=utf-8"},
  "/styles.css":{name:"styles.css",type:"text/css; charset=utf-8"},
- "/commercial.css":{name:"commercial.css",type:"text/css; charset=utf-8"}};
+ "/commercial.css":{name:"commercial.css",type:"text/css; charset=utf-8"},
+ "/report.css":{name:"report.css",type:"text/css; charset=utf-8"}};
 const stableServices=["Shopify","Stripe","Render","Supabase","GitHub","DNS","Hercules MCP","Studio","Smallz","Domain Guard"];
 const defaultProbes=[
  {name:"Hercules MCP",url:"https://hercules-mcp.onrender.com/health"},
@@ -115,6 +117,17 @@ export function createServer(config={}){
   if(method==="GET"&&path==="/health")
    return send(res,200,{service:"hercules-gatehouse",status:"running",mode:"isolated-read-only",
     credentialsConfigured:Boolean(token),productionAuthorized:false});
+  if(path==="/api/commercial/fulfillment-readiness"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   return send(res,200,assessFulfillment());
+  }
+  if(path==="/commercial/report-preview"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   try{
+    const sample=makeSampleReport(await publicSummary());
+    return send(res,200,renderPrintableSample(sample),"text/html; charset=utf-8");
+   }catch{return send(res,503,{error:"No sample could be prepared"})}
+  }
   if(path==="/api/commercial/catalog"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
    return send(res,200,CATALOG);
