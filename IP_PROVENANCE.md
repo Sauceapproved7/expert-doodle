@@ -1,11 +1,5 @@
 # Hercules IP Provenance & Canonical Source
 
-## Independent diff triage — 2026-10-13
-
-- Paths: `scripts/hercules-independent-review.mjs`, `tests/hercules-independent-review.test.mjs`, `.github/workflows/hercules-independent-review.yml`, and `docs/HERCULES-INDEPENDENT-REVIEW.md`.
-- Origin: original Hercules static diff review implementation prepared with AI assistance and Node.js built-in modules only; no copied external source, model weights, or provider SDKs.
-- Scope: bounded read-only diff review on GitHub pull requests. No provider access, no source upload, no customer data, no production authority. Not a substitute for existing security, ownership, or approval gates.
-
 ## Shopify webhook runtime repair — 2026-10-13
 
 - Paths: Shopify webhook and bulk-reconciliation Edge Functions, runtime regression tests, reconciliation CI, and runtime repair documentation.
