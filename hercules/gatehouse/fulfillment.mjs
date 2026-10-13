@@ -4,7 +4,8 @@
  */
 const PRODUCT_ID="gid://shopify/Product/15424049283392";
 const VARIANT_ID="gid://shopify/ProductVariant/67754351460672";
-const SHOP_DOMAIN="sauceapproved-2.myshopify.com";
+// Shopify Admin-attested original myshopifyDomain; historical provider registry alias is not canonical.
+const SHOP_DOMAIN="azymhc-x0.myshopify.com";
 const KNOWN=new Set(["Hercules MCP","Studio","Smallz","Domain Guard"]);
 const CONNECTIVITY=new Set(["reachable","unreachable"]);
 export const REQUIRED_GATES=Object.freeze([
@@ -39,7 +40,7 @@ export function assessFulfillment(){
  return {service:"Hercules Gatehouse Website Health Diagnostic",status:"HOLD",
    offerPriceUSD:"49.00",shopifyProductStatus:"DRAFT",
    purchaseEnabled:false,deliveryAuthorized:false,subscriptionBillingEnabled:false,
-   actualCustomerOrdersVerified:0,
+   actualCustomerOrdersVerified:null,
    paidOrderReaderConnected:false,domainOwnershipVerified:false,
    safeCustomerProbeConnected:false,durableReportStoreConnected:false,
    customerIdentityTransportConnected:false,termsApprovedForOffer:false,

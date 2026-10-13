@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {REQUIRED_GATES,assessFulfillment,makeSampleReport,renderPrintableSample,checkOrderReadback} from "./fulfillment.mjs";
 
 const validOrder=()=>({
- orderId:"gid://shopify/Order/12345",shopDomain:"sauceapproved-2.myshopify.com",
+ orderId:"gid://shopify/Order/12345",shopDomain:"azymhc-x0.myshopify.com",
  currencyCode:"USD",totalPrice:"49.00",financialStatus:"PAID",
  cancelledAt:null,refundTotal:"0.00",fulfillmentStatus:"UNFULFILLED",
  lineItems:[{productId:"gid://shopify/Product/15424049283392",
@@ -15,7 +15,7 @@ test("commerce defaults permanently to HOLD when no authorized delivery adapters
  assert.equal(s.purchaseEnabled,false);
  assert.equal(s.deliveryAuthorized,false);
  assert.equal(s.subscriptionBillingEnabled,false);
- assert.equal(s.actualCustomerOrdersVerified,0);
+ assert.equal(s.actualCustomerOrdersVerified,null);
  assert.equal(s.missing.length,REQUIRED_GATES.length);
 });
 test("verified-looking flags supplied as data cannot unlock a real sale or delivery",()=>{
@@ -39,6 +39,7 @@ test("wrong currency, SKU, variant, order status, refunds, cancellation and mixe
   {currencyCode:"EUR"},{totalPrice:"50.00"},{financialStatus:"PENDING"},
   {refundTotal:"1.00"},{cancelledAt:"2026-10-13T11:00:00Z"},
   {shopDomain:"other.myshopify.com"},
+  {shopDomain:"sauceapproved-2.myshopify.com"},
   {lineItems:[{...validOrder().lineItems[0],sku:"OTHER"}]},
   {lineItems:[{...validOrder().lineItems[0],variantId:"gid://shopify/ProductVariant/1"}]},
   {lineItems:[{...validOrder().lineItems[0],quantity:2}]},
