@@ -109,6 +109,42 @@ test("wrong shop, duplicate IDs, malformed IDs, oversized pages and provider exc
  assert.equal(r.status,503);
  assert.doesNotMatch(JSON.stringify(r.body),/leak|test-only-provider-token/);
 });
+test("Shopify protected customer email denial is a distinct private HOLD, even on HTTP 200",async()=>{
+ const s=setup();
+ const denied={...page([s.order]),errors:[{
+  message:"This app is not approved to use the email field.",
+  path:["orders","edges",0,"node","email"],extensions:{code:"ACCESS_DENIED"}
+ }]};
+ const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(denied)}).run();
+ assert.equal(r.status,503);
+ assert.equal(r.body.error,"shopify-protected-customer-email-unavailable");
+ assert.equal(r.body.shopAuthenticated,false);
+ assert.equal(r.body.candidateMayBeRecorded,false);
+ assert.equal(r.body.privateRow,null);
+ assert.equal(r.body.deliveryAuthorized,false);
+ assert.equal(r.body.customerEntitlementGranted,false);
+ assert.doesNotMatch(JSON.stringify(r.body),/buyer@example|GH1-|Order\/|This app is not approved|test-only-provider-token/);
+});
+test("non-email GraphQL access denial never mislabels protected customer email approval",async()=>{
+ const s=setup();
+ const denied={...page([s.order]),errors:[{
+  message:"Access denied for orders field",path:["orders"],extensions:{code:"ACCESS_DENIED"}
+ }]};
+ const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(denied)}).run();
+ assert.equal(r.status,503);
+ assert.equal(r.body.error,"shopify-shop-attestation-unavailable");
+ assert.equal(r.body.candidateMayBeRecorded,false);
+ assert.equal(r.body.deliveryAuthorized,false);
+});
+test("redacted null email without GraphQL errors cannot match a verified buyer",async()=>{
+ const s=setup();
+ const redacted={...s.order,email:null};
+ const r=await createPrivateBuyerOrderReader({...s.input,fetcher:async()=>fake(page([redacted]))}).run();
+ assert.equal(r.status,200);
+ assert.equal(r.body.candidateMayBeRecorded,false);
+ assert.equal(r.body.privateRow,null);
+ assert.equal(r.body.deliveryAuthorized,false);
+});
 test("two distinct paid orders claiming same reference are ambiguous and cannot reserve a candidate",async()=>{
  const s=setup();
  const r=await createPrivateBuyerOrderReader({...s.input,
