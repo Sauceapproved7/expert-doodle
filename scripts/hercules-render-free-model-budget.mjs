@@ -16,7 +16,7 @@ export function evaluateFreeModelBudget(evidence){
   const maxMemory=evidence?.memoryLimitBytes;
   const peak=evidence?.peakMemoryBytes;
   const elapsed=evidence?.elapsedMs;
-  const text=evidence?.generatedText;
+  const reply=evidence?.modelReply;
   const quotaVerified=Number.isSafeInteger(cpu)&&Number.isSafeInteger(period)&&
     period>0 && cpu>0 && cpu/period===RENDER_FREE_LIMITS.cpuFraction &&
     maxMemory===RENDER_FREE_LIMITS.memoryBytes;
@@ -27,8 +27,16 @@ export function evaluateFreeModelBudget(evidence){
   const memoryHeadroomOk=measurementValid&&
     (RENDER_FREE_LIMITS.memoryBytes-peak)>=RENDER_FREE_LIMITS.memoryHeadroomBytes;
   const responseUnder15s=measurementValid&&elapsed<=RENDER_FREE_LIMITS.maxResponseMs;
-  const measuredRealText=typeof text==="string"&&text.trim().length>0&&
-    text.length<=4096;
+  // Only a structured, completed response from the exact loaded model counts.
+  // A CLI startup banner or a successful process exit is not proof of inference.
+  const choices=reply?.choices;
+  const message=Array.isArray(choices)&&choices.length===1?choices[0]?.message:null;
+  const generated=message?.content;
+  const measuredRealText=reply?.model==="hercules-trial" &&
+    Array.isArray(choices)&&choices.length===1 &&
+    choices[0]?.finish_reason==="stop" &&
+    message?.role==="assistant" &&
+    typeof generated==="string"&&generated.trim().length>0&&generated.length<=4096;
   return Object.freeze({
     quotaVerified:Boolean(quotaVerified),
     measurementValid:Boolean(measurementValid),
@@ -38,7 +46,7 @@ export function evaluateFreeModelBudget(evidence){
     responseUnder15s:Boolean(responseUnder15s),
     peakMemoryBytes:measurementValid?peak:null,
     elapsedMs:measurementValid?elapsed:null,
-    generatedTextExcerpt:measuredRealText?text.trim().slice(0,180):null,
+    generatedTextExcerpt:measuredRealText?generated.trim().slice(0,180):null,
     furtherLabEligible:Boolean(quotaVerified&&memoryWithinLimit&&
       memoryHeadroomOk&&responseUnder15s&&measuredRealText),
     comparedUsingGitHubDockerNotRender:true,
@@ -55,7 +63,7 @@ export function parseFreeModelBudgetLog(source){
   const fields=new Map();
   const required=new Set([
     "HERCULES_CPU_QUOTA","HERCULES_CPU_PERIOD","HERCULES_MEMORY_LIMIT",
-    "HERCULES_MEMORY_PEAK","HERCULES_ELAPSED_MS","HERCULES_GENERATED_BASE64"
+    "HERCULES_MEMORY_PEAK","HERCULES_ELAPSED_MS","HERCULES_MODEL_REPLY_BASE64"
   ]);
   for(const line of source.split(/\r?\n/)){
     if(!line.startsWith("HERCULES_"))continue;
@@ -72,17 +80,54 @@ export function parseFreeModelBudgetLog(source){
     if(!Number.isSafeInteger(n))throw new TypeError("invalid numeric quota evidence");
     return n;
   }
-  const encoded=fields.get("HERCULES_GENERATED_BASE64");
-  if(encoded.length>5500 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded))
-    throw new TypeError("invalid encoded generated text");
-  const generatedText=Buffer.from(encoded,"base64").toString("utf8");
+  const encoded=fields.get("HERCULES_MODEL_REPLY_BASE64");
+  if(encoded.length>55000 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(encoded))
+    throw new TypeError("invalid encoded HTTP response");
+  const raw=Buffer.from(encoded,"base64");
+  const offset=raw.indexOf("\r\n\r\n");
+  if(offset<0 || offset>4096)throw new TypeError("invalid HTTP response headers");
+  const headers=raw.subarray(0,offset).toString("latin1");
+  if(!/^HTTP\/1\.[01] 200\b/.test(headers))throw new TypeError("invalid HTTP status");
+  let body=raw.subarray(offset+4);
+  const chunked=/^transfer-encoding:\s*chunked\s*$/im.test(headers);
+  if(chunked){
+    const pieces=[];let cursor=0,total=0;
+    for(let i=0;i<128;i++){
+      const lineEnd=body.indexOf("\r\n",cursor);
+      if(lineEnd<0)throw new TypeError("invalid chunked HTTP body");
+      const sizeText=body.subarray(cursor,lineEnd).toString("ascii").split(";")[0];
+      if(!/^[0-9a-fA-F]{1,8}$/.test(sizeText))throw new TypeError("invalid HTTP chunk length");
+      const size=parseInt(sizeText,16);
+      cursor=lineEnd+2;
+      if(size===0)break;
+      if(cursor+size+2>body.length)throw new TypeError("truncated HTTP chunk");
+      pieces.push(body.subarray(cursor,cursor+size));
+      total+=size;
+      if(total>16384)throw new TypeError("oversized HTTP model reply");
+      cursor+=size;
+      if(body.toString("latin1",cursor,cursor+2)!=="\r\n")throw new TypeError("invalid HTTP chunk separator");
+      cursor+=2;
+    }
+    body=Buffer.concat(pieces);
+  }else{
+    const match=/^content-length:\s*(\d+)\s*$/im.exec(headers);
+    if(match){
+      const bytes=Number(match[1]);
+      if(!Number.isSafeInteger(bytes)||bytes!==body.length)throw new TypeError("invalid HTTP content-length");
+    }
+  }
+  if(body.length===0||body.length>16384)throw new TypeError("invalid JSON HTTP body length");
+  let modelReply;
+  try {modelReply=JSON.parse(body.toString("utf8"));}catch{throw new TypeError("invalid JSON model response")}
+  if(!modelReply||typeof modelReply!=="object"||Array.isArray(modelReply))
+    throw new TypeError("invalid model response structure");
   return Object.freeze({
     cpuQuotaMicros:int("HERCULES_CPU_QUOTA"),
     cpuPeriodMicros:int("HERCULES_CPU_PERIOD"),
     memoryLimitBytes:int("HERCULES_MEMORY_LIMIT"),
     peakMemoryBytes:int("HERCULES_MEMORY_PEAK"),
     elapsedMs:int("HERCULES_ELAPSED_MS"),
-    generatedText,
+    modelReply,
   });
 }
 
