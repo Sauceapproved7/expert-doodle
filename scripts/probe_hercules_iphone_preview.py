@@ -10,7 +10,7 @@ from urllib import error, request
 
 
 ORIGIN = "https://hercules-iphone-ui-preview.onrender.com"
-PATHS = ("/", "/manifest.webmanifest", "/service-worker.js",
+PATHS = ("/", "/manifest.json", "/service-worker.js",
          "/app-icon-192.png", "/app-icon-512.png")
 BODY_LIMIT = 1_000_000
 TIMEOUT_SECONDS = 15
@@ -66,7 +66,7 @@ def _assess(path, result):
         if "fetch(" in html or "XMLHttpRequest" in html:
             return "preview_network_surface_present"
         return "ok"
-    if path == "/manifest.webmanifest":
+    if path == "/manifest.json":
         if mime not in ("application/manifest+json", "application/json"):
             return "unexpected_content_type"
         try:
