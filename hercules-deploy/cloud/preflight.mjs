@@ -45,7 +45,7 @@ export function preflightCloudDeployment(input,{targets=[]}={}){
    readyForStaging,
    blockedReasons,
    controls,
-   costChangeUsd:costOk?0:null,
+   costChangeUsd:costOk&&isolated&&identity?0:null,
    executionAuthorized:false,
    productionAuthorized:false,
    rollbackExecuted:false,
