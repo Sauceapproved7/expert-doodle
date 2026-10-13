@@ -1,6 +1,6 @@
 -- Restrict privileged OAuth custody helpers to the existing service-role Edge caller.
 
--- Leaves Hercules signup, storefront, orders, checkout and public release switch unchanged.
+-- No other tables, function bodies or launch controls are changed.
 
 BEGIN;
 
