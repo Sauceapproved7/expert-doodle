@@ -1,3 +1,10 @@
+## Second open-weight CPU model evaluation — 2026-10-13
+
+- Owned paths: `scripts/hercules-smollm2-360m-trial.mjs`, `tests/hercules-smollm2-360m-trial.test.mjs`, `.github/workflows/hercules-smollm2-360m-trial.yml`, and `docs/HERCULES-SMOLLM2-360M-TRIAL.md`.
+- Source: first-party evaluation wrapper, read-only CI orchestration and safety tests authored with AI assistance, using the existing original Hercules real-model evaluator and Node built-ins.
+- Evaluation-only external model: `bartowski/SmolLM2-360M-Instruct-GGUF` Apache-2.0, revision `7be6f65f1db715fe5dc5a4634c0d459b4eed42ec`, file `SmolLM2-360M-Instruct-Q4_K_M.gguf` (270,590,880 bytes, SHA256 `2fa3f013dcdd7b99f9b237717fa0b12d75bbb89984cc1274be1471a465bac9c2`). Inference engine pinned to `ggml-org/llama.cpp` commit `d81235049384534c167caea52b85a694f6103d14`. These upstream binaries/model weights are not original SauceApproved intellectual property.
+- No model weights, vendor libraries, training corpora, user prompts, customer data, subscription API calls or downloaded third-party code are committed. Ephemeral public GitHub standard runner only; no production deployment and no launch approval.
+
 ## External open-weight model evaluation — 2026-10-13
 
 - Files: `scripts/hercules-real-model-trial.mjs`, `tests/hercules-real-model-trial.test.mjs`, `.github/workflows/hercules-real-model-trial.yml`, `docs/HERCULES-REAL-MODEL-TRIAL.md`.
