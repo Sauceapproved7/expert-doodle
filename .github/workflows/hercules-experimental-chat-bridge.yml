@@ -23,18 +23,28 @@ jobs:
           node --input-type=module <<'NODE'
           import {HerculesEmbeddedCoreNeuralV03} from "./hercules-models/embedded-core-neural-v0.3.mjs";
           const model=await HerculesEmbeddedCoreNeuralV03.load();
-          const input="Hercules test of simple language continuation.";
-          const out=model.infer({prompt:input,maxTokens:24},{task:"general"});
-          if(typeof out.continuation!=="string" || !Array.isArray(out.tokenIds) ||
-             out.tokenIds.length>24 || out.version!=="0.3-candidate"){
-            throw new Error("native experimental checkpoint cannot execute");
-          }
+          const prompts=[
+            "Hercules test of simple language continuation.",
+            "The canonical repository is",
+            "Hercules validates every",
+            "What is two plus two?",
+            "Hercules keeps model identity",
+          ];
+          const samples=prompts.map(prompt=>{
+            const out=model.infer({prompt,maxTokens:24},{task:"general"});
+            if(typeof out.continuation!=="string" || !Array.isArray(out.tokenIds) ||
+               out.tokenIds.length>24 || out.version!=="0.3-candidate"){
+              throw new Error("native experimental checkpoint cannot execute");
+            }
+            return {
+              prompt,observedTokenCount:out.tokenIds.length,
+              nonEmptyText:out.continuation.trim().length>0,
+              sampleText:out.continuation.slice(0,220),
+            };
+          });
           console.log(JSON.stringify({
-            candidate:"hercules-core-neural-v03",version:out.version,
-            observedTokenCount:out.tokenIds.length,
-            nonEmptyText:out.continuation.trim().length>0,
-            sampleText:out.continuation.slice(0,220),
-            chatQualityVerified:false,productionReady:false
+            candidate:"hercules-core-neural-v03",
+            samples,chatQualityVerified:false,productionReady:false
           }));
           NODE
       - name: Verify Hercules ownership, security and execution gates
