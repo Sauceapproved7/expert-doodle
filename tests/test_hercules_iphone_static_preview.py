@@ -26,10 +26,10 @@ class HerculesIphonePreviewTests(unittest.TestCase):
 
     def test_writes_independently_installable_pwa_assets(self):
         assert set(p.name for p in self.path.iterdir()) == {
-            "index.html", "manifest.webmanifest", "service-worker.js",
+            "index.html", "manifest.json", "service-worker.js",
             "app-icon-192.png", "app-icon-512.png",
         }
-        manifest = json.loads((self.path / "manifest.webmanifest").read_text())
+        manifest = json.loads((self.path / "manifest.json").read_text())
         self.assertEqual(manifest["display"], "standalone")
         self.assertEqual(manifest["start_url"], "/")
         self.assertIn("preview", manifest["name"].lower())
@@ -67,11 +67,14 @@ class HerculesIphonePreviewTests(unittest.TestCase):
     def test_service_worker_is_existing_guarded_own_source(self):
         self.assertEqual(
             (self.path / "service-worker.js").read_bytes(),
-            (self.src / "service-worker.js").read_bytes()
+            (self.src / "service-worker.js").read_bytes().replace(b"/manifest.webmanifest", b"/manifest.json")
         )
         html = (self.path / "index.html").read_text()
         self.assertIn('navigator.serviceWorker.register("/service-worker.js")', html)
+        self.assertIn('href="/manifest.json"', html)
+        self.assertNotIn('href="/manifest.webmanifest"', html)
         self.assertIn("hercules-shell-v2", (self.path / "service-worker.js").read_text())
+        self.assertIn('"/manifest.json"', (self.path / "service-worker.js").read_text())
 
     def test_only_generates_files_in_requested_output_directory(self):
         self.assertEqual(set(p.name for p in self.path.parent.iterdir()), {"preview"})

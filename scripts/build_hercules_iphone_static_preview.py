@@ -79,6 +79,12 @@ def build_preview(source_dir=SOURCE_DIR, output_dir=OUTPUT_DIR):
         "<title>HERCULES // IPHONE PREVIEW</title>",
         1,
     )
+    if 'href="/manifest.webmanifest"' not in html:
+        raise ValueError("source_manifest_link_missing")
+    html = html.replace('href="/manifest.webmanifest"', 'href="/manifest.json"', 1)
+    if worker.count(b"/manifest.webmanifest") != 1:
+        raise ValueError("source_worker_manifest_cache_unexpected")
+    worker = worker.replace(b"/manifest.webmanifest", b"/manifest.json")
     html = html.replace(
         "</head>", (
             '<meta name="robots" content="noindex,nofollow">'
@@ -117,7 +123,7 @@ def build_preview(source_dir=SOURCE_DIR, output_dir=OUTPUT_DIR):
 
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "index.html").write_text(html, encoding="utf-8")
-    (output_dir / "manifest.webmanifest").write_text(
+    (output_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     (output_dir / "service-worker.js").write_bytes(worker)
