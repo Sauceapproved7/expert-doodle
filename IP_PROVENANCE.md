@@ -1,3 +1,10 @@
+## Alternative small-model real inference experiment — DA-45, October 13, 2026
+
+- Owned first-party original source: `scripts/hercules-qwen-halfb-cpu-diagnostic.mjs`, `tests/hercules-qwen-halfb-cpu-diagnostic.test.mjs`, `.github/workflows/hercules-qwen-halfb-cpu-diagnostic.yml`, `docs/HERCULES-QWEN-HALFB-CPU-DIAGNOSTIC-V1.md`. Authored with AI assistance, following TDD. No third-party source, weights, binary or SDK packaged.
+- Evaluation-only vendor weights: `bartowski/Qwen2.5-0.5B-Instruct-GGUF` Q3_K_S, immutable commit `eadd1b868ae382c989d828189bdb8e5d34dc675c`, published SHA-256 `468787b643ef9081a75c6e7bd98da987f46583250248e0a0a7aca173308e8d34`; based on Apache-2.0 `Qwen/Qwen2.5-0.5B-Instruct`. Ephemeral `ggml-org/llama.cpp` pinned at `d81235049384534c167caea52b85a694f6103d14`.
+- All third-party files downloaded exclusively to a temporary, no-network standard GitHub-hosted test environment. Upstream copyrights/licenses remain third-party and are not represented as Hercules-owned pretraining.
+- Fixed non-customer prompts, no account credentials; protected 0.1 CPU/512MiB, no Render/Railway/Shopify/Supabase updates, no billing/provider account changes, no live model deployment or public signup/payment authority.
+
 ## Hercules bounded grounded-arithmetic tool — DA-45, 2026-10-13
 
 - Owned first-party, AI-assisted source: `hercules-models/grounded-arithmetic.mjs`, authenticated isolated route in `hercules-models/service.mjs`, `tests/hercules-models-grounded-arithmetic.test.mjs`, `docs/HERCULES-GROUNDED-ARITHMETIC-V1.md`.
