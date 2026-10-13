@@ -27,3 +27,10 @@ For independent human audit, it prints a **bounded 180-character** excerpt of th
 A positive run demonstrates only tested quality/memory in a GitHub Actions runner, not throughput on the existing Render model lab's **512 MiB RAM / 0.15 CPU**. A failure, timeout or missing measurement is not an approval. The machine readout always says `chatInferenceVerifiedForProduction=false`, `publicReleaseApproved=false`, `paidCommerceEnabled=false`.
 
 Production `hercules-ai`, `HERCULES_LOCAL_CHAT_ENABLED`, Shopify, domain, payment, public-registration and existing model lab remain unchanged. No weights or model server are deployed. A substantially larger/stronger owned or properly licensed model plus performance, instruction-following, reliability, security and business gating are needed before monetizable customer AI.
+
+## End-to-end native Hercules chat path (DA-45)
+
+The same ephemeral, checksum-pinned 360M CPU inference job now exercises the first-party `createLocalChatAdapter({protocol:"llama-cpp"})` **through the real authenticated `createModelPlaneService`** on loopback. The probe asserts that a public unauthenticated `POST /v1/chat` returns 401; authenticated readiness is explicit `inferenceVerified:false` before use; the authenticated request reaches the actual llama.cpp model and returns bounded, nonempty original generation; a returned success remains `publicReleaseApproved:false` and is not production-chat-quality evidence.
+
+This uses a synthetic publicly safe prompt only, localhost ports on an ephemeral GitHub Actions runner, no new service, subscription, customer data, source upload or credentials. The existing Render model lab is unchanged and auto-deploy remains disabled. This is **integration evidence** for the original Hercules codepath only, not a claim of suitable answer quality, throughput, or affordability on a shared 0.15-CPU Render Free instance.
+
