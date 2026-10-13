@@ -23,6 +23,7 @@ export const NATIVE_SHOPIFY_QUERY=`query GatehouseNativeOrders($first: Int!) {
   } }
  }
 }`;
+const SHOPIFY_ORDER_ID=/^gid:\/\/shopify\/Order\/[1-9][0-9]{0,19}$/;
 const cents=value=>typeof value==="string"&&/^(0|[1-9][0-9]{0,9})\.[0-9]{2}$/.test(value)?
  Number(value.replace(".","")):NaN;
 function candidate(o){
@@ -63,7 +64,9 @@ export function createNativeShopifyReader({enabled=false,ownerAuthenticated=fals
    const page=data.data.orders;
    if(!Array.isArray(page?.edges)||page.edges.length>10||
     typeof page?.pageInfo?.hasNextPage!=="boolean"||
-    page.edges.some(e=>!e?.node||typeof e.node!=="object"))return error("shopify-order-page-incomplete");
+    page.edges.some(e=>!e?.node||typeof e.node!=="object"
+     ||typeof e.node.id!=="string"||!SHOPIFY_ORDER_ID.test(e.node.id))||
+    new Set(page.edges.map(e=>e.node.id)).size!==page.edges.length)return error("shopify-order-page-incomplete");
    return {status:200,body:{
     schema:"hercules.gatehouse.native-order-observation.v1",
     status:"readback-candidates-only",
