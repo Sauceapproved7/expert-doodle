@@ -1,3 +1,10 @@
+## Hercules Smallz read-only evidence bridge — October 13, 2026
+
+- Original SauceApproved AI-assisted Node 22 source: `hercules-deploy/smallz-evidence-bridge.mjs`, `tests/hercules-deploy-smallz-evidence-bridge.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-EVIDENCE-BRIDGE-V1.md`.
+- Reuses existing first-party `hercules-runtime/smallz-release-proof.mjs`; no third-party source code, libraries, vendor assets, weights, credentials, customer records or executables packaged.
+- Implements strict read-only pinning/normalization for connected GitHub and Render records. Reader functions are caller-supplied and cannot constitute independent authentication; reports explicit unverified authority, source and runtime claims. No deployment/rollback/secret access, production settings, payments or hosting charges.
+- Test-first evidence: initial PR-head `81f383374c1183c92a4450cd49aa783f66cdbb42` failed Deploy Plane with the expected missing module (99 existing tests passed). Implementation `fc857832b1337412f523e7b20d0e132ca49df3f9` passed all **105/105** Deploy Plane tests (0 failures).
+
 ## Vault Passport fail-closed regression hardening — October 13, 2026
 
 - Expanded original first-party SauceApproved assurance tests to reproduce and repair misleading green release evidence when extra CI checks fail or are malformed, and to reject recomputed integrity digests carrying forged release/owner/execution-authority flags.
