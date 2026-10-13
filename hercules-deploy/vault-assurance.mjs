@@ -46,6 +46,17 @@ export function assessReleasePassport(input={}){
   if(ci.sourceCommit!==intent.sourceCommit||ci.artifactSha256!==intent.artifactSha256)
     reasons.push('CI_BUILD_MISMATCH');
   const checks=Array.isArray(ci.checks)?ci.checks:[];
+  // Every supplied CI check must be uniquely identified and successful.
+  // Required-check success cannot mask another failing or malformed check.
+  const names=new Set();
+  const clean=checks.length>=REQUIRED_CHECKS.length&&checks.length<=64&&checks.every(check=>{
+    if(!plain(check)||Object.keys(check).length!==2
+      ||!Object.hasOwn(check,'name')||!Object.hasOwn(check,'status')
+      ||typeof check.name!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(check.name)
+      ||check.status!=='success'||names.has(check.name))return false;
+    names.add(check.name);return true;
+  });
+  if(!clean)reasons.push('CI_CHECK_SET_NOT_CLEAN');
   for(const name of REQUIRED_CHECKS){
     const matching=checks.filter(check=>plain(check)&&check.name===name);
     if(matching.length!==1||matching[0].status!=='success')
@@ -80,6 +91,42 @@ export function assessReleasePassport(input={}){
 export function verifyReleasePassport(passport){
   if(!plain(passport)||!validSha(passport.passportSha256,64))
     return Object.freeze({valid:false,reason:'INVALID_PASSPORT'});
+  const requiredKeys=[
+    'schema','status','reasonCodes','serviceId','sourceCommit','artifactSha256',
+    'rollbackCommit','checkedRequirements','consistencyOnly','signedByTrustedBuilder',
+    'providerIndependentlyAuthenticated','ownerAuthorizationVerified','runtimeHealthVerified',
+    'releaseApproved','executionAuthority','passportSha256'
+  ];
+  const exactSchema=Object.keys(passport).length===requiredKeys.length
+    &&requiredKeys.every(key=>Object.hasOwn(passport,key))
+    &&passport.schema==='sauceapproved.hercules.release-passport.v1'
+    &&passport.consistencyOnly===true
+    &&passport.signedByTrustedBuilder===false
+    &&passport.providerIndependentlyAuthenticated===false
+    &&passport.ownerAuthorizationVerified===false
+    &&passport.runtimeHealthVerified===false
+    &&passport.releaseApproved===false
+    &&passport.executionAuthority===false
+    &&Array.isArray(passport.checkedRequirements)
+    &&JSON.stringify(passport.checkedRequirements)===JSON.stringify(REQUIRED_CHECKS)
+    &&(passport.serviceId===null||validId(passport.serviceId))
+    &&(passport.sourceCommit===null||validSha(passport.sourceCommit,40))
+    &&(passport.artifactSha256===null||validSha(passport.artifactSha256,64))
+    &&(passport.rollbackCommit===null||validSha(passport.rollbackCommit,40))
+    &&Array.isArray(passport.reasonCodes)
+    &&passport.reasonCodes.length<=32
+    &&passport.reasonCodes.every((code,i)=>typeof code==='string'
+      &&/^[A-Z][A-Z0-9_]{0,127}$/u.test(code)
+      &&(i===0||passport.reasonCodes[i-1]<code))
+    &&((passport.status==='HOLD'&&passport.reasonCodes.length>0)
+      ||(passport.status==='EVIDENCE_CONSISTENT_UNATTESTED'
+        &&passport.reasonCodes.length===0
+        &&validId(passport.serviceId)
+        &&validSha(passport.sourceCommit,40)
+        &&validSha(passport.artifactSha256,64)
+        &&validSha(passport.rollbackCommit,40)
+        &&passport.sourceCommit!==passport.rollbackCommit));
+  if(!exactSchema)return Object.freeze({valid:false,reason:'SEMANTIC_POLICY_VIOLATION'});
   const {passportSha256,...body}=passport;
   const valid=sha256(body)===passportSha256;
   return Object.freeze({valid,reason:valid?'INTEGRITY_ONLY_NOT_ATTESTATION':'INTEGRITY_MISMATCH'});
