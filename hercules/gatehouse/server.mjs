@@ -4,15 +4,18 @@ import {readFileSync} from "node:fs";
 import {createHmac,timingSafeEqual} from "node:crypto";
 import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
+import {CATALOG,buildDemoReport} from "./commerce.mjs";
 import {assessLaunch,sentinelAlerts,revenueRadar,recoveryPlan,simulateCheckout,
  newEvidenceLedger,appendEvidence,verifyEvidenceLedger,timeMachine,validateTarget} from "./core.mjs";
 
 const directory=dirname(fileURLToPath(import.meta.url));
 const files={"/":{name:"index.html",type:"text/html; charset=utf-8"},
+ "/commercial":{name:"commercial.html",type:"text/html; charset=utf-8"},
  "/app.mjs":{name:"app.mjs",type:"text/javascript; charset=utf-8"},
  "/local-archive.mjs":{name:"local-archive.mjs",type:"text/javascript; charset=utf-8"},
  "/device-vault.mjs":{name:"device-vault.mjs",type:"text/javascript; charset=utf-8"},
- "/styles.css":{name:"styles.css",type:"text/css; charset=utf-8"}};
+ "/styles.css":{name:"styles.css",type:"text/css; charset=utf-8"},
+ "/commercial.css":{name:"commercial.css",type:"text/css; charset=utf-8"}};
 const stableServices=["Shopify","Stripe","Render","Supabase","GitHub","DNS","Hercules MCP","Studio","Smallz","Domain Guard"];
 const defaultProbes=[
  {name:"Hercules MCP",url:"https://hercules-mcp.onrender.com/health"},
@@ -112,6 +115,16 @@ export function createServer(config={}){
   if(method==="GET"&&path==="/health")
    return send(res,200,{service:"hercules-gatehouse",status:"running",mode:"isolated-read-only",
     credentialsConfigured:Boolean(token),productionAuthorized:false});
+  if(path==="/api/commercial/catalog"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   return send(res,200,CATALOG);
+  }
+  if(path==="/api/commercial/demo-report"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   try{return send(res,200,buildDemoReport(await publicSummary()),"application/json; charset=utf-8",
+    {"content-disposition":"attachment; filename=hercules-gatehouse-sample-report.json"})}
+   catch{return send(res,503,{error:"Sample unavailable; no customer website scanned"})}
+  }
   if(path==="/api/public-summary"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
    try{return send(res,200,await publicSummary())}
