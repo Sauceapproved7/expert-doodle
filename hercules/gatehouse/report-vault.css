@@ -1,0 +1,18 @@
+:root{color-scheme:dark;font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;color:#e9eef8;background:#080f1f}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 12% 4%,#173862 0,transparent 31%),#080f1f}
+a{color:#e9c682}a:focus-visible{outline:2px solid #f7dca1;outline-offset:3px}
+.v-shell{max-width:1100px;margin:auto;padding:0 clamp(18px,4vw,48px)}
+.v-header{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:26px 0;border-bottom:1px solid #344861}
+.v-brand{font-size:14px;font-weight:900;letter-spacing:.10em;color:#f0d499;text-decoration:none}.v-brand span{color:#9ebfe8}.v-back{font-size:13px;white-space:nowrap}
+.v-hero{display:grid;grid-template-columns:minmax(0,38%) minmax(0,62%);align-items:center;border-radius:18px;border:1px solid #325787;background:linear-gradient(122deg,#143465,#101e36 65%,#0c172c);box-shadow:0 25px 70px #0007;margin:33px 0;overflow:hidden}
+.v-art{display:flex;align-items:center;justify-content:center;padding:19px}.v-art img{width:100%;max-height:390px;object-fit:contain;filter:drop-shadow(0 16px 26px #0008)}
+.v-copy{padding:30px 38px 37px 4px}.v-eyebrow,.v-kicker{font-size:11px;font-weight:800;letter-spacing:.16em;color:#e3c381}
+.v-copy h1{font-size:clamp(33px,4.3vw,56px);line-height:1.07;letter-spacing:-.025em;margin:18px 0}.v-copy h1 em{font-style:normal;color:#f1cd85}
+.v-copy p,.v-list p{color:#c0cfe2}.v-warning{padding:15px;background:#2a2219;border:1px solid #896a32;border-radius:8px;color:#f0d59e;font-size:13px;margin-top:20px}
+.v-list{background:#101b2f;border:1px solid #304765;border-radius:16px;padding:30px;margin:25px 0 50px}
+.v-list h2{font-size:clamp(23px,3vw,31px);margin:10px 0}.v-records{padding:13px 17px;background:#091422;border:1px solid #344a68;border-radius:9px;margin:20px 0}
+.v-record{border-bottom:1px solid #2b435d;padding:13px 0}.v-record:last-child{border-bottom:0}.v-record strong{color:#edce90}.v-record span{color:#b2c7dc;font-size:13px;margin-left:10px}
+.v-muted,.v-status{font-size:13px}.v-link{display:inline-block;margin-top:12px;font-weight:750;font-size:14px}
+footer{border-top:1px solid #31405a;color:#859fbd;font-size:12px;padding:22px 0 44px}
+@media(max-width:750px){.v-hero{grid-template-columns:1fr}.v-art{max-height:245px}.v-art img{max-height:240px}.v-copy{padding:14px 23px 32px}.v-list{padding:21px}.v-copy h1{font-size:37px}}
+@media(max-width:410px){.v-header{flex-wrap:wrap}.v-record span{display:block;margin-left:0}}
