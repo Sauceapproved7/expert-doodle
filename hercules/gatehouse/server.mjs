@@ -41,7 +41,7 @@ function send(res,status,value,type="application/json; charset=utf-8",extraHeade
  res.writeHead(status,{"content-type":type,"cache-control":"no-store",
   "x-content-type-options":"nosniff","x-frame-options":"DENY",
   "referrer-policy":"no-referrer","permissions-policy":"camera=(), microphone=(), geolocation=()",
-  "content-security-policy":"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",...extraHeaders});
+  "content-security-policy":"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: https://cdn.shopify.com; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",...extraHeaders});
  res.end(body);
 }
 function parseBody(req){return new Promise((resolve,reject)=>{
