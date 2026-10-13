@@ -114,3 +114,7 @@ test('command subprocess errors fail closed without leaking stderr, tokens or un
  assert.equal(result.stdout,'');
  assert.equal(JSON.stringify(result).includes('SECRET'),false);
 });
+
+test('no executable host bridge exists without a separately authorized runner',()=>{
+ assert.throws(()=>createBoundedDockerRunner(plan()),/local_command_executor_not_injected/);
+});
