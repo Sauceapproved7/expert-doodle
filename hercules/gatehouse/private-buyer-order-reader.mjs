@@ -4,12 +4,16 @@
  * Owner authorization, real provider credentials, and all release gates stay external.
  */
 import {preparePrivateOrderCandidate} from "./order-candidate-ledger.mjs";
+import {createHmac,timingSafeEqual} from "node:crypto";
 const API="https://azymhc-x0.myshopify.com/admin/api/2026-10/graphql.json";
 const SHOP_ID="gid://shopify/Shop/100002726208";
 const SHOP_DOMAIN="azymhc-x0.myshopify.com";
 const ORDER_ID=/^gid:\/\/shopify\/Order\/[1-9][0-9]{0,19}$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const REF=/^GH1-[A-Za-z0-9_-]{32}$/;
+const HEX_SHA256=/^[0-9a-f]{64}$/;
+const INTENT_LIMIT_MS=24*60*60*1000;
+const verifiedEmail=x=>typeof x==="string"&&x.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
 export const PRIVATE_BUYER_ORDER_QUERY=`query GatehousePrivateBuyerOrders($first: Int!) {
  shop { id myshopifyDomain }
  orders(first: $first, sortKey: CREATED_AT, reverse: true) {
@@ -38,14 +42,24 @@ const deny=reason=>({status:503,body:{
 const tokenOk=t=>typeof t==="string"&&t.length>=20&&t.length<=4096
  &&/^[\x21-\x7e]+$/.test(t)&&!/[\s"'<>]/.test(t);
 function inputOk({identity,intentRow,buyerReference,requestedSiteId,secret,now}){
- return identity&&intentRow
-  &&UUID.test(identity.id||"")&&UUID.test(requestedSiteId||"")
-  &&UUID.test(intentRow.id||"")&&intentRow.owner_user_id===identity.id
-  &&intentRow.site_id===requestedSiteId
-  &&intentRow.status==="awaiting-provider-readback"
-  &&REF.test(buyerReference||"")
-  &&Buffer.isBuffer(secret)&&secret.length>=32
-  &&Number.isSafeInteger(now)&&now>=0;
+ if(!identity||!intentRow
+  ||!UUID.test(identity.id||"")||!UUID.test(requestedSiteId||"")
+  ||!UUID.test(intentRow.id||"")||intentRow.owner_user_id!==identity.id
+  ||intentRow.site_id!==requestedSiteId
+  ||intentRow.status!=="awaiting-provider-readback"
+  ||!REF.test(buyerReference||"")
+  ||!HEX_SHA256.test(intentRow.reference_hash||"")
+  ||!Buffer.isBuffer(secret)||secret.length<32
+  ||!Number.isSafeInteger(now)||now<0
+  ||!verifiedEmail(identity.email))return false;
+ const expiry=Date.parse(intentRow.expires_at);
+ const confirmed=Date.parse(identity.emailConfirmedAt);
+ if(!Number.isFinite(expiry)||expiry<=now||expiry-now>INTENT_LIMIT_MS
+  ||!Number.isFinite(confirmed)||confirmed>now)return false;
+ const expected=createHmac("sha256",secret)
+  .update("Gatehouse-intent:v1:"+buyerReference).digest();
+ const actual=Buffer.from(intentRow.reference_hash,"hex");
+ return actual.length===expected.length&&timingSafeEqual(actual,expected);
 }
 export function createPrivateBuyerOrderReader({
  enabled=false,ownerAuthenticated=false,accessToken="",
@@ -83,9 +97,13 @@ export function createPrivateBuyerOrderReader({
     order:e.node,secret,now
    })).filter(x=>x.candidateMayBeRecorded===true);
    if(candidates.length>1)return deny("ambiguous-private-buyer-correlation");
-   const matched=candidates.length===1;
+   // A later page could contain a second order claiming this reference.
+   // Do not generate even a local reservation proposal from incomplete history.
+   const complete=page.pageInfo.hasNextPage===false;
+   const matched=complete&&candidates.length===1;
    return {status:200,body:{
-    status:matched?"private-candidate-proposal-only":"no-local-candidate",
+    status:!complete?"incomplete-provider-lookback":
+      matched?"private-candidate-proposal-only":"no-local-candidate",
     shopAuthenticated:true,ordersScanned:page.edges.length,
     hasNextPage:page.pageInfo.hasNextPage,
     ...noAuthority,
