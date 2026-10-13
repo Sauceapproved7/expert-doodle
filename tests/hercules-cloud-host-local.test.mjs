@@ -126,7 +126,7 @@ test('signed deployment grant and real disk replay marker compose with synthetic
  const runner=createBoundedDockerRunner(p,{execFileImpl:(file,args,opts,callback)=>{
   if(args[2]==='info')return callback(null,'["name=rootless"]','');
   mutatingCommands++;
-  if(args[3]==='inspect')return callback(null,'true\\n','');
+  if(args[3]==='inspect')return callback(null,'true','');
   return callback(null,'','');
  }});
  const first=await createDurableNonceStore({root});
