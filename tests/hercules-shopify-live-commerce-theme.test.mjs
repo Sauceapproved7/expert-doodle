@@ -8,13 +8,13 @@ async function read(relativePath) {
   return readFile(new URL(relativePath, base), "utf8");
 }
 
-test("live commerce extension is a theme app extension with no additional API scopes", async () => {
+test("live commerce extension keeps its theme boundary while Hercules legal policy scope is explicit", async () => {
   const extension = await read("shopify.extension.toml");
   const appConfig = await read("../../shopify.app.toml");
 
   assert.match(extension, /^type\s*=\s*"theme"$/m);
   assert.match(extension, /^handle\s*=\s*"hercules-live-commerce"$/m);
-  assert.match(appConfig, /scopes\s*=\s*"read_orders"/);
+  assert.match(appConfig, /scopes\s*=\s*"read_orders,write_legal_policies"/);
 });
 
 test("live event block schema exposes a selected Shopify product and explicit event states", async () => {
