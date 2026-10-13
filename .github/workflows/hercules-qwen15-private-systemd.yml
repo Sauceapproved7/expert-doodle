@@ -17,6 +17,14 @@ jobs:
       - name: Validate private, fail-closed service unit
         run: |
           node --test tests/hercules-qwen15-systemd-unit.test.mjs
-          systemd-analyze verify deploy/hercules-qwen15/hercules-qwen15-private.service
+          # CI does not have /usr/bin/node. The JS contract test above asserts
+          # the REAL unit retains that exact host prerequisite.
+          # Substitute only the binary path in a disposable validation copy.
+          verification_dir="$(mktemp -d)"
+          trap 'rm -rf "$verification_dir"' EXIT
+          sed 's|^ExecStart=.*|ExecStart=/usr/bin/true|' \
+            deploy/hercules-qwen15/hercules-qwen15-private.service \
+            > "$verification_dir/hercules-qwen15-private.service"
+          systemd-analyze verify "$verification_dir/hercules-qwen15-private.service"
           node scripts/verify-owner-code-only.mjs
           node scripts/security-baseline.mjs
