@@ -12,10 +12,8 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Run mobile control regression tests
         run: |
-          python -m unittest discover -s tests -p 'test_hercules_mobile_*.py' -v
+          python3 --version
+          python3 -m unittest discover -s tests -p 'test_hercules_mobile_*.py' -v
