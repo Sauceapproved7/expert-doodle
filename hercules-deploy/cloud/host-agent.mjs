@@ -20,6 +20,10 @@ function toTime(value){
  const t=Date.parse(String(value??''));
  return Number.isFinite(t)?t:NaN;
 }
+function localSocket(uid){
+ if(!Number.isSafeInteger(uid)||uid<1000||uid>65535)fail('sandbox_host_not_authorized');
+ return 'unix:///run/user/'+uid+'/docker.sock';
+}
 function exactCommands(name,image){
  return {
   create:['container','create','--name',name,'--pull','never',
@@ -44,6 +48,7 @@ function assertPlan(plan){
    ||plan.costChangeUsd!==0||!NAME.test(plan.containerName)
    ||!IMAGE.test(plan.image)||plan.target?.kind!=='owned_linux'
    ||plan.target?.environment!=='sandbox'
+   ||plan.rootlessSocket!==localSocket(plan.runtimeUid)
    ||!isDeepStrictEqual(plan.commands,exactCommands(plan.containerName,plan.image))
    ||hash(canonicalPlan(plan))!==plan.planDigest)fail('plan_integrity_invalid');
  return plan;
@@ -87,7 +92,8 @@ export function createSandboxHostPlan(request,{targets=[],image,now=Date.now()}=
  const fresh=Number.isFinite(checked)&&checked<=now+CLOCK_SKEW_MS
    &&checked>=now-MAX_HOST_AGE_MS;
  if(!base.readyForStaging||base.target.kind!=='owned_linux'||!host
-   ||host.runtime!=='rootless_docker'||!fresh)
+   ||host.runtime!=='rootless_docker'||!Number.isSafeInteger(host.runtimeUid)
+   ||host.runtimeUid<1000||host.runtimeUid>65535||!fresh)
    fail('sandbox_host_not_authorized');
  if(typeof image!=='string'||!IMAGE.test(image)
    ||!Array.isArray(host.allowlistedImages)||!host.allowlistedImages.includes(image))
@@ -99,6 +105,7 @@ export function createSandboxHostPlan(request,{targets=[],image,now=Date.now()}=
   serviceId:base.serviceId,releaseId:base.releaseId,
   sourceCommit:base.sourceCommit,artifactFingerprint:base.artifactFingerprint,
   requestDigest:base.requestDigest,image,containerName,
+  runtimeUid:host.runtimeUid,rootlessSocket:localSocket(host.runtimeUid),
   commands:exactCommands(containerName,image),
   costChangeUsd:0,executionAuthorized:false,productionAuthorized:false,
   limits:{memoryMiB:128,cpus:0.5,pids:64,network:'none',filesystem:'read-only'},
@@ -122,14 +129,14 @@ function requireRunner(runCommand,consumeNonce){
  if(typeof runCommand!=='function')fail('runner_unavailable');
  if(typeof consumeNonce!=='function')fail('replay_store_required');
 }
-async function run(runCommand,args){
+async function run(runCommand,args,plan){
  let result;
- try{result=await runCommand('docker',args,{timeoutMs:10000,shell:false})}
+ try{result=await runCommand('docker',['--host',plan.rootlessSocket,...args],{timeoutMs:10000,shell:false})}
  catch{return {ok:false,stdout:''}}
  return {ok:result?.exitCode===0,stdout:typeof result?.stdout==='string'?result.stdout:''};
 }
-async function verifyRootless(runCommand){
- const r=await run(runCommand,['info','--format','{{json .SecurityOptions}}']);
+async function verifyRootless(runCommand,plan){
+ const r=await run(runCommand,['info','--format','{{json .SecurityOptions}}'],plan);
  if(!r.ok)fail('rootless_docker_unverified');
  let options;
  try{options=JSON.parse(r.stdout.trim())}catch{fail('rootless_docker_unverified')}
@@ -147,16 +154,16 @@ export async function executeSandboxHostPlan(plan,{
 }={}){
  validatePermit(plan,permit,{signingKey,action:'start',now});
  requireRunner(runCommand,consumeNonce);
- await verifyRootless(runCommand);
+ await verifyRootless(runCommand,plan);
  await consume(consumeNonce,permit);
  let created=false;
  try{
-  const creation=await run(runCommand,plan.commands.create);
+  const creation=await run(runCommand,plan.commands.create,plan);
   if(!creation.ok)fail('sandbox_launch_unverified');
   created=true;
-  const started=await run(runCommand,plan.commands.start);
+  const started=await run(runCommand,plan.commands.start,plan);
   if(!started.ok)fail('sandbox_launch_unverified');
-  const result=await run(runCommand,plan.commands.inspect);
+  const result=await run(runCommand,plan.commands.inspect,plan);
   if(!result.ok||result.stdout.trim()!=='true')fail('sandbox_launch_unverified');
   return Object.freeze({
    schema:'hercules.cloud.host-receipt.v1',planDigest:plan.planDigest,
@@ -164,7 +171,7 @@ export async function executeSandboxHostPlan(plan,{
    started:true,runningVerified:true,productionAuthorized:false
   });
  }catch{
-  if(created)await run(runCommand,plan.commands.rollback);
+  if(created)await run(runCommand,plan.commands.rollback,plan);
   fail('sandbox_launch_unverified');
  }
 }
@@ -173,9 +180,9 @@ export async function rollbackSandboxHostPlan(plan,{
 }={}){
  validatePermit(plan,permit,{signingKey,action:'rollback',now});
  requireRunner(runCommand,consumeNonce);
- await verifyRootless(runCommand);
+ await verifyRootless(runCommand,plan);
  await consume(consumeNonce,permit);
- const result=await run(runCommand,plan.commands.rollback);
+ const result=await run(runCommand,plan.commands.rollback,plan);
  if(!result.ok)fail('sandbox_rollback_unverified');
  return Object.freeze({
   schema:'hercules.cloud.rollback-receipt.v1',
