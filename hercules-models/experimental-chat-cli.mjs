@@ -2,6 +2,11 @@ import {randomBytes} from "node:crypto";
 import {HerculesEmbeddedCoreNeuralV03} from "./embedded-core-neural-v0.3.mjs";
 import {createServer, EXPERIMENTAL_MODEL_ID} from "./experimental-chat-bridge.mjs";
 
+// A protected prototype cannot silently become an active production runtime.
+if(process.env.HERCULES_EXP_CHAT_EXPERIMENT_ENABLED!=="true"){
+  throw new Error("experimental bridge disabled: explicit staging opt-in required");
+}
+
 const host=process.env.HERCULES_EXP_CHAT_HOST??"127.0.0.1";
 const port=Number(process.env.PORT??process.env.HERCULES_EXP_CHAT_PORT??38902);
 if(!Number.isInteger(port) || port<1 || port>65535) throw new Error("invalid listen port");
