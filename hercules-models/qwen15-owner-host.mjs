@@ -282,6 +282,31 @@ export async function inspectQwen15LocalHost({modelPath,engineBinary,systemProbe
   });
 }
 
+// A llama.cpp /health 200 alone is not evidence that the expected pinned
+// model alias is loaded. Perform BOTH checks before exposing Hercules API.
+// This proves only private engine readiness, never weight ownership, billing,
+// Devbrain reachability or production release.
+export async function probeQwen15EngineIdentity({fetchImpl=globalThis.fetch}={}){
+  if(typeof fetchImpl!=="function")return false;
+  async function getExactJson(path){
+    const result=await fetchImpl("http://127.0.0.1:18776"+path,{
+      method:"GET",headers:{accept:"application/json"},
+      redirect:"error",cache:"no-store",signal:AbortSignal.timeout(1500)
+    });
+    if(!result?.ok||result.status!==200)return null;
+    const body=await result.json();
+    return body&&typeof body==="object"&&!Array.isArray(body)?body:null;
+  }
+  try{
+    const health=await getExactJson("/health");
+    if(!health||health.status!=="ok"||Object.hasOwn(health,"error"))return false;
+    const inventory=await getExactJson("/v1/models");
+    return inventory?.object==="list"&&
+      Array.isArray(inventory.data)&&inventory.data.length===1&&
+      inventory.data[0]?.id===QWEN15_MODEL_ALIAS;
+  }catch{return false;}
+}
+
 export function makeQwen15PrivateLaunchPlan({enabled=false,token,modelPath,engineBinary,hostEvidence}={}){
   if(enabled!==true)throw new Error("owner_private_trial_disabled");
   if(typeof token!=="string"||token.length<32||token.length>512||
