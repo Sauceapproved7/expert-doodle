@@ -68,7 +68,24 @@ async function loadPublic(){
  $("mode-chip").className="chip gold";
  text($("probe-chip"),"PUBLIC CONNECTIVITY");
  text($("updated"),"Reachability checked "+new Date(data.refreshedAt).toLocaleTimeString());
- announce("Public service reachability is available without login. Owner access is separately required for evidence history and detailed operations. No production changes can be made here.");
+ announce("Public reachability is available without login. Owner authentication is needed for private detail. No production changes can be made here.");
+ try{
+  const history=await jsonFetch("/api/public-history");
+  text($("public-samples"),history.sampleCount);
+  const samples=history.samples||[];
+  const last=samples.at(-1),previous=samples.at(-2);
+  if(previous&&last){
+   const before=new Map(previous.signals.map(x=>[x.name,x.status]));
+   const changes=last.signals.filter(x=>before.get(x.name)!==x.status);
+   renderActivities("timeline",changes.map(x=>({title:x.name,note:(before.get(x.name)||"unknown")+" → "+x.status})),
+    "No state change between the last two requested observations. This does not establish uptime.");
+  }else{
+   renderActivities("timeline",[],"Only "+samples.length+" sampled observation(s). Monitoring is not continuous.");
+  }
+ }catch{
+  text($("public-samples"),"Unavailable");
+  renderActivities("timeline",[],"History temporarily unavailable; no verified timeline.");
+ }
 }
 async function load(){
  const data=await jsonFetch("/api/dashboard");
