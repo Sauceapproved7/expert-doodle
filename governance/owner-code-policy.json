@@ -275,6 +275,15 @@
         "posix-shell",
         "postgresql-client"
       ]
+    },
+    {
+      "path": "scripts/hercules-qwen15-native-systemd-probe.sh",
+      "dependencies": [
+        "posix-shell",
+        "nodejs",
+        "systemd",
+        "llama-cpp"
+      ]
     }
   ],
   "externalInfrastructure": [

@@ -161,3 +161,11 @@ test("lab documents no live host, no billing and limited recovery proof",()=>{
     "production main"])
     assert.ok(doc.toLowerCase().includes(term.toLowerCase()),term);
 });
+
+test("real model systemd CI explicitly declares the approved external-command boundary",()=>{
+  const policy=JSON.parse(readFileSync(new URL("../governance/owner-code-policy.json",import.meta.url),"utf8"));
+  const binding=policy.shellCommandBoundaries.find(x=>x.path==="scripts/hercules-qwen15-native-systemd-probe.sh");
+  assert.deepEqual(binding?.dependencies,["posix-shell","nodejs","systemd","llama-cpp"]);
+  for(const dependency of binding.dependencies)
+    assert.equal(policy.externalInfrastructure.find(x=>x.id===dependency)?.packagedAsHerculesCode,false);
+});
