@@ -39,3 +39,10 @@ Two Hercules differentiators: fixed safe commands rather than arbitrary installe
 ## Cost, privacy, and ownership
 
 Repository-side handoff adds no secret, provider call, billing, new hosting resource, model inference, production change, live checkout or DNS update. Codex Cloud usage itself is governed by the signed-in account's available usage limits. Implementation uses original SauceApproved JavaScript, Node built-ins, and no vendored external code.
+
+
+## Repository-native Codex operator skill
+
+Codex automatically discovers repository skills under `.agents/skills`. This repository now includes `.agents/skills/hercules-codex-operator/SKILL.md`. It instructs future Codex sessions to inspect the canonical repo first, run the safe handoff and doctor commands, apply test-first engineering and CI evidence, and preserve the owner-only production/commerce gates.
+
+This is an instruction-only skill, not a web/desktop account environment or persistent assistant. Its presence cannot prove that Codex Cloud published an environment or ran its instructions. Official skill guidance: https://learn.chatgpt.com/docs/build-skills
