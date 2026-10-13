@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { REQUIRED_PATHS, assessProposedPaths, inspectReadiness } from '../hercules-codex/readiness.mjs';
+import { REQUIRED_PATHS, assessProposedPaths, inspectReadiness } from '../hercules-runtime/codex-readiness.mjs';
 
 const cli = fileURLToPath(new URL('../scripts/hercules-codex-doctor.mjs', import.meta.url));
 const completeFiles = Object.fromEntries(REQUIRED_PATHS.map((path) => [path, true]));
