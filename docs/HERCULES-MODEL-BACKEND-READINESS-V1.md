@@ -23,3 +23,7 @@ The model service cannot be manufactured by returning dummy model records or reu
 ## Provenance
 
 Original SauceApproved/Hercules implementation, with AI assistance; no third-party source, model checkpoints, keys or assets added. Existing licenses and owner-controlled release gate preserved.
+
+## Provider-safe verification sequence
+
+After an authorized deployment, compare the Render deployment SHA with the intended reviewed commit, then check `GET /health`, `GET /ready` and `GET /v1/models` in that order. `/health` is process-only; `/ready` is exact-default-model inventory; `/v1/models` contains model names and should not be included in public audit logs. All three are necessary but still insufficient for proving a real model-generated chat response. Do not start paid inference or public promotion from the model list alone.
