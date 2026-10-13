@@ -2,11 +2,11 @@
  * No customer-facing route may call this without separate server-side owner authentication.
  * No token, PII, raw order IDs, payment mutation, buyer claims or report delivery.
  */
-const SHOP_DOMAIN="sauceapproved-2.myshopify.com";
+const SHOP_DOMAIN="azymhc-x0.myshopify.com";
 const SHOP_ID="gid://shopify/Shop/100002726208";
 const PRODUCT_ID="gid://shopify/Product/15424049283392";
 const VARIANT_ID="gid://shopify/ProductVariant/67754351460672";
-const URL="https://sauceapproved-2.myshopify.com/admin/api/2026-10/graphql.json";
+const URL="https://azymhc-x0.myshopify.com/admin/api/2026-10/graphql.json";
 export const NATIVE_SHOPIFY_QUERY=`query GatehouseNativeOrders($first: Int!) {
  shop { id myshopifyDomain }
  orders(first: $first, sortKey: CREATED_AT, reverse: true) {
