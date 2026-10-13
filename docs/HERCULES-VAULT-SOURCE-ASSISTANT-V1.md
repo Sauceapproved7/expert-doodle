@@ -33,3 +33,7 @@ GitHub workflow `.github/workflows/hercules-vault-source-assistant.yml` runs foc
 - A **no-evidence response** rather than a fabricated completion or unchecked public launch claim.
 
 Original Hercules/SourceApproved project-owned implementation with AI assistance, Node standard library, and existing first-party project native-retrieval implementation. No external dependencies, copied model weights or new rights grant.
+
+## Release limitation
+
+The returned snippets describe what checked-in Hercules documents **say**, not independently established external facts. No automatic action is permitted based solely on a retrieved snippet, and no signed-in consumer AI account is created or enabled.
