@@ -1,3 +1,10 @@
+## Constrained CPU model evidence — October 13, 2026
+
+- New owner-code paths: `scripts/hercules-360m-constrained-cpu.mjs`, `tests/hercules-360m-constrained-cpu.test.mjs`, `.github/workflows/hercules-360m-constrained-cpu.yml` and `docs/HERCULES-360M-CONSTRAINED-CPU-LAB.md`; original implementation with AI assistance.
+- Third-party pinned model: SmolLM2-360M-Instruct GGUF / Apache-2.0, immutable revision, exact size and SHA as documented. Ephemeral pinned upstream llama.cpp and Ubuntu 24.04 container are **not** claimed as SauceApproved-owned IP or redistributed.
+- Resource intent: Docker CPU quota 15% of one core, 512 MiB memory and swap, restricted privileges, no owner/customer data, no provider credentials. Fail-closed measurements and no launch authority.
+- Release: no chat connection, Render build, commerce, public registration, paid host or storefront mutation; no production model weights in the repository.
+
 ## Real model-plane authentication proof — DA-45, 2026-10-13
 
 - Original AI-assisted SauceApproved source: `scripts/hercules-live-model-plane-proof.mjs`, `tests/hercules-live-model-plane-proof.test.mjs`, `.github/workflows/hercules-live-model-plane-proof.yml`, and `docs/HERCULES-REAL-MODEL-AUTH-PROOF.md`.
