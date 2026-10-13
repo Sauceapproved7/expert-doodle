@@ -31,9 +31,18 @@ try{
     .slice(0,10).map(line=>line.slice(0,280));
 }catch{procData.mountCgroupEntries=["unavailable"];}
 
+const scoped={};
+const id=procData["/proc/self/cgroup"]?.split("\n").find(l=>l.startsWith("0::"))?.slice(3);
+if(id?.startsWith("/")&&!id.split("/").includes("..")){
+  const candidate="/sys/fs/cgroup"+id;
+  for(const name of ["memory.max","memory.current","cpu.max","cgroup.controllers"]){
+    try{scoped[name]=(await readFile(candidate+"/"+name,"utf8")).trim().slice(0,120);}
+    catch(e){scoped[name]=e?.code==="ENOENT"?null:"unreadable";}
+  }
+}
 process.stdout.write(JSON.stringify({
   schema:"hercules.qwen15.ephemeral-arm-cgroup-observation.v1",
-  host,detectedControllerValues:files,derived,procData,
+  host,detectedControllerValues:files,derived,procData,scopedControllerValues:scoped,
   productionInferenceVerified:false,
   hostOwnershipVerified:false,
   ownerBillingVerified:false,
