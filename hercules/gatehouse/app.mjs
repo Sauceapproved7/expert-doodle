@@ -60,6 +60,16 @@ async function jsonFetch(path,options={}){
  if(!res.ok)throw Error(body.error||"Request failed");
  return body;
 }
+async function loadPublic(){
+ const data=await jsonFetch("/api/public-summary");
+ if(authenticated)return;
+ renderServices(data.signals||[]);
+ text($("mode-chip"),"PUBLIC READ-ONLY");
+ $("mode-chip").className="chip gold";
+ text($("probe-chip"),"PUBLIC CONNECTIVITY");
+ text($("updated"),"Reachability checked "+new Date(data.refreshedAt).toLocaleTimeString());
+ announce("Public service reachability is available without login. Owner access is separately required for evidence history and detailed operations. No production changes can be made here.");
+}
 async function load(){
  const data=await jsonFetch("/api/dashboard");
  authenticated=true;
@@ -96,7 +106,7 @@ $("login-form").addEventListener("submit",async ev=>{
  finally{button.disabled=false}
 });
 $("refresh").addEventListener("click",async()=>{
- if(!authenticated){announce("Sign in to request real public endpoint observations; you can still explore the synthetic simulator.");return}
+ if(!authenticated){try{await loadPublic()}catch{announce("Public checks unavailable; cached statuses are not verified.")}return}
  try{await load()}catch{announce("Observation refresh failed; cached display should not be considered current.");text($("probe-chip"),"REFRESH FAILED")}
 });
 $("logout").addEventListener("click",async()=>{
@@ -106,6 +116,7 @@ $("logout").addEventListener("click",async()=>{
  text($("updated"),"Not connected");text($("events-stat"),"—");text($("count"),"—");
  text($("integrity"),"Awaiting records");announce("Signed out. All displayed preview statuses are unknown.");
  preview();
+ try{await loadPublic()}catch{}
 });
 $("simulate").addEventListener("click",async()=>{
  const scenario=$("scenario").value;
@@ -117,4 +128,4 @@ $("simulate").addEventListener("click",async()=>{
  }catch{text($("simulation-output"),"Synthetic test unavailable. No real transaction was attempted.")}
 });
 preview();
-jsonFetch("/api/session").then(()=>load()).catch(()=>{});
+jsonFetch("/api/session").then(()=>load()).catch(()=>loadPublic().catch(()=>{}));

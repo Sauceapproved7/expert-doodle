@@ -21,7 +21,7 @@ node --test hercules/gatehouse/*.test.mjs
 GATEHOUSE_ACCESS_TOKEN=$PRIVATE_GATEHOUSE_TOKEN PORT=8787 node hercules/gatehouse/server.mjs
 ```
 
-Open `http://localhost:8787` on a local machine for development. When deployed, Render serves HTTPS. The `/health` endpoint is public and deliberately contains no private data. The command dashboard stays in **synthetic preview mode** until a real `GATEHOUSE_ACCESS_TOKEN` is configured in the Gatehouse service *itself*.
+Open `http://localhost:8787` on a local machine for development. When deployed, Render serves HTTPS. The `/health` endpoint is public and deliberately contains no private data. The unauthenticated preview now shows **public read-only reachability checks** of four allowlisted Render services via `/api/public-summary`, with a shared 60-second cache to avoid excessive upstream traffic. No payment, payout, order, identity, internal log, or launch-readiness information is exposed through this route. The private Evidence Vault, Time Machine history, and full dashboard remain locked until a real `GATEHOUSE_ACCESS_TOKEN` is configured in the Gatehouse service *itself*.
 
 **Do not paste the owner token in a chat, commit, URL, or shared log.** Use the Render service's private environment settings or existing authorized vault tooling. A session is kept only in an HttpOnly, Secure, SameSite=Strict cookie.
 
@@ -29,8 +29,8 @@ Open `http://localhost:8787` on a local machine for development. When deployed, 
 - Do not merge into `main` until test, security and provenance review. Main is wired to auto-deploy several already live services.
 - Never repoint existing DNS or change payment/payout domains for this project.
 - No checkout/refund/payout, release activation, owner approval, credential export, GitHub write action, Cloudflare adjustment, or provider mutation is exposed.
-- Only public HTTPS status endpoints on Render-hosted names can be probed. No redirection or private IP range probes.
-- All private APIs return 503 if no owner credential exists, 401 if the owner session is invalid.
+- Only four explicitly configured public HTTPS status endpoints on Render-hosted names can be probed; the summary publishes only service names and reachability. It does not expose URLs, provider response bodies, internal endpoint credentials, logs, or IDs. No redirection or private IP range probes.
+- All private APIs return 503 if no owner credential exists, 401 if the owner session is invalid. The public cached summary intentionally remains accessible without an owner credential and grants no production authority.
 - All dashboard data is read-only observation; a reachable endpoint is not a verified transaction.
 - Avoid printing personal data, tokens or payment references into the Evidence Vault.
 - Live rollback, auto-remediation, persistent evidence storage, authenticated provider order reconciliation and alerts require separately scoped service connections and tested authorization. Until then, those features deliberately remain advisory/in-memory.
