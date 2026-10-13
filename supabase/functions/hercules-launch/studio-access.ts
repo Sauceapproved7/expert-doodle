@@ -1,6 +1,6 @@
 import {createClient} from 'npm:@supabase/supabase-js@2';
 
-const STUDIO_URL='https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-preview-cell/site/preview-sauceapproved-studio-global-20260928';
+const STUDIO_URL='https://sauceapproved-studio.onrender.com/';
 const ENTITLEMENT_VERSION='studio-shopify-founding-pilot-v1';
 const EMAIL=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

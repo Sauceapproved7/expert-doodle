@@ -4,6 +4,8 @@ The Shopify Studio activation page currently links to a Supabase Edge Function H
 
 The Studio server now provides `/activate`, rendering only the fixed Hercules Studio access page with HTML response headers. POST accepts only email-link requests and authenticated Studio purchase claims. The relay rejects foreign/missing origins, unsupported actions, arbitrary upstream targets, redirects, oversized input/output, and invalid upstream responses. It forwards no cookies or service-role credentials. Paid entitlement and identity checks remain in Hercules.
 
+The successful claim and activation-page fallback both hand off to the existing hosted Studio root, not the historical raw Supabase preview response (also served as text/plain). This changes the navigation destination, not authentication, membership, or execution permissions. The public Studio shell is not proof of paid-buyer sign-in or access to protected execution. Those require separate end-to-end evidence.
+
 ## Rollout checklist
 
 1. Deploy the reviewed source commit to the existing SauceApproved Studio service and verify `/activate` returns the form with `text/html`, no-store, CSP, and framing protection.
