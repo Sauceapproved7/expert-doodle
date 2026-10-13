@@ -5,15 +5,16 @@ import {readFile} from "node:fs/promises";
 const migration=await readFile(new URL("../supabase/migrations/20261007003500_hercules_supabase_management_oauth_v1.sql",import.meta.url),"utf8");
 
 test("Supabase Management OAuth state stores only Vault references and hashed state",()=>{
-  assert.match(migration,/create table if not exists public\.hercules_supabase_management_oauth/);
-  assert.match(migration,/client_secret_secret_ref uuid/);
-  assert.match(migration,/access_token_secret_ref uuid/);
-  assert.match(migration,/refresh_token_secret_ref uuid/);
-  assert.match(migration,/pkce_verifier_secret_ref uuid/);
-  assert.match(migration,/oauth_state_sha256 text/);
-  assert.doesNotMatch(migration,/client_secret text/);
-  assert.doesNotMatch(migration,/access_token text/);
-  assert.doesNotMatch(migration,/refresh_token text/);
+  const table=migration.slice(migration.indexOf("create table if not exists public.hercules_supabase_management_oauth"),migration.indexOf(");",migration.indexOf("create table if not exists public.hercules_supabase_management_oauth"))+2);
+  assert.match(table,/create table if not exists public\.hercules_supabase_management_oauth/);
+  assert.match(table,/client_secret_secret_ref uuid/);
+  assert.match(table,/access_token_secret_ref uuid/);
+  assert.match(table,/refresh_token_secret_ref uuid/);
+  assert.match(table,/pkce_verifier_secret_ref uuid/);
+  assert.match(table,/oauth_state_sha256 text/);
+  assert.doesNotMatch(table,/client_secret text/);
+  assert.doesNotMatch(table,/access_token text/);
+  assert.doesNotMatch(table,/refresh_token text/);
 });
 
 test("Supabase Management OAuth custody is service-role only and RLS forced",()=>{

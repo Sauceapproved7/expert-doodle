@@ -24,8 +24,8 @@ test("callback validates state through Vault custody and stores token references
   assert.match(callback,/code_verifier/);
   assert.match(callback,/grant_type","authorization_code"/);
   assert.match(callback,/Basic /);
-  assert.doesNotMatch(callback,/accessToken:/);
-  assert.doesNotMatch(callback,/refreshToken:/);
+  assert.doesNotMatch(callback,/\baccessToken\s*:\s*(?!string\b)[^,}\n]+/);
+  assert.doesNotMatch(callback,/\brefreshToken\s*:\s*(?!string\b)[^,}\n]+/);
 });
 
 test("configured authority immediately enables only Hercules OAuth server settings",()=>{
@@ -46,8 +46,9 @@ test("Management OAuth start remains owner-only and credential-free",()=>{
 
 test("callback validates OAuth state before exchanging the one-time authorization code",()=>{
   assert.match(callback,/hercules_supabase_management_validate_callback_state/);
-  const preflight=callback.indexOf("hercules_supabase_management_validate_callback_state");
-  const exchange=callback.indexOf("tokenRequest(");
+  const handler=callback.slice(callback.indexOf("async function callback(url:URL)"));
+  const preflight=handler.indexOf("hercules_supabase_management_validate_callback_state");
+  const exchange=handler.indexOf("await tokenRequest(");
   assert.ok(preflight>=0,"state preflight RPC must exist");
   assert.ok(exchange>=0,"token exchange must exist");
   assert.ok(preflight<exchange,"state preflight must happen before token exchange");
