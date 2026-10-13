@@ -23,3 +23,7 @@ Original SauceApproved/Hercules first-party code. No third-party source copied. 
 ## Provider limitation
 
 If the legitimate Client Secret is not accessible and the current app/store are not in the same Shopify Dev Dashboard organization, this grant is unavailable. Do **not** synthesize or concatenate unrelated Supabase tokens. An owner-approved OAuth grant for the same app is the next supported authorization path. Approval, signatures, 2FA and Shopify identity actions remain owner-controlled.
+
+## Token expiry and early-revocation recovery (v1.1)
+
+For the existing read-only owner action, Hercules re-exchanges the stored owner-authorized Client Secret when its 24-hour Shopify access token approaches expiry. The new token is validated with a baseline read-only shop-and-orders query **before** the Vault reference is updated. If a previously unexpired token gets an unexpected HTTP 401 from Shopify, the same owner-authenticated readback attempt renews that authorized token **once** and retries **once**. Any further 401, network failure, scope rejection or non-auth error is treated as an unavailable readback; no uncontrolled retries, webhook mutations, checkout, payout, entitlement or customer delivery are authorized. The owner can revoke app access at Shopify any time. No personal or credential data is sent in the response.

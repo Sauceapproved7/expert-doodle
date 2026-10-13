@@ -9,6 +9,7 @@ on:
       - "tests/hercules-shopify-domain-monitor.test.mjs"
       - "tests/hercules-shopify-provider-onboarding-ui.test.mjs"
       - "tests/hercules-gatehouse-shopify-readonly-owner.test.mjs"
+      - "tests/hercules-gatehouse-shopify-token-recovery.test.mjs"
       - "supabase/gatehouse_shopify_readonly_connections.sql"
       - "docs/HERCULES-SHOPIFY-DOMAIN-MONITOR-V1.md"
       - ".github/workflows/hercules-shopify-domain-monitor.yml"
@@ -27,4 +28,4 @@ jobs:
       - name: Enforce repository-wide owner-code-only policy
         run: node scripts/verify-owner-code-only.mjs
       - name: Verify Shopify domain monitor
-        run: node --test tests/hercules-shopify-domain-monitor.test.mjs tests/hercules-shopify-provider-onboarding-ui.test.mjs tests/hercules-gatehouse-shopify-readonly-owner.test.mjs
+        run: node --test tests/hercules-shopify-domain-monitor.test.mjs tests/hercules-shopify-provider-onboarding-ui.test.mjs tests/hercules-gatehouse-shopify-readonly-owner.test.mjs tests/hercules-gatehouse-shopify-token-recovery.test.mjs

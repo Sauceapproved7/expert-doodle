@@ -1270,13 +1270,12 @@ Deno.serve(async req=>{
       if(error||!data||data.client_id!==GATEHOUSE_SHOPIFY_CLIENT_ID
        ||data.shop_gid!==SHOP_GID||data.shop_domain!==SHOPIFY_API_HOST
        ||data.status!=='readback-only')return j({error:'read_only_connection_not_authorized'},503);
-      let token:string;
-      if(Date.parse(data.access_expires_at)<=Date.now()+60000){
+      const renew=async()=>{
        const secret=await getSecret(admin,String(data.secret_ref));
        const grant=await exchangeGatehouseShopifyGrant(data.client_id,secret);
-       token=grant.token;
-       // All refresh operations remain internal to the dedicated read-only credential table.
-       const newRef=await storeSecret(admin,token,
+       // Verify live shop and baseline order-read before storing renewed credential.
+       await verifyGatehouseShopifyOrderPermission(grant.token);
+       const newRef=await storeSecret(admin,grant.token,
         `hercules_gatehouse_shopify_access_${org}_${crypto.randomUUID()}`,
         'Renewed Gatehouse read-only Shopify Admin token.');
        const {error:updateError}=await admin.from('gatehouse_shopify_readonly_connections')
@@ -1284,10 +1283,20 @@ Deno.serve(async req=>{
          access_expires_at:new Date(Date.now()+grant.expiresIn*1000).toISOString(),
          updated_at:new Date().toISOString()}).eq('organization_id',org);
        if(updateError)throw updateError;
-      }else{
-       token=await getSecret(admin,String(data.access_secret_ref));
+       return grant.token;
+      };
+      const initiallyExpired=Date.parse(data.access_expires_at)<=Date.now()+60000;
+      const token=initiallyExpired
+       ?await renew():await getSecret(admin,String(data.access_secret_ref));
+      let evidence;
+      try{
+       evidence=await checkGatehouseShopifyOrderReadback(token,10);
+      }catch(error){
+       // A cached token can be revoked before its documented expiry. Exactly one retry.
+       if(!initiallyExpired&&Number((error as any)?.status)===401){
+        evidence=await checkGatehouseShopifyOrderReadback(await renew(),10);
+       }else throw error;
       }
-      const evidence=await checkGatehouseShopifyOrderReadback(token,10);
       return j({ok:true,source:'shopify-native-admin-read-only',shopAuthenticated:true,
        ordersScanned:evidence.ordersScanned,candidateCount:evidence.candidateCount,
        hasMoreOrders:evidence.truncated,
