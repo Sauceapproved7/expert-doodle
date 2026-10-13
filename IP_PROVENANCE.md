@@ -1,3 +1,11 @@
+## Nine-question native ARM64 Qwen trial — DA-45, 2026-10-13
+
+- First-party AI-assisted SauceApproved code: `scripts/hercules-arm64-nine-quality.mjs`, `tests/hercules-arm64-nine-quality.test.mjs`, `.github/workflows/hercules-arm64-nine-quality.yml`, `docs/HERCULES-ARM64-NINE-QUALITY.md`.
+- First-party foundation: existing Hercules nine-question question/scoring contract and own ARM evidence evaluator; this addition compares actual third-party Qwen samples with the same deterministic cases.
+- Evaluation-only external assets: Apache-2.0 `bartowski/Qwen2.5-0.5B-Instruct-GGUF` at immutable revision `eadd1b868ae382c989d828189bdb8e5d34dc675c` and SHA-256 `468787b643ef9081a75c6e7bd98da987f46583250248e0a0a7aca173308e8d34`, plus pinned upstream `ggml-org/llama.cpp`. No third-party model weights, code, binaries or training corpus is bundled or claimed as company-owned IP. Retain vendor Apache-2.0 notices on any future distribution.
+- Lab-only native ARM64 public GitHub runner, protected by exact model-completion, architecture, licensing, latency, RSS and semantic checks; no OCI account/host creation, Render/Railway deploy, provider secret, paid charge, customer data, release authority or registration change.
+
+
 ## Hercules Codex Cloud repository handoff — October 13, 2026
 
 - First-party, AI-assisted original SauceApproved source: `governance/hercules-codex-cloud-profile-v1.json`, `hercules-runtime/codex-cloud-profile.mjs`, `scripts/hercules-codex-cloud-handoff.mjs`, `tests/hercules-codex-cloud-handoff.test.mjs`, and `docs/HERCULES-CODEX-CLOUD-HANDOFF-V1.md`.
