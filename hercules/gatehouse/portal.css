@@ -5,3 +5,4 @@
 @media(max-width:800px){.p-hero{grid-template-columns:1fr;min-height:0}.p-art{max-height:310px}.p-logo{max-height:280px}.p-intro{padding:15px 25px 32px}.p-hero{margin-top:20px}.p-steps{grid-template-columns:1fr}.p-steps p{min-height:0}.p-demo{grid-template-columns:1fr;gap:20px;padding:22px}.p-plan{align-items:flex-start;flex-direction:column}.p-plan-price{font-size:41px}}
 @media(max-width:450px){.p-nav{flex-wrap:wrap}.p-intro h1{font-size:36px}.p-preview-input{flex-direction:column}.p-preview-input button{width:100%}.p-status{align-items:flex-start}.p-plan{padding:22px}}
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto;transition:none!important}}
+.p-cta.p-login{background:transparent;color:#f4d28f;border:1px solid #cfaa65;margin-left:10px}.p-cta.p-login:hover,.p-cta.p-login:focus-visible{background:#2e3c58}@media(max-width:600px){.p-cta.p-login{margin:12px 0 0}}
