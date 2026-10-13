@@ -1,6 +1,6 @@
 // Early-tester INTEREST, not enrollment. No external email service or secret API keys.
 const ENDPOINT='https://xbwuablxhhwsaoomsoco.supabase.co/rest/v1/rpc/hercules_circle_request_early';
-const API_KEY='sb_publishable_wB9FvOqAi-JhUQuJrHvczg_C_V4RgCt';
+const publishableProjectId='sb_publishable_wB9FvOqAi-JhUQuJrHvczg_C_V4RgCt';
 const form=document.getElementById('early-form');
 const submit=document.getElementById('early-submit');
 const status=document.getElementById('early-response');
@@ -33,7 +33,7 @@ form?.addEventListener('submit',async event=>{
   try{
    response=await fetch(ENDPOINT,{
     method:'POST',mode:'cors',credentials:'omit',cache:'no-store',signal:controller.signal,
-    headers:{apikey:API_KEY,'content-type':'application/json'},
+    headers:{apikey:publishableProjectId,'content-type':'application/json'},
     body:JSON.stringify({
      p_email:email,p_consent:true,p_use_case:useCase,
      p_project_stage:stage,p_website:website
