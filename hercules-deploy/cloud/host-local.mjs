@@ -1,7 +1,6 @@
 // Local-only Hercules Cloud adapter: not wired to any public API or deployed host.
 // An independent owner-controlled operator must authorize each signed action.
 import {createHash} from 'node:crypto';
-import {execFile} from 'node:child_process';
 import {constants} from 'node:fs';
 import {mkdir,lstat,open,realpath} from 'node:fs/promises';
 import {isAbsolute,join,normalize,resolve} from 'node:path';
@@ -63,9 +62,9 @@ export async function createDurableNonceStore({root}={}){
   return true;
  };
 }
-export function createBoundedDockerRunner(plan,{execFileImpl=execFile}={}){
+export function createBoundedDockerRunner(plan,{execFileImpl}={}){
  assertSandboxHostPlan(plan);
- if(typeof execFileImpl!=='function')fail('command_runner_invalid');
+ if(typeof execFileImpl!=='function')fail('local_command_executor_not_injected');
  const socket=plan.rootlessSocket;
  if(!/^unix:\/\/\/run\/user\/(?:[1-9]\d{3,4})\/docker\.sock$/.test(socket))
    fail('plan_integrity_invalid');
