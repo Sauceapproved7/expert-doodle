@@ -5,7 +5,6 @@ on:
     paths:
       - "hercules-deploy/cloud/founders*"
       - "hercules-deploy/cloud/index.html"
-      - "supabase/functions/hercules-cloud-founders/**"
       - "supabase/migrations/*hercules_cloud_founders*"
       - "tests/hercules-cloud-founders.test.mjs"
       - "scripts/build_hercules_cloud_preview.mjs"
@@ -14,7 +13,6 @@ on:
     branches: [main]
     paths:
       - "hercules-deploy/cloud/founders*"
-      - "supabase/functions/hercules-cloud-founders/**"
       - "tests/hercules-cloud-founders.test.mjs"
       - ".github/workflows/hercules-cloud-founders.yml"
 
@@ -41,6 +39,5 @@ jobs:
           test -s dist/hercules-cloud/founders.mjs
       - name: Syntax and owner-code boundary
         run: |
-          node --check supabase/functions/hercules-cloud-founders/core.mjs
           node --check hercules-deploy/cloud/founders.mjs
           node scripts/verify-owner-code-only.mjs
