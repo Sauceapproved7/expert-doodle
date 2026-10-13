@@ -34,6 +34,10 @@ test("drill proves failure, real restart attempts and final start-limit-hit",()=
   assert.match(ci,/Result/);
   assert.match(ci,/NRestarts/);
   assert.match(ci,/start-limit-hit/);
+  assert.match(ci,/Start request repeated too quickly/);
+  assert.match(ci,/sudo journalctl -u/);
+  assert.match(ci,/service_state/);
+  assert.match(ci,/start_limit_evidenced/);
   assert.match(ci,/restart_count/);
   assert.match(ci,/test "\$restart_count" -ge 2/);
   assert.match(ci,/test "\$restart_count" -le 3/);
