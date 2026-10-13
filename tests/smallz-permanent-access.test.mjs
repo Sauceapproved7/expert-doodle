@@ -5,8 +5,8 @@ test('permanent access page renders without credentials, scripts or registrar de
  const app=createHerculesBotApp({boundary:{authenticateOwner:async()=>{throw Error('must not authenticate a public link page')}}});
  const r=await app.handle({method:'GET',url:'/launch'});
  assert.equal(r.status,200);assert.match(r.headers['content-type'],/^text\/html/);
- assert.match(r.body,/https:\/\/sauceapproved-2.myshopify.com\/products\/sauceapproved-premium-hoodie/);
- assert.match(r.body,/href="\/app"/);assert.match(r.body,/https:\/\/sauceapproved-studio.onrender.com/);
+ const destinations=[...r.body.matchAll(/href="([^"]+)"/g)].map(match=>match[1]);
+ assert.deepEqual(destinations,['https://sauceapproved-2.myshopify.com/products/sauceapproved-premium-hoodie','/app','https://sauceapproved-studio.onrender.com']);
  assert.doesNotMatch(r.body,/<script|handoff_token|access_token|api_secret/);
  assert.match(r.headers['content-security-policy'],/default-src 'none'/);
 });
