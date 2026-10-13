@@ -1,0 +1,29 @@
+name: Hercules Circle Private Confirmation Gateway
+
+on:
+  pull_request:
+    paths:
+      - "hercules-deploy/owned-circle/confirmation-gateway.mjs"
+      - "tests/hercules-circle-confirmation-gateway.test.mjs"
+      - "hercules-deploy/owned-circle/CONFIRMATION_GATEWAY_V1.md"
+      - ".github/workflows/hercules-circle-gateway.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  held-private-api:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Test fail-closed HTTP gateway and origin/rate limits
+        run: |
+          node --test tests/hercules-circle-confirmation-gateway.test.mjs
+          node --check hercules-deploy/owned-circle/confirmation-gateway.mjs
+      - name: Verify independent ownership rules
+        run: node scripts/verify-owner-code-only.mjs
