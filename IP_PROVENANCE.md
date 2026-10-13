@@ -266,3 +266,9 @@ After execution of a valid assignment, update the declared rights holder, owner-
 - Paths: hercules-bot/credential-setup.mjs, Smallz server route, focused tests, and setup documentation.
 - Origin: original Hercules code created with AI assistance. Node built-ins and the existing private bridge are used; no new packaged dependency.
 - Scope: render the existing expiring credential-drop form on the owned Smallz host, forwarding only bounded key/secret fields to a fixed Hercules backend. Provider validation, Vault storage, and DNS authorization remain enforced by that backend.
+
+## Smallz permanent access page — 2026-10-12
+
+- Paths: hercules-bot/launch.html, /launch route, focused route test and documentation.
+- Origin: original project-authored page with AI assistance; Node/browser built-ins only. The existing product photo is loaded from the user's Shopify CDN, not packaged as software or claimed as new original media.
+- Scope: a script-free public navigation page linking the current Shopify storefront, authenticated Smallz console, and Studio. It adds no payment flow, registrar authority, release approval, or new service.

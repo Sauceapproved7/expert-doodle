@@ -69,6 +69,7 @@ export function createHerculesBotApp({port=Number(process.env.PORT||38801),bound
     const method=String(req.method??"GET").toUpperCase(),url=String(req.url??"/").split("?")[0];
     if(url==="/connect/spaceship")return credentialSetup(req,{fetchUpstream:credentialFetch});
     if(method==="GET"&&url==="/health")return json(200,{ok:true,service:"smallz",securityBoundary:"owner-auth-and-external-estop",hardware:"disconnected"});
+    if(method==="GET"&&url==="/launch")return {status:200,headers:{"content-type":"text/html; charset=utf-8","cache-control":"no-store","x-content-type-options":"nosniff","referrer-policy":"no-referrer","content-security-policy":"default-src 'none'; img-src https://cdn.shopify.com; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"},body:await readFile(join(fileURLToPath(new URL(".",import.meta.url)),"launch.html"),"utf8")};
     if(method==="GET"&&url==="/api/auth-config"){
       const authUrl=process.env.SUPABASE_PUBLIC_URL,key=process.env.SUPABASE_PUBLISHABLE_KEY;
       if(!authUrl||!key)return json(503,{error:"owner-auth-not-configured"});
