@@ -42,7 +42,7 @@ class HerculesIphonePreviewTests(unittest.TestCase):
         self.assertIn('name="robots" content="noindex,nofollow"', html)
         self.assertIn('id="previewNotice"', html)
         self.assertRegex(html, r"PREVIEW\s+ONLY")
-        self.assertIn("no live AI", html.lower())
+        self.assertIn("no live ai", html.lower())
 
     def test_preview_chat_always_disabled_with_no_model_or_remote_calls(self):
         html = (self.path / "index.html").read_text()
