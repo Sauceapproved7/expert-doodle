@@ -116,3 +116,25 @@ test("staging server CLI cannot start without explicit experimental opt-in",()=>
  }});
  assert.notEqual(result.status,0);assert.match(result.stderr,/disabled/i);
 });
+
+test("actual allowlisted Hercules documentation corpus loads and cites a real project record",async()=>{
+ const {readFile}=await import("node:fs/promises");
+ const paths=[
+  "docs/HERCULES-MODEL-BACKEND-READINESS-V1.md",
+  "docs/HERCULES-EXPERIMENTAL-CHAT-BRIDGE-V1.md",
+  "docs/HERCULES-NATIVE-MODEL-LAB-V1.md",
+  "docs/HERCULES-IPHONE-STATIC-PREVIEW-V1.md",
+  "docs/HERCULES-IPHONE-PUBLIC-EVIDENCE-V1.md",
+ ];
+ const documents=await Promise.all(paths.map(async path=>({
+  path,content:await readFile(new URL("../"+path,import.meta.url),"utf8")
+ })));
+ const idx=buildVaultIndex(documents);
+ const response=answerFromVault(idx,"What does Hercules model backend readiness verify?");
+ assert.equal(response.found,true);
+ assert.ok(response.sources.length===1);
+ assert.ok(paths.includes(response.sources[0].path));
+ assert.ok(response.sources[0].sha256.length===64);
+ assert.equal(response.general_chat_verified,false);
+ assert.equal(response.command_executed,false);
+});
