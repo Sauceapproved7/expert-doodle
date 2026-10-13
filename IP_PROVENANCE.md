@@ -1,3 +1,9 @@
+## Hercules Smallz release identity proof — October 13, 2026
+
+- Original first-party SauceApproved AI-assisted Node.js code and tests: `hercules-runtime/smallz-release-proof.mjs`, `hercules-bot/app-server.mjs`, `tests/hercules-smallz-release-proof.test.mjs`, `tests/hercules-smallz-runtime-identity-route.test.mjs`, `docs/HERCULES-SMALLZ-RELEASE-PROOF-V1.md` and existing CI registration. Standard-library only; no vendored source or dependencies.
+- Uses only existing owner authentication and external emergency-stop state read to protect a future authenticated runtime-identity route. Render-supplied metadata is strictly validated, and provider/GitHub snapshots must still be read independently from authorized accounts. Source statements alone are not provider authentication.
+- No new credentials, customer data, model weights, provider access, payment/commerce authorizations, billing, deployment, DNS, Codex Cloud publication, or live runtime change by committing this code. No new license obligations.
+
 ## Hercules Runtime Witness v1 — October 13, 2026
 
 - Original first-party SauceApproved Node.js code, authored with AI assistance: hercules-runtime/runtime-witness.mjs, scripts/hercules-runtime-witness.mjs, tests/hercules-runtime-witness.test.mjs, and docs/HERCULES-RUNTIME-WITNESS-V1.md; attached to existing implementation-enforcement CI.
