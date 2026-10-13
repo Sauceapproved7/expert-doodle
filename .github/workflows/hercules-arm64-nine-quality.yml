@@ -5,9 +5,11 @@ on:
       - ".github/workflows/hercules-arm64-nine-quality.yml"
       - "scripts/hercules-arm64-nine-quality.mjs"
       - "scripts/hercules-arm64-format-probe.mjs"
+      - "scripts/hercules-arm64-system-quality-matrix.mjs"
       - "scripts/hercules-360m-quality-benchmark.mjs"
       - "tests/hercules-arm64-nine-quality.test.mjs"
       - "tests/hercules-arm64-format-probe.test.mjs"
+      - "tests/hercules-arm64-system-quality-matrix.test.mjs"
       - "docs/HERCULES-ARM64-NINE-QUALITY.md"
   workflow_dispatch:
 permissions:
@@ -21,7 +23,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Check owner rules and fail-closed evidence logic
         run: |
-          node --test tests/hercules-arm64-nine-quality.test.mjs tests/hercules-arm64-format-probe.test.mjs tests/hercules-arm64-inference-lab.test.mjs
+          node --test tests/hercules-arm64-nine-quality.test.mjs tests/hercules-arm64-format-probe.test.mjs tests/hercules-arm64-system-quality-matrix.test.mjs tests/hercules-arm64-inference-lab.test.mjs
           node scripts/verify-hercules-execution-contract.mjs
           node scripts/verify-owner-code-only.mjs
           node scripts/security-baseline.mjs
@@ -73,6 +75,7 @@ jobs:
           import {writeFileSync} from "node:fs";
           import {BENCHMARK_CASES} from "./scripts/hercules-360m-quality-benchmark.mjs";
           import {HELLO_PROBES,formatProbeMessages} from "./scripts/hercules-arm64-format-probe.mjs";
+          import {SYSTEM_HOLDOUT_CASES,systemQualityMessages} from "./scripts/hercules-arm64-system-quality-matrix.mjs";
           const answers=[];
           for (const item of BENCHMARK_CASES){
             const started=Date.now();
@@ -128,6 +131,35 @@ jobs:
             }));
           }
           writeFileSync("/tmp/hercules-arm/hello-probe-answers.json",JSON.stringify(probeAnswers));
+          // Third independent matrix: all original nine plus nine novel fixed holdouts.
+          const systemAnswers=[];
+          for(const item of [...BENCHMARK_CASES,...SYSTEM_HOLDOUT_CASES]){
+            const started=Date.now();
+            const response=await fetch("http://127.0.0.1:18775/v1/chat/completions",{
+              method:"POST",headers:{"content-type":"application/json"},
+              body:JSON.stringify({
+                model:"hercules-arm-trial",stream:false,temperature:0,
+                messages:systemQualityMessages(item.prompt),max_tokens:36
+              }),
+              signal:AbortSignal.timeout(30000)
+            });
+            if(!response.ok)throw new Error("failed system quality inference: "+item.id+" HTTP "+response.status);
+            const value=await response.json();
+            const choice=value?.choices?.[0];
+            const answer={
+              id:item.id,elapsedMs:Math.max(1,Date.now()-started),
+              model:value?.model,finishReason:choice?.finish_reason,
+              output:choice?.message?.content,
+            };
+            systemAnswers.push(answer);
+            console.log(JSON.stringify({
+              group:"system-matrix",id:item.id,elapsedMs:answer.elapsedMs,
+              responseExcerpt:item.id==="private"||item.id==="holdout-private"?
+                "[redacted-sensitive-test]":typeof answer.output==="string"?
+                  answer.output.slice(0,120):null
+            }));
+          }
+          writeFileSync("/tmp/hercules-arm/system-quality-answers.json",JSON.stringify(systemAnswers));
           NODE
           peak_kb="$(awk '$1=="VmHWM:" {print $2}' "/proc/$model_pid/status")"
           test -n "$peak_kb"
@@ -146,7 +178,11 @@ jobs:
           writeFileSync("/tmp/hercules-arm/hello-probe-evidence.json",JSON.stringify({
             ...evidence,answers:JSON.parse(readFileSync("/tmp/hercules-arm/hello-probe-answers.json","utf8"))
           }));
+          writeFileSync("/tmp/hercules-arm/system-quality-evidence.json",JSON.stringify({
+            ...evidence,answers:JSON.parse(readFileSync("/tmp/hercules-arm/system-quality-answers.json","utf8"))
+          }));
           NODE
           node scripts/hercules-arm64-nine-quality.mjs --evaluate /tmp/hercules-arm/evidence.json
           node scripts/hercules-arm64-format-probe.mjs --evaluate /tmp/hercules-arm/hello-probe-evidence.json
+          node scripts/hercules-arm64-system-quality-matrix.mjs --evaluate /tmp/hercules-arm/system-quality-evidence.json
           echo 'This lab is not an Oracle VM or public chat quality approval.'
