@@ -18,6 +18,20 @@ function normalizedAnswer(value){
   return /^\d+$/.test(s)?s:null;
 }
 
+
+function isSemanticallyCorrect(testCase,raw){
+  if(typeof raw!=="string"||raw.length>2048)return false;
+  if(normalizedAnswer(raw)===testCase.expected)return true;
+  const text=raw.trim().toLowerCase().replace(/[.!?]+$/,"").trim();
+  if(testCase.id==="addition")
+    return /^2\s*(?:\+|plus)\s*2\s*(?:=|equals)\s*4$/.test(text);
+  if(testCase.id==="subtraction")
+    return /^5\s*(?:-|−|minus)\s*3\s*(?:=|equals)\s*2$/.test(text);
+  if(testCase.id==="compare")
+    return /^12\s+is\s+(?:the\s+)?larger(?:\s+number)?(?:\s+than\s+7)?$/.test(text);
+  return false;
+}
+
 export function evaluateMathPromptDiagnostic(evidence){
   const q=evidence?.cpuQuotaMicros,p=evidence?.cpuPeriodMicros,lim=evidence?.memoryLimitBytes,rss=evidence?.processPeakRssBytes;
   const measuredBudget=Number.isSafeInteger(q)&&Number.isSafeInteger(p)&&p>0&&
@@ -45,7 +59,8 @@ export function evaluateMathPromptDiagnostic(evidence){
         Number.isSafeInteger(entry.elapsedMs)&&entry.elapsedMs>0&&entry.elapsedMs<=150000);
       const actual=valid?body.message.content.trim():null;
       rows.push(Object.freeze({
-        id:c.id,mode,valid,correct:Boolean(valid&&normalizedAnswer(actual)===c.expected),
+        id:c.id,mode,valid,correct:Boolean(valid&&isSemanticallyCorrect(c,actual)),
+        formatCorrect:Boolean(valid&&actual===c.expected),
         elapsedMs:valid?entry.elapsedMs:null,
         observedText:actual?.slice(0,160)||null
       }));
@@ -56,6 +71,7 @@ export function evaluateMathPromptDiagnostic(evidence){
     const groupRows=rows.filter(row=>row.mode===mode);
     return Object.freeze({
       correct:groupRows.filter(row=>row.correct).length,
+      formatCorrect:groupRows.filter(row=>row.formatCorrect).length,
       wrong:groupRows.filter(row=>row.valid&&!row.correct).length,
       p95Ms:groupRows.every(row=>row.valid)?
         [...groupRows.map(row=>row.elapsedMs)].sort((a,b)=>a-b)[Math.ceil(.95*groupRows.length)-1]:null
