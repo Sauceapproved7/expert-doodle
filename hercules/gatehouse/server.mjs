@@ -6,6 +6,7 @@ import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
 import {CATALOG,buildDemoReport} from "./commerce.mjs";
 import {buildPurchaseLinkReadiness} from "./purchase-link.mjs";
+import {createNativeShopifyReader} from "./native-shopify-reader.mjs";
 import {customerAccessBridge} from "./customer-bridge.mjs";
 import {createCustomerAuthenticator} from "./customer-auth.mjs";
 import {portalReadiness} from "./customer-portal-model.mjs";
@@ -207,6 +208,20 @@ export function createServer(config={}){
   if(path==="/commercial/website-diagnostic-preview"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
    return send(res,200,renderIllustrativeDiagnostic(),"text/html; charset=utf-8");
+  }
+  if(path==="/api/private/shopify-order-readback"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   if(!token)return send(res,503,{error:"owner-credential-not-configured"});
+   if(!authed(req))return send(res,401,{error:"owner-session-required"});
+   if(req.headers["x-gatehouse-request"]!=="1")return send(res,403,{error:"first-party-request-required"});
+   const reader=createNativeShopifyReader({
+    enabled:config.nativeShopifyEnabled??(process.env.GATEHOUSE_SHOPIFY_READBACK_APPROVED==="true"),
+    ownerAuthenticated:true,
+    accessToken:config.nativeShopifyToken??process.env.GATEHOUSE_SHOPIFY_ADMIN_ACCESS_TOKEN??"",
+    fetcher:config.nativeShopifyFetcher??fetch
+   });
+   const result=await reader.run();
+   return send(res,result.status,result.body);
   }
   if(path==="/api/commercial/purchase-link-readiness"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
