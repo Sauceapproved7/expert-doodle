@@ -1,0 +1,28 @@
+name: Hercules Circle Real Public Connection Proof
+
+on:
+  pull_request:
+    paths:
+      - "scripts/probe_hercules_circle_live.mjs"
+      - "tests/hercules-circle-live-http.test.mjs"
+      - ".github/workflows/hercules-circle-live-http.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-negative-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Test read-only public probe safety boundaries
+        run: node --test tests/hercules-circle-live-http.test.mjs
+      - name: Independently verify live website, CORS, private data and required consent
+        run: node scripts/probe_hercules_circle_live.mjs
+      - name: Verify owner-code restrictions
+        run: node scripts/verify-owner-code-only.mjs
