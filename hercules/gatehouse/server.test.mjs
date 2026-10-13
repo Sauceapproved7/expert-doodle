@@ -57,3 +57,42 @@ test("no credential can be sent in a GET URL and unknown routes 404",async()=>{
   assert.equal((await fetch(base+"/api/anything-else")).status,404);
  });
 });
+
+test("public summary exposes only bounded public reachability, never private data",async()=>{
+ const calls=[];
+ await withServer({
+  accessToken:"",probeUrls:[{name:"Hercules MCP",url:"https://hercules-mcp.onrender.com/health"}],
+  fetcher:async (url,options)=>{calls.push({url:String(url),options});return {status:200}}
+ },async base=>{
+  const r=await fetch(base+"/api/public-summary");
+  assert.equal(r.status,200);
+  const json=await r.json();
+  assert.equal(json.productionAuthorized,false);
+  assert.equal(json.moneyMoved,false);
+  assert.equal(json.mode,"public-connectivity-only");
+  assert.deepEqual(json.signals.map(s=>s.name),["Hercules MCP"]);
+  assert.equal(json.signals[0].status,"reachable");
+  assert.equal(json.authoritative,false);
+  assert.equal(JSON.stringify(json).includes("onrender.com"),false);
+  assert.deepEqual(calls.map(c=>c.options.method),["GET"]);
+ });
+});
+test("public summary caches probes and never causes repeated upstream hits during refresh",async()=>{
+ let hits=0;
+ await withServer({
+  accessToken:"",probeUrls:[{name:"Studio",url:"https://sauceapproved-studio.onrender.com/health"}],
+  fetcher:async()=>{hits++;return {status:200}}
+ },async base=>{
+  const a=await fetch(base+"/api/public-summary");
+  const b=await fetch(base+"/api/public-summary");
+  assert.equal(a.status,200);
+  assert.equal(b.status,200);
+  assert.equal(hits,1);
+ });
+});
+test("public summary is GET-only and never bypasses private dashboard",async()=>{
+ await withServer({accessToken:"",probeUrls:[]},async base=>{
+  assert.equal((await fetch(base+"/api/public-summary",{method:"POST"})).status,405);
+  assert.equal((await fetch(base+"/api/dashboard")).status,503);
+ });
+});
