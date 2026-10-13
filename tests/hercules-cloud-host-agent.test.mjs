@@ -31,7 +31,7 @@ function fakeRunner(){
    assert.equal(file,'docker');
    assert.deepEqual(args.slice(0,2),['--host','unix:///run/user/1000/docker.sock']);
    if(args[2]==='info')return {exitCode:0,stdout:'[\"name=rootless\"]',stderr:''};
-   if(args[0]==='container'&&args[1]==='inspect')
+   if(args[2]==='container'&&args[3]==='inspect')
      return {exitCode:0,stdout:'true\n',stderr:''};
    return {exitCode:0,stdout:'',stderr:''};
  };
@@ -143,7 +143,7 @@ test('failed verification attempts bounded cleanup and does not claim success',a
  const runner=async(file,args)=>{
   calls.push(args);
   if(args[2]==='info')return {exitCode:0,stdout:'["name=rootless"]',stderr:''};
-  if(args[1]==='inspect')return {exitCode:0,stdout:'false\n',stderr:''};
+  if(args[3]==='inspect')return {exitCode:0,stdout:'false\n',stderr:''};
   return {exitCode:0,stdout:'',stderr:''};
  };
  await assert.rejects(()=>executeSandboxHostPlan(plan,{permit,signingKey:key,now:time,runCommand:runner,consumeNonce:nonceStore()}),/sandbox_launch_unverified/);
