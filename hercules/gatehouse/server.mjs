@@ -6,6 +6,7 @@ import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
 import {CATALOG,buildDemoReport} from "./commerce.mjs";
 import {customerAccessBridge} from "./customer-bridge.mjs";
+import {createCustomerAuthenticator} from "./customer-auth.mjs";
 import {portalReadiness} from "./customer-portal-model.mjs";
 import {assessFulfillment,makeSampleReport,renderPrintableSample} from "./fulfillment.mjs";
 import {assessLaunch,sentinelAlerts,revenueRadar,recoveryPlan,simulateCheckout,
@@ -15,6 +16,9 @@ const directory=dirname(fileURLToPath(import.meta.url));
 const files={"/":{name:"index.html",type:"text/html; charset=utf-8"},
  "/commercial":{name:"commercial.html",type:"text/html; charset=utf-8"},
  "/portal":{name:"portal.html",type:"text/html; charset=utf-8"},
+ "/portal/access":{name:"access.html",type:"text/html; charset=utf-8"},
+ "/access.mjs":{name:"access.mjs",type:"text/javascript; charset=utf-8"},
+ "/access.css":{name:"access.css",type:"text/css; charset=utf-8"},
  "/portal.mjs":{name:"portal.mjs",type:"text/javascript; charset=utf-8"},
  "/portal.css":{name:"portal.css",type:"text/css; charset=utf-8"},
  "/app.mjs":{name:"app.mjs",type:"text/javascript; charset=utf-8"},
@@ -70,9 +74,17 @@ export function createServer(config={}){
  const fetcher=config.fetcher??fetch;
  const probeUrls=config.probeUrls??defaultProbes;
  const targets=probeUrls.filter(p=>{try{return stableServices.includes(p.name)&&Boolean(validateTarget(p.url))}catch{return false}});
+ const customerAuthEnabled=config.customerAuthEnabled??(process.env.GATEHOUSE_CUSTOMER_AUTH_APPROVED==="true");
+ const customerPublishableKey=config.customerPublishableKey??process.env.GATEHOUSE_SUPABASE_PUBLISHABLE_KEY??"";
+ const customerAuthenticator=createCustomerAuthenticator({
+  enabled:customerAuthEnabled,
+  publishableKey:customerPublishableKey,
+  fetcher:config.authFetcher??fetch,
+  now:config.authNow??Date.now
+ });
  const customerBridge=customerAccessBridge({
   enabled:config.customerEnabled??(process.env.GATEHOUSE_CUSTOMER_INTAKE_APPROVED==="true"),
-  publishableKey:config.customerPublishableKey??process.env.GATEHOUSE_SUPABASE_PUBLISHABLE_KEY??"",
+  publishableKey:customerPublishableKey,
   fetcher:config.customerFetcher??fetch
  });
  let publicCache=null,publicCacheTime=0,publicInFlight=null;
@@ -127,6 +139,32 @@ export function createServer(config={}){
   if(method==="GET"&&path==="/health")
    return send(res,200,{service:"hercules-gatehouse",status:"running",mode:"isolated-read-only",
     credentialsConfigured:Boolean(token),productionAuthorized:false});
+  if(path==="/api/customer/auth/capability"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   return send(res,200,{emailCodeEnabled:customerAuthEnabled&&customerPublishableKey.startsWith("sb_publishable_"),
+    customerSignupEnabled:false,customerIntakeEnabled:false,checkoutEnabled:false,
+    reportDeliveryEnabled:false,
+    notice:"Account access requires existing user, a configured email-code template and owner approval. No new signups or commerce are enabled."});
+  }
+  const authActions={
+   "/api/customer/auth/request-code":"request-code",
+   "/api/customer/auth/verify-code":"verify-code",
+   "/api/customer/auth/session":"session",
+   "/api/customer/auth/logout":"logout"
+  };
+  if(Object.hasOwn(authActions,path)){
+   const action=authActions[path];
+   if(action==="session"&&method!=="GET")return send(res,405,{error:"Method not allowed"});
+   if(action!=="session"&&method!=="POST")return send(res,405,{error:"Method not allowed"});
+   let body=undefined;
+   if(method==="POST"&&action!=="logout"){
+    if(req.headers["content-type"]?.split(";")[0]!=="application/json")return send(res,415,{error:"JSON required"});
+    try{body=await parseBody(req)}catch{return send(res,400,{error:"Invalid JSON"})}
+   }
+   const reply=await customerAuthenticator.handle({action,method,headers:req.headers,body,remoteAddress:req.socket?.remoteAddress});
+   if(reply.setCookie)res.setHeader("Set-Cookie",reply.setCookie);
+   return send(res,reply.status,reply.body);
+  }
   if(path==="/api/customer/portal-readiness"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
    return send(res,200,portalReadiness());
@@ -136,10 +174,20 @@ export function createServer(config={}){
    if(method==="POST"){
     if(req.headers["content-type"]?.split(";")[0]!=="application/json")return send(res,415,{error:"JSON required"});
     let data;try{data=await parseBody(req)}catch{return send(res,400,{error:"Invalid JSON"})}
-    const reply=await customerBridge.handle({headers:req.headers,body:data},"create");
+    const customerHeaders={...req.headers};
+    const cookieToken=customerAuthenticator.readSession(req.headers.cookie);
+    if(cookieToken&&!customerHeaders.authorization){
+     if(req.headers.origin!=="https://hercules-gatehouse-preview.onrender.com"||req.headers["x-gatehouse-request"]!=="1")
+      return send(res,403,{error:"same-origin-required"});
+     customerHeaders.authorization="Bearer "+cookieToken;
+    }
+    const reply=await customerBridge.handle({headers:customerHeaders,body:data},"create");
     return send(res,reply.status,reply.body);
    }
-   const reply=await customerBridge.handle({headers:req.headers},"list");
+   const customerHeaders={...req.headers};
+   const cookieToken=customerAuthenticator.readSession(req.headers.cookie);
+   if(cookieToken&&!customerHeaders.authorization)customerHeaders.authorization="Bearer "+cookieToken;
+   const reply=await customerBridge.handle({headers:customerHeaders},"list");
    return send(res,reply.status,reply.body);
   }
   if(path==="/api/commercial/fulfillment-readiness"){
