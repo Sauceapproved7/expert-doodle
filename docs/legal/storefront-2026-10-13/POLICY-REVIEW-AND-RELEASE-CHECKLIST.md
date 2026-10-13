@@ -32,6 +32,16 @@ Do **not** conflate the:
 
 These are separate commercial products. No new price, paid-path verification, legal approval or billing activation is inferred here.
 
+## Additional evidence from authenticated Shopify read-only check — October 13, 2026
+
+- **Two configured delivery profiles:** General profile and a profile labeled "Standard: Printify Choice - International, Sweatshirt, Hoodie." These profiles contain configured shipping methods but do **not** establish actual rates for every checkout, accepted shipment deadlines, international legal coverage, or customer-visible delivery estimates.
+- **Product evidence:** Two active physical hoodie products list the vendor **Printify**. This supports treating Printify as an integration to verify, not treating an integration label as proof of return acceptance or delivery service levels.
+- **One visible merchant-managed Shopify location** fulfills online orders. It is **not** verified as a safe/public customer return destination, and its physical address must not be silently inserted into a published policy.
+- **FTC shipment rule:** For most internet merchandise orders, fulfillment must have a reasonable basis for the advertised shipment period or generally within 30 days where none is promised. Delays require compliant consent/cancellation notices or refunds. Source: https://www.ftc.gov/business-guidance/resources/business-guide-ftcs-mail-internet-or-telephone-order-merchandise-rule.
+- **Connecticut online return disclosure:** Connecticut General Statutes § 42-110aa requires the online refund/exchange policy to disclose refund form, return deadline, fees as dollar amount or percentage, and other conditions. Confirm whether regular exchanges are offered and settle a conspicuous final fee statement. Source: https://prdext2.cga.ct.gov/2025/pub/chap_735c.htm.
+- **Missing operational proofs:** fulfillment provider's return-acceptance rules and label service, actual return destination, rates and shipping times by checkout market, customer delay-notice handling, approved refund fee schedule, and currently valid privacy opt-out pages.
+- None of the read-only checks proves an end-to-end paid checkout, provider payout, fulfillment or refunds.
+
 ## Before authorizing publication
 
 1. **Owner/qualified legal review:** Confirm registered legal entity wording, appropriate contact information, applicable service markets, required legal notice/registered address, nonwaivable consumer rights, tax/business data and privacy requirements.
