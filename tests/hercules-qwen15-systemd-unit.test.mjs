@@ -169,3 +169,11 @@ test("real model systemd CI explicitly declares the approved external-command bo
   for(const dependency of binding.dependencies)
     assert.equal(policy.externalInfrastructure.find(x=>x.id===dependency)?.packagedAsHerculesCode,false);
 });
+
+test("native failure diagnostics expose only fixed machine error classes and never environment secrets",()=>{
+ const s=readFileSync(new URL("../scripts/hercules-qwen15-native-systemd-probe.sh",import.meta.url),"utf8");
+ assert.match(s,/owner_host_preflight_failed\|private_model_unavailable/);
+ assert.match(s,/sudo journalctl -u "\$unit_name"/);
+ assert.match(s,/grep -E 'owner_host_preflight_failed/);
+ assert.doesNotMatch(s,/cat "\$env_path"|grep -v .*TOKEN|journalctl.*-o verbose/);
+});

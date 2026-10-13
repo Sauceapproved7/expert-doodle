@@ -76,7 +76,12 @@ for i in $(seq 1 110); do
 done
 if test "$ready" != 1; then
   echo "systemd_real_qwen_initial_start_failed"
-  sudo systemctl show "$unit_name" -p ActiveState -p Result -p NRestarts --no-pager
+  sudo systemctl show "$unit_name" -p ActiveState -p Result -p NRestarts -p ExecMainStatus -p ConditionResult --no-pager
+  # Emit only preapproved machine diagnostics: no environment, token, or
+  # arbitrary model responses/paths in CI logs.
+  sudo journalctl -u "$unit_name" -n 60 --no-pager --output=cat | \
+    grep -E 'owner_host_preflight_failed|private_model_unavailable|Failed at step|Failed to set up|Failed to mount|Main process exited|status=[0-9]+|Permission denied|Start request repeated too quickly' | \
+    tail -n 18 || true
   exit 1
 fi
 node scripts/hercules-qwen15-private-live-smoke.mjs
