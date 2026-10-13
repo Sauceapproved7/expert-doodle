@@ -1,5 +1,11 @@
 # Hercules IP Provenance & Canonical Source
 
+## Studio post-activation handoff — 2026-10-13
+
+- Paths: Studio access module, workspace-handoff tests, and hosted activation rollout documentation.
+- Origin: original Hercules repair with AI assistance; no new runtime dependency or packaged third-party code.
+- Scope: replace the obsolete raw Edge preview destination with the existing owned hosted Studio URL. Buyer/session checks and protected execution gates are preserved; navigation success does not certify a paid buyer's complete session flow.
+
 ## Studio hosted activation relay — 2026-10-13
 
 - Paths: hercules-video/studio-activation.mjs, Studio server routing, hosted activation tests, Studio access callback, and rollout documentation.
