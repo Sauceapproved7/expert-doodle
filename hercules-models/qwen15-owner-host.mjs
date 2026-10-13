@@ -103,12 +103,104 @@ async function readCgroupText(path){
     return "unreadable";
   }
 }
+// /sys/fs/cgroup is a mount root, not necessarily the calling process's
+// cgroup. Resolve the kernel's actual process cgroup path before reading
+// quota files, and include parent cgroups that can enforce stricter limits.
+export function resolveQwen15ScopedCgroupDirs(procText,mountInfoText){
+  if(typeof procText!=="string"||typeof mountInfoText!=="string")return null;
+  const record=procText.split(/\r?\n/).find(x=>x.startsWith("0::"));
+  if(!record)return null;
+  const current=record.slice(3).trim();
+  if(!current.startsWith("/")||current.includes("\\")||
+     current.includes("%")||current.includes("\0")||
+     current.split("/").some(x=>x===".."||x==="."))return null;
+  const lines=mountInfoText.split(/\r?\n/);
+  let mountRoot=null,mountPoint=null;
+  for(const line of lines){
+    const parts=line.split(" - ");
+    if(parts.length!==2||parts[1].split(/\s+/)[0]!=="cgroup2")continue;
+    const fields=parts[0].split(/\s+/);
+    if(fields.length<5||fields[4]!=="/sys/fs/cgroup")continue;
+    mountRoot=fields[3];mountPoint=fields[4];break;
+  }
+  if(!mountPoint||!mountRoot||!mountRoot.startsWith("/")||
+     mountRoot.includes("\\")||mountRoot.includes("%")||
+     mountRoot.split("/").some(x=>x===".."||x==="."))return null;
+  if(mountRoot!=="/"&&current!==mountRoot&&!current.startsWith(mountRoot+"/"))
+    return null;
+  const relative=mountRoot==="/"?current.slice(1):current.slice(mountRoot.length).replace(/^\//,"");
+  const components=relative?relative.split("/"):[];
+  if(components.some(x=>!x||x===".."||x==="."||x.includes("\\")||x.includes("%")))return null;
+  const dirs=[mountPoint];
+  let sofar=mountPoint;
+  for(const part of components){
+    sofar+="/"+part;
+    dirs.push(sofar);
+    if(dirs.length>32)return null;
+  }
+  return Object.freeze(dirs);
+}
+const invalidScopedBudget=()=>Object.freeze({
+  cgroupMode:"v2_scoped",cgroupInspectionOk:false,
+  cpuCount:0,totalMemBytes:0,freeMemBytes:0
+});
+async function readScopedBudget(host,dirs,reader){
+  if(!Array.isArray(dirs)||!dirs.length)return invalidScopedBudget();
+  const out={...host};
+  let seen=false;
+  for(const [index,dir] of dirs.entries()){
+    const entries=await Promise.all([
+      ["limit",V2.limit],["used",V2.used],["cpu",V2.cpu]
+    ].map(async ([name,p])=>{
+      const leaf=p.slice("/sys/fs/cgroup/".length);
+      try{return [name,await reader(dir+"/"+leaf)];}
+      catch{return [name,"unreadable"];}
+    }));
+    const fields=Object.fromEntries(entries);
+    if(!Object.values(fields).some(present)){
+      // Kernel cgroup2 mount root often has no memory.max/cpu.max.
+      // Non-root leaf and parent cgroups must still be inspectable.
+      if(index===0)continue;
+      return invalidScopedBudget();
+    }
+    const limit=deriveQwen15CgroupBudget(host,{
+      [V2.limit]:fields.limit,[V2.used]:fields.used,[V2.cpu]:fields.cpu
+    });
+    if(!limit.cgroupInspectionOk)return invalidScopedBudget();
+    out.cpuCount=Math.min(out.cpuCount,limit.cpuCount);
+    out.totalMemBytes=Math.min(out.totalMemBytes,limit.totalMemBytes);
+    out.freeMemBytes=Math.min(out.freeMemBytes,limit.freeMemBytes);
+    seen=true;
+  }
+  if(!seen)return invalidScopedBudget();
+  return Object.freeze({
+    cgroupMode:"v2_scoped",cgroupInspectionOk:true,
+    cpuCount:out.cpuCount,totalMemBytes:out.totalMemBytes,
+    freeMemBytes:out.freeMemBytes
+  });
+}
 async function readCgroupBudget(host,reader=readCgroupText){
   const entries=await Promise.all(CGROUP_PATHS.map(async path=>{
     try{return [path,await reader(path)];}
     catch{return [path,"unreadable"];}
   }));
-  return deriveQwen15CgroupBudget(host,Object.fromEntries(entries));
+  const staticFiles=Object.fromEntries(entries);
+  // Prefer scoped v2 to mount-root files. A permissive root would otherwise
+  // mask a 512MiB/0.1-CPU restriction on a nested process cgroup.
+  let proc=null,mount=null;
+  try{proc=await reader("/proc/self/cgroup");}
+  catch{proc="unreadable";}
+  try{mount=await reader("/proc/self/mountinfo");}
+  catch{mount="unreadable";}
+  if(present(proc)||present(mount)){
+    const dirs=resolveQwen15ScopedCgroupDirs(proc,mount);
+    if(dirs)return readScopedBudget(host,dirs,reader);
+    // If the kernel reports a v2 controller mount but its path cannot be
+    // validated, do not fall back to physical host specs.
+    return invalidScopedBudget();
+  }
+  // Supports synthetic tests and legacy v1 hosts without a cgroup2 mount.
+  return deriveQwen15CgroupBudget(host,staticFiles);
 }
 
 export function assessQwen15OwnerHost(evidence){

@@ -13,3 +13,10 @@ Tests cover v1 and v2, unlimited sentinels, fractional CPUs, 512MiB/0.1 vCPU ser
 - No production release approval; all model/service quality and cost gates remain false until independent verification.
 
 Tests: \`node --test tests/hercules-qwen15-owner-host.test.mjs tests/hercules-qwen15-cgroup-budget.test.mjs\`.
+
+
+## Nested cgroup path correction
+
+A GitHub ARM64 runner demonstrated why only reading \`/sys/fs/cgroup/memory.max\` is insufficient: its cgroup2 mount is at \`/sys/fs/cgroup\` but the running service's \`/proc/self/cgroup\` was \`0::/system.slice/hosted-compute-agent.service\`. Root quota files were absent, while **scoped** service files were present (\`memory.max=max\`, \`memory.current\` measured, \`cpu.max=max 100000\`). The original fail-closed gate correctly denied startup, but misidentified this valid non-root cgroup as an unknown host.
+
+Now resolve the kernel's process path against the cgroup2 mount advertised in \`/proc/self/mountinfo\`, verify no traversal or ambiguous mount, inspect the leaf and all visible parent cgroups, and apply the **most restrictive** memory/CPU budget. An unbounded leaf cannot bypass a 512MiB or 0.1-CPU parent. Malformed paths, missing non-root controller values and unmatched mounts still deny launch. This improves portability without enabling public inference or inferring owner billing.
