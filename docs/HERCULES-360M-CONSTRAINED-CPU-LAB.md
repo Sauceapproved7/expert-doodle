@@ -23,3 +23,9 @@ Workflow is an isolated public-repository standard runner, with read-only reposi
 ## Release gate
 
 The protected local llama.cpp adapter from #951 is still default-off; the experiment is separate from the existing live Hercules API. The full public AI launch remains blocked by missing provider-specific performance proof, broader model evaluation, authenticated production deployment and real-device chat verification. See launch issue #909.
+
+## Memory-accounting correction
+
+The first real Docker-quota execution (GitHub Actions run `38424274981`) enforced the CPU/memory caps and answered nine synthetic questions, but `memory.peak` read approximately 106 MiB even though a previous process-RSS measurement of this same quantized model was about 357 MiB. Linux memory-mapped GGUF file pages may be charged to the runner cgroup that originally cached the downloaded file, so **container cgroup memory.peak alone can understate the model process's real resident memory**. Do not treat the 106-MiB counter as the GGUF's actual RAM requirement.
+
+The improved CI also measures the running llama-server PID 1 `VmHWM` from `/proc/1/status` and requires that independent process peak RSS to be available, positive and at most 512 MiB. A missing, excessive, or contradictory measurement blocks resource-completion evidence. The test remains a GitHub resource approximation, not Render production certification.
