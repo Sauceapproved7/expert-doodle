@@ -16,7 +16,7 @@ test("readiness endpoint discloses missing commercial proof and rejects any writ
   assert.equal(data.status,"HOLD");
   assert.equal(data.purchaseEnabled,false);
   assert.equal(data.deliveryAuthorized,false);
-  assert.equal(data.actualCustomerOrdersVerified,0);
+  assert.equal(data.actualCustomerOrdersVerified,null);
   assert.ok(data.missing.length>=5);
   assert.equal((await fetch(url+"/api/commercial/fulfillment-readiness",{method:"POST"})).status,405);
   assert.equal((await fetch(url+"/api/commercial/checkout",{method:"POST"})).status,404);
