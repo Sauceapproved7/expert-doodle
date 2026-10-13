@@ -15,7 +15,7 @@ def response(content, media_type="text/html", status=200):
 def demo(path):
     if path == "/":
         return response(b'<meta name="robots" content="noindex,nofollow"><div>PREVIEW ONLY</div><button id="chatSend" disabled>RUN HERCULES</button><p>No AI model is connected</p>')
-    if path == "/manifest.webmanifest":
+    if path == "/manifest.json":
         return response(json.dumps({
             "name": "Hercules — iPhone Preview",
             "start_url": "/", "display": "standalone",
@@ -47,7 +47,7 @@ class PreviewSmokeTests(unittest.TestCase):
 
     def test_malfunctioning_media_returns_blocked_not_false_success(self):
         def fetch(path):
-            return response(b'{"error":"missing"}', "application/json", 503) if path == "/manifest.webmanifest" else demo(path)
+            return response(b'{"error":"missing"}', "application/json", 503) if path == "/manifest.json" else demo(path)
         result = probe.run_probe(fetch)
         self.assertFalse(result["static_preview_reachable"])
         self.assertIn("http_503", [x["reason"] for x in result["checks"]])
