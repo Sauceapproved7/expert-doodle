@@ -10,6 +10,8 @@ import {assessLaunch,sentinelAlerts,revenueRadar,recoveryPlan,simulateCheckout,
 const directory=dirname(fileURLToPath(import.meta.url));
 const files={"/":{name:"index.html",type:"text/html; charset=utf-8"},
  "/app.mjs":{name:"app.mjs",type:"text/javascript; charset=utf-8"},
+ "/local-archive.mjs":{name:"local-archive.mjs",type:"text/javascript; charset=utf-8"},
+ "/device-vault.mjs":{name:"device-vault.mjs",type:"text/javascript; charset=utf-8"},
  "/styles.css":{name:"styles.css",type:"text/css; charset=utf-8"}};
 const stableServices=["Shopify","Stripe","Render","Supabase","GitHub","DNS","Hercules MCP","Studio","Smallz","Domain Guard"];
 const defaultProbes=[
