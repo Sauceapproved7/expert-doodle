@@ -1,3 +1,17 @@
+## Vault Passport fail-closed regression hardening — October 13, 2026
+
+- Expanded original first-party SauceApproved assurance tests to reproduce and repair misleading green release evidence when extra CI checks fail or are malformed, and to reject recomputed integrity digests carrying forged release/owner/execution-authority flags.
+- GitHub Actions TDD RED at `053f1baf680dff422f6fddb10352d4448c76752e`: 96 passed, 3 failed (expected). GREEN at `11b6c79b69b0eddc4d2fbefd39eef1315fa6b0c5`: 99 passed, 0 failed. No live service modification, permission grants, keys, new dependencies or hosting costs.
+- Checksums alone remain insufficient to authenticate a remote provider or sign a production release.
+
+## Hercules Vault Triple Assurance — October 13, 2026
+
+- Original first-party SauceApproved AI-assisted Node.js source: hercules-deploy/vault-assurance.mjs, tests/hercules-deploy-vault-assurance.test.mjs, and docs/HERCULES-DEPLOY-VAULT-TRIPLE-ASSURANCE-V1.md.
+- Requirement source: user-provided Hercules Secret Knowledge Vault, October 13 Code/Codex/Cyber research trilogy. Research material is treated as untrusted design reference, not as code, permissions, security audit or deploy receipt.
+- Source policy combines existing SauceApproved Hercules Authority Lease, proof and release controls with new advisory cross-checking and synthetic fault cases; no third-party code or model weights copied. Uses standard Node crypto only.
+- No new packages, network connections, external execution rights, payments, secret reads, database migrations, licensing obligations or hosting plans. Outputs explicitly lack owner authorization and production release authority.
+- Test-first proof: initially added tests without implementation and observed Deploy Plane CI failure ERR_MODULE_NOT_FOUND, then implemented code for the GREEN and full regression gates. Any remaining failing tests/security gates must be repaired before merge.
+
 ## Hercules Smallz Render exact-commit release planner — October 13, 2026
 
 - Original first-party SauceApproved AI-assisted Node 22 source `hercules-deploy/render-exact-commit.mjs`; associated `tests/hercules-deploy-render-exact-commit.test.mjs` and `docs/HERCULES-DEPLOY-RENDER-EXACT-COMMIT-V1.md`.
