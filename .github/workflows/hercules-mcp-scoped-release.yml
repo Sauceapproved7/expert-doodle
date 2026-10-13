@@ -39,6 +39,7 @@ jobs:
             'tests/test_hercules_model_readiness.py',
             'tests/test_hercules_mcp_runtime_smoke.py',
             'tests/test_hercules_mcp_scoped_release.py',
+            'tests/test_hercules_mcp_runtime_smoke.py',
           }
           assert changed<=allowed,(changed-allowed)
           assert len(changed & {'hercules-ai/app/main.py','hercules-ai/app/model_readiness.py','hercules-ai/ui/index.html','hercules-ai/ui/service-worker.js'})==4
