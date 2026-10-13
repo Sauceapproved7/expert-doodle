@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { lstatSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { REQUIRED_PATHS, inspectReadiness } from '../hercules-codex/readiness.mjs';
+import { REQUIRED_PATHS, inspectReadiness } from '../hercules-runtime/codex-readiness.mjs';
 
 function usage() {
   return 'Usage: node scripts/hercules-codex-doctor.mjs [--json] [--changed path1 path2 ...]\n';
