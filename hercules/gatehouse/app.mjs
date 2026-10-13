@@ -1,3 +1,5 @@
+import {mergeLocalSamples,listObservedTransitions,makeLocalArchive} from "./local-archive.mjs";
+import {readDeviceHistory,writeDeviceHistory,clearDeviceHistory} from "./device-vault.mjs";
 const $=id=>document.getElementById(id);
 const names=["Shopify","Stripe","Render","Supabase","GitHub","DNS","Hercules MCP","Studio","Smallz","Domain Guard"];
 const gateLabels={
@@ -8,6 +10,56 @@ const gateLabels={
  owner_launch_approval:"Owner launch authorization"
 };
 let authenticated=false;
+let deviceSamples=[];
+let deviceWritable=false;
+let refreshInFlight=false;
+const VISIBLE_REFRESH_MS=5*60_000;
+
+function renderDeviceVault(){
+ text($("device-samples"),deviceSamples.length);
+ text($("device-status"),deviceWritable?"On-device (best effort)":"Unavailable — export only");
+ $("export-device").disabled=deviceSamples.length===0;
+ $("clear-device").disabled=!deviceWritable||deviceSamples.length===0;
+ const changes=listObservedTransitions(deviceSamples);
+ if(!authenticated){
+  renderActivities("timeline",changes.slice(-8).reverse().map(c=>({
+   title:c.name,note:c.from+" → "+c.to+" at "+new Date(c.sampledAt).toLocaleString()
+  })), "No changes between saved observations. Coverage exists only when Gatehouse was open and sampled.");
+ }
+}
+async function initializeDeviceVault(){
+ try{
+  deviceSamples=mergeLocalSamples([],await readDeviceHistory());
+  deviceWritable=true;
+ }catch{deviceWritable=false;}
+ renderDeviceVault();
+}
+async function ingestHistory(history){
+ const next=mergeLocalSamples(deviceSamples,history?.samples||[]);
+ if(JSON.stringify(next)!==JSON.stringify(deviceSamples)){
+  deviceSamples=next;
+  if(deviceWritable){
+   try{await writeDeviceHistory(deviceSamples)}
+   catch{deviceWritable=false;}
+  }
+ }
+ renderDeviceVault();
+}
+async function syncHistory(){
+ const h=await jsonFetch("/api/public-history");
+ text($("public-samples"),h.sampleCount);
+ await ingestHistory(h);
+}
+function exportDeviceVault(){
+ const archive=makeLocalArchive(deviceSamples);
+ const blob=new Blob([JSON.stringify(archive,null,2)],{type:"application/json"});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement("a");
+ a.href=url;a.download="hercules-gatehouse-device-evidence.json";
+ document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),15000);
+}
+
 function text(el,value){el.textContent=String(value)}
 function node(tag,className,contents){
  const el=document.createElement(tag);if(className)el.className=className;
@@ -70,18 +122,7 @@ async function loadPublic(){
  text($("updated"),"Reachability checked "+new Date(data.refreshedAt).toLocaleTimeString());
  announce("Public reachability is available without login. Owner authentication is needed for private detail. No production changes can be made here.");
  try{
-  const history=await jsonFetch("/api/public-history");
-  text($("public-samples"),history.sampleCount);
-  const samples=history.samples||[];
-  const last=samples.at(-1),previous=samples.at(-2);
-  if(previous&&last){
-   const before=new Map(previous.signals.map(x=>[x.name,x.status]));
-   const changes=last.signals.filter(x=>before.get(x.name)!==x.status);
-   renderActivities("timeline",changes.map(x=>({title:x.name,note:(before.get(x.name)||"unknown")+" → "+x.status})),
-    "No state change between the last two requested observations. This does not establish uptime.");
-  }else{
-   renderActivities("timeline",[],"Only "+samples.length+" sampled observation(s). Monitoring is not continuous.");
-  }
+  await syncHistory();
  }catch{
   text($("public-samples"),"Unavailable");
   renderActivities("timeline",[],"History temporarily unavailable; no verified timeline.");
@@ -107,8 +148,9 @@ async function load(){
  text($("payouts"),"Not connected");
  renderActivities("recovery-actions",(data.recovery?.actions||[]).map(a=>({title:a.service+" / "+a.advice,
   note:"Recommendation only • No production action"})),"No recovery advice.");
- renderActivities("timeline",(data.compare?.changes||[]).map(c=>({title:c.service, note:c.previous+" → "+c.current})),
-  "No observed service-state changes yet. Two refreshes are needed.");
+ try{await syncHistory()}catch{
+  renderActivities("timeline",[],"Sampled history unavailable. Existing signals do not establish continuous uptime.");
+ }
 }
 $("login-form").addEventListener("submit",async ev=>{
  ev.preventDefault();const form=ev.currentTarget;const button=form.querySelector("button");
@@ -144,5 +186,27 @@ $("simulate").addEventListener("click",async()=>{
   text($("simulation-output"),result+"\n\nSynthetic: "+r.synthetic+" • Money moved: "+r.moneyMoved+" • Production authorized: "+r.productionAuthorized);
  }catch{text($("simulation-output"),"Synthetic test unavailable. No real transaction was attempted.")}
 });
+$("export-device").addEventListener("click",exportDeviceVault);
+$("clear-device").addEventListener("click",async()=>{
+ if(!deviceWritable||!window.confirm("Clear saved public observations from this device? This does not affect any server or live service."))return;
+ try{
+  await clearDeviceHistory();
+  deviceSamples=[];
+  renderDeviceVault();
+ }catch{
+  deviceWritable=false;renderDeviceVault();
+ }
+});
+async function refreshVisible(){
+ if(refreshInFlight||document.visibilityState!=="visible"||navigator.onLine===false)return;
+ refreshInFlight=true;
+ try{if(authenticated)await load();else await loadPublic()}catch{
+  text($("probe-chip"),"REFRESH UNAVAILABLE");
+ }finally{refreshInFlight=false;}
+}
 preview();
-jsonFetch("/api/session").then(()=>load()).catch(()=>loadPublic().catch(()=>{}));
+initializeDeviceVault().finally(()=>jsonFetch("/api/session").then(()=>load()).catch(()=>loadPublic().catch(()=>{})));
+setInterval(refreshVisible,VISIBLE_REFRESH_MS);
+document.addEventListener("visibilitychange",()=>{
+ if(document.visibilityState==="visible")refreshVisible();
+});
