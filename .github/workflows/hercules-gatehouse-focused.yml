@@ -1,0 +1,30 @@
+name: Hercules Gatehouse Isolated Checks
+on:
+  pull_request:
+    paths:
+      - 'hercules/gatehouse/**'
+      - '.github/workflows/hercules-gatehouse-focused.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gatehouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          node --check hercules/gatehouse/core.mjs
+          node --check hercules/gatehouse/server.mjs
+          node --check hercules/gatehouse/app.mjs
+      - name: Isolated feature tests
+        run: node --test hercules/gatehouse/*.test.mjs
+      - name: Existing Floodgates tests
+        run: node --test hercules/floodgates/floodgates-readonly.test.mjs
+      - name: Owner-code-only policy
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Security baseline
+        run: node scripts/security-baseline.mjs
