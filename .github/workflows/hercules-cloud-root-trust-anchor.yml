@@ -1,0 +1,27 @@
+name: Hercules Cloud Root-Owned Trust Anchor
+on:
+  pull_request:
+    paths:
+      - 'hercules-deploy/cloud/owner-trust-anchor.mjs'
+      - 'hercules-deploy/cloud/host-engine-cli.mjs'
+      - 'tests/hercules-cloud-owner-trust-anchor.test.mjs'
+      - 'tests/hercules-cloud-owner-permit.test.mjs'
+      - 'tests/hercules-cloud-host-engine.test.mjs'
+      - 'docs/HERCULES-CLOUD-ROOT-TRUST-ANCHOR.md'
+      - '.github/workflows/hercules-cloud-root-trust-anchor.yml'
+permissions:
+  contents: read
+jobs:
+  trust-root-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Root-owned trust material and signed permit tests
+        run: |
+          node --test tests/hercules-cloud-owner-trust-anchor.test.mjs
+          node --test tests/hercules-cloud-owner-permit.test.mjs tests/hercules-cloud-host-engine.test.mjs
+      - name: Security and ownership contracts
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs

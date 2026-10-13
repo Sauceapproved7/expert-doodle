@@ -1,0 +1,27 @@
+name: Hercules Cloud Owner Public-Key Permit
+on:
+  pull_request:
+    paths:
+      - 'hercules-deploy/cloud/owner-permit.mjs'
+      - 'hercules-deploy/cloud/host-agent.mjs'
+      - 'hercules-deploy/cloud/host-engine.mjs'
+      - 'hercules-deploy/cloud/host-engine-cli.mjs'
+      - 'tests/hercules-cloud-owner-permit.test.mjs'
+      - 'docs/HERCULES-CLOUD-OWNER-SIGNED-PERMITS.md'
+      - '.github/workflows/hercules-cloud-owner-permit.yml'
+permissions:
+  contents: read
+jobs:
+  owner-only-signatures:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Owner Ed25519 permissions, HMAC host refusal, replay and CLI tests
+        run: |
+          node --test tests/hercules-cloud-owner-permit.test.mjs
+          node --test tests/hercules-cloud-host-engine.test.mjs tests/hercules-cloud-host-agent.test.mjs
+      - name: Hercules code safety, provenance and security
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs

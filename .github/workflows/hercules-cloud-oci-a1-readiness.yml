@@ -1,0 +1,22 @@
+name: Hercules OCI A1 Host Readiness (Source Only)
+on:
+  pull_request:
+    paths:
+      - 'hercules-deploy/cloud/oci-a1-host-readiness.mjs'
+      - 'tests/hercules-cloud-oci-a1-readiness.test.mjs'
+      - 'hercules-deploy/cloud/OCI_A1_HOST_ONBOARDING.md'
+      - '.github/workflows/hercules-cloud-oci-a1-readiness.yml'
+permissions:
+  contents: read
+jobs:
+  no-provider-execution:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Pure source only host preflight contract
+        run: node --test tests/hercules-cloud-oci-a1-readiness.test.mjs
+      - name: Security and ownership boundaries
+        run: |
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
