@@ -104,3 +104,21 @@ To confirm that a customer controls the site, the future authenticated workflow 
 **NOT CONNECTED OR LIVE:** no public challenge issuance, user/customer intake, arbitrary domain probe endpoint, report storage, email transport, payment, hosted checkout or 24/7 monitoring has been enabled. The commercial page documents the future method without collecting site URLs. A real customer account system and validated website authorization must guard issuance; the HMAC signing key must be provided only via a secure secret manager if this workflow is later activated. Until then, `assessFulfillment()` returns HOLD, and the existing $49 Shopify product remains DRAFT. The browser tab and Render instance cannot act as independent durable evidence storage.
 
 This work only affects the separately deployed free Gatehouse preview branch. It must not be merged into main without complete exact-head CI/security review because existing unrelated services auto-deploy there.
+
+## Gatehouse authenticated customer intake — isolated private pilot
+
+This release introduces a separate `hercules-gatehouse-customer-intake` Edge Function and an **additive, private** SQL schema for future customer onboarding. It uses the project's existing Supabase Auth users, does not require another merchant account, and does not modify any existing Shopify, Titan, Studio, checkout, DNS or payout records.
+
+**Authenticated routes (no CORS access, no public website scan):**
+- `GET /status` checks a signed-in, non-anonymous Supabase user and reports paid delivery on HOLD.
+- `GET /sites` lists only that authenticated user's previously consented public HTTPS origins; the database query is always restricted to the server-verified `user.id`.
+- `POST /sites` requires small, well-formed JSON, `authorized:true`, `consentVersion:"gatehouse-diagnostic-v1"` and a canonical public HTTPS origin. It stores only an **awaiting-domain-control** record; it does not issue domain checks or accept payment. Repeated insert does not silently override earlier consent.
+- `GET /reports` lists only that customer's **withheld** report metadata (ID, site ID, status, timestamp), never customer report body or content.
+
+The Edge Function uses a server-only service key to access only newly prefixed Gatehouse tables, with every query scoped to the authenticated Supabase `user.id`. The server rejects missing/invalid/anonymous JWTs and does not accept client-supplied owner IDs.
+
+**Storage security:** `supabase/gatehouse_private_intake.sql` defines `gatehouse_customer_sites` and `gatehouse_customer_reports`, enforced by a composite `(site_id,owner_user_id)` foreign key. RLS is enabled on both tables, and direct `anon`/`authenticated` Data API privileges are explicitly revoked. Reports remain `withheld` by schema constraint and cannot be marked delivered in this version.
+
+**Launch boundary:** Backend intake is not yet a public registration/login UI, domain ownership proof, paid-order attestation or successful report delivery. The $49 Shopify product stays DRAFT. Verified customer signup, encrypted/session-secure end-user UI, consent policy approval, actual DNS-pinned challenge verification, trusted Shopify paid-order readback and a proven private report-delivery route remain prerequisites to take real money.
+
+**Operational sequencing:** Validate exact GitHub CI, apply only the additive table migration, deploy the separate Edge Function with `verify_jwt=true`, then verify owner JWT denial and authorized requests. No existing public Gatehouse page should request this function without an authenticated owner/customer session.
