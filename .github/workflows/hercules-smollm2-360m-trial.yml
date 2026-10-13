@@ -43,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/hercules-360m
-          curl --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 240 --max-filesize 120000000 \
+          curl --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 240 --max-filesize 300000000 \
             --output /tmp/hercules-360m/candidate.gguf \
             'https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/7be6f65f1db715fe5dc5a4634c0d459b4eed42ec/SmolLM2-360M-Instruct-Q4_K_M.gguf'
           test "$(stat -c %s /tmp/hercules-360m/candidate.gguf)" = 270590880
