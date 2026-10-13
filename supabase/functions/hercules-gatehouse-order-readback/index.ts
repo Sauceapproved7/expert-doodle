@@ -1,6 +1,6 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import {createClient} from 'npm:@supabase/supabase-js@2';
-import {CANONICAL_SHOP,SHOPIFY_ORDER_QUERY,summarizeShopifyOrders,verifyOrderScope} from '../_shared/gatehouse-shopify-readback.mjs';
+import {CANONICAL_SHOP,SHOPIFY_ORDER_QUERY,summarizeShopifyOrders,verifyOrderScope} from './gatehouse-shopify-readback.mjs';
 
 /** Separate authenticated owner-only reader. No mutations, receipts, customer PII, or entitlement writes. */
 const U=Deno.env.get('SUPABASE_URL')||'';
