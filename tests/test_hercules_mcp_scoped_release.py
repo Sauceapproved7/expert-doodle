@@ -18,7 +18,7 @@ class ScopedMcpCandidate(unittest.TestCase):
         self.assertIn('hercules-shell-v2',sw)
         self.assertIn('request.method !== "GET"',sw)
         self.assertIn("url.origin !== self.location.origin",sw)
-        self.assertIn("request.mode === \\"navigate\\"",sw)
+        self.assertIn('request.mode === "navigate"',sw)
         self.assertIn("STATIC_PATHS.has",sw)
         self.assertNotIn("/v1/chat/completions",sw)
 
