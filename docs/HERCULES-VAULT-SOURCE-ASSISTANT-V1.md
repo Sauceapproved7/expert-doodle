@@ -37,3 +37,7 @@ Original Hercules/SourceApproved project-owned implementation with AI assistance
 ## Release limitation
 
 The returned snippets describe what checked-in Hercules documents **say**, not independently established external facts. No automatic action is permitted based solely on a retrieved snippet, and no signed-in consumer AI account is created or enabled.
+
+## Independent CI evidence
+
+The focused GitHub test covers exact source excerpts, SHA-256 and line spans, corpus safety, denied unauthenticated requests, oversized inputs, unknown-question fallback, and the five actual allowlisted documentation files. Public distribution and general AI inference remain unverified.
