@@ -1,0 +1,46 @@
+name: Hercules Cloud Founding Interest Safety
+
+on:
+  pull_request:
+    paths:
+      - "hercules-deploy/cloud/founders*"
+      - "hercules-deploy/cloud/index.html"
+      - "supabase/functions/hercules-cloud-founders/**"
+      - "supabase/migrations/*hercules_cloud_founders*"
+      - "tests/hercules-cloud-founders.test.mjs"
+      - "scripts/build_hercules_cloud_preview.mjs"
+      - ".github/workflows/hercules-cloud-founders.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-deploy/cloud/founders*"
+      - "supabase/functions/hercules-cloud-founders/**"
+      - "tests/hercules-cloud-founders.test.mjs"
+      - ".github/workflows/hercules-cloud-founders.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  opt-in-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Test free founding interest and original Hercules dashboard
+        run: |
+          node --test tests/hercules-cloud-founders.test.mjs tests/hercules-cloud-original-ui.test.mjs tests/hercules-cloud-control-plane.test.mjs
+      - name: Package isolated preview
+        run: |
+          node scripts/build_hercules_cloud_preview.mjs
+          test -s dist/hercules-cloud/founders.html
+          test -s dist/hercules-cloud/founders.css
+          test -s dist/hercules-cloud/founders.mjs
+      - name: Syntax and owner-code boundary
+        run: |
+          node --check supabase/functions/hercules-cloud-founders/core.mjs
+          node --check hercules-deploy/cloud/founders.mjs
+          node scripts/verify-owner-code-only.mjs
