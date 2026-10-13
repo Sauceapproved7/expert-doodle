@@ -25,3 +25,5 @@ Required existing gates still include `node scripts/verify-hercules-execution-co
 ## Ownership and provenance
 
 Original Hercules code prepared with AI assistance, using Node.js built-in modules only; no third-party review engine, model weight, private code, or vendor dependency was incorporated. The tool is separate from Empire LLM for Codex and can operate without Codex, OpenRouter, or Render. It does not open a paid inference session or change the Shopify, payout, DNS, or production approval state.
+
+The GitHub Actions summary intentionally omits raw added lines and any tokens that may appear in the diff. Reviewers must still inspect the actual pull-request changes before approval.
