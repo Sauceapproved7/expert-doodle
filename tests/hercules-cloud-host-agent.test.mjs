@@ -137,6 +137,7 @@ test('failed verification attempts bounded cleanup and does not claim success',a
  const plan=create(),permit=signer(plan),calls=[];
  const runner=async(file,args)=>{
   calls.push(args);
+  if(args[0]==='info')return {exitCode:0,stdout:'["name=rootless"]',stderr:''};
   if(args[1]==='inspect')return {exitCode:0,stdout:'false\n',stderr:''};
   return {exitCode:0,stdout:'',stderr:''};
  };
