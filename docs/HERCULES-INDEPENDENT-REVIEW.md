@@ -15,7 +15,8 @@ This tool is **advisory**. It cannot certify safety, run code analysis equivalen
 The workflow `.github/workflows/hercules-independent-review.yml` runs on pull requests under read-only GitHub permissions. To run locally from a repository checkout with the base commit present:
 
 ```sh
-HERCULES_REVIEW_BASE_SHA=$(git merge-base HEAD main) node scripts/hercules-independent-review.mjs
+BASE_SHA=$(git merge-base HEAD main)
+HERCULES_REVIEW_BASE_SHA="$BASE_SHA" sh -c 'git diff --no-ext-diff --no-textconv --no-renames --unified=0 "$HERCULES_REVIEW_BASE_SHA" HEAD -- | node scripts/hercules-independent-review.mjs'
 node --test tests/hercules-independent-review.test.mjs
 ```
 
