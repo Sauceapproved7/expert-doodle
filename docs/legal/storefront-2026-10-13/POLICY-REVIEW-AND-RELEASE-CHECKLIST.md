@@ -42,6 +42,21 @@ These are separate commercial products. No new price, paid-path verification, le
 - **Missing operational proofs:** fulfillment provider's return-acceptance rules and label service, actual return destination, rates and shipping times by checkout market, customer delay-notice handling, approved refund fee schedule, and currently valid privacy opt-out pages.
 - None of the read-only checks proves an end-to-end paid checkout, provider payout, fulfillment or refunds.
 
+## Authorized storefront page release — October 13, 2026
+
+The owner explicitly requested the prepared policies be published. Live Shopify read/write evidence confirms:
+
+- Four Shopify Online Store **Pages** were already published that day: `/pages/shipping-and-delivery`, `/pages/returns-and-refunds`, `/pages/terms-of-service`, and `/pages/legal-notice`.
+- An authorized `pageUpdate` published a shipment-delay/cancellation/refund-rights clarification on the shipping Page. Re-read verified the revised content.
+- An authorized `pageUpdate` fixed the unconditional prepaid-return-label promise on the refunds Page and published a **$0 restocking fee** / customer-arranged return-postage disclosure for ordinary change-of-mind returns. Re-read confirmed the content and published status.
+- An authorized `menuUpdate` redirected the main footer's Shipping, Returns & Refunds, and Terms links to those storefront Pages and added Legal Notice, retaining Privacy Policy, Your Privacy Choices, Search, and Contact links.
+- Both connected Shopify links resolve to `https://sauceapproved.com` and have `read_legal_policies` but **not** `write_legal_policies`.
+- A valid `shopPolicyUpdate` mutation was attempted against Shipping, Legal Notice, Refund and Terms but returned **access denied on all four fields**. Therefore official Shopify checkout-policy records were **NOT updated**. Shipping and Legal Notice remain the old `<p>Yes</p>` placeholders; the official refund and terms records still have outstanding placeholders.
+- The generated Shopify Privacy Policy remains published and unchanged. Public Pages are **not** replacements for the Shopify checkout-policy records.
+- Separate GitHub PR content remains in review. Publication does not prove legal counsel review, paid checkout readiness or software policy approval.
+
+**Remaining technical gate:** obtain a legitimately reauthorized Shopify app connection with `write_legal_policies`, or use an authorized owner-admin session to update the official policy fields. Do not attempt to elevate OAuth scope programmatically without the provider's consent/grant flow. After authorized update, read back all official policy objects and verify checkout links.
+
 ## Before authorizing publication
 
 1. **Owner/qualified legal review:** Confirm registered legal entity wording, appropriate contact information, applicable service markets, required legal notice/registered address, nonwaivable consumer rights, tax/business data and privacy requirements.
