@@ -1,0 +1,41 @@
+name: Hercules Cloud Isolated Host Agent
+
+on:
+  pull_request:
+    paths:
+      - "hercules-deploy/cloud/host-agent.mjs"
+      - "hercules-deploy/cloud/preflight.mjs"
+      - "tests/hercules-cloud-host-agent.test.mjs"
+      - ".github/workflows/hercules-cloud-host-agent.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-deploy/cloud/host-agent.mjs"
+      - "hercules-deploy/cloud/preflight.mjs"
+      - "tests/hercules-cloud-host-agent.test.mjs"
+      - ".github/workflows/hercules-cloud-host-agent.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  owned-sandbox-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Test offline owner grants, rootless attestation, rollback and no-host fallthrough
+        run: |
+          node --test tests/hercules-cloud-host-agent.test.mjs tests/hercules-cloud-control-plane.test.mjs tests/hercules-cloud-original-ui.test.mjs
+      - name: Syntax and owner scope
+        run: |
+          node --check hercules-deploy/cloud/host-agent.mjs
+          node scripts/verify-owner-code-only.mjs
+      - name: No live host connection in stage 2
+        run: |
+          if grep -E '(from "node:child_process"|from .node:child_process.|process\.env\.DOCKER_HOST|http[s]?://.*docker)' hercules-deploy/cloud/host-agent.mjs; then
+            echo 'Unexpected live host binding'; exit 1
+          fi
