@@ -5,6 +5,7 @@ import {createHmac,timingSafeEqual} from "node:crypto";
 import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
 import {CATALOG,buildDemoReport} from "./commerce.mjs";
+import {buildPurchaseLinkReadiness} from "./purchase-link.mjs";
 import {customerAccessBridge} from "./customer-bridge.mjs";
 import {createCustomerAuthenticator} from "./customer-auth.mjs";
 import {portalReadiness} from "./customer-portal-model.mjs";
@@ -206,6 +207,10 @@ export function createServer(config={}){
   if(path==="/commercial/website-diagnostic-preview"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
    return send(res,200,renderIllustrativeDiagnostic(),"text/html; charset=utf-8");
+  }
+  if(path==="/api/commercial/purchase-link-readiness"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   return send(res,200,buildPurchaseLinkReadiness());
   }
   if(path==="/api/commercial/fulfillment-readiness"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
