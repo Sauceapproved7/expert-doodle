@@ -1,3 +1,5 @@
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {inspectSmallzFromRuntime,runSmallzEvidenceReadCommand} from '../hercules-deploy/smallz-evidence-command.mjs';
@@ -121,4 +123,36 @@ test('server environment values are not echoed to output even when a getter fail
   const r=await inspectSmallzFromRuntime({env,fetchImpl:async()=>{throw Error('not called')}});
   assert.equal(r.status,'HOLD');
   assert.equal(JSON.stringify(r).includes('secret-render-detail'),false);
+});
+
+test('actual owned CLI executable reports a bounded HOLD when tokens are not available',()=>{
+  const script=fileURLToPath(new URL('../scripts/hercules-smallz-evidence-read.mjs',import.meta.url));
+  const executed=spawnSync(process.execPath,[script,'--json'],{
+    encoding:'utf8',timeout:5000,
+    env:{...process.env,
+      HERCULES_SMALLZ_RENDER_READ_TOKEN:'',
+      HERCULES_SMALLZ_GITHUB_READ_TOKEN:''}
+  });
+  assert.equal(executed.status,2);
+  assert.equal(executed.stderr,'');
+  const output=JSON.parse(executed.stdout);
+  assert.equal(output.status,'HOLD');
+  assert.deepEqual(output.reasonCodes,['DEDICATED_READ_CREDENTIALS_UNAVAILABLE']);
+  assert.equal(output.providerQueriesAttempted,false);
+  assert.equal(output.executionAuthority,false);
+  assert.equal(output.productionChanged,false);
+});
+test('actual CLI refuses arbitrary URL arguments before making provider reads',()=>{
+  const script=fileURLToPath(new URL('../scripts/hercules-smallz-evidence-read.mjs',import.meta.url));
+  const executed=spawnSync(process.execPath,[script,'--url','https://evil.example/'],{
+    encoding:'utf8',timeout:5000,
+    env:{...process.env,
+      HERCULES_SMALLZ_RENDER_READ_TOKEN:'mock-read-token-render-1234567890',
+      HERCULES_SMALLZ_GITHUB_READ_TOKEN:'mock-read-token-github-1234567890'}
+  });
+  assert.equal(executed.status,2);
+  assert.equal(executed.stderr,'');
+  const output=JSON.parse(executed.stdout);
+  assert.deepEqual(output.reasonCodes,['UNSUPPORTED_ARGUMENTS']);
+  assert.equal(output.providerQueriesAttempted,false);
 });
