@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0d13"><meta name="description" content="Hercules Gatehouse: isolated launch intelligence and evidence command center.">
+<title>Hercules Gatehouse | SauceApproved</title>
+<link rel="stylesheet" href="/styles.css">
+<script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<div class="shell">
+ <aside class="sidebar" aria-label="Primary navigation">
+  <div class="brand"><div class="brand-mark">H<span>G</span></div><div><strong>HERCULES</strong><small>GATEHOUSE / v1.0</small></div></div>
+  <div class="side-label">COMMAND</div>
+  <nav class="nav"><a href="#overview" class="active">◈ <span>Overview</span></a><a href="#sentinel">◉ <span>Sentinel</span></a><a href="#gate">⬡ <span>Gate Intelligence</span></a><a href="#revenue">▤ <span>Revenue Radar</span></a><a href="#simulator">◇ <span>Launch Simulator</span></a><a href="#vault">▣ <span>Evidence Vault</span></a><a href="#recovery">↺ <span>Recovery & Time Machine</span></a></nav>
+  <div class="side-bottom"><div class="security-dot"></div><div><strong>PRODUCTION SHIELDED</strong><small>Read-only • Separate service</small></div></div>
+ </aside>
+ <main id="overview" class="main">
+  <header class="topbar"><div class="breadcrumbs">SAUCEAPPROVED <span>/</span> OPERATIONS <span>/</span> GATEHOUSE</div><div class="top-actions"><span id="mode-chip" class="chip gold">PREVIEW MODE</span><button id="refresh" class="quiet">↻ Refresh</button><button id="logout" class="quiet hidden">Sign out</button></div></header>
+  <div class="content">
+   <div class="hero"><div><div class="eyebrow"><span class="pulse"></span> OWNED CONTROL INTELLIGENCE</div><h1>Your empire.<br><em>One command center.</em></h1><p>Monitor what matters. Protect what’s live. Never mistake a passing test for permission to launch.</p></div><div class="hero-glyph" aria-hidden="true"><div class="rings"><b>HG</b></div></div></div>
+   <section id="owner-access" class="access"><div><strong>Owner access</strong><p id="auth-caption">Preview is synthetic. Sign in to request read-only service probes; no changes are made to your live store.</p></div><form id="login-form"><label class="sr-only" for="owner-token">Owner access token</label><input id="owner-token" type="password" autocomplete="current-password" placeholder="Owner access token" required><button type="submit" class="primary">Unlock command center →</button></form></section>
+   <div class="stats">
+    <div class="stat"><div class="stat-label">PRODUCTION WRITES</div><div class="stat-value">00 <span class="stat-icon">⏣</span></div><div class="stat-desc"><span class="safe"></span> Always disabled</div></div>
+    <div class="stat"><div class="stat-label">VERIFIED SALES</div><div id="sales-stat" class="stat-value">— <span class="stat-icon">↗</span></div><div class="stat-desc">No order feed connected</div></div>
+    <div class="stat"><div class="stat-label">GATE STATUS</div><div id="gate-stat" class="stat-value">HOLD <span class="stat-icon">⬡</span></div><div class="stat-desc">Existing authority unchanged</div></div>
+    <div class="stat"><div class="stat-label">EVIDENCE EVENTS</div><div id="events-stat" class="stat-value">— <span class="stat-icon">▣</span></div><div class="stat-desc">Hash-chained observations</div></div>
+   </div>
+   <div class="main-grid">
+    <section id="sentinel" class="panel wide"><div class="panel-head"><div><div class="eyebrow">01 / LIVE OBSERVABILITY</div><h2>Hercules Sentinel</h2></div><span id="probe-chip" class="chip">AWAITING AUTH</span></div><p class="help">External public health endpoints are connectivity checks—not verification that checkout, payouts or APIs function.</p><div id="services" class="service-grid" aria-live="polite"></div><div class="footnote">All service states default to unknown unless evidence has been collected.</div></section>
+    <section id="gate" class="panel"><div class="panel-head"><div><div class="eyebrow">02 / RELEASE POLICY</div><h2>Gate Intelligence</h2></div><span class="chip danger">FAIL CLOSED</span></div><div class="gate-visual"><div class="gate-icon">⬡</div><div><strong>Production gate preserved</strong><p>Dashboard never grants launch approval, opens registration, or changes configuration.</p></div></div><div class="section-title">Nine existing Floodgates checks</div><div id="gate-list" class="checks"></div><div class="footnote">Owner approval and provider attestations must remain independently verified.</div></section>
+    <section id="revenue" class="panel"><div class="panel-head"><div><div class="eyebrow">03 / FINANCIAL OVERSIGHT</div><h2>Revenue Radar</h2></div><span class="chip">UNLINKED</span></div><div class="revenue-figure">— <small>USD</small></div><div class="figure-desc">Verified gross receipts unavailable</div><div class="revenue-row"><span>Verified paid orders</span><strong id="orders">Not connected</strong></div><div class="revenue-row"><span>Settled payouts</span><strong id="payouts">Not connected</strong></div><div class="footnote">We will never fabricate revenue or interpret synthetic receipts as real payments.</div></section>
+    <section id="simulator" class="panel"><div class="panel-head"><div><div class="eyebrow">04 / SAFE EXERCISES</div><h2>Launch Simulator</h2></div><span class="chip gold">SYNTHETIC ONLY</span></div><p class="help">Run simulated purchase, delivery and payout scenarios without submitting real orders or spending money.</p><label for="scenario" class="form-label">Scenario</label><select id="scenario"><option value="success">Successful mock purchase</option><option value="payment-declined">Mock payment declined</option><option value="delivery-failed">Mock delivery failure</option><option value="payout-pending">Mock payout pending</option></select><button id="simulate" class="primary full">Run safe simulation →</button><div id="simulation-output" class="simulation-out">No synthetic test executed.</div></section>
+    <section id="vault" class="panel"><div class="panel-head"><div><div class="eyebrow">05 / VERIFIABLE HISTORY</div><h2>Evidence Vault</h2></div><span class="chip">HASH CHAIN</span></div><p class="help">Timestamped read-only observations linked by SHA-256 hashes. They are not signed provider attestations.</p><div class="revenue-row"><span>Chain integrity</span><strong id="integrity">Awaiting records</strong></div><div class="revenue-row"><span>Entries</span><strong id="count">—</strong></div><div class="revenue-row"><span>Storage</span><strong>Ephemeral / preview</strong></div><div class="footnote">Persistence requires a separately authorized durable store; service restarts reset the in-memory ledger.</div></section>
+    <section id="recovery" class="panel wide"><div class="panel-head"><div><div class="eyebrow">06 / RESILIENCE</div><h2>Auto-Recovery & Time Machine</h2></div><span class="chip gold">ADVISORY ONLY</span></div><div class="dual"><div><h3>Recovery recommendations</h3><div id="recovery-actions" class="activity">Run a read-only health check to generate recommendations.</div></div><div><h3>What changed?</h3><div id="timeline" class="activity">No snapshots to compare yet. Refresh twice to establish a difference.</div></div></div><div class="footnote">No rollback, provider mutation, credential exchange, payout change, or live deploy can occur from this application.</div></section>
+   </div>
+   <footer>HERCULES SYSTEMS <span>© SAUCEAPPROVED · OWNER-CONTROLLED · VERIFIED OVER CLAIMED</span><span id="updated">Not connected</span></footer>
+  </div>
+ </main>
+</div>
+</body></html>
