@@ -32,13 +32,33 @@ footer{padding:0 4vw 4vw;color:var(--steel);font:11px monospace}@media(max-width
 </select>
 <div id="speedReadout" class="pill" style="margin-top:12px">BALANCED • 2048 TOKEN BUDGET</div></section>
 
-<section class="card hero"><h2>LIVE HERCULES</h2><div id="chatLog" aria-live="polite" style="min-height:180px;white-space:pre-wrap;font:14px monospace;margin-bottom:12px"></div><textarea id="chatInput" aria-label="Message Hercules" placeholder="Tell Hercules what to do" style="width:100%;min-height:90px;background:#0b0e12;color:var(--text);border:1px solid var(--line);padding:12px"></textarea><button id="chatSend" style="margin-top:10px;padding:12px 18px;background:var(--hot);border:0;font-weight:900">RUN HERCULES</button></section>
+<section class="card hero"><h2>LIVE HERCULES</h2><p id="modelStatus" role="status" aria-live="polite" style="color:var(--steel);font:12px monospace;margin:0 0 12px">Checking AI model connection…</p><button id="modelRetry" type="button" style="margin-bottom:14px;padding:9px 12px;background:#0b0e12;border:1px solid var(--line);color:var(--text);font:12px monospace">RETRY MODEL CONNECTION</button><div id="chatLog" aria-live="polite" style="min-height:180px;white-space:pre-wrap;font:14px monospace;margin-bottom:12px"></div><textarea id="chatInput" aria-label="Message Hercules" placeholder="Tell Hercules what to do" style="width:100%;min-height:90px;background:#0b0e12;color:var(--text);border:1px solid var(--line);padding:12px"></textarea><button id="chatSend" disabled style="margin-top:10px;padding:12px 18px;background:var(--hot);border:0;font-weight:900">RUN HERCULES</button></section>
 <section class="card"><h2>BLACK BOX VAULT</h2><p>Decisions, actions, commits and rollback references form an auditable recovery trail.</p><span class="pill">AUDIT</span><span class="pill">ROLLBACK</span></section>
 </main><script>
 const speed=document.getElementById("speedMode"),readout=document.getElementById("speedReadout"),log=document.getElementById("chatLog"),input=document.getElementById("chatInput"),send=document.getElementById("chatSend");
 let conversationId=null;
+const modelStatus=document.getElementById("modelStatus"),modelRetry=document.getElementById("modelRetry");
+let modelReady=false;
+send.disabled=true;
+async function verifyModelConnection(){
+  modelReady=false;send.disabled=true;modelRetry.disabled=true;
+  modelStatus.textContent="Checking model availability…";
+  try{
+    const response=await fetch("/v1/models",{cache:"no-store",credentials:"omit"});
+    if(!response.ok)throw new Error("model_unavailable");
+    const data=await response.json();
+    const valid=Number.isInteger(data?.count)&&data.count>0&&Array.isArray(data?.installed)&&data.installed.some(m=>m&&typeof m.name==="string"&&m.name.trim());
+    if(!valid)throw new Error("model_unavailable");
+    modelReady=true;send.disabled=false;
+    modelStatus.textContent="Model detected. Chat response capability is not yet verified.";
+  }catch{
+    modelStatus.textContent="Model service unavailable. Chat is disabled until verified.";
+  }finally{modelRetry.disabled=false;}
+}
+modelRetry.addEventListener("click",verifyModelConnection);
+void verifyModelConnection();
 const labels={turbo:"TURBO • 512 TOKEN BUDGET",fast:"FAST • 1024 TOKEN BUDGET",balanced:"BALANCED • 2048 TOKEN BUDGET",deep:"DEEP • 4096 TOKEN BUDGET",max:"MAX • 8192 TOKEN BUDGET"};
 speed.addEventListener("change",()=>{readout.textContent=labels[speed.value]||labels.balanced});
-send.addEventListener("click",async()=>{const content=input.value.trim();if(!content)return;send.disabled=true;log.textContent+="YOU // "+content+"\\nHERCULES // ";input.value="";try{const response=await fetch("/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:[{role:"user",content}],conversation_id:conversationId,speed_mode:speed.value,stream:true})});if(!response.ok||!response.body)throw new Error("stream unavailable");conversationId=response.headers.get("X-Hercules-Conversation-Id")||conversationId;const reader=response.body.getReader(),decoder=new TextDecoder();let buffer="";while(true){const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split("\\n");buffer=lines.pop()||"";for(const line of lines){if(!line.startsWith("data: "))continue;const data=line.slice(6);if(data==="[DONE]")continue;try{const event=JSON.parse(data);const token=event.choices?.[0]?.delta?.content;if(token)log.textContent+=token;if(event.error)log.textContent+="["+event.error+"]"}catch{}}}log.textContent+="\\n";}catch(e){log.textContent+="[LOCAL STREAM ERROR]\\n";}finally{send.disabled=false;input.focus();}});
+send.addEventListener("click",async()=>{if(!modelReady)return;const content=input.value.trim();if(!content)return;send.disabled=true;log.textContent+="YOU // "+content+"\\nHERCULES // ";input.value="";try{const response=await fetch("/v1/chat/completions",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({messages:[{role:"user",content}],conversation_id:conversationId,speed_mode:speed.value,stream:true})});if(!response.ok||!response.body)throw new Error("stream unavailable");conversationId=response.headers.get("X-Hercules-Conversation-Id")||conversationId;const reader=response.body.getReader(),decoder=new TextDecoder();let buffer="";while(true){const {value,done}=await reader.read();if(done)break;buffer+=decoder.decode(value,{stream:true});const lines=buffer.split("\\n");buffer=lines.pop()||"";for(const line of lines){if(!line.startsWith("data: "))continue;const data=line.slice(6);if(data==="[DONE]")continue;try{const event=JSON.parse(data);const token=event.choices?.[0]?.delta?.content;if(token)log.textContent+=token;if(event.error)log.textContent+="["+event.error+"]"}catch{}}}log.textContent+="\\n";}catch(e){modelReady=false;modelStatus.textContent="Model service unavailable. Chat is disabled until verified.";log.textContent+="[LOCAL STREAM ERROR]\\n";}finally{send.disabled=!modelReady;input.focus();}});
 if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("/service-worker.js").catch(()=>{}));}
 </script><footer>SAUCEAPPROVED // HERCULES SOVEREIGN SYSTEM</footer></body></html>
