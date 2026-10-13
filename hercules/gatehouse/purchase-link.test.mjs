@@ -40,7 +40,7 @@ test("random future reference is opaque, tenant-bound, short lived, never accept
 test("validated shapes are candidates ONLY, not proof of Shopify authenticity or buyer delivery",()=>{
  const intent=setup();
  const x=assessPurchaseCandidate({identity,intentRow:intent.privateRow,
-  buyerReference:intent.buyerReference,order:order(intent),secret,now:now+1000});
+  buyerReference:intent.buyerReference,requestedSiteId:siteId,order:order(intent),secret,now:now+1000});
  assert.equal(x.status,"candidate-needs-authoritative-readback");
  assert.equal(x.localChecksMatched,true);
  assert.equal(x.providerReadbackVerified,false);
@@ -68,7 +68,7 @@ test("unpaid, refunded, test, canceled, partial, wrong product/currency, and con
  ];
  for(const change of cases){
   const result=assessPurchaseCandidate({identity,intentRow:intent.privateRow,
-   buyerReference:intent.buyerReference,order:{...base,...change},secret,now});
+   buyerReference:intent.buyerReference,requestedSiteId:siteId,order:{...base,...change},secret,now});
   assert.equal(result.localChecksMatched,false,JSON.stringify(change));
   assert.equal(result.deliveryAuthorized,false);
  }
@@ -88,7 +88,7 @@ test("wrong identity, missing provider-verified email claims, expired/forged ref
  ];
  for(const change of cases){
   const result=assessPurchaseCandidate({identity,intentRow:intent.privateRow,
-   buyerReference:intent.buyerReference,order:rawOrder,secret,now, ...change});
+   buyerReference:intent.buyerReference,requestedSiteId:siteId,order:rawOrder,secret,now, ...change});
   assert.equal(result.localChecksMatched,false);
   assert.equal(result.customerEntitlementGranted,false);
  }
