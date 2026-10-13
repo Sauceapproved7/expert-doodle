@@ -1,0 +1,30 @@
+name: Hercules Circle Mail Readiness Evidence
+
+on:
+  pull_request:
+    paths:
+      - "scripts/hercules_circle_mail_readiness.mjs"
+      - "tests/hercules-circle-mail-readiness.test.mjs"
+      - ".github/workflows/hercules-circle-mail-readiness.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-only-email-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Test fail-closed email readiness
+        run: |
+          node --test tests/hercules-circle-mail-readiness.test.mjs
+          node --check scripts/hercules_circle_mail_readiness.mjs
+      - name: Real sender domain DNS observations without send or DNS change
+        run: node scripts/hercules_circle_mail_readiness.mjs
+      - name: Verify owner-code policy
+        run: node scripts/verify-owner-code-only.mjs
