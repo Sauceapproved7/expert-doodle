@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {createServer} from "./server.mjs";
 const ownerToken="owner-test-secret-used-in-isolated-tests";
 const accessToken=["test","provider","token","which","is","not","a","real","secret"].join("-");
-const shop={id:"gid://shopify/Shop/100002726208",myshopifyDomain:"sauceapproved-2.myshopify.com"};
+const shop={id:"gid://shopify/Shop/100002726208",myshopifyDomain:"azymhc-x0.myshopify.com"};
 async function withServer(config,fn){
  const s=createServer({...config,probeUrls:[],accessToken:ownerToken});
  await new Promise(resolve=>s.listen(0,"127.0.0.1",resolve));
