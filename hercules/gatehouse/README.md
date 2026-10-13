@@ -65,3 +65,20 @@ The Gatehouse dashboard now combines the existing on-demand `/api/public-history
 - Server-side public history remains ephemeral. Durable *server-side* storage and verified Shopify/Stripe revenue collection are **not** implemented.
 
 No launch permissions, live payments, payouts, DNS, deployments or webhook integrations are introduced in this upgrade.
+
+## Commercial pilot preparation (no-charge preview)
+
+The existing SauceApproved Shopify store contains a **DRAFT** `$49.00 USD` one-time diagnostic offer:
+- Product: `gid://shopify/Product/15424049283392`
+- Variant: `gid://shopify/ProductVariant/67754351460672`
+- SKU: `HG-DIAGNOSTIC-49`
+
+The separate Gatehouse app publishes `GET /commercial` as a no-charge marketing **preview**; it is not a checkout page. `GET /api/commercial/catalog` returns draft one-time and proposed $19/$49/$149/month subscription tiers with purchase and recurring billing explicitly disabled. `GET /api/commercial/demo-report` downloads a sample of existing **Hercules** public health checks only; it is **not a customer's website scan**, and cannot be used as paid delivery evidence.
+
+Customer intake is represented by a pure, fail-closed validator (`normalizeIntake`) with HTTPS-origin and explicit self-attested authorization checks. It does **not** collect or store PII, resolve arbitrary DNS, perform a network request, provision a service, or submit payment. A self-attestation is not independently verified site ownership. All public commerce routes are GET-only and payment, intake, customer report delivery and subscription mutations are 404.
+
+The `assessPaidOrderWebhook` pure helper validates a properly scoped signed Shopify webhook and the exact diagnostic variant, quantity, USD price, paid status, cancellation/refund absence. A matching signed event remains `needs-provider-readback` with `deliveryAuthorized:false`: a true paid purchase and customer's access **must** be reconciled with provider-authoritative order data before allowing delivery. No webhook receiver or secret is configured, and no payment/provisioning callback is activated.
+
+**Still required before first paid customer:** independently verified paid checkout/reversal procedures; an authenticated customer authorization and intake path; a safe customer-domain probe constrained against SSRF/DNS rebinding; durable separated request/report storage; provable email or customer-portal delivery; refund/cancellation support; approved commercial terms/privacy. Subscription plans additionally need independent scheduled monitoring, metering, billing schedules, cancellation and client data isolation. Keep the Shopify product **DRAFT** until all first-sale prerequisites are verified. Do not invent payment verification from the demo or the live Stripe connection.
+
+No new database, new cost, DNS modification, production release, Shopify product publish, billing or payout action was introduced here.
