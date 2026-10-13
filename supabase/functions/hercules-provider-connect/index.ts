@@ -213,6 +213,16 @@ async function exchangeGatehouseShopifyGrant(clientId:string,clientSecret:string
   throw new Error('shopify_token_lifetime_unavailable');
  return {token:String(body.access_token),expiresIn};
 }
+async function verifyGatehouseShopifyOrderPermission(token:string){
+ // Only baseline read_orders permission for initial authorization; richer
+ // product/variant matching remains a separately checked operation.
+ const data=await shopifyGraphql(token,
+  'query GatehouseOrderPermission{shop{id myshopifyDomain} orders(first:1){pageInfo{hasNextPage}}}');
+ if(data?.shop?.id!==SHOP_GID||data?.shop?.myshopifyDomain!==SHOPIFY_API_HOST
+  ||typeof data?.orders?.pageInfo?.hasNextPage!=='boolean')
+  throw new Error('gatehouse_shop_or_orders_scope_unverified');
+ return true;
+}
 async function checkGatehouseShopifyOrderReadback(token:string,limit=1){
  if(!Number.isInteger(limit)||limit<1||limit>10)throw new Error('gatehouse_bounded_scan_only');
  const data=await shopifyGraphql(token,GATEHOUSE_SHOPIFY_ORDER_QUERY,{first:limit});
@@ -1207,7 +1217,7 @@ Deno.serve(async req=>{
       // A real provider grant, verified shop GID, original API domain and read_orders
       // must all succeed BEFORE storing any credential references.
       const grant=await exchangeGatehouseShopifyGrant(clientId,clientSecret);
-      await checkGatehouseShopifyOrderReadback(grant.token,1);
+      await verifyGatehouseShopifyOrderPermission(grant.token);
       const secretRef=await storeSecret(admin,clientSecret,
        `hercules_gatehouse_shopify_client_${org}_${crypto.randomUUID()}`,
        'Separate Gatehouse Shopify order-read app secret, never used for webhooks.');
