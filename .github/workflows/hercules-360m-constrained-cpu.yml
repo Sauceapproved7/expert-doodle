@@ -1,0 +1,18 @@
+name: Hercules 360M Quota-Constrained Lab
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/hercules-360m-constrained-cpu.yml'
+      - 'scripts/hercules-360m-constrained-cpu.mjs'
+      - 'tests/hercules-360m-constrained-cpu.test.mjs'
+      - 'docs/HERCULES-360M-CONSTRAINED-CPU-LAB.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  quota-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: node --test tests/hercules-360m-constrained-cpu.test.mjs
