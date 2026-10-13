@@ -1,5 +1,6 @@
 import {createHash,createHmac,randomBytes,timingSafeEqual} from 'node:crypto';
 import {isDeepStrictEqual} from 'node:util';
+import {OWNER_PERMIT_SCHEMA,verifyOwnerSignedPermit} from './owner-permit.mjs';
 import {preflightCloudDeployment} from './preflight.mjs';
 
 const IMAGE=/^[a-z0-9][a-z0-9._/-]{1,128}@sha256:[a-f0-9]{64}$/;
@@ -66,9 +67,14 @@ function payload(permit){
 function seal(permit,key){
  return createHmac('sha256',key).update(payload(permit)).digest('hex');
 }
-function validatePermit(plan,permit,{signingKey,action,now}){
- const key=signingSecret(signingKey);
+function validatePermit(plan,permit,{signingKey,ownerPublicKey,action,now}){
  assertPlan(plan);
+ if(permit?.schema===OWNER_PERMIT_SCHEMA){
+  if(signingKey!==undefined)fail('permit_legacy_secret_disallowed');
+  return verifyOwnerSignedPermit(plan,permit,{ownerPublicKey,action,now});
+ }
+ if(ownerPublicKey!==undefined)fail('permit_schema_invalid');
+ const key=signingSecret(signingKey);
  if(!permit||permit.schema!==PERMIT_SCHEMA||permit.action!==action)
    fail('permit_action_mismatch');
  if(permit.planDigest!==plan.planDigest
@@ -153,9 +159,9 @@ async function consume(consumeNonce,permit){
  if(used!==true)fail('permit_replayed');
 }
 export async function executeSandboxHostPlan(plan,{
- permit,signingKey,runCommand,consumeNonce,now=Date.now()
+ permit,signingKey,ownerPublicKey,runCommand,consumeNonce,now=Date.now()
 }={}){
- validatePermit(plan,permit,{signingKey,action:'start',now});
+ validatePermit(plan,permit,{signingKey,ownerPublicKey,action:'start',now});
  requireRunner(runCommand,consumeNonce);
  await verifyRootless(runCommand,plan);
  await consume(consumeNonce,permit);
@@ -179,9 +185,9 @@ export async function executeSandboxHostPlan(plan,{
  }
 }
 export async function rollbackSandboxHostPlan(plan,{
- permit,signingKey,runCommand,consumeNonce,now=Date.now()
+ permit,signingKey,ownerPublicKey,runCommand,consumeNonce,now=Date.now()
 }={}){
- validatePermit(plan,permit,{signingKey,action:'rollback',now});
+ validatePermit(plan,permit,{signingKey,ownerPublicKey,action:'rollback',now});
  requireRunner(runCommand,consumeNonce);
  await verifyRootless(runCommand,plan);
  await consume(consumeNonce,permit);
