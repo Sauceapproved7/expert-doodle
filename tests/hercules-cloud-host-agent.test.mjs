@@ -29,6 +29,7 @@ function fakeRunner(){
  const runCommand=async(file,args)=>{
    calls.push({file,args});
    assert.equal(file,'docker');
+   if(args[0]==='info')return {exitCode:0,stdout:'[\"name=rootless\"]',stderr:''};
    if(args[0]==='container'&&args[1]==='inspect')
      return {exitCode:0,stdout:'true\n',stderr:''};
    return {exitCode:0,stdout:'',stderr:''};
@@ -122,7 +123,7 @@ test('valid owner grant only starts an already-local immutable image and verifie
  assert.equal(proof.runningVerified,true);
  assert.equal(proof.productionAuthorized,false);
  assert.equal(proof.containerName,plan.containerName);
- assert.deepEqual(calls.map(x=>x.args.slice(0,2)),[['container','create'],['container','start'],['container','inspect']]);
+ assert.deepEqual(calls.map(x=>x.args.slice(0,2)),[['info','--format'],['container','create'],['container','start'],['container','inspect']]);
  assert.equal(JSON.stringify(proof).includes(key),false);
 });
 test('same signed permit cannot be executed twice through a durable replay store interface',async()=>{
@@ -130,7 +131,7 @@ test('same signed permit cannot be executed twice through a durable replay store
  const params={permit,signingKey:key,now:time,runCommand:runner.runCommand,consumeNonce};
  await executeSandboxHostPlan(plan,params);
  await assert.rejects(()=>executeSandboxHostPlan(plan,params),/permit_replayed/);
- assert.equal(runner.calls.length,3);
+ assert.equal(runner.calls.length,4);
 });
 test('failed verification attempts bounded cleanup and does not claim success',async()=>{
  const plan=create(),permit=signer(plan),calls=[];
@@ -147,6 +148,22 @@ test('rollback requires separate signed action bound to same container and canno
  const proof=await rollbackSandboxHostPlan(plan,{permit,signingKey:key,now:time,runCommand:runner.runCommand,consumeNonce:nonceStore()});
  assert.equal(proof.rolledBack,true);
  assert.equal(proof.productionAuthorized,false);
- assert.deepEqual(runner.calls[0].args,plan.commands.rollback);
+ assert.deepEqual(runner.calls[1].args,plan.commands.rollback);
  await assert.rejects(()=>rollbackSandboxHostPlan(plan,{permit:signer(plan),signingKey:key,now:time,runCommand:runner.runCommand,consumeNonce:nonceStore()}),/permit_action_mismatch/);
+});
+
+test('rootful Docker daemon is refused before any container action or replay consumption',async()=>{
+ const plan=create(),permit=signer(plan),calls=[];
+ let used=false;
+ const runCommand=async(file,args)=>{
+  calls.push(args);
+  return {exitCode:0,stdout:args[0]==='info'?'["name=seccomp"]':'true'};
+ };
+ await assert.rejects(()=>executeSandboxHostPlan(plan,{
+  permit,signingKey:key,now:time,runCommand,
+  consumeNonce:async()=>{used=true;return true}
+ }),/rootless_docker_unverified/);
+ assert.equal(used,false);
+ assert.equal(calls.length,1);
+ assert.equal(calls[0][0],'info');
 });
