@@ -43,6 +43,7 @@ test('production or unverified host blocked even when declared free',()=>{
   const result=preflightCloudDeployment(release,{targets:[target]});
   assert.equal(result.readyForStaging,false);
   assert.equal(result.executionAuthorized,false);
+  assert.equal(result.costChangeUsd,null);
  }
 });
 test('rejects secret-shaped metadata, invalid SHA and injected URLs',()=>{
