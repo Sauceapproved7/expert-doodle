@@ -4,7 +4,8 @@ import {REQUIRED_GATES,assessFulfillment,makeSampleReport,renderPrintableSample,
 
 const validOrder=()=>({
  orderId:"gid://shopify/Order/12345",shopDomain:"azymhc-x0.myshopify.com",
- currencyCode:"USD",totalPrice:"49.00",financialStatus:"PAID",
+ currencyCode:"USD",totalPrice:"49.00",financialStatus:"PAID",test:false,
+ lineItemsPageHasNextPage:false,
  cancelledAt:null,refundTotal:"0.00",fulfillmentStatus:"UNFULFILLED",
  lineItems:[{productId:"gid://shopify/Product/15424049283392",
   variantId:"gid://shopify/ProductVariant/67754351460672",sku:"HG-DIAGNOSTIC-49",quantity:1,unitPrice:"49.00"}]
@@ -45,6 +46,9 @@ test("wrong currency, SKU, variant, order status, refunds, cancellation and mixe
   {lineItems:[{...validOrder().lineItems[0],quantity:2}]},
   {lineItems:[...validOrder().lineItems,{...validOrder().lineItems[0],quantity:1}]},
   {lineItems:[]},
+  {test:true},{test:null},{test:undefined},
+  {lineItemsPageHasNextPage:true},{lineItemsPageHasNextPage:null},
+  {lineItemsPageHasNextPage:undefined},
  ];
  for(const mod of bad){
   const r=checkOrderReadback({...validOrder(),...mod});
