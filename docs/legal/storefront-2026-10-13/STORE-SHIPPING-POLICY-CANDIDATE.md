@@ -21,11 +21,11 @@ We will have a reasonable basis for any shipping timeframe presented when an ord
 
 **Legal source:** https://www.ftc.gov/business-guidance/resources/business-guide-ftcs-mail-internet-or-telephone-order-merchandise-rule
 
-## 5. Shipping charges and estimates
+## 4. Shipping charges and estimates
 
 Available delivery methods, charges, and any estimated delivery windows are shown during checkout when supported. Shipping prices and eligibility may depend on destination, weight, item type and selected service. Quoted delivery windows are estimates unless the checkout specifically guarantees one.
 
-## 4. Tracking and delivery notifications
+## 5. Tracking and delivery notifications
 
 Where the carrier supplies tracking, we will provide available tracking information through the order or shipping notification. Shipping updates may be delayed between label creation, carrier pickup and carrier scans. A shipping-label creation event alone does not prove the package was delivered.
 
