@@ -16,7 +16,12 @@ export async function inspectCircleMailDomain({
  if(domain!==DOMAIN)throw Error('domain_not_allowlisted');
  if(typeof resolver?.resolveMx!=='function'||typeof resolver?.resolveTxt!=='function')
   throw Error('invalid_resolver');
- const fetchSafe=async fn=>{try{return await fn()}catch{return null}};
+ const fetchSafe=async fn=>{try{return await fn()}catch(error){
+  // NXDOMAIN/ENODATA is a completed lookup without a record; timeouts and
+  // transport failures must remain unverified, never treated as absence.
+  if(['ENODATA','ENOTFOUND','ENODOMAIN'].includes(error?.code))return [];
+  return null;
+ }};
  const [mx,txt,dmarc]=await Promise.all([
   fetchSafe(()=>resolver.resolveMx(DOMAIN)),
   fetchSafe(()=>resolver.resolveTxt(DOMAIN)),
