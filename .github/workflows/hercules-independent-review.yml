@@ -22,4 +22,8 @@ jobs:
       - name: Triage proposed changes without external models
         env:
           HERCULES_REVIEW_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: node scripts/hercules-independent-review.mjs
+        shell: bash
+        run: |
+          set -o pipefail
+          [[ "$HERCULES_REVIEW_BASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          git -c core.quotepath=false diff --no-ext-diff --no-textconv --no-renames --unified=0 "$HERCULES_REVIEW_BASE_SHA" HEAD -- | node scripts/hercules-independent-review.mjs
