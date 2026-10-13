@@ -1,0 +1,20 @@
+name: Hercules Qwen ARM64 Container Resource Diagnostics
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/hercules-qwen15-arm-resource-probe.yml"
+      - "scripts/hercules-qwen15-arm-resource-probe.mjs"
+      - "hercules-models/qwen15-owner-host.mjs"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  resource-observation:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Observe kernel-enforced resource controllers without credentials
+        run: |
+          node --test tests/hercules-qwen15-cgroup-budget.test.mjs
+          node scripts/hercules-qwen15-arm-resource-probe.mjs
