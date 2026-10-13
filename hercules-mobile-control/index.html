@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101827"><title>Hercules Mobile Control</title>
+<style>body{font:16px system-ui;background:#101827;color:#f3f5f9;margin:0}main{max-width:680px;margin:auto;padding:24px}section{background:#1d293b;border:1px solid #40516b;border-radius:16px;padding:18px;margin:16px 0}h1{font-size:1.6rem}textarea{box-sizing:border-box;width:100%;min-height:130px;background:#0c1422;color:white;border:1px solid #8191a8;border-radius:10px;padding:12px;font:inherit}button,a{font:inherit}button{background:#b6dbff;color:#091522;padding:12px 16px;border:0;border-radius:9px}button:disabled{opacity:.45}a{color:#a8d7ff}small{color:#c1ccdc}li{margin:8px 0}</style></head>
+<body><main><h1>Hercules Mobile Control</h1><p>iPhone · Android · Desktop</p>
+<section><h2>Connection</h2><p id="status" role="status">Not connected — execution locked</p><small>No Codex environment or authenticated task endpoint is configured in this interface.</small></section>
+<section><h2>Prepare coding task</h2><label for="task">Task instructions</label><textarea id="task" maxlength="4000" placeholder="Describe the change you want Codex to make"></textarea><p><small id="count">0 / 4000</small></p><button id="copy" type="button">Copy task</button> <button id="submit" type="button" disabled>Submit to Codex (locked)</button><p id="feedback" role="status"></p></section>
+<section><h2>Existing services</h2><ul><li><a href="https://hercules-mcp.onrender.com" rel="noopener noreferrer">Hercules MCP</a></li><li><a href="https://smallz-hercules.onrender.com" rel="noopener noreferrer">Smallz</a></li><li><a href="https://dashboard.render.com/web/srv-db0sic6gekts73b40jcg" rel="noopener noreferrer">Render MCP dashboard</a></li></ul></section>
+<section><h2>Safety</h2><p>Execution, computer access, and production deployment are disabled. Do not paste passwords, API keys, or secrets into task instructions.</p></section>
+</main><script>
+const task=document.getElementById('task'),count=document.getElementById('count'),feedback=document.getElementById('feedback');
+task.addEventListener('input',()=>{count.textContent=task.value.length+' / 4000'});
+document.getElementById('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(task.value);feedback.textContent='Task copied';}catch{feedback.textContent='Copy unavailable in this browser';}});
+</script></body></html>
