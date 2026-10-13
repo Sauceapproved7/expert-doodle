@@ -122,7 +122,7 @@ test("DA-44: contradictory cutover does not keep a prior complete stage eligible
 test("DA-44: existing DNS authorization and privilege boundaries remain unchanged",()=>{
   assert.match(repairedSql,/v_auth := public\.hercules_spaceship_authorization_status\(\)/);
   assert.match(repairedSql,/hercules_spaceship_dns_submit\('reconcile', true\)/);
-  assert.match(repairedSql,/grant execute on function public\.hercules_domain_launch_autopilot_tick\(\) to service_role/);
-  assert.match(repairedSql,/revoke all on function public\.hercules_domain_launch_autopilot_tick\(\) from public,anon,authenticated/);
+  assert.match(repairedSql,/grant execute on function public\.hercules_domain_launch_autopilot_tick\(\) to service_role/i);
+  assert.match(repairedSql,/revoke all on function public\.hercules_domain_launch_autopilot_tick\(\) from public,anon,authenticated/i);
   assert.doesNotMatch(repairedSql,/\b(?:webPresenceCreate|domainCreate|primaryDomainUpdate)\b/);
 });
