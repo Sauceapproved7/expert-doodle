@@ -45,3 +45,12 @@ node scripts/security-baseline.mjs
 ```
 
 The local HTTP model-server simulator in unit tests proves protocol handling and failure behavior only; **it is not a proof of production AI inference**.
+
+## Optional llama.cpp local compatibility (DA-45, October 13, 2026)
+
+The original adapter continues to default to `ollama`. A second supported protocol, `llama-cpp`, is **explicitly opt-in** with `HERCULES_LOCAL_CHAT_PROTOCOL=llama-cpp`, while `HERCULES_LOCAL_CHAT_ENABLED` stays `false` unless independently authorized for a **separate lab**. Both use only numeric loopback addresses and require the existing Hercules control bearer token at the model-plane boundary. Remote URLs, credentials in endpoints, and unrecognized protocols remain prohibited.
+
+The llama.cpp profile checks **`GET /v1/models`** for the exact configured model ID, then sends a bounded nonstreaming `POST /v1/chat/completions` with a deterministic temperature and token budget. Success requires a single `finish_reason:stop` assistant choice, the exact model ID, and nonempty generated text. Missing models, empty/partial/wrong replies or transport failures remain error states, never generated success.
+
+The PR tests use an in-process simulated provider; the separate [PR #947](https://github.com/Sauceapproved7/expert-doodle/pull/947) contains the real 360M checkpoint CPU run and its observed outputs. **Neither test proves speed or reliable chat quality under the existing Render lab's 0.15 CPU limit**. No model weights are installed, no Render deployment is changed, and public launch remains fail-closed.
+
