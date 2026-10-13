@@ -12,7 +12,9 @@ const PAGES=Object.freeze([
  ['/app.mjs',['hercules_cloud_join_founders']],
  ['/early.mjs',['hercules_circle_request_early']],
  ['/owner.mjs',['hercules_circle_owner_acl']],
- ['/circle-access.css',['.owner-wrap']]
+ ['/circle-access.css',['.owner-wrap']],
+ ['/verify.html',['Email confirmation is not active yet','No email address has been verified']],
+ ['/verify.mjs',['history.replaceState','Never read, store or submit']]
 ]);
 function gate(ok,code){if(!ok)throw Error(code)}
 export function readCirclePublishableKey(source){
