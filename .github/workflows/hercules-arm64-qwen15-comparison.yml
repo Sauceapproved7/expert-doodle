@@ -4,6 +4,8 @@ on:
     paths:
       - ".github/workflows/hercules-arm64-qwen15-comparison.yml"
       - "scripts/hercules-arm64-qwen15-comparison.mjs"
+      - "hercules-models/qwen15-owner-host.mjs"
+      - "tests/hercules-qwen15-cgroup-budget.test.mjs"
       - "tests/hercules-arm64-qwen15-comparison.test.mjs"
       - "scripts/hercules-arm64-system-quality-matrix.mjs"
       - "docs/HERCULES-ARM64-QWEN15-COMPARISON.md"
@@ -19,7 +21,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Check fail-closed evaluator and owner/security rules
         run: |
-          node --test tests/hercules-arm64-qwen15-comparison.test.mjs tests/hercules-arm64-system-quality-matrix.test.mjs tests/hercules-qwen15-private-live-smoke.test.mjs
+          node --test tests/hercules-arm64-qwen15-comparison.test.mjs tests/hercules-arm64-system-quality-matrix.test.mjs tests/hercules-qwen15-private-live-smoke.test.mjs tests/hercules-qwen15-cgroup-budget.test.mjs
           node scripts/verify-hercules-execution-contract.mjs
           node scripts/verify-owner-code-only.mjs
           node scripts/security-baseline.mjs
