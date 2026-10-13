@@ -42,7 +42,7 @@ test('independent verified checks plus safe configuration permit explicit releas
  const r=evaluateCircleRelease(complete,evidence);
  assert.equal(r.ready,true);assert.equal(r.customerSignupsEnabled,true);
  assert.equal(r.paymentEnabled,false);
- assert.equal(assertCircleRelease(complete,evidence),r.ready&&assertCircleRelease(complete,evidence));
+ assert.equal(assertCircleRelease(complete,evidence).ready,true);
  assert.throws(()=>assertCircleRelease(complete,{...evidence,ownerReleaseApproved:false}),/not_release_ready/);
 });
 test('release evidence never echoes sensitive values',()=>{
