@@ -46,7 +46,7 @@ test('early tester request is private and unverified until separately proven',()
  assert.match(sql,/if total >= 40/i);
  assert.match(sql,/return null;/i);
  assert.doesNotMatch(sql,/on conflict \(email\)/i);
- assert.match(sql,/grant execute on function public\.hercules_circle_request_early\(text,boolean,text,text,text\) to anon,authenticated/i);
+ assert.match(sql,/grant execute on function public\.hercules_circle_request_early\(text,boolean,text,text,text\)\s+to anon,authenticated/i);
  assert.doesNotMatch(sql,/customer_entitlement|stripe|shopify|payout|checkout|public-registration-open/i);
 });
 test('owner page requires existing Supabase authentication and never registers new accounts',()=>{
