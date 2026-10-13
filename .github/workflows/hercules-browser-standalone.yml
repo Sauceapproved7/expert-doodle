@@ -6,7 +6,7 @@ on:
       - "render/hercules-browser-standalone/**"
       - "supabase/functions/hercules-browser-standalone-auth/**"
       - "supabase/migrations/*hercules_browser_standalone_auth_broker*"
-      - "tests/hercules-browser-standalone.test.mjs"
+      - "tests/hercules-browser-standalone*.test.mjs"
       - "tests/hercules-browser-standalone-auth-broker.test.mjs"
       - "tests/hercules-browser-standalone-invoker-remediation.test.mjs"
       - "docs/HERCULES-BROWSER-STANDALONE-V1.md"
@@ -30,6 +30,6 @@ jobs:
       - name: Enforce owner-code boundary
         run: node scripts/verify-owner-code-only.mjs
       - name: Test standalone browser
-        run: node --test tests/hercules-browser-standalone.test.mjs tests/hercules-browser-standalone-auth-broker.test.mjs tests/hercules-browser-standalone-invoker-remediation.test.mjs
+        run: node --test tests/hercules-browser-standalone*.test.mjs
       - name: Run security baseline
         run: node scripts/security-baseline.mjs

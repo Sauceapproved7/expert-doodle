@@ -1,5 +1,11 @@
 # Hercules IP Provenance & Canonical Source
 
+## Standalone browser owner handoff and context capacity — 2026-10-13
+
+- Paths: standalone browser server/client, owner-handoff and context-capacity regression tests, and browser workflow/runbook.
+- Origin: original Hercules repair with AI assistance, using existing browser infrastructure and Node built-ins; no new runtime dependency or third-party source.
+- Scope: coalesce concurrent owner-context creation, bound Chromium context allocation, preserve active owner/worker requests, and reopen an approved handoff destination when the authenticated browser is blank. Provider login, verification, owner-field controls, and private-network restrictions are preserved.
+
 ## Studio post-activation handoff — 2026-10-13
 
 - Paths: Studio access module, workspace-handoff tests, and hosted activation rollout documentation.

@@ -15,6 +15,9 @@ const PUBLIC_DIR = fileURLToPath(new URL("./public/", import.meta.url));
 const MAX_BODY = 256 * 1024;
 const MAX_TIMEOUT = 60000;
 const SESSION_TTL = 24 * 60 * 60 * 1000;
+const WORKER_SESSION_TTL = 5 * 60 * 1000;
+// The deployed browser has 512 MiB. Keep one context and preserve the owner page.
+const MAX_BROWSER_CONTEXTS = 1;
 const AUTOPILOT_MAX_STEPS = 25;
 const AUTOPILOT_MAX_RETRIES = 3;
 const DNS_CACHE_TTL = 60000;
@@ -26,6 +29,8 @@ const uiSessions = new Map();
 const dnsCache = new Map();
 let browserPromise = null;
 let ownerSessionId = null;
+let ownerSessionPromise = null;
+let sessionCreations = 0;
 
 function json(res,status,body,headers={}) {
   res.writeHead(status,{
@@ -211,33 +216,51 @@ async function browser() {
   }
 }
 
-async function freshSession() {
-  const b=await browser();
-  const context=await b.newContext({
-    acceptDownloads:false,
-    serviceWorkers:"block",
-    viewport:VIEWPORT
-  });
-  const page=await context.newPage();
-  await page.route("**/*",async route=>{
-    if(await networkAllowed(route.request().url()))return route.continue();
-    return route.abort("blockedbyclient");
-  });
-  const id=crypto.randomUUID();
-  const s={id,context,page,lastUsed:Date.now(),createdAt:Date.now()};
-  sessions.set(id,s);
-  return s;
+async function freshSession({isOwner=false}={}) {
+  if(sessions.size+sessionCreations>=MAX_BROWSER_CONTEXTS) {
+    for(const [id,s] of sessions) {
+      if(s.page.isClosed?.()||(!s.isOwner&&!s.activeRequests))await closeSession(id);
+    }
+    if(sessions.size+sessionCreations>=MAX_BROWSER_CONTEXTS)throw Error("browser_capacity_busy");
+  }
+  sessionCreations+=1;
+  let context;
+  try {
+    const b=await browser();
+    context=await b.newContext({acceptDownloads:false,serviceWorkers:"block",viewport:VIEWPORT});
+    const page=await context.newPage();
+    await page.route("**/*",async route=>{
+      if(await networkAllowed(route.request().url()))return route.continue();
+      return route.abort("blockedbyclient");
+    });
+    const id=crypto.randomUUID();
+    const s={id,context,page,isOwner,activeRequests:0,lastUsed:Date.now(),createdAt:Date.now()};
+    sessions.set(id,s);
+    return s;
+  } catch(error) {
+    await context?.close().catch(()=>{});
+    throw error;
+  } finally {
+    sessionCreations-=1;
+  }
 }
 
 async function ownerSession() {
   if(ownerSessionId&&sessions.has(ownerSessionId)) {
     const s=sessions.get(ownerSessionId);
-    s.lastUsed=Date.now();
-    return s;
+    if(!s.page.isClosed?.()) {
+      s.lastUsed=Date.now();
+      return s;
+    }
+    await closeSession(s.id);
   }
-  const s=await freshSession();
-  ownerSessionId=s.id;
-  return s;
+  if(!ownerSessionPromise)ownerSessionPromise=(async()=>{
+    const s=await freshSession({isOwner:true});
+    ownerSessionId=s.id;
+    return s;
+  })();
+  try {return await ownerSessionPromise;}
+  finally {ownerSessionPromise=null;}
 }
 
 async function closeSession(id) {
@@ -478,15 +501,17 @@ async function workerExtract(page,selector) {
 }
 
 async function workerSession(id,persist) {
-  if(id&&sessions.has(id)) {
+  if(id) {
+    if(!sessions.has(id))throw Error("session_expired");
     const existing=sessions.get(id);
     existing.lastUsed=Date.now();
+    existing.activeRequests+=1;
     return {...existing,id,persist:true};
   }
   const fresh=await freshSession();
+  fresh.activeRequests=1;
   if(persist) return {...fresh,id:fresh.id,persist:true};
-  sessions.delete(fresh.id);
-  return {...fresh,id:null,persist:false};
+  return {...fresh,id:fresh.id,persist:false};
 }
 
 async function canonicalWorkerRun(input) {
@@ -503,6 +528,7 @@ async function canonicalWorkerRun(input) {
   const timeout=clamp(input?.timeoutMs,1000,MAX_TIMEOUT,30000);
   const persist=input?.persistSession===true||Boolean(input?.sessionId);
   const session=await workerSession(input?.sessionId?String(input.sessionId):null,persist);
+  const trackedSession=sessions.get(session.id);
 
   try {
     if(input?.url) {
@@ -514,7 +540,7 @@ async function canonicalWorkerRun(input) {
       return {
         ok:true,
         action,
-        sessionId:session.id,
+        sessionId:session.persist?session.id:null,
         page:await workerSnapshot(session.page,input?.maxTextChars)
       };
     }
@@ -528,7 +554,7 @@ async function canonicalWorkerRun(input) {
       return {
         ok:true,
         action,
-        sessionId:session.id,
+        sessionId:session.persist?session.id:null,
         page:await workerSnapshot(session.page,input?.maxTextChars),
         extracted
       };
@@ -539,7 +565,7 @@ async function canonicalWorkerRun(input) {
       return {
         ok:true,
         action,
-        sessionId:session.id,
+        sessionId:session.persist?session.id:null,
         contentType:"image/png",
         base64:png.toString("base64"),
         bytes:png.length,
@@ -586,12 +612,13 @@ async function canonicalWorkerRun(input) {
     return {
       ok:true,
       action,
-      sessionId:session.id,
+      sessionId:session.persist?session.id:null,
       steps:outputs,
       page:await workerSnapshot(session.page,input?.maxTextChars)
     };
   } finally {
-    if(!session.persist)await session.context.close().catch(()=>{});
+    trackedSession.activeRequests-=1;
+    if(!session.persist)await closeSession(session.id);
   }
 }
 
@@ -624,8 +651,10 @@ async function staticFile(res,path) {
 
 setInterval(async()=>{
   const now=Date.now();
-  const cutoff=now-SESSION_TTL;
-  for(const [id,s] of sessions)if(s.lastUsed<cutoff)await closeSession(id);
+  for(const [id,s] of sessions) {
+    const ttl=s.isOwner?SESSION_TTL:WORKER_SESSION_TTL;
+    if(!s.activeRequests&&s.lastUsed<now-ttl)await closeSession(id);
+  }
   for(const [id,session] of uiSessions)if(session.expiresAt<=now)uiSessions.delete(id);
 },60000).unref();
 
@@ -652,6 +681,7 @@ http.createServer(async(req,res)=>{
       autopilot:true,
       workerContract:"v1",
       sessionReuse:true,
+      maxContexts:MAX_BROWSER_CONTEXTS,
       rawCodeExecution:false,
       antiBotBypass:false
     });
@@ -669,7 +699,8 @@ http.createServer(async(req,res)=>{
         "selector_required","session_id_required","request_too_large"
       ].includes(message);
       const ownerBoundary=message.startsWith("owner_action_required:");
-      return json(res,ownerBoundary?409:(bad?400:502),{ok:false,error:message.slice(0,1200)});
+      const sessionBoundary=["browser_capacity_busy","session_expired"].includes(message);
+      return json(res,ownerBoundary||sessionBoundary?409:(bad?400:502),{ok:false,error:message.slice(0,1200)});
     }
   }
 
