@@ -38,21 +38,23 @@ export function assertHostEngineOperator(plan,{
 }
 
 export async function runHostEngineOperation({
-  action,plan,permit,signingKey,root,observation,
+  action,plan,permit,ownerPublicKey,root,observation,
   processUid,socketStat,execFileImpl,
   enableSandbox=false,now=Date.now()
 }={}){
   if(enableSandbox!==true)deny("sandbox_disabled");
   if(!["start","rollback"].includes(action))deny("engine_action_invalid");
   if(!permit||typeof permit!=="object")deny("permit_invalid");
-  if(typeof signingKey!=="string"||signingKey.length<32)
-    deny("signing_key_required");
+  if(permit.schema!=="hercules.cloud.sandbox-permit.ed25519.v1")
+    deny("permit_schema_invalid");
+  if(typeof ownerPublicKey!=="string"||!ownerPublicKey.includes("-----BEGIN PUBLIC KEY-----"))
+    deny("owner_public_key_required");
   // Refuse even a valid owner permit when local host identity is unproven.
   const operator=assertHostEngineOperator(plan,{observation,processUid,socketStat,now});
   if(typeof execFileImpl!=="function")deny("engine_runner_unavailable");
   const runCommand=createBoundedDockerRunner(plan,{execFileImpl});
   const consumeNonce=await createDurableNonceStore({root});
-  const options={permit,signingKey,runCommand,consumeNonce,now};
+  const options={permit,ownerPublicKey,runCommand,consumeNonce,now};
   const receipt=action==="start"
     ?await executeSandboxHostPlan(plan,options)
     :await rollbackSandboxHostPlan(plan,options);

@@ -5,7 +5,9 @@ import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {spawnSync} from "node:child_process";
 import {readFileSync} from "node:fs";
-import {createSandboxHostPlan,createSandboxPermit} from "../hercules-deploy/cloud/host-agent.mjs";
+import {generateKeyPairSync} from "node:crypto";
+import {createSandboxHostPlan} from "../hercules-deploy/cloud/host-agent.mjs";
+import {createOwnerSignedPermit} from "../hercules-deploy/cloud/owner-permit.mjs";
 import {runHostEngineOperation,assertHostEngineOperator} from "../hercules-deploy/cloud/host-engine.mjs";
 
 const now=Date.parse("2026-10-13T17:00:00Z");
@@ -18,7 +20,9 @@ const target={kind:"owned_linux",reference:"isolated-01",environment:"sandbox",
  runtime:"rootless_docker",runtimeUid:1000,incrementalMonthlyCostUsd:0,
  allowlistedImages:[image]};
 const plan=createSandboxHostPlan(request,{targets:[target],image,now});
-const signingKey="owner-demo-only-"+"x".repeat(48);
+const ownerKeyPair=generateKeyPairSync("ed25519");
+const ownerPrivateKey=ownerKeyPair.privateKey.export({type:"pkcs8",format:"pem"});
+const ownerPublicKey=ownerKeyPair.publicKey.export({type:"spki",format:"pem"});
 const observation=()=>({
  osId:"ubuntu",osVersion:"24.04",architecture:"arm64",
  logicalCpus:2,memoryBytes:12*1024**3,availableDiskBytes:25*1024**3,
@@ -43,19 +47,19 @@ function fakeExec({rootless=true,running=true,failOn=null}={}){
 }
 function ctx(overrides={}){
  const f=fakeExec();
- const permit=createSandboxPermit(plan,{signingKey,action:"start",now,ttlMs:120000});
- return {plan,permit,signingKey,observation:observation(),now,processUid:1000,
+ const permit=createOwnerSignedPermit(plan,{ownerPrivateKey,action:"start",now,ttlMs:120000});
+ return {plan,permit,ownerPublicKey,observation:observation(),now,processUid:1000,
   socketStat:{isSocket:()=>true,uid:1000,mode:0o140600},
   execFileImpl:f.impl,calls:f.calls,...overrides};
 }
 test("requires explicit local signed action and refuses anything else",async()=>withVault(async root=>{
  for(const change of [
   {enableSandbox:false},{action:"deploy"},{action:"start",permit:null},
-  {action:"start",signingKey:"short"},
+  {action:"start",ownerPublicKey:"short"},
   {action:"start",permit:{...ctx().permit,signature:"0".repeat(64)}},
  ]){
   const q=ctx(change);
-  await assert.rejects(()=>runHostEngineOperation({...q,root,action:q.action??"start"}),/sandbox_|permit_|signing_|engine_/);
+  await assert.rejects(()=>runHostEngineOperation({...q,root,action:q.action??"start"}),/sandbox_|permit_|signing_|owner_|engine_/);
   assert.equal(q.calls.length,0);
  }
 }));
@@ -84,7 +88,7 @@ test("signed sandbox launch creates, starts and inspects exactly one container",
  assert.deepEqual(q.calls.map(c=>c.args.slice(2,4)),[
   ["info","--format"],["container","create"],["container","start"],["container","inspect"]]);
  assert.ok(q.calls.every(c=>c.file==="/usr/bin/docker"&&c.opts.shell===false));
- assert.doesNotMatch(JSON.stringify(receipt),/owner-demo-only/);
+ assert.doesNotMatch(JSON.stringify(receipt),/PRIVATE KEY/);
 }));
 test("restarting process cannot replay previously consumed permit",()=>withVault(async root=>{
  const q=ctx();
@@ -106,7 +110,7 @@ test("inspect failure triggers only bounded rollback of own name",()=>withVault(
  assert.deepEqual(f.calls.at(-1).args.slice(2,5),["container","rm","--force"]);
 }));
 test("rollback uses a separately signed one-use grant",()=>withVault(async root=>{
- const q=ctx({action:"rollback",permit:createSandboxPermit(plan,{signingKey,action:"rollback",now})});
+ const q=ctx({action:"rollback",permit:createOwnerSignedPermit(plan,{ownerPrivateKey,action:"rollback",now})});
  const result=await runHostEngineOperation({...q,root,enableSandbox:true});
  assert.equal(result.rolledBack,true);
  assert.equal(result.executionAuthorizedForProduction,false);
@@ -145,7 +149,7 @@ test("standalone operator defaults off and does not leak inherited owner secrets
   const r=spawnSync(process.execPath,[bin.pathname,"start"],{
    encoding:"utf8",timeout:7000,
    env:{...process.env,HERCULES_HOST_ENGINE_SANDBOX_ENABLED:enabled,
-    HERCULES_HOST_ENGINE_OWNER_KEY_FILE:"OWNER-SECRET-KEY-LOCAL"}
+    HERCULES_HOST_ENGINE_OWNER_PUBLIC_KEY_FILE:"OWNER-SECRET-KEY-LOCAL"}
   });
   assert.equal(r.status,1);
   assert.doesNotMatch(r.stdout+r.stderr,/OWNER-SECRET-KEY-LOCAL/);
@@ -155,7 +159,7 @@ test("standalone operator defaults off and does not leak inherited owner secrets
 test("Host Engine CLI has no public listener and only the declared Docker subprocess",()=>{
  const cli=readFileSync(new URL("../hercules-deploy/cloud/host-engine-cli.mjs",import.meta.url),"utf8");
  assert.ok(cli.includes("HERCULES_HOST_ENGINE_SANDBOX_ENABLED"));
- assert.ok(cli.includes("HERCULES_HOST_ENGINE_OWNER_KEY_FILE"));
+ assert.ok(cli.includes("HERCULES_HOST_ENGINE_OWNER_PUBLIC_KEY_FILE"));
  for(const forbidden of ["createServer(","listen(","fetch(","eval(","http.request("])
   assert.equal(cli.includes(forbidden),false,forbidden);
 });

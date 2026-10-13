@@ -50,9 +50,9 @@ if(process.env.HERCULES_HOST_ENGINE_SANDBOX_ENABLED!=="true") {
   const socketStat=await lstat(socket);
   if(!socketStat.isSocket()||socketStat.uid!==uid||(socketStat.mode&0o077)!==0)
    throw Error("host_socket_unverified");
-  const keyPath=process.env.HERCULES_HOST_ENGINE_OWNER_KEY_FILE;
-  const signingKey=await readRestricted(keyPath,uid,{asJson:false});
-  if(signingKey.length<32)throw Error("owner_verification_key_untrusted");
+  const keyPath=process.env.HERCULES_HOST_ENGINE_OWNER_PUBLIC_KEY_FILE;
+  const ownerPublicKey=await readRestricted(keyPath,uid,{asJson:false});
+  if(!ownerPublicKey.startsWith("-----BEGIN PUBLIC KEY-----"))throw Error("owner_verification_key_untrusted");
 
   const release=await readFile("/etc/os-release",{encoding:"utf8"});
   const os=machineInfo(release);
@@ -74,7 +74,7 @@ if(process.env.HERCULES_HOST_ENGINE_SANDBOX_ENABLED!=="true") {
    dockerSocketOwnerUid:socketStat.uid,dockerSecurityOptions:options,observedAt:now
   };
   const result=await runHostEngineOperation({
-   action:cmd,plan,permit,signingKey,root,observation,processUid:uid,
+   action:cmd,plan,permit,ownerPublicKey,root,observation,processUid:uid,
    socketStat,execFileImpl:execFile,enableSandbox:true,now
   });
   process.stdout.write(JSON.stringify(result)+"\n");
