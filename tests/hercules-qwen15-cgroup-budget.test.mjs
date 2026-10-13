@@ -4,7 +4,7 @@ import {mkdtemp,writeFile,rm} from "node:fs/promises";
 import {join} from "node:path";
 import {tmpdir} from "node:os";
 import {QWEN15_SHA256,assessQwen15OwnerHost,deriveQwen15CgroupBudget,
-  inspectQwen15LocalHost} from "../hercules-models/qwen15-owner-host.mjs";
+  inspectQwen15LocalHost,resolveQwen15ScopedCgroupDirs} from "../hercules-models/qwen15-owner-host.mjs";
 
 const GiB=1024**3;
 const host={arch:"arm64",cpuCount:8,totalMemBytes:16*GiB,freeMemBytes:12*GiB};
@@ -95,4 +95,78 @@ test("cgroup inspection uncertainty cannot be bypassed by plausible host memory"
   const r=assessQwen15OwnerHost({...good,cgroupInspectionOk:false});
   assert.equal(r.hardwareCompatibleForPrivateTrial,false);
   assert.ok(r.reasons.includes("container_resource_inspection_failed"));
+});
+
+const procCgroup="0::/system.slice/hosted-compute-agent.service\n";
+const mountInfo="38 32 0:32 / /sys/fs/cgroup rw,nosuid,nodev,noexec,relatime shared:8 - cgroup2 cgroup2 rw,nsdelegate,memory_recursiveprot\n";
+const scopedPath="/sys/fs/cgroup/system.slice/hosted-compute-agent.service";
+test("resolve process cgroup v2 mount path safely; never read unrelated filesystem roots",()=>{
+  assert.deepEqual(resolveQwen15ScopedCgroupDirs(procCgroup,mountInfo),[
+    "/sys/fs/cgroup",
+    "/sys/fs/cgroup/system.slice",
+    scopedPath
+  ]);
+  for(const path of [
+    "0::/../../tmp/secrets",
+    "0::/system.slice/../secrets",
+    "1:cpu:/system.slice/user",
+    "0::/system.slice/hosted-compute-agent.service/../../other",
+    "0::/system.slice/hosted-compute-agent.service%2F.."
+  ])assert.equal(resolveQwen15ScopedCgroupDirs(path,mountInfo),null);
+  assert.equal(resolveQwen15ScopedCgroupDirs(procCgroup,"no cgroup mount"),null);
+  assert.equal(resolveQwen15ScopedCgroupDirs(procCgroup,
+    "38 32 0:32 / /etc rw - cgroup2 cgroup2 rw"),null);
+});
+test("real inspector finds process-scoped cgroup with root controller files absent",async()=>{
+  const dir=await mkdtemp(join(tmpdir(),"hercules-scoped-cgroup-"));
+  try{
+    const modelPath=join(dir,"fake.gguf"),engineBinary=join(dir,"engine");
+    await writeFile(modelPath,"fake-model-bytes");
+    await writeFile(engineBinary,"#!/bin/sh\nexit 0\n",{mode:0o700});
+    const files={
+      "/proc/self/cgroup":procCgroup,
+      "/proc/self/mountinfo":mountInfo,
+      [scopedPath+"/memory.max"]:"max",
+      [scopedPath+"/memory.current"]:String(GiB),
+      [scopedPath+"/cpu.max"]:"max 100000",
+      "/sys/fs/cgroup/system.slice/memory.max":"max",
+      "/sys/fs/cgroup/system.slice/memory.current":String(GiB),
+      "/sys/fs/cgroup/system.slice/cpu.max":"max 100000"
+    };
+    const e=await inspectQwen15LocalHost({
+      modelPath,engineBinary,systemProbe:()=>host,
+      cgroupReadText:async p=>files[p]??null
+    });
+    assert.equal(e.cgroupMode,"v2_scoped");
+    assert.equal(e.cgroupInspectionOk,true);
+    assert.equal(e.totalMemBytes,host.totalMemBytes);
+    assert.equal(e.cpuCount,host.cpuCount);
+    assert.equal(e.freeMemBytes,host.freeMemBytes);
+  }finally{await rm(dir,{recursive:true,force:true})}
+});
+test("scoped parent quota trumps an unbounded leaf and root",async()=>{
+  const dir=await mkdtemp(join(tmpdir(),"hercules-cgroup-ancestor-"));
+  try{
+    const modelPath=join(dir,"fake.gguf"),engineBinary=join(dir,"engine");
+    await writeFile(modelPath,"fake-model-bytes");
+    await writeFile(engineBinary,"#!/bin/sh\nexit 0\n",{mode:0o700});
+    const files={
+      "/proc/self/cgroup":procCgroup,
+      "/proc/self/mountinfo":mountInfo,
+      [scopedPath+"/memory.max"]:"max",
+      [scopedPath+"/memory.current"]:"0",
+      [scopedPath+"/cpu.max"]:"max 100000",
+      "/sys/fs/cgroup/system.slice/memory.max":String(512*1024*1024),
+      "/sys/fs/cgroup/system.slice/memory.current":"65536000",
+      "/sys/fs/cgroup/system.slice/cpu.max":"10000 100000"
+    };
+    const e=await inspectQwen15LocalHost({
+      modelPath,engineBinary,systemProbe:()=>host,
+      cgroupReadText:async p=>files[p]??null
+    });
+    assert.equal(e.cgroupMode,"v2_scoped");
+    assert.equal(e.totalMemBytes,512*1024*1024);
+    assert.equal(e.cpuCount,.1);
+    assert.equal(assessQwen15OwnerHost({...good,...e}).hardwareCompatibleForPrivateTrial,false);
+  }finally{await rm(dir,{recursive:true,force:true})}
 });
