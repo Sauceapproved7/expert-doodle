@@ -97,10 +97,23 @@ test("no auto-activation, no production model flag in the isolated bootstrap fil
   const {readFile}=await import("node:fs/promises");
   const code=await readFile(new URL("../scripts/hercules-qwen15-owner-host.mjs",import.meta.url),"utf8");
   assert.match(code,/HERCULES_QWEN15_PRIVATE_TRIAL/);
-  assert.match(code,/===\s*"true"/);
+  assert.match(code,/!==\s*"true"/);
   assert.match(code,/createLocalChatAdapter/);
   assert.match(code,/listenModelPlaneService/);
   assert.match(code,/127\.0\.0\.1/);
   assert.doesNotMatch(code,/listen\s*\(\s*[^,]+,\s*["']0\.0\.0\.0["']/);
   assert.doesNotMatch(code,/oci\s+compute\s+instance\s+launch|RENDER_API_KEY|OPENAI_API_KEY/);
+});
+
+test("private launcher refuses to start without explicit owner authorization",async()=>{
+  const {spawnSync}=await import("node:child_process");
+  const script=new URL("../scripts/hercules-qwen15-owner-host.mjs",import.meta.url);
+  const result=spawnSync(process.execPath,[script.pathname],{
+    encoding:"utf8",
+    timeout:8000,
+    env:{PATH:process.env.PATH||"/usr/bin:/bin"}
+  });
+  assert.equal(result.status,2);
+  assert.match(result.stderr,/owner_private_trial_disabled/);
+  assert.doesNotMatch(result.stdout,/privateTrial|ok/);
 });
