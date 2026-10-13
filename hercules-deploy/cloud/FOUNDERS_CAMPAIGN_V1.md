@@ -1,39 +1,38 @@
-# Hercules Cloud Founding Interest — free public campaign
+# Hercules Cloud — Free Founding Interest v1
 
-**Purpose:** collect explicit consent to future updates about the Hercules Cloud software project. This is **not** the existing Hercules account registration, is not hosting access, and does not authorize checkout, payouts or public SaaS release. Price: **free ($0)**.
+**Status:** Free, opt-in interest campaign. Not a Hercules public account registration, customer subscription, hosted application, payment checkout, or product entitlement.
 
-## Customer-facing deliverable
-- Original responsive public landing `/founders.html` within separate static Hercules Cloud preview, with email-only interest and required opt-in.
-- Link to the exact connected SauceApproved Shopify privacy policy on the provider's policy host.
-- User explicitly chooses future software, self-hosting, or both, and agrees to updates.
-- The success state says only **interest recorded / unverified**. It does not claim a confirmation email, an account, a paid order, or future hosting entitlement.
+## Customer experience
 
-## Storage and consent restrictions
-- New dedicated `public.hercules_cloud_founders` Postgres table; RLS enabled, no policies for anonymous/authenticated users, direct permissions revoked. Only the existing backend service role may select or insert.
-- Email normalized lowercase and deduplicated. Store email, chosen interest category, consent timestamp, notice version, policy URL, initial source, status `unverified`.
-- Service endpoint via Supabase Edge Function `hercules-cloud-founders`. Protected by `@supabase/server` `auth:'publishable'` (publishable API key authorization) and exact Origin check. The Edge platform `verify_jwt=false` is intentionally chosen because this is public interest without Hercules Auth account signup; the application handler enforces publishable-key authentication as documented at https://supabase.com/docs/guides/functions/auth and https://supabase.com/docs/guides/functions/auth-headers.
-- No service role key is sent to the browser; the public publishable key is expected to be visible in frontend code and only identifies the project, not any subscriber identity.
-- 200 new submissions/24h global cap plus case-normalized dedup, 2KiB JSON size limit and hidden honeypot. These protections are limited; they do not constitute CAPTCHA, anti-spam perfection, email address ownership verification or verified marketing consent.
-- Because the intake has no confirmation email transport, **do not send marketing to unverified addresses**; connect a verified double-opt-in transport before sending marketing communications. Support opt-out/deletion requests through the connected SauceApproved contact information; no automatic customer account creation or messaging.
-- Backend responds generically without echoing private email or allowing public lookup, enumeration or results export.
-- No Shopify products, prices, checkout status, legal policy bodies or launch-gate approvals changed.
+The original Hercules Cloud static preview adds `/founders.html`: a mobile-first founding-interest form that requests only email, interest category, and explicit marketing consent. It links the actual published SauceApproved Shopify Privacy Policy. The response records interest as **unverified**; it sends no email, grants no account/hosting access, and does not promise a release date. No price or card fields exist.
 
-## Development and verification
+## Technical implementation
+
+- `supabase/migrations/20261013152000_hercules_cloud_founders_private_intake_v1.sql` creates a dedicated table with email, consent time, interest, source, policy notice, status and timestamp. RLS is on. Anonymous and signed-in callers have **no direct SELECT or INSERT** on the table; only the existing service role is granted those table capabilities.
+- `supabase/migrations/20261013155500_hercules_cloud_join_founders_rpc_v1.sql` adds **one intentionally public, narrow PostgREST RPC** `public.hercules_cloud_join_founders(text,boolean,text,text)`. It runs with fixed `pg_catalog, public` search path, checks explicit consent, validates/normalizes email, enforces allowed interest values, silently ignores honeypot requests, serializes submissions with a transaction-scoped advisory lock, caps total new interest records at 200 per rolling 24 hours, and inserts only unverified interest. Duplicate emails get the same response. Error responses never include subscriber email.
+- The public browser posts to the project's existing `/rest/v1/rpc/hercules_cloud_join_founders` with its **publishable API key**; a publishable key identifies the project but is not proof of individual identity. No secret/service-role key is bundled, and the table cannot be listed by public users.
+- Supabase Edge Function quota is **fully used**, so a new Edge Function attempt was rejected by the provider. No plan upgrade, extra function or billing was requested. The unused Edge files were removed from this branch.
+
+## Key limitations
+
+- **Email ownership is not verified.** Treat recorded rows as unverified expressions of interest, **not** confirmed marketing subscribers. Do not bulk email them until a genuine double-opt-in confirmation transport is separately installed and tested.
+- The daily cap, deduplication and honeypot are basic abuse constraints, **not** proof against all bots; the public RPC is intentionally accessible.
+- Support unsubscribe/deletion requests through SauceApproved's official published contact policy. Review retention before bulk outreach.
+- PostgREST quotas and static-host bandwidth/build minutes remain provider-metered; using existing plans creates no new subscription but is not an unlimited-cost guarantee.
+- No modification to Shopify prices, checkout, payout, DNS, Hercules public-registration gate, old services or existing Render deploys.
+
+## Verification
+
 ```sh
 node --test tests/hercules-cloud-founders.test.mjs tests/hercules-cloud-original-ui.test.mjs tests/hercules-cloud-control-plane.test.mjs
 node scripts/build_hercules_cloud_preview.mjs
 node scripts/verify-owner-code-only.mjs
 ```
 
-## Restricted deployment order
-1. Complete repository tests, CodeQL, security and provenance gates on exact branch head.
-2. Apply **only** the additive isolated `hercules_cloud_founders_private_intake_v1` migration. Verify no public/anon/authenticated access to the table, service-role insert permission, and no existing public registration flag changed.
-3. Deploy a new named Edge function with publishable-handler auth and `verify_jwt=false`, verify status, and ensure other functions remain unchanged.
-4. Manually deploy **only** the existing `hercules-cloud-origin-preview` static site from this isolated branch or update that one site's branch after reviewing the deploy target. Keep auto-deploy disabled; do not change existing production MCP, Smallz or Studio services.
-5. Smoke test CORS from allowed and disallowed origin, request validation, no-account/no-charge behavior. Do not create a fake paid order or synthetic public subscriber just to claim success.
-6. Launch free founding campaign. Before any paid Cloud offer, approve definite licensed software deliverable, final price, download fulfillment, legal/refund terms, checkout and transaction verification.
+Apply only the two additive SQL migrations through authorized Supabase migration tooling, verify live RLS/ACL + RPC grants, then publish **only** the same isolated static Hercules Cloud preview manually from this campaign branch, auto-deploy off. An external verified signup and confirmed email flow must precede paid advertising or bulk marketing.
 
-## Cost and release limitations
-The campaign uses already connected Render static hosting and Supabase project. It creates no subscription or new paid service, but real usage of either provider still consumes metered quotas and may incur charges if account limits are exceeded. Live hosting, generative AI, multi-tenant PaaS, paid entitlements and account registration remain separate and not released here.
+### Commercial follow-on
 
-**Hercules:** SEEK KNOWLEDGE. BUILD POWER. PROVE EVERYTHING.
+Before charging, approve one specific downloadable software deliverable, the actual package/license/support boundaries, price, refund terms, automated digital fulfillment and a real checkout test. The free interest form does not sell a Railway replacement or an unbuilt hosting subscription.
+
+**SEEK KNOWLEDGE. BUILD POWER. PROVE EVERYTHING.**
