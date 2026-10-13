@@ -1,0 +1,21 @@
+{
+  "schema": "sauceapproved.hercules.codex-cloud-profile.v1",
+  "version": 1,
+  "repository": "Sauceapproved7/expert-doodle",
+  "branch": "main",
+  "nodeMinimumMajor": 22,
+  "defaultNetwork": "minimal",
+  "visibility": "private",
+  "requiresCredentials": false,
+  "allowLiveDeploy": false,
+  "allowPaymentChanges": false,
+  "autoPublish": false,
+  "installCommands": [
+    "node --version",
+    "node scripts/hercules-codex-doctor.mjs --json"
+  ],
+  "startCommands": [
+    "node --test tests/hercules-codex-doctor.test.mjs",
+    "node scripts/hercules-preflight.mjs"
+  ]
+}

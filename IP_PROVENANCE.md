@@ -1,3 +1,9 @@
+## Hercules Codex Cloud repository handoff — October 13, 2026
+
+- First-party, AI-assisted original SauceApproved source: `governance/hercules-codex-cloud-profile-v1.json`, `hercules-runtime/codex-cloud-profile.mjs`, `scripts/hercules-codex-cloud-handoff.mjs`, `tests/hercules-codex-cloud-handoff.test.mjs`, and `docs/HERCULES-CODEX-CLOUD-HANDOFF-V1.md`.
+- Node.js built-ins only, no third-party dependency, network call, licensed code, secret, customer data, model file, binary or provider API. No external rights acquired or transferred.
+- Commands are inert setup text. Reusable Codex Cloud publication still requires native web/desktop account action. No live store, payment, DNS, production deployment, external account creation, credential or access-grant changes.
+
 ## Hercules Codex Doctor v1 — October 13, 2026
 
 - First-party SauceApproved source: `hercules-runtime/codex-readiness.mjs`, `scripts/hercules-codex-doctor.mjs`, `tests/hercules-codex-doctor.test.mjs`, and `docs/HERCULES-CODEX-DOCTOR-V1.md`; existing implementation enforcement CI adds the dedicated Node test.
