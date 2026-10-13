@@ -18,7 +18,7 @@ Requires Node 22 or later; no npm packages or third-party code.
 
 ```bash
 node --test hercules/gatehouse/*.test.mjs
-GATEHOUSE_ACCESS_TOKEN='<owner-only-strong-secret>' PORT=8787 node hercules/gatehouse/server.mjs
+GATEHOUSE_ACCESS_TOKEN=$PRIVATE_GATEHOUSE_TOKEN PORT=8787 node hercules/gatehouse/server.mjs
 ```
 
 Open `http://localhost:8787` on a local machine for development. When deployed, Render serves HTTPS. The `/health` endpoint is public and deliberately contains no private data. The command dashboard stays in **synthetic preview mode** until a real `GATEHOUSE_ACCESS_TOKEN` is configured in the Gatehouse service *itself*.
