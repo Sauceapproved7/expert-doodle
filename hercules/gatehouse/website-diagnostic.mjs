@@ -41,7 +41,7 @@ export function buildDiagnosticFindings(head){
  * Does not follow redirects or read response body. HEAD may be unsupported by valid sites.
  */
 export function headRootPinned({hostname,pinnedIPv4,path="/",method="HEAD",timeoutMs=4500,redirect="deny"}={}){
- const normal=normalizeIntake({website:"https://"+hostname,authorized:true});
+ let normal;try{normal=normalizeIntake({website:"https://"+hostname,authorized:true})}catch{return Promise.reject(new TypeError("Unsafe diagnostic destination"))}
  if(new URL(normal.website).hostname!==hostname||!isPublicIPv4(pinnedIPv4)||path!=="/"||method!=="HEAD"||redirect!=="deny"||
   !Number.isInteger(timeoutMs)||timeoutMs<100||timeoutMs>5000)
   return Promise.reject(new TypeError("Unsafe diagnostic destination"));
