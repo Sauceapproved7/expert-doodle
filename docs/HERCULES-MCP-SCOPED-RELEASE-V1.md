@@ -9,3 +9,5 @@ The GitHub branch CI is read-only and verifies exact base ancestry and scope, TD
 Prior to any release: verify a separate staging runtime on resource-feasible, authorized infrastructure; confirm same pinned SHA and actual GET /health, /ready, /v1/models, authenticated real /v1/chat and no accidental public inference; verify Render GitHub integration or use an owner-approved narrowly scoped deployment path. Do not replace live main with this branch or bypass the Gatehouse gate. Any provider plan charges require owner decision. This release candidate is not a public AI app.
 
 Provenance: First-party Hercules source backport, existing ownership/law/security boundaries preserved; documentation and tests original, AI assisted; no external code or model weights introduced.
+
+Candidate governance: only an isolated test deployment may be considered until real inference, exact provider SHA, and release gate approval are independently evidenced.
