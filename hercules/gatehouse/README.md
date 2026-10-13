@@ -152,3 +152,24 @@ If approved and configured later:
 **Owner / provider checks required before activating:** approve applicable privacy and customer terms, verify the Supabase Email OTP template actually sends numeric codes (Supabase defaults to a magic link unless configured), inspect configured email provider capacity and rate limits, protect route from abusive automated use, confirm owner-approved customer support and account deletion, and test OTP → cookie → Supabase owner identity → RLS → revocation end to end.
 
 The $49 Shopify Gatehouse diagnostic remains DRAFT. No new user enrollment, live email sending, additional paid provider, cash movement, payout mutation, or irreversible launch settings were performed in this implementation.
+
+## v1.8 — Verified domain diagnostic core and private withheld report contract
+
+This release adds the next actual technical component required to monetize the $49 Gatehouse Website Health Diagnostic. It is **not a customer checkout, publicly callable scanner, login activation or automated report delivery release**.
+
+### Secure read-only site diagnostic
+
+- The first-party `runVerifiedSiteDiagnostic` requires a *valid, unexpired, organization-scoped HMAC domain challenge* and performs the original DNS-pinned website-control request before touching the website root.
+- Only after verified control, it issues a **single fixed HTTPS `HEAD /`** probe pinned to a previously vetted public IPv4. TLS hostname verification is required, redirects are **not followed**, headers are bounded and stripped to fixed observed/not-observed booleans, and no response body is read. No credentials, cookies, arbitrary paths, JavaScript execution, resource crawling, payment testing or security penetration testing.
+- Reports distinguish `HEAD` not supported (405), redirects (not followed), client/server error responses, and unobserved status. Header recommendations are carefully worded as *not observed on this HEAD response* rather than security vulnerabilities or uptime promises. Raw cookies, URLs from Location, network IPs and provider headers are never included in report outputs.
+
+### Withheld, tenant-scoped report representation
+
+- `buildWithheldSiteReport` requires a server-loaded (never browser-trusted) Gatehouse site row, authenticated requester's exact owner UUID, current recorded consent (max 30 days), an unexpired signed domain challenge and exact site-host match before any network activity.
+- Returns a strictly bounded record suitable for the **existing private** Gatehouse report table, with `delivery_state: "withheld"` and explicit `paid_order_verified:false` / `customer_report_released:false`. It deliberately performs **no database writes**; future independent authenticated storage integration must bind the database RLS scopes and audit record.
+- No customer domain checks, fee collection or report delivery are exposed to the public route. The new `GET /commercial/website-diagnostic-preview` shows an **illustrative report with fictional values**, clearly labeled neither an actual customer scan nor a paid deliverable.
+- Customer sign-in remains disabled; the website intake remains disabled; the $49 Shopify product remains DRAFT. No report was produced for a real customer.
+
+**Still outstanding to receive money:** owner-approved privacy and offer terms, actual authenticated customer onboarding, safe domain-control proof through the customer portal, authenticated Shopify purchase re-read (the existing backend provider vault currently lacks necessary credential refs), private stored-report creation, verified delivery to the correct buyer, and a controlled real checkout/refund test. Do not switch on paid checkout until these work together.
+
+No new paid infrastructure, Shopify product publication, DNS, payout, new Edge Function, service-role key or production deployment.
