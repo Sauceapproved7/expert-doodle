@@ -84,7 +84,6 @@ jobs:
           echo "HERCULES_CPU_QUOTA=$cpu_quota"
           echo "HERCULES_CPU_PERIOD=$cpu_period"
           echo "HERCULES_MEMORY_LIMIT=$memory_limit"
-          echo "HERCULES_COLD_COPY_COMPLETE=0"
           cp /candidate.gguf /cold-model/candidate.gguf
           test "$(stat -c %s /cold-model/candidate.gguf)" -ge 300000000
           charged="$(cat /sys/fs/cgroup/memory.current)"
