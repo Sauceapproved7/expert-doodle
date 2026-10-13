@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Check fail-closed evaluator and owner/security rules
         run: |
-          node --test tests/hercules-arm64-qwen15-comparison.test.mjs tests/hercules-arm64-system-quality-matrix.test.mjs
+          node --test tests/hercules-arm64-qwen15-comparison.test.mjs tests/hercules-arm64-system-quality-matrix.test.mjs tests/hercules-qwen15-private-live-smoke.test.mjs
           node scripts/verify-hercules-execution-contract.mjs
           node scripts/verify-owner-code-only.mjs
           node scripts/security-baseline.mjs
@@ -122,3 +122,37 @@ jobs:
           NODE
           node scripts/hercules-arm64-qwen15-comparison.mjs --evaluate /tmp/hercules-qwen15/evidence.json
           echo 'Quality laboratory only: no persistent ARM64 machine or production AI approval.'
+      - name: Prove owner-private loopback startup, authorization and real generation
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Prior baseline model process must be gone; never attach to another listener.
+          for i in $(seq 1 25); do
+            if ! curl -fsS --max-time 1 http://127.0.0.1:18776/health >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          if curl -fsS --max-time 1 http://127.0.0.1:18776/health >/dev/null 2>&1; then
+            echo 'A preexisting engine still holds the owner-host port'; exit 1
+          fi
+          export HERCULES_QWEN15_PRIVATE_TRIAL=true
+          export HERCULES_QWEN15_MODEL_FILE=/tmp/hercules-qwen15/candidate.gguf
+          export HERCULES_QWEN15_LLAMA_SERVER=/tmp/hercules-qwen15-build/bin/llama-server
+          # Ephemeral test-only bearer secret. Never display it or store it as an artifact.
+          export HERCULES_MODEL_TOKEN="$(node -e 'process.stdout.write(require("node:crypto").randomBytes(32).toString("hex"))')"
+          node scripts/hercules-qwen15-owner-host.mjs >/tmp/hercules-qwen15/private-bootstrap.log 2>&1 &
+          private_pid=$!
+          trap 'kill "$private_pid" 2>/dev/null || true; wait "$private_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -fsS --max-time 2 http://127.0.0.1:38900/health >/dev/null 2>&1; then
+              ready=1; break
+            fi
+            if ! kill -0 "$private_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          node scripts/hercules-qwen15-private-live-smoke.mjs
+          if grep -Fq -- "$HERCULES_MODEL_TOKEN" /tmp/hercules-qwen15/private-bootstrap.log; then
+            echo 'Owner credential unexpectedly appeared in private process log'; exit 1
+          fi
+          echo 'Private CI trial passed. No permanent VM, public chat, Devbrain or production approval.'
