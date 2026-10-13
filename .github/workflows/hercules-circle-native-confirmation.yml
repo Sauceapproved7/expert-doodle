@@ -5,8 +5,10 @@ on:
       - "hercules-deploy/owned-circle/confirmation-engine.mjs"
       - "hercules-deploy/owned-circle/confirmation-supabase-store.mjs"
       - "supabase/migrations/*hercules_circle_private_confirmation_storage*"
+      - "supabase/migrations/*hercules_circle_atomic_verify*"
       - "tests/hercules-circle-native-confirmation.test.mjs"
       - "tests/hercules-circle-confirmation-supabase.test.mjs"
+      - "tests/hercules-circle-atomic-verify.test.mjs"
       - ".github/workflows/hercules-circle-native-confirmation.yml"
       - "hercules-deploy/owned-circle/CONFIRMATION_ENGINE_V1.md"
   workflow_dispatch:
@@ -23,7 +25,7 @@ jobs:
           node-version: "22"
       - name: Exercise consent, sender refusal, replay, and expiry
         run: |
-          node --test tests/hercules-circle-native-confirmation.test.mjs tests/hercules-circle-confirmation-supabase.test.mjs
+          node --test tests/hercules-circle-native-confirmation.test.mjs tests/hercules-circle-confirmation-supabase.test.mjs tests/hercules-circle-atomic-verify.test.mjs
           node --check hercules-deploy/owned-circle/confirmation-engine.mjs
           node --check hercules-deploy/owned-circle/confirmation-supabase-store.mjs
       - name: Preserve owner-only source restrictions
