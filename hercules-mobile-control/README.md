@@ -6,7 +6,7 @@ Mobile-first read-only operations console for iPhone, Android, and desktop. No S
 
 - `https://hercules-mobile-api-staging.onrender.com/` — operational console and same-origin API.
 - `https://hercules-mobile-control-preview.onrender.com/` — static preview; directs users to the API for checks.
-- `GET /api/ops` — bounded public HTTP snapshots of an explicit allowlist of Hercules web services, cached for 60 seconds. HTTP timeouts on Render Free are `unconfirmed`, not definitive outages.
+- `GET /api/ops` — bounded public HTTP snapshots of an explicit allowlist of Hercules web services, cached for 60 seconds. HTTP timeouts and gateway errors (502/503) on Render Free are `unconfirmed`, not definitive application outages. Recheck after the instance has had time to wake.
 - `GET /health` — existing API liveness probe.
 
 ## Included controls
