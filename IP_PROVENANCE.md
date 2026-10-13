@@ -1,3 +1,10 @@
+## Math prompt sensitivity CPU lab — DA-45, 2026-10-13
+
+- Original AI-assisted first-party Hercules code: `scripts/hercules-math-prompt-diagnostic.mjs`, an inlined, reviewed shell harness inside the governed workflow, `tests/hercules-math-prompt-diagnostic.test.mjs`, `.github/workflows/hercules-math-prompt-diagnostic.yml`, `docs/HERCULES-MATH-PROMPT-DIAGNOSTIC-V1.md`.
+- Ephemeral third-party test-only model: `bartowski/SmolLM2-360M-Instruct-GGUF` Apache-2.0, immutable revision `7be6f65f1db715fe5dc5a4634c0d459b4eed42ec`, Q4_K_M file SHA256 `2fa3f013dcdd7b99f9b237717fa0b12d75bbb89984cc1274be1471a465bac9c2`. Pinned `ggml-org/llama.cpp` source and Ubuntu image are temporary runner dependencies, not copied or claimed as SauceApproved-owned code.
+- Scope: six public fixed math questions/modes on disposable GitHub public runner, no user data, secrets, licensed weights checked into repository, paid subscriptions, cloud deployment, storefront or release authorization.
+- Model responses are explicitly measured evidence, never fabricated, and their mathematical correctness is separate from a completed generative output and release approval.
+
 ## 0.1 CPU real model truth gate — DA-45, 2026-10-13
 
 - Owned, AI-assisted first-party additions: scripts/hercules-render-free-model-budget.mjs, tests/hercules-render-free-model-budget.test.mjs, .github/workflows/hercules-render-free-model-budget.yml, docs/HERCULES-RENDER-FREE-BUDGET-V1.md.
