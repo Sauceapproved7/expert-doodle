@@ -3,6 +3,7 @@ import {timingSafeEqual} from "node:crypto";
 import {HerculesModelRegistry} from "./registry.mjs";
 import {HerculesModelRouter} from "./router.mjs";
 import {createLocalChatAdapter} from "./local-chat.mjs";
+import {solveGroundedArithmetic} from "./grounded-arithmetic.mjs";
 
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -102,6 +103,12 @@ export function createModelPlaneService({
           maxOutputTokens: body.maxOutputTokens ?? 128,
         });
         return send(res, 200, result);
+      }
+
+      // Separate deterministic tool, never a substitute for verified model inference.
+      if (req.method === "POST" && url.pathname === "/v1/tools/arithmetic") {
+        const body = await readBody(req);
+        return send(res, 200, solveGroundedArithmetic(body.question));
       }
 
       if (req.method === "GET" && url.pathname === "/v1/models") {
