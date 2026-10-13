@@ -69,7 +69,7 @@ test("bad generation fails closed rather than treating process health as AI proo
   const p=await provider(async(req)=>req.url==="/v1/models"
     ?{json:{data:[{id:"hercules-trial"}]}}
     :{json:{model:"hercules-trial",choices:[{message:{role:"assistant",content:"partial"},finish_reason:"length"}]}}
-  ));
+  );
   try{await assert.rejects(
     proveAuthenticatedLocalChat({backendEndpoint:p.url,modelId:"hercules-trial",prompt:"hello"}),
     /local_chat_inference_invalid/
