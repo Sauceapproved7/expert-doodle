@@ -16,6 +16,9 @@ function harness(mutator){
   if(u.pathname.endsWith('hercules_cloud_founders')){
    return new Response(JSON.stringify([{email:addr,status:'unverified',consent_at:'2026-10-13T20:00:00Z'}]),{status:200});
   }
+  if(u.pathname.includes('/rpc/hercules_circle_consume_confirmation')){
+   return new Response(JSON.stringify({ok:true,status:'email_confirmed_no_entitlement',email:addr}),{status:200});
+  }
   if(options.method==='POST')return new Response('',{status:201});
   if(options.method==='PATCH')return new Response(JSON.stringify([{email:addr}]),{status:200});
   return new Response(JSON.stringify([]),{status:200});
@@ -57,7 +60,7 @@ test('email already has a challenge -> no additional invitation sent',async()=>{
  const store=harness((u,o)=>o.method==='POST'?new Response('{"code":"23505"}',{status:409}):null);
  assert.equal(await store.reserve({email:addr,tokenDigest:digest,issuedAt:1781373600000,expiresAt:1781460000000}),false);
 });
-test('markSent and consume enforce digest plus exact state in atomic database updates',async()=>{
+test('markSent remains reserved-only and consume uses single atomic server RPC',async()=>{
  requestLog.length=0;
  const store=harness();
  await store.markSent({email:addr,tokenDigest:digest,at:1781373600000});
@@ -67,13 +70,14 @@ test('markSent and consume enforce digest plus exact state in atomic database up
  assert.equal(JSON.parse(a.body).status,'sent');
  const consumed=await store.consume({tokenDigest:digest,now:1781373601000});
  const b=requestLog.at(-1);
- assert.match(b.url,/status=eq\.sent/);
- assert.match(b.url,/expires_at=gt\./);
- assert.equal(JSON.parse(b.body).status,'confirmed');
+ assert.equal(b.method,'POST');
+ assert.match(b.url,/\/rpc\/hercules_circle_consume_confirmation$/);
+ assert.deepEqual(JSON.parse(b.body),{p_token_digest:digest});
  assert.deepEqual(consumed,{email:addr,confirmed:true});
 });
 test('already consumed tokens return null, not authorized access',async()=>{
- const store=harness((u,o)=>o.method==='PATCH'?new Response('[]',{status:200}):null);
+ const store=harness((u,o)=>u.pathname.includes('/rpc/hercules_circle_consume_confirmation')?
+  new Response(JSON.stringify({ok:false,status:'invalid_or_expired'}),{status:200}):null);
  assert.equal(await store.consume({tokenDigest:digest,now:1781373601000}),null);
 });
 test('failed database requests do not leak admin token in errors',async()=>{
