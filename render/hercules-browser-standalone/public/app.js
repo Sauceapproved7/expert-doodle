@@ -1,5 +1,17 @@
+let handoffUrl="";
+function handoffTarget(value){
+  try {
+    const url=new URL(String(value||""));
+    return ["http:","https:"].includes(url.protocol)&&!url.username&&!url.password?url.href:"";
+  } catch {return "";}
+}
 async function bootstrapOwnerClaim(){
   const params=new URLSearchParams(location.hash.startsWith("#")?location.hash.slice(1):location.hash);
+  handoffUrl=handoffTarget(params.get("start"));
+  try {
+    if(handoffUrl)sessionStorage.setItem("hercules.browser.start",handoffUrl);
+    else handoffUrl=handoffTarget(sessionStorage.getItem("hercules.browser.start"));
+  } catch {}
   const access=params.get("access");
   if(!access)return false;
   history.replaceState(null,"",location.pathname+location.search);
@@ -20,6 +32,9 @@ const screenMessage=$("screenMessage");
 let active=true;
 let refreshTimer=null;
 let lastFrameAt=0;
+let openingTask=false;
+let navigationAttempts=0;
+let blankPage=true;
 
 async function api(path,options={}){
   const r=await fetch(path,{cache:"no-store",...options,headers:{"content-type":"application/json",...(options.headers||{})}});
@@ -30,6 +45,7 @@ async function api(path,options={}){
 
 function setStatus(text){$("status").textContent=text}
 function renderPage(page={}){
+  blankPage=!page.url||page.url==="about:blank";
   $("pageTitle").textContent=page.title||"—";
   $("pageUrl").textContent=page.url||"about:blank";
   if(page.url&&page.url!=="about:blank")$("urlInput").value=page.url;
@@ -38,6 +54,19 @@ function renderPage(page={}){
 async function refreshStatus(){
   try{
     const s=await api("/api/status");
+    if(s.page?.url==="about:blank"&&handoffUrl&&!openingTask&&navigationAttempts<3) {
+      openingTask=true;
+      navigationAttempts+=1;
+      setStatus("Opening your task…");
+      try {
+        const opened=await api("/api/navigate",{method:"POST",body:JSON.stringify({url:handoffUrl})});
+        s.page=opened.page;
+      } catch(error) {
+        screenMessage.hidden=false;
+        screenMessage.textContent="Could not open your task. "+error.message;
+        throw error;
+      } finally {openingTask=false;}
+    }
     $("healthDot").classList.add("live");
     $("healthText").textContent="Live";
     $("sessionState").textContent="Connected";
@@ -64,6 +93,11 @@ function refreshFrame(){
 }
 
 screen.onload=()=>{
+  if(blankPage){
+    screenMessage.hidden=false;
+    if(!screenMessage.textContent?.startsWith("Could not open"))screenMessage.textContent=handoffUrl?"Opening your task…":"Enter a URL to open a page.";
+    return;
+  }
   screenMessage.hidden=true;
   setStatus("Live Hercules Chromium session");
 };
