@@ -176,4 +176,49 @@ jobs:
             echo 'Private model child still accepting traffic after stop'; exit 1
           fi
           echo 'private_shutdown_verified: control and model listeners both closed.'
+          # An unexpected model crash must cause the owner-host wrapper to fail,
+          # enabling bounded future systemd recovery rather than false health.
+          node scripts/hercules-qwen15-owner-host.mjs >/tmp/hercules-qwen15/private-child-crash.log 2>&1 &
+          crash_parent_pid=$!
+          trap 'kill "$crash_parent_pid" 2>/dev/null || true; wait "$crash_parent_pid" 2>/dev/null || true' EXIT
+          crash_ready=0
+          for i in $(seq 1 90); do
+            if curl -fsS --max-time 2 http://127.0.0.1:38900/health >/dev/null 2>&1; then
+              crash_ready=1; break
+            fi
+            if ! kill -0 "$crash_parent_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$crash_ready" = 1
+          test -r "/proc/$crash_parent_pid/task/$crash_parent_pid/children"
+          children_text="$(cat "/proc/$crash_parent_pid/task/$crash_parent_pid/children")"
+          read -r model_child_pid extra_children <<< "$children_text"
+          # Never signal an unrelated service; exactly one direct model child.
+          test -n "$model_child_pid"
+          test -z "$extra_children"
+          [[ "$model_child_pid" =~ ^[0-9]+$ ]]
+          test "$model_child_pid" -gt 1
+          kill -KILL "$model_child_pid"
+          crash_closed=0
+          for i in $(seq 1 80); do
+            if ! kill -0 "$crash_parent_pid" 2>/dev/null; then
+              crash_closed=1; break
+            fi
+            sleep 0.25
+          done
+          test "$crash_closed" = 1
+          crash_exit_code=0
+          wait "$crash_parent_pid" || crash_exit_code=$?
+          test "$crash_exit_code" -ne 0
+          if curl -fsS --max-time 2 http://127.0.0.1:38900/health >/dev/null 2>&1; then
+            echo 'Private control service still healthy after engine crash'; exit 1
+          fi
+          if curl -fsS --max-time 2 http://127.0.0.1:18776/health >/dev/null 2>&1; then
+            echo 'Private crashed engine port still reachable'; exit 1
+          fi
+          if grep -Fq -- "$HERCULES_MODEL_TOKEN" /tmp/hercules-qwen15/private-child-crash.log; then
+            echo 'Owner credential unexpectedly appeared in child-crash log'; exit 1
+          fi
+          echo 'private_child_crash_failclosed_verified: owner wrapper failed and both listeners closed.'
+
 
