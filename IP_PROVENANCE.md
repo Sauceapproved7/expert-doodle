@@ -1,3 +1,11 @@
+## External open-weight model evaluation — 2026-10-13
+
+- Files: `scripts/hercules-real-model-trial.mjs`, `tests/hercules-real-model-trial.test.mjs`, `.github/workflows/hercules-real-model-trial.yml`, `docs/HERCULES-REAL-MODEL-TRIAL.md`.
+- Origin: original Hercules pure response-and-memory evaluator, CI orchestration and tests authored with AI assistance. Node.js standard library and repository-owned tests only.
+- Third-party laboratory inputs: `HuggingFaceTB/SmolLM2-135M-Instruct` original weights, `QuantFactory/SmolLM2-135M-Instruct-GGUF` quantization (Apache-2.0), and `ggml-org/llama.cpp` ephemeral pinned engine. The exact model GGUF is external, 105,454,144 bytes, SHA-256 `8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684`.
+- No model weights, vendor source trees, pretrained checkpoint, public customer data or dependency bundles are committed or distributed as SauceApproved-owned IP; upstream licenses must be retained if separately distributing these assets.
+- Scope: bounded standard hosted public-repo CI test of genuine CPU inference, not paid hosting, customer chatbot, sale authorization, or deployment. Quality and production approval remain fail-closed even if small smoke prompts pass.
+
 ## DA-45 isolated native local-chat adapter — 2026-10-13
 
 - Paths: `hercules-models/local-chat.mjs`, changes to `hercules-models/service.mjs` and `control-cli.mjs`, `tests/hercules-models-local-chat.test.mjs`, and `docs/HERCULES-LOCAL-CHAT-EXPERIMENT-V1.md`.

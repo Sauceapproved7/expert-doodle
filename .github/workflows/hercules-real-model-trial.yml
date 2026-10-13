@@ -1,0 +1,85 @@
+name: Hercules Read-only Real-model Laboratory
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/hercules-real-model-trial.yml"
+      - "scripts/hercules-real-model-trial.mjs"
+      - "tests/hercules-real-model-trial.test.mjs"
+      - "docs/HERCULES-REAL-MODEL-TRIAL.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-cpu-inference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Hercules owned evidence harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Test fail-closed evaluator before real inference
+        run: |
+          node --test tests/hercules-real-model-trial.test.mjs
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+      # External inference engine is pinned for this ephemeral evidence run only;
+      # it is not committed into Hercules, deployed or invoked in production.
+      - name: Checkout pinned upstream inference engine for read-only real-model evidence
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ggml-org/llama.cpp
+          ref: d81235049384534c167caea52b85a694f6103d14
+          path: .thirdparty-ephemeral/llama.cpp
+          persist-credentials: false
+      - name: Compile pinned CPU llama-server
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C .thirdparty-ephemeral/llama.cpp rev-parse HEAD)" = d81235049384534c167caea52b85a694f6103d14
+          cmake -S .thirdparty-ephemeral/llama.cpp -B /tmp/hercules-llama-build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DLLAMA_CURL=OFF -DLLAMA_BUILD_SERVER=ON -DLLAMA_BUILD_TESTS=OFF
+          cmake --build /tmp/hercules-llama-build --target llama-server -j 4
+      - name: Fetch externally licensed candidate with exact checksum and size
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hercules-evidence
+          curl --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 240 --max-filesize 120000000 \
+            --output /tmp/hercules-evidence/candidate.gguf \
+            'https://huggingface.co/QuantFactory/SmolLM2-135M-Instruct-GGUF/resolve/476854d00ede130660aba430d15f9347ad2e7d0e/SmolLM2-135M-Instruct.Q4_K_M.gguf'
+          test "$(stat -c %s /tmp/hercules-evidence/candidate.gguf)" = 105454144
+          echo '8030f04528538d47bda434f6f0bdf3952c40a58123e4d5e755332f23731a8684  /tmp/hercules-evidence/candidate.gguf' | sha256sum -c -
+      - name: Generate three real local-only model replies
+        shell: bash
+        run: |
+          set -euo pipefail
+          /tmp/hercules-llama-build/bin/llama-server \
+            --model /tmp/hercules-evidence/candidate.gguf --alias hercules-trial \
+            --host 127.0.0.1 --port 18773 --ctx-size 256 --parallel 1 \
+            --threads 2 --no-webui > /tmp/hercules-evidence/server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 45); do
+            if curl -fsS --max-time 2 http://127.0.0.1:18773/health > /dev/null 2>&1; then ready=1; break; fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          test "$ready" = 1
+          for trial in arithmetic capital instruction; do
+            case "$trial" in
+              arithmetic) prompt='What is 2 plus 2? Answer with the number only.';;
+              capital) prompt='What is the capital of France? Reply with the city only.';;
+              instruction) prompt='Reply with exactly HELLO.';;
+            esac
+            node --input-type=module -e 'process.stdout.write(JSON.stringify({model:"hercules-trial",messages:[{role:"user",content:process.argv[1]}],max_tokens:32,temperature:0,stream:false}))' "$prompt" > /tmp/hercules-evidence/request.json
+            curl --fail --silent --show-error --max-time 90 \
+              -H 'content-type: application/json' \
+              --data-binary @/tmp/hercules-evidence/request.json \
+              http://127.0.0.1:18773/v1/chat/completions > "/tmp/hercules-evidence/$trial.json"
+          done
+          peak="$(awk '$1=="VmHWM:" {print $2}' "/proc/$server_pid/status")"
+          test -n "$peak"
+          printf '%s\n' "$peak" > /tmp/hercules-evidence/peak-rss-kb.txt
+          node scripts/hercules-real-model-trial.mjs --evaluate /tmp/hercules-evidence
+          echo 'Experiment only: never grants launch, commerce, or production model authority.'
+          # No model weights or prompts uploaded as Actions artifacts.
