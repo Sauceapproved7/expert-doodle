@@ -1,0 +1,99 @@
+name: Hercules Render Free 0.1 CPU Model Budget Laboratory
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/hercules-render-free-model-budget.yml"
+      - "scripts/hercules-render-free-model-budget.mjs"
+      - "tests/hercules-render-free-model-budget.test.mjs"
+      - "docs/HERCULES-RENDER-FREE-BUDGET-V1.md"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genuine-cpu-inference:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout Hercules owned evidence harness
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Test fail-closed evaluator before real inference
+        run: |
+          node --test tests/hercules-render-free-model-budget.test.mjs
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+      # External inference engine is pinned for this ephemeral evidence run only;
+      # it is not committed into Hercules, deployed or invoked in production.
+      - name: Checkout pinned upstream inference engine for read-only real-model evidence
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: ggml-org/llama.cpp
+          ref: d81235049384534c167caea52b85a694f6103d14
+          path: .thirdparty-ephemeral/llama.cpp
+          persist-credentials: false
+      - name: Compile pinned CPU llama-cli
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git -C .thirdparty-ephemeral/llama.cpp rev-parse HEAD)" = d81235049384534c167caea52b85a694f6103d14
+          cmake -S .thirdparty-ephemeral/llama.cpp -B /tmp/hercules-llama-build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF -DLLAMA_CURL=OFF -DLLAMA_BUILD_TESTS=OFF
+          cmake --build /tmp/hercules-llama-build --target llama-cli -j 4
+      - name: Fetch externally licensed candidate with exact checksum and size
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/hercules-360m
+          curl --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 240 --max-filesize 300000000 \
+            --output /tmp/hercules-360m/candidate.gguf \
+            'https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/7be6f65f1db715fe5dc5a4634c0d459b4eed42ec/SmolLM2-360M-Instruct-Q4_K_M.gguf'
+          test "$(stat -c %s /tmp/hercules-360m/candidate.gguf)" = 270590880
+          echo '2fa3f013dcdd7b99f9b237717fa0b12d75bbb89984cc1274be1471a465bac9c2  /tmp/hercules-360m/candidate.gguf' | sha256sum -c -
+      - name: Measure real model generation within Render Free cgroup quotas
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Ephemeral pinned Ubuntu image; no service deployment or web-accessible port.
+          docker pull ubuntu@sha256:2e863c44b718727c860746568e1d54afd13b2fa71b160f5cd9058fc436217b30
+          timeout 175s docker run --rm \
+            --network none \
+            --cpus 0.10 \
+            --memory 512m \
+            --memory-swap 512m \
+            --pids-limit 64 \
+            --cap-drop ALL \
+            --security-opt no-new-privileges \
+            --read-only \
+            --user 65534:65534 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=32m \
+            -e LD_LIBRARY_PATH=/llama-bin \
+            --mount type=bind,src=/tmp/hercules-llama-build/bin,dst=/llama-bin,readonly \
+            --mount type=bind,src=/tmp/hercules-360m/candidate.gguf,dst=/candidate.gguf,readonly \
+            ubuntu@sha256:2e863c44b718727c860746568e1d54afd13b2fa71b160f5cd9058fc436217b30 \
+            /bin/bash -euc '
+              # Assert kernel-enforced cgroup resource limits, not just Docker flags.
+              read -r cpu_quota cpu_period < /sys/fs/cgroup/cpu.max
+              memory_limit="$(cat /sys/fs/cgroup/memory.max)"
+              test "$cpu_quota" = 10000
+              test "$cpu_period" = 100000
+              test "$memory_limit" = 536870912
+              started="$(date +%s%3N)"
+              timeout 150s /llama-bin/llama-cli \
+                -m /candidate.gguf \
+                -p "What is 2 plus 2? Answer concisely." \
+                -n 24 -c 512 -t 1 -ngl 0 \
+                --single-turn --no-display-prompt --simple-io \
+                --log-disable -co off \
+                > /tmp/hercules-generated.txt 2> /tmp/hercules-llama-stderr.txt
+              elapsed="$(( $(date +%s%3N) - started ))"
+              peak="$(cat /sys/fs/cgroup/memory.peak)"
+              test -s /tmp/hercules-generated.txt
+              test "$(wc -c < /tmp/hercules-generated.txt)" -le 4000
+              echo "HERCULES_CPU_QUOTA=$cpu_quota"
+              echo "HERCULES_CPU_PERIOD=$cpu_period"
+              echo "HERCULES_MEMORY_LIMIT=$memory_limit"
+              echo "HERCULES_MEMORY_PEAK=$peak"
+              echo "HERCULES_ELAPSED_MS=$elapsed"
+              echo "HERCULES_GENERATED_BASE64=$(base64 -w0 /tmp/hercules-generated.txt)"
+            ' > /tmp/hercules-360m/render-free-quota.log
+          node scripts/hercules-render-free-model-budget.mjs --evaluate /tmp/hercules-360m/render-free-quota.log
+          echo 'This is a cgroup laboratory benchmark, not Render deployment or customer-ready quality proof.'
