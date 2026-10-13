@@ -13,10 +13,13 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]
 const REF=/^GH1-[A-Za-z0-9_-]{32}$/;
 const HEX_SHA256=/^[0-9a-f]{64}$/;
 const INTENT_LIMIT_MS=24*60*60*1000;
+const PAGE_SIZE=10;
+const MAX_PAGES=3;
+const validCursor=value=>typeof value==="string"&&value.length>0&&value.length<=2048&&/^[\x21-\x7e]+$/.test(value);
 const verifiedEmail=x=>typeof x==="string"&&x.length<=254&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(x);
-export const PRIVATE_BUYER_ORDER_QUERY=`query GatehousePrivateBuyerOrders($first: Int!) {
+export const PRIVATE_BUYER_ORDER_QUERY=`query GatehousePrivateBuyerOrders($first: Int!, $after: String) {
  shop { id myshopifyDomain }
- orders(first: $first, sortKey: CREATED_AT, reverse: true) {
+ orders(first: $first, after: $after, sortKey: CREATED_AT, reverse: true) {
   pageInfo { hasNextPage endCursor }
   edges { node {
    id email test cancelledAt displayFinancialStatus currencyCode
@@ -73,44 +76,59 @@ export function createPrivateBuyerOrderReader({
   if(!inputOk({identity,intentRow,buyerReference,requestedSiteId,secret,now}))
    return deny("private-owner-site-intent-required");
   try{
-   const response=await fetcher(API,{
-    method:"POST",redirect:"error",signal:AbortSignal.timeout(10000),
-    headers:{"content-type":"application/json","accept":"application/json",
+   // Hard cap: at most three pages / 30 provider orders; incomplete history never earns a match.
+   let after=null,ordersScanned=0;
+   const seenIds=new Set(),seenCursors=new Set(),candidates=[];
+   for(let n=0;n<MAX_PAGES;n++){
+    const response=await fetcher(API,{
+     method:"POST",redirect:"error",signal:AbortSignal.timeout(10000),
+     headers:{"content-type":"application/json","accept":"application/json",
       "X-Shopify-Access-Token":accessToken},
-    body:JSON.stringify({query:PRIVATE_BUYER_ORDER_QUERY,variables:{first:10}})
-   });
-   if(!response?.ok||response.status!==200)return deny("shopify-api-unavailable");
-   const envelope=await response.json();
-   if(envelope?.errors?.length||envelope?.data?.shop?.id!==SHOP_ID
-    ||envelope?.data?.shop?.myshopifyDomain!==SHOP_DOMAIN)
-    return deny("shopify-shop-attestation-unavailable");
-   const page=envelope.data.orders;
-   if(!Array.isArray(page?.edges)||page.edges.length>10
-    ||typeof page?.pageInfo?.hasNextPage!=="boolean"
-    ||page.edges.some(e=>!e?.node||typeof e.node!=="object"
-      ||typeof e.node.id!=="string"||!ORDER_ID.test(e.node.id))
-    ||new Set(page.edges.map(e=>e.node.id)).size!==page.edges.length)
-    return deny("shopify-order-page-incomplete");
-   // Only the privileged backend may ever see the proposal; no public route exists.
-   const candidates=page.edges.map(e=>preparePrivateOrderCandidate({
-    identity,intentRow,buyerReference,requestedSiteId,
-    order:e.node,secret,now
-   })).filter(x=>x.candidateMayBeRecorded===true);
-   if(candidates.length>1)return deny("ambiguous-private-buyer-correlation");
-   // A later page could contain a second order claiming this reference.
-   // Do not generate even a local reservation proposal from incomplete history.
-   const complete=page.pageInfo.hasNextPage===false;
-   const matched=complete&&candidates.length===1;
-   return {status:200,body:{
-    status:!complete?"incomplete-provider-lookback":
-      matched?"private-candidate-proposal-only":"no-local-candidate",
-    shopAuthenticated:true,ordersScanned:page.edges.length,
-    hasNextPage:page.pageInfo.hasNextPage,
-    ...noAuthority,
-    candidateMayBeRecorded:matched,
-    privateRow:matched?candidates[0].privateRow:null,
-    notice:"Private HMAC candidate proposal only. No persistent reservation, authoritative buyer attestation, payment or refund finality, entitlement or delivery."
-   }};
+     body:JSON.stringify({query:PRIVATE_BUYER_ORDER_QUERY,variables:{first:PAGE_SIZE,after}})
+    });
+    if(!response?.ok||response.status!==200)return deny("shopify-api-unavailable");
+    const envelope=await response.json();
+    if(envelope?.errors?.length||envelope?.data?.shop?.id!==SHOP_ID
+     ||envelope?.data?.shop?.myshopifyDomain!==SHOP_DOMAIN)
+     return deny("shopify-shop-attestation-unavailable");
+    const page=envelope.data.orders;
+    if(!Array.isArray(page?.edges)||page.edges.length>PAGE_SIZE
+     ||typeof page?.pageInfo?.hasNextPage!=="boolean"
+     ||page.edges.some(e=>!e?.node||typeof e.node!=="object"
+       ||typeof e.node.id!=="string"||!ORDER_ID.test(e.node.id)
+       ||seenIds.has(e.node.id))
+     ||new Set(page.edges.map(e=>e.node.id)).size!==page.edges.length)
+     return deny("shopify-order-page-incomplete");
+    const more=page.pageInfo.hasNextPage;
+    if(more&&(!page.edges.length||!validCursor(page.pageInfo.endCursor)
+      ||seenCursors.has(page.pageInfo.endCursor)))
+     return deny("shopify-order-page-incomplete");
+    for(const edge of page.edges){
+     seenIds.add(edge.node.id);
+     const candidate=preparePrivateOrderCandidate({
+      identity,intentRow,buyerReference,requestedSiteId,
+      order:edge.node,secret,now
+     });
+     if(candidate.candidateMayBeRecorded===true)candidates.push(candidate);
+     if(candidates.length>1)return deny("ambiguous-private-buyer-correlation");
+    }
+    ordersScanned+=page.edges.length;
+    if(!more||n===MAX_PAGES-1){
+     const matched=!more&&candidates.length===1;
+     return {status:200,body:{
+      status:more?"incomplete-provider-lookback":
+       matched?"private-candidate-proposal-only":"no-local-candidate",
+      shopAuthenticated:true,ordersScanned,hasNextPage:more,
+      ...noAuthority,
+      candidateMayBeRecorded:matched,
+      privateRow:matched?candidates[0].privateRow:null,
+      notice:"Private HMAC candidate proposal only. No persistent reservation, authoritative buyer attestation, payment or refund finality, entitlement or delivery."
+     }};
+    }
+    seenCursors.add(page.pageInfo.endCursor);
+    after=page.pageInfo.endCursor;
+   }
+   return deny("shopify-order-page-incomplete");
   }catch{return deny("shopify-api-unavailable")}
  }
  return {run};
