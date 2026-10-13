@@ -32,7 +32,7 @@ export function createSupabaseConfirmationStore({
   authorization:'Bearer '+adminToken,
   accept:'application/json'
  });
- async function request(path,{method='GET',body,prefer}={}){
+ async function request(path,{method='GET',body,prefer,expectedShape='array'}={}){
   const headers={...common};
   if(body!==undefined)headers['content-type']='application/json';
   if(prefer)headers.prefer=prefer;
@@ -50,7 +50,9 @@ export function createSupabaseConfirmationStore({
   if(response.status===201&&prefer==='return=minimal')return {};
   let data;
   try{data=await response.json()}catch{throw Error('owner_database_unavailable')}
-  if(!Array.isArray(data))throw Error('owner_database_unavailable');
+  if(expectedShape==='object'){
+   if(!data||Array.isArray(data)||typeof data!=='object')throw Error('owner_database_unavailable');
+  }else if(!Array.isArray(data))throw Error('owner_database_unavailable');
   return data;
  }
  const eq=value=>encodeURIComponent('eq.'+value);
@@ -91,15 +93,17 @@ export function createSupabaseConfirmationStore({
   },
   async consume({tokenDigest,now}){
    digest(tokenDigest);
-   const timestamp=validTime(now);
-   const matches=await request(CHALLENGES+
-    '?token_digest='+eq(tokenDigest)+'&status='+eq('sent')+
-    '&expires_at='+encodeURIComponent('gt.'+timestamp)+'&select=email',{
-      method:'PATCH',body:{status:'confirmed',confirmed_at:timestamp},prefer:'return=representation'
-    });
-   if(matches.length!==1)return null;
-   const email=matches[0]?.email;
-   if(typeof email!=='string')throw Error('owner_database_unavailable');
+   validTime(now);
+   // Service-role-only SECURITY INVOKER RPC updates founder status and
+   // single-use challenge inside one Postgres transaction. Never do this
+   // with separate client-side PATCH requests.
+   const result=await request('rpc/hercules_circle_consume_confirmation',{
+    method:'POST',body:{p_token_digest:tokenDigest},expectedShape:'object'
+   });
+   if(result.ok===false&&result.status==='invalid_or_expired')return null;
+   if(result.ok!==true||result.status!=='email_confirmed_no_entitlement')
+    throw Error('owner_database_unavailable');
+   const email=result.email;
    return {email:address(email),confirmed:true};
   }
  });
