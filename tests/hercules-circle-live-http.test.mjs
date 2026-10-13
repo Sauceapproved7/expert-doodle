@@ -13,7 +13,9 @@ const bodyFor=(url)=>{
  '/app.mjs':'const endpoint="hercules_cloud_join_founders"',
  '/early.mjs':'const ENDPOINT="hercules_circle_request_early"',
  '/owner.mjs':'const ACL="hercules_circle_owner_acl"',
- '/circle-access.css':'.owner-wrap { color: white }'
+ '/circle-access.css':'.owner-wrap { color: white }',
+ '/verify.html':'Email confirmation is not active yet; No email address has been verified or account activated here.',
+ '/verify.mjs':'// Never read, store or submit any token; window.history.replaceState(null,\"\",location.pathname);'
  })[path]??'';
 };
 const fakeKey='sb_publishable_'+'A'.repeat(38);
@@ -50,7 +52,7 @@ test('read-only smoke checks deployed html/scripts, CORS, negative consent and a
  const calls=[];
  const data=await probeCirclePublic({fetchImpl:fetchFactory(calls),publishableKey:fakeKey});
  assert.equal(data.allPassed,true);
- assert.equal(data.checkedPages,7);
+ assert.equal(data.checkedPages,9);
  assert.equal(data.consentFailuresRejected,2);
  assert.equal(data.privilegedTablesDenied,2);
  assert.equal(data.corsPreflightPassed,true);
