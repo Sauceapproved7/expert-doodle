@@ -60,3 +60,22 @@ test('public client uses only publishable key and scoped RPC, with no session or
  assert.doesNotMatch(client,/service_role|sb_secret_|auth\/v1\/signup|checkout/i);
  assert.match(client,/Interest recorded/);
 });
+
+test('founding public RPC is invoker-only; private trigger retains exclusive rate and duplicate guard',()=>{
+ const fix=readFileSync(new URL('../supabase/migrations/20261013161500_hercules_cloud_founders_invoker_guard_v2.sql',import.meta.url),'utf8');
+ assert.match(fix,/create or replace function private\.hercules_cloud_founders_guard\(\)/i);
+ assert.match(fix,/returns trigger/i);
+ assert.match(fix,/security definer/i);
+ assert.match(fix,/revoke all on function private\.hercules_cloud_founders_guard\(\) from public,anon,authenticated/i);
+ assert.match(fix,/before insert on public\.hercules_cloud_founders/i);
+ assert.match(fix,/create or replace function public\.hercules_cloud_join_founders\(/i);
+ assert.match(fix,/security invoker/i);
+ assert.match(fix,/grant insert \(email,interest,notice_version,privacy_policy_url,status,source\)/i);
+ assert.match(fix,/create policy hercules_cloud_founders_limited_insert/i);
+ assert.match(fix,/with check/i);
+ assert.match(fix,/if exists \(select 1 from public\.hercules_cloud_founders where email = new\.email\)/i);
+ assert.match(fix,/if entries >= 200/i);
+ assert.match(fix,/raise exception.*intake_temporarily_full/is);
+ assert.doesNotMatch(fix,/grant select on public\.hercules_cloud_founders to anon/i);
+ assert.doesNotMatch(fix,/grant execute on function private\.hercules_cloud_founders_guard\(\) to anon/i);
+});
