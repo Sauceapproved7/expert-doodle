@@ -33,7 +33,7 @@ test('checks live scopes before writes and verifies post-write bodies',async()=>
   })():({data:{shop:{myshopifyDomain:'sauceapproved-3.myshopify.com',shopPolicies:Object.entries(state).map(([type,body])=>({type,body}))},currentAppInstallation:{accessScopes:[{handle:'read_legal_policies'},{handle:'write_legal_policies'}]}}});
   return {ok:true,status:200,json:async()=>payload};
  };
- const result=await publishApprovedPolicies({shop:'sauceapproved-3.myshopify.com',expectedShopDomain:'sauceapproved-3.myshopify.com',apiVersion:'2026-10',accessToken:'fixture-token-not-real',approvedPolicies:bodies,approvalHashes:hashes,ownerApproved:true,fetchImpl});
+ const result=await publishApprovedPolicies({shop:'sauceapproved-3.myshopify.com',expectedShopDomain:'sauceapproved-3.myshopify.com',apiVersion:'2026-10',accessToken:'fixture',approvedPolicies:bodies,approvalHashes:hashes,ownerApproved:true,fetchImpl});
  assert.deepEqual(updates,POLICY_TYPES);assert.equal(result.updated.length,4);
  assert.equal(state.PRIVACY_POLICY,'<p>existing detailed privacy</p>');
 });
