@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {REQUIRED_GATES,assessFulfillment,makeSampleReport,checkOrderReadback} from "./fulfillment.mjs";
+import {REQUIRED_GATES,assessFulfillment,makeSampleReport,renderPrintableSample,checkOrderReadback} from "./fulfillment.mjs";
 
 const validOrder=()=>({
  orderId:"gid://shopify/Order/12345",shopDomain:"sauceapproved-2.myshopify.com",
@@ -75,4 +75,13 @@ test("invalid report timestamps do not manufacture a time or customer scan",()=>
  assert.equal(r.testedAt,null);
  assert.deepEqual(r.observations,[]);
  assert.equal(r.customerDomainScanned,false);
+});
+
+test("printable report does not reflect forged timestamps or arbitrary HTML",()=>{
+ const report=makeSampleReport({refreshedAt:"2026-10-13T12:00:00.000Z",signals:[{name:"Studio",status:"reachable"}]});
+ const attack={...report,testedAt:'2026-10-13T12:00:00Z<img src=x onerror=alert(1)>',observations:[{service:'<script>',connectivity:"reachable"},{service:"Studio",connectivity:"reachable"}]};
+ const html=renderPrintableSample(attack);
+ assert.match(html,/No verified observation/);
+ assert.doesNotMatch(html,/<script>|<img/);
+ assert.match(html,/Studio/);
 });
