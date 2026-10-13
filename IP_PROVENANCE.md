@@ -1,3 +1,10 @@
+## Local llama.cpp protocol adapter — DA-45, October 13, 2026
+
+- Scope: existing original Hercules `hercules-models/local-chat.mjs` plus `hercules-models/control-cli.mjs`, `tests/hercules-models-local-chat.test.mjs` and `docs/HERCULES-LOCAL-CHAT-EXPERIMENT-V1.md`.
+- Origin: original first-party protocol adapter and Node built-in HTTP tests developed with AI assistance; no vendor source code, hosted inference keys or model weights copied.
+- Third-party interaction: generic llama.cpp OpenAI-compatible local HTTP shapes are used only over numeric loopback; vendor engine and separately licensed weights are NOT packaged or claimed as company-owned artifacts.
+- Isolation: explicit protocol selection, opt-in flag remains disabled by default, strict exact model ID and completed assistant text checks, protected bearer token, no deployment, AI release approvals or commerce changes.
+
 ## Second open-weight CPU model evaluation — 2026-10-13
 
 - Owned paths: `scripts/hercules-smollm2-360m-trial.mjs`, `tests/hercules-smollm2-360m-trial.test.mjs`, `.github/workflows/hercules-smollm2-360m-trial.yml`, and `docs/HERCULES-SMOLLM2-360M-TRIAL.md`.
