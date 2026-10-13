@@ -1,3 +1,9 @@
+## Hercules Smallz Render exact-commit release planner — October 13, 2026
+
+- Original first-party SauceApproved AI-assisted Node 22 source `hercules-deploy/render-exact-commit.mjs`; associated `tests/hercules-deploy-render-exact-commit.test.mjs` and `docs/HERCULES-DEPLOY-RENDER-EXACT-COMMIT-V1.md`.
+- No external dependencies, model weights, vendored software, provider credentials, owner-session tokens, customers, binaries or additional licenses. No network I/O; all output is advisory.
+- Fail-closed against unexpected Render service state, autoDeploy-on, live-deployment drift, and any Git SHA other than candidate `861c8244ef1f86ec8843569e372d6f01abb8aec1`; synthetic red-before-green regression evidence. No actual deployment or authorization is made by this module.
+
 ## Hercules Smallz release identity proof — October 13, 2026
 
 - Original first-party SauceApproved AI-assisted Node.js code and tests: `hercules-runtime/smallz-release-proof.mjs`, `hercules-bot/app-server.mjs`, `tests/hercules-smallz-release-proof.test.mjs`, `tests/hercules-smallz-runtime-identity-route.test.mjs`, `docs/HERCULES-SMALLZ-RELEASE-PROOF-V1.md` and existing CI registration. Standard-library only; no vendored source or dependencies.
