@@ -89,3 +89,45 @@ test('unknown CLI flags are rejected without performing any checks', () => {
   assert.equal(run.status, 2);
   assert.match(run.stderr, /unsupported option/i);
 });
+
+
+test('Codex Doctor flags agent, verifier, runtime and hosting control paths for review', () => {
+  for (const path of [
+    '.agents/skills/hercules-codex-operator/SKILL.md', '.github/dependabot.yml',
+    '.devcontainer/devcontainer.json', '.vscode/settings.json', '.mcp.json',
+    '.gitignore', 'Dockerfile', 'package.json', 'package-lock.json',
+    'scripts/hercules-preflight.mjs', 'hercules-runtime/codex-readiness.mjs',
+    'render/service.yaml', 'infra/network.tf', 'hercules-identity/auth.mjs',
+    'shopify/theme.liquid', 'hercules-models/service.mjs',
+  ]) {
+    const result = assessProposedPaths([path]);
+    assert.equal(result.paths[0].risk, 'review_required', path);
+    assert.equal(result.authorizesChanges, false);
+  }
+});
+
+test('Codex Doctor blocks ambiguous cross-platform path aliases and .git internals', () => {
+  for (const path of [
+    'C:relative.txt', 'docs/item:stream', '~/.ssh/id_rsa',
+    'docs/%2e%2e/secrets', 'docs/%2Fetc', 'docs/%252e%252e',
+    'docs/NUL.txt', 'docs/COM1', 'docs/trailing.', 'docs/trailing ',
+    'docs/\u202Esecret', '.git/config', 'docs/.git/index',
+    'docs/file%5c..%5csecret',
+  ]) {
+    const result = assessProposedPaths([path]);
+    assert.equal(result.paths[0].risk, 'blocked', path);
+    assert.equal(result.authorizesChanges, false);
+  }
+});
+
+test('Codex Doctor protects other private key formats but leaves ordinary files isolated', () => {
+  for (const path of [
+    'credentials.pfx', 'data/key.pkcs12', 'config/secret.jks',
+    'credentials.p8', 'vault/key.age', '.env.prod',
+  ]) {
+    assert.equal(assessProposedPaths([path]).paths[0].risk, 'review_required', path);
+  }
+  const result = assessProposedPaths(['docs/guide.md', 'tests/math.test.mjs']);
+  assert.equal(result.status, 'isolated');
+  assert.equal(result.authorizesChanges, false);
+});
