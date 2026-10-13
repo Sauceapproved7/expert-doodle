@@ -27,3 +27,16 @@ The strict pure evaluator reports completion and correctness separately for base
 A model that follows better prompts on three arithmetic cases is *not* necessarily safe, capable or reliable. A model that fails again is strong evidence the small architecture is unsuitable for uncapped mathematics in public chat. GitHub's CPU emulation is not a guarantee of Render uptime or performance.
 
 The result may guide choosing a stronger properly licensed model, adding first-party deterministic tools for arithmetic while keeping generated responses explicitly separate, or reevaluating hosting cost. **No live cutover or new spending is authorized by this test.**
+
+
+## Observed first CPU run (2026-10-13)
+
+The isolated six-prompt run job `115415834412` completed successfully with all six requests having valid real HTTP model replies and measured process peak RSS **375,500,800 bytes** (~358 MiB). Responses:
+
+- 2+2: baseline `2` (wrong), general system instruction `2 + 2 = 4` (correct, non-exact formatting)
+- larger 7 or 12: both modes `7` (wrong)
+- 5−3: both modes `5 minus 3 equals 2.` (semantically correct, non-exact formatting)
+
+The original narrow numeric-only evaluator reported 0/3 baseline, 1/3 system because it missed semantically correct subtraction sentences. The updated evaluator adds bounded **semantic correctness separately from exact formatting**. Expected semantic scores on the same recorded replies: **1/3 baseline, 2/3 system**; strict number-only formatting: **0/3 baseline, 0/3 system**. This does **not** establish that prompting fixes the model's numerical comparisons or qualifies a public AI service.
+
+Any changes to this scorer require new exact-head CI before merging. Do not interpret passing pipeline status alone as positive model quality.
