@@ -9,12 +9,19 @@ import {HerculesEmbeddedCoreNeuralV03} from "./embedded-core-neural-v0.3.mjs";
 import {HerculesEmbeddedCoderNeuralV02} from "./embedded-coder-neural-v0.2.mjs";
 import {HerculesEmbeddedResearchNeuralV02} from "./embedded-research-neural-v0.2.mjs";
 import {listenModelPlaneService} from "./service.mjs";
+import {createLocalChatAdapter} from "./local-chat.mjs";
 
 const configuredToken = process.env.HERCULES_MODEL_TOKEN;
 const token = configuredToken ?? randomBytes(24).toString("hex");
 const host = process.env.HERCULES_MODEL_HOST ?? "127.0.0.1";
 const port = Number(process.env.HERCULES_MODEL_PORT ?? 38900);
 const nativeOnly = process.env.HERCULES_MODEL_NATIVE_ONLY !== "false";
+// Opt-in isolated local model service; defaults to OFF on every existing deployment.
+const chatAdapter = createLocalChatAdapter({
+  enabled: process.env.HERCULES_LOCAL_CHAT_ENABLED === "true",
+  endpoint: process.env.HERCULES_LOCAL_CHAT_ENDPOINT || "http://127.0.0.1:11434",
+  model: process.env.HERCULES_LOCAL_CHAT_MODEL || "",
+});
 const candidateEvaluationEnabled =
   process.env.HERCULES_MODEL_ENABLE_CANDIDATES === "true";
 
@@ -53,6 +60,7 @@ if (candidateEvaluationEnabled) {
 listenModelPlaneService({
   models: HERCULES_MODEL_SLOTS,
   token,
+  chatAdapter,
   nativeOnly,
   candidates: HERCULES_MODEL_CANDIDATES,
   candidateRuntimes,
@@ -85,4 +93,6 @@ console.log(JSON.stringify({
   candidateEvaluationEnabled,
   candidateRuntimes: Object.keys(candidateRuntimes).length,
   tokenSource: configuredToken ? "environment" : "generated-session",
+  localChatEnabled: chatAdapter.status().enabled,
+  localChatInferenceVerified: false,
 }, null, 2));

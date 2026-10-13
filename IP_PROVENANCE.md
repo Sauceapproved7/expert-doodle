@@ -1,3 +1,11 @@
+## DA-45 isolated native local-chat adapter — 2026-10-13
+
+- Paths: `hercules-models/local-chat.mjs`, changes to `hercules-models/service.mjs` and `control-cli.mjs`, `tests/hercules-models-local-chat.test.mjs`, and `docs/HERCULES-LOCAL-CHAT-EXPERIMENT-V1.md`.
+- Origin: original first-party Hercules JavaScript code and tests prepared with AI assistance. Built on the repository's existing owner-controlled model-plane HTTP server using only Node built-ins.
+- External interfaces: optional on-host Ollama-compatible JSON endpoints (`/api/tags`, `/api/chat`); no vendor library or weights are copied, downloaded or packaged. The protocol implementation is original and the endpoint is restricted to numeric loopback.
+- Ownership: SauceApproved controls the adapter and security envelope; **future** imported model weights would retain their own upstream licenses and must not be misrepresented as SauceApproved-owned training work.
+- Scope: authenticated, bounded, default-off laboratory capability. Not automatically enabled, deployed, billable, or evidence of actual model-generated chat. No customer checkout, registration or provider configuration changes.
+
 # Hercules IP Provenance & Canonical Source
 
 ## Independent diff triage — 2026-10-13
