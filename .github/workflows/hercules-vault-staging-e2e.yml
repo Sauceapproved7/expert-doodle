@@ -3,12 +3,23 @@ on:
   pull_request:
     paths:
       - 'tests/hercules-vault-real-cli.test.mjs'
+      - 'tests/test_probe_hercules_vault_staging.py'
+      - 'scripts/probe_hercules_vault_staging.py'
       - '.github/workflows/hercules-vault-staging-e2e.yml'
       - 'hercules-vault/**'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
+  public-staging-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Validate fixed-origin probe contracts
+        run: python3 -m unittest discover -s tests -p 'test_probe_hercules_vault_staging.py' -v
+      - name: Independently verify anonymous public staging access is denied
+        run: python3 scripts/probe_hercules_vault_staging.py
   actual-cli-retrieval:
     runs-on: ubuntu-latest
     timeout-minutes: 4
