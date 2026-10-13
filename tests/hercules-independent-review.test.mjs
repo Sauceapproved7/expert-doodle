@@ -74,8 +74,9 @@ function inScratchRepo(fn) {
 
 test('CLI reviews a bounded local git diff with SHA-bound evidence', () => {
   inScratchRepo((cwd, baseSha) => {
+    const diff = execFileSync('git', ['diff', '--no-ext-diff', '--unified=0', baseSha, 'HEAD'], {cwd, encoding: 'utf8'});
     const result = spawnSync(process.execPath, [new URL('../scripts/hercules-independent-review.mjs', import.meta.url).pathname], {
-      cwd, encoding: 'utf8', env: {...process.env, HERCULES_REVIEW_BASE_SHA: baseSha},
+      cwd, input: diff, encoding: 'utf8', env: {...process.env, HERCULES_REVIEW_BASE_SHA: baseSha},
     });
     assert.equal(result.status, 0, result.stderr);
     const report = JSON.parse(result.stdout);
@@ -90,4 +91,15 @@ test('CLI fails closed when base SHA is unavailable', () => {
   });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /independent_review_unavailable/);
+});
+
+test('CLI accepts a streamed diff without access to a git executable', () => {
+  const result = spawnSync(process.execPath, [new URL('../scripts/hercules-independent-review.mjs', import.meta.url).pathname], {
+    cwd: tmpdir(),
+    input: patch('app/index.mjs', ["eval(userInput)"]),
+    encoding: 'utf8',
+    env: {...process.env, HERCULES_REVIEW_BASE_SHA: 'a'.repeat(40), PATH: '/nonexistent'},
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.ok(JSON.parse(result.stdout).findings.some(x => x.rule === 'dynamic-code-execution'));
 });
