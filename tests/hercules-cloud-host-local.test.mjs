@@ -4,7 +4,7 @@ import {mkdtemp,mkdir,lstat,readFile,rm,symlink,chmod} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {createDurableNonceStore,createBoundedDockerRunner} from '../hercules-deploy/cloud/host-local.mjs';
-import {createSandboxHostPlan} from '../hercules-deploy/cloud/host-agent.mjs';
+import {createSandboxHostPlan,createSandboxPermit,executeSandboxHostPlan} from '../hercules-deploy/cloud/host-agent.mjs';
 
 const now=Date.parse('2026-10-13T14:10:00Z');
 const image='registry.example/hercules-smoke@sha256:'+'c'.repeat(64);
@@ -118,3 +118,27 @@ test('command subprocess errors fail closed without leaking stderr, tokens or un
 test('no executable host bridge exists without a separately authorized runner',()=>{
  assert.throws(()=>createBoundedDockerRunner(plan()),/local_command_executor_not_injected/);
 });
+
+test('signed deployment grant and real disk replay marker compose with synthetic rootless commands',()=>tempRoot(async(parent,root)=>{
+ const p=plan(),grant='s'.repeat(40);
+ const permit=createSandboxPermit(p,{signingKey:grant,now,ttlMs:120000});
+ let mutatingCommands=0;
+ const runner=createBoundedDockerRunner(p,{execFileImpl:(file,args,opts,callback)=>{
+  if(args[2]==='info')return callback(null,'["name=rootless"]','');
+  mutatingCommands++;
+  if(args[3]==='inspect')return callback(null,'true\\n','');
+  return callback(null,'','');
+ }});
+ const first=await createDurableNonceStore({root});
+ const receipt=await executeSandboxHostPlan(p,{
+  permit,signingKey:grant,now,runCommand:runner,consumeNonce:first
+ });
+ assert.equal(receipt.runningVerified,true);
+ assert.equal(receipt.productionAuthorized,false);
+ assert.equal(mutatingCommands,3);
+ const reopened=await createDurableNonceStore({root});
+ await assert.rejects(()=>executeSandboxHostPlan(p,{
+  permit,signingKey:grant,now,runCommand:runner,consumeNonce:reopened
+ }),/permit_replayed/);
+ assert.equal(mutatingCommands,3);
+}));
