@@ -1,3 +1,11 @@
+## Hercules Smallz Dedicated Read Audit — October 13, 2026
+
+- Original first-party SauceApproved AI-assisted Node.js implementation `hercules-deploy/smallz-read-audit.mjs`, `scripts/hercules-smallz-read-audit.mjs`, `tests/hercules-deploy-smallz-read-audit.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-READ-AUDIT-V1.md`.
+- Reuses owned Smallz provider readers and release evidence bridge. All dependency imports are owned local files; no third-party code, vendor libraries, media, models, or credentials incorporated.
+- Fixed one-shot read-only operation, opt-in required, distinct server-custodied read credentials, known deploy/control token reuse rejection, no public endpoint or automatic scheduling. Does not claim independent provider token scope verification.
+- TDD RED at `ebd59e84187bd1a3e8f836d435359f221b84464b` (112 passing, 1 missing module), GREEN at `eeea1fad3fc87635c9ee03b6decbeb5479aaae68` (119 passing), RED command at `3c99c87a25ddca97b2e2f63d7fe484ccd03d4cde` (119 passing, 1 missing command), GREEN at `b7c2060f071bc5a5746b3e215cdcca1b9a29f8d0` (120 passing).
+- No provider credentials accessed, token creation, deployment, rollback, payment operation, new cloud service or billing changes.
+
 
 ## Hercules Smallz authenticated REST read transport — October 13, 2026
 
