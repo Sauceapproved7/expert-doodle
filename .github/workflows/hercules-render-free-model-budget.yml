@@ -109,12 +109,17 @@ jobs:
               )
               elapsed="$(( $(date +%s%3N) - started ))"
               peak="$(cat /sys/fs/cgroup/memory.peak)"
+              model_rss_kb="$(awk '$1=="VmHWM:" {print $2}' "/proc/$server_pid/status")"
+              test -n "$model_rss_kb"
+              test "$model_rss_kb" -gt 0
+              model_rss_bytes="$((model_rss_kb * 1024))"
               test -s /tmp/model-reply.http
               test "$(wc -c < /tmp/model-reply.http)" -le 16000
               echo "HERCULES_CPU_QUOTA=$cpu_quota"
               echo "HERCULES_CPU_PERIOD=$cpu_period"
               echo "HERCULES_MEMORY_LIMIT=$memory_limit"
               echo "HERCULES_MEMORY_PEAK=$peak"
+              echo "HERCULES_PROCESS_PEAK_RSS_BYTES=$model_rss_bytes"
               echo "HERCULES_ELAPSED_MS=$elapsed"
               echo "HERCULES_MODEL_REPLY_BASE64=$(base64 -w0 /tmp/model-reply.http)"
             ' > /tmp/hercules-360m/render-free-quota.log
