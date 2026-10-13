@@ -79,3 +79,13 @@ test('founding public RPC is invoker-only; private trigger retains exclusive rat
  assert.doesNotMatch(fix,/grant select on public\.hercules_cloud_founders to anon/i);
  assert.doesNotMatch(fix,/grant execute on function private\.hercules_cloud_founders_guard\(\) to anon/i);
 });
+
+test('founding signup invoker does not need table SELECT through ON CONFLICT',()=>{
+ const fix=readFileSync(new URL('../supabase/migrations/20261013162500_hercules_cloud_founders_insert_no_select_v3.sql',import.meta.url),'utf8');
+ assert.match(fix,/create or replace function public\.hercules_cloud_join_founders\(/i);
+ assert.match(fix,/security invoker/i);
+ assert.match(fix,/insert into public\.hercules_cloud_founders/i);
+ assert.doesNotMatch(fix,/on conflict/i);
+ assert.doesNotMatch(fix,/grant select.*hercules_cloud_founders.*to anon/i);
+ assert.match(fix,/jsonb_build_object\('ok',true,'status','interest_recorded_unverified'\)/i);
+});
