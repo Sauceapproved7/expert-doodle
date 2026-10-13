@@ -187,3 +187,9 @@ The server validates the Supabase Auth token against fixed-project `/auth/v1/use
 No stored customer reports exist at this stage. A report is only a *withheld record* until buyer identity, provider-authoritative paid/refund state, and authenticated delivery are independently verified. This upgrade does not make the $49 diagnostic sellable. Keep the Shopify product DRAFT. Do not enable sign-in or inbox flags until customer privacy/commercial terms, provider email-code sign-in and authorization tests are approved.
 
 This is isolated to the free Gatehouse preview service; no unrelated Render, Shopify, payout, DNS, or main-branch changes. The repository unit tests and Render build run `node --test hercules/gatehouse/*.test.mjs`.
+
+## v2.0 — Buyer reference preparation
+
+This branch adds offline owner/site-scoped purchase intent references and strict local candidate matching for the Gatehouse $49 service. The buyer reference has no email or user identifier. The matching model compares a prospective provider order shape against the original product, variant, price, refund/cancellation state, and authenticated identity, but NEVER grants access or verifies a real payment. A matching shape is not a confirmed purchase.
+
+The proposed Supabase table is private, RLS enabled, and contains only pending records; no public grant or issuing endpoint. The GET-only purchase-link readiness endpoint returns HOLD. The existing native Shopify server connection has missing credential references. Therefore the product remains DRAFT, reports withheld, and payment, delivery, and subscriptions disabled. No production services, domain, payouts, or checkout were modified.
