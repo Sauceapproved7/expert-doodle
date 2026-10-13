@@ -1,3 +1,10 @@
+## Real-model authenticated Hercules chat integration trial — 2026-10-13
+
+- Owned files: `scripts/hercules-real-modelplane-e2e.mjs`, `tests/hercules-real-modelplane-e2e.test.mjs`, updates to `.github/workflows/hercules-smollm2-360m-trial.yml` and `docs/HERCULES-SMOLLM2-360M-TRIAL.md`.
+- Original first-party JavaScript instrumentation authored with AI assistance using Node built-ins and existing Hercules model-plane APIs. No copied third-party code or runtime dependencies.
+- An existing pinned Apache-2.0 third-party quantized SmolLM2-360M model and pinned llama.cpp are used only inside an ephemeral public-GitHub standard runner. They are not bundled, claimed as SauceApproved-owned weights or deployed.
+- No live service, account, billing, public registration, commerce, payment, credential or production route changes; the real generated reply proves a lab request, not verified consumer AI quality or launch approval.
+
 ## Local llama.cpp protocol adapter — DA-45, October 13, 2026
 
 - Scope: existing original Hercules `hercules-models/local-chat.mjs` plus `hercules-models/control-cli.mjs`, `tests/hercules-models-local-chat.test.mjs` and `docs/HERCULES-LOCAL-CHAT-EXPERIMENT-V1.md`.
