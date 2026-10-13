@@ -18,6 +18,9 @@ const files={"/":{name:"index.html",type:"text/html; charset=utf-8"},
  "/commercial":{name:"commercial.html",type:"text/html; charset=utf-8"},
  "/portal":{name:"portal.html",type:"text/html; charset=utf-8"},
  "/portal/access":{name:"access.html",type:"text/html; charset=utf-8"},
+ "/portal/reports":{name:"report-vault.html",type:"text/html; charset=utf-8"},
+ "/report-vault.mjs":{name:"report-vault.mjs",type:"text/javascript; charset=utf-8"},
+ "/report-vault.css":{name:"report-vault.css",type:"text/css; charset=utf-8"},
  "/access.mjs":{name:"access.mjs",type:"text/javascript; charset=utf-8"},
  "/access.css":{name:"access.css",type:"text/css; charset=utf-8"},
  "/portal.mjs":{name:"portal.mjs",type:"text/javascript; charset=utf-8"},
@@ -85,6 +88,7 @@ export function createServer(config={}){
  });
  const customerBridge=customerAccessBridge({
   enabled:config.customerEnabled??(process.env.GATEHOUSE_CUSTOMER_INTAKE_APPROVED==="true"),
+  reportsEnabled:config.reportInboxEnabled??(process.env.GATEHOUSE_CUSTOMER_REPORT_INBOX_APPROVED==="true"),
   publishableKey:customerPublishableKey,
   fetcher:config.customerFetcher??fetch
  });
@@ -169,6 +173,14 @@ export function createServer(config={}){
   if(path==="/api/customer/portal-readiness"){
    if(method!=="GET")return send(res,405,{error:"Method not allowed"});
    return send(res,200,portalReadiness());
+  }
+  if(path==="/api/customer/reports"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   const customerHeaders={...req.headers};
+   const cookieToken=customerAuthenticator.readSession(req.headers.cookie);
+   if(cookieToken&&!customerHeaders.authorization)customerHeaders.authorization="Bearer "+cookieToken;
+   const reply=await customerBridge.handle({headers:customerHeaders},"reports");
+   return send(res,reply.status,reply.body);
   }
   if(path==="/api/customer/sites"){
    if(method!=="GET"&&method!=="POST")return send(res,405,{error:"Method not allowed"});
