@@ -59,7 +59,7 @@ export function parseFreeModelBudgetLog(source){
   ]);
   for(const line of source.split(/\r?\n/)){
     if(!line.startsWith("HERCULES_"))continue;
-    const m=/^(HERCULES_[A-Z_]+)=(.*)$/.exec(line);
+    const m=/^(HERCULES_[A-Z0-9_]+)=(.*)$/.exec(line);
     if(!m||!required.has(m[1]))throw new TypeError("invalid quota evidence field");
     if(fields.has(m[1]))throw new TypeError("duplicate quota evidence field");
     fields.set(m[1],m[2]);
