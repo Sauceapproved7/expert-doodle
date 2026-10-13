@@ -14,7 +14,7 @@ test("live commerce extension keeps its theme boundary while Hercules legal poli
 
   assert.match(extension, /^type\s*=\s*"theme"$/m);
   assert.match(extension, /^handle\s*=\s*"hercules-live-commerce"$/m);
-  assert.match(appConfig, /scopes\s*=\s*"read_orders,write_legal_policies"/);
+  assert.match(appConfig, /scopes\s*=\s*"read_orders,read_legal_policies,write_legal_policies"/);
 });
 
 test("live event block schema exposes a selected Shopify product and explicit event states", async () => {
