@@ -30,5 +30,7 @@ Before changing anything, read and obey:
 15. Before completion, run `node scripts/verify-hercules-execution-contract.mjs`. A failure is a blocker, not an advisory warning.
 16. **Shopify paid-order continuity:** when native `ORDERS_PAID` delivery is unavailable but the connected Shopify Admin API is authorized, follow `governance/hercules-shopify-paid-order-reconciliation-v1.json`. Reconcile only exact allowlisted Studio/Titan paid line items through `hercules_reconcile_verified_shopify_paid_order_v1`; never accept customer-supplied payment claims, never store raw buyer email, and never use reconciliation to change pricing, legal approvals, checkout/publication state, or other orders.
 
+17. **Codex Cloud handoff:** use the fixed offline setup profile at `docs/HERCULES-CODEX-CLOUD-HANDOFF-V1.md` and `node scripts/hercules-codex-cloud-handoff.mjs --json` before claiming a reusable cloud environment. A repository checkout, passed local checks, and task transcript do not prove environment publication or task-specific repository access; only direct account/task evidence does.
+
 The full human-readable operating model is `governance/sauceapproved-master-gpt-operating-instructions-v1.md`.
 The machine-readable source for enforceable execution controls is `governance/hercules-execution-contract-v1.json`.
