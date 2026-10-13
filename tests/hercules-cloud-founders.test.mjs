@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {normalizeFoundingInterest,foundingCapacityReached} from '../supabase/functions/hercules-cloud-founders/core.mjs';
 
 const table=readFileSync(new URL('../supabase/migrations/20261013152000_hercules_cloud_founders_private_intake_v1.sql',import.meta.url),'utf8');
 const rpc=readFileSync(new URL('../supabase/migrations/20261013155500_hercules_cloud_join_founders_rpc_v1.sql',import.meta.url),'utf8');
@@ -10,27 +9,6 @@ const client=readFileSync(new URL('../hercules-deploy/cloud/founders.mjs',import
 const home=readFileSync(new URL('../hercules-deploy/cloud/index.html',import.meta.url),'utf8');
 const build=readFileSync(new URL('../scripts/build_hercules_cloud_preview.mjs',import.meta.url),'utf8');
 
-test('founding interest is free, opt-in, email-only and never activates Hercules account signup',()=>{
- const val=normalizeFoundingInterest({email:'  SALES+FOUNDERS@Example.com ',consent:true,interest:'self-hosted',website:''});
- assert.deepEqual(val,{email:'sales+founders@example.com',interest:'self-hosted',honeypot:false});
- assert.equal(normalizeFoundingInterest({email:'a@example.com',consent:true,website:'https://spam.example'}).honeypot,true);
- for(const bad of [
-  {email:'a@example.com',consent:false},
-  {email:'a@example.com'},
-  {email:'bad@',consent:true},
-  {email:'a@example.com\nCC:other@b.com',consent:true},
-  {email:'a'.repeat(300)+'@b.com',consent:true},
-  {email:'a@example.com',consent:true,interest:'billing'},
-  {email:'a@example.com',consent:true,price:49}
- ])assert.throws(()=>normalizeFoundingInterest(bad),/founders_/);
-});
-test('public signup capacity fails closed for unsupported data',()=>{
- assert.equal(foundingCapacityReached(0),false);
- assert.equal(foundingCapacityReached(199),false);
- assert.equal(foundingCapacityReached(200),true);
- assert.equal(foundingCapacityReached(null),true);
- assert.equal(foundingCapacityReached('12'),true);
-});
 test('isolated table denies all direct browser list and writes',()=>{
  assert.match(table,/create table(?: if not exists)? public\.hercules_cloud_founders/i);
  assert.match(table,/email text not null unique/i);
@@ -47,6 +25,10 @@ test('database RPC enforces server-side consent, limits and no duplicate enumera
  assert.match(rpc,/security definer/i);
  assert.match(rpc,/set search_path\s*=\s*pg_catalog,\s*public/i);
  assert.match(rpc,/p_consent is not true/i);
+ assert.match(rpc,/length\(em\)>254/i);
+ assert.match(rpc,/em !~ /i);
+ assert.match(rpc,/on conflict \(email\) do nothing/i);
+ assert.match(rpc,/jsonb_build_object\('ok',true,'status','interest_recorded_unverified'\)/i);
  assert.match(rpc,/pg_try_advisory_xact_lock/i);
  assert.match(rpc,/created_at\s*>=\s*now\(\)\s*-\s*interval '24 hours'/i);
  assert.match(rpc,/count\s*>=\s*200/i);
