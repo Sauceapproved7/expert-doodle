@@ -24,6 +24,7 @@ test('public founders assets, CORS preflight, and denied-consent RPC respond wit
   const script=await scriptResponse.text();
   assert.match(script,/No registration has been confirmed/);
   assert.match(script,/Your address is currently unverified/);
+  assert.doesNotMatch(script,/sb_secret_|service_role|auth\/v1\/signup|checkout/i,'public browser module must contain no privileged key or paid path');
   const endpoint=script.match(/const endpoint='([^']+)'/)?.[1];
   const publicKey=script.match(/const publishableKey='([^']+)'/)?.[1];
   assert.equal(endpoint,RPC,'published form must use the expected limited RPC');
