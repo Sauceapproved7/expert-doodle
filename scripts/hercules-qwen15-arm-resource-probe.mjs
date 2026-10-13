@@ -19,9 +19,21 @@ const entries=await Promise.all(paths.map(async p=>{
 const files=Object.fromEntries(entries);
 const host={arch:arch(),cpuCount:availableParallelism(),totalMemBytes:totalmem(),freeMemBytes:freemem()};
 const derived=deriveQwen15CgroupBudget(host,files);
+const procData={};
+for(const p of ["/proc/self/cgroup","/proc/1/cgroup","/proc/1/comm"]){
+  try{procData[p]=(await readFile(p,"utf8")).trim().slice(0,240);}
+  catch{procData[p]="unavailable";}
+}
+try{
+  const mountinfo=await readFile("/proc/self/mountinfo","utf8");
+  procData.mountCgroupEntries=mountinfo.split("\n")
+    .filter(line=>/\s-\s(cgroup|cgroup2)\s/.test(line)||line.includes(" /sys/fs/cgroup "))
+    .slice(0,10).map(line=>line.slice(0,280));
+}catch{procData.mountCgroupEntries=["unavailable"];}
+
 process.stdout.write(JSON.stringify({
   schema:"hercules.qwen15.ephemeral-arm-cgroup-observation.v1",
-  host,detectedControllerValues:files,derived,
+  host,detectedControllerValues:files,derived,procData,
   productionInferenceVerified:false,
   hostOwnershipVerified:false,
   ownerBillingVerified:false,
