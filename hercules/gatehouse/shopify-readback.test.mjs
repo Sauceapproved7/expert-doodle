@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {SHOPIFY_ORDER_QUERY, summarizeShopifyOrders, verifyOrderScope, productLineCandidate} from "../../supabase/functions/_shared/gatehouse-shopify-readback.mjs";
+import {SHOPIFY_ORDER_QUERY, summarizeShopifyOrders, verifyOrderScope, productLineCandidate} from "../../supabase/functions/hercules-gatehouse-order-readback/gatehouse-shopify-readback.mjs";
 
 const line=()=>({id:"gid://shopify/LineItem/21",sku:"HG-DIAGNOSTIC-49",quantity:1,
   product:{id:"gid://shopify/Product/15424049283392"},
