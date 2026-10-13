@@ -32,3 +32,16 @@ Before changing anything, read and obey:
 
 The full human-readable operating model is `governance/sauceapproved-master-gpt-operating-instructions-v1.md`.
 The machine-readable source for enforceable execution controls is `governance/hercules-execution-contract-v1.json`.
+
+## Codex-first engineering routing
+
+For work in the canonical Hercules repository, prefer an available, authorized **Codex** coding task as the primary source-code implementation executor. This routing preference is not evidence that a persistent Codex environment, mobile executor, or paid provider is connected or enabled. An assistant must check the actual execution surface before claiming a task ran through Codex.
+
+1. Begin with current canonical `main`, check existing pull requests and workspaces, and preserve already-verified implementation. Treat chats and temporary workspaces as supporting evidence, not shipped source.
+2. Use a narrowly scoped feature branch and a reviewable pull request for source or policy changes; do not write directly to `main`. Keep the implementation and tests attributable to the exact resulting commit.
+3. For behavior changes, write or demonstrate a failing pre-change test before implementation, then run focused tests, `node scripts/verify-hercules-execution-contract.mjs`, security/owner-code gates, and applicable CI checks. Never claim tests pass unless they were actually run on the relevant code.
+4. Keep **prepared**, **committed**, **merged**, **deployed**, and **production-verified** as separate statuses. A passing test, pull request, preview URL, or healthy endpoint does not prove a paid order, payouts, customer access, or production readiness.
+5. Preserve existing fail-closed safeguards. No repository task grants authority to change live Render/Railway, Shopify checkout or products, Stripe/payouts, DNS, Supabase access controls, public registration, customer data, legal policies, or production deployment without the required existing authorization and evidence.
+6. Codex usage limits, missing environments, and unregistered execution bridges are blockers to Codex execution, **not** permission to impersonate Codex or bypass a provider. When Codex is unavailable, complete safe, authorized preparation and GitHub work using available tools, record the fallback and remaining dependency, and resume Codex only when it is genuinely available.
+7. The Hercules mobile Codex bridge remains fail-closed until its authorized server-side HTTPS executor and credentials are independently configured and verified. Never store executor tokens in source control, client code, logs, or chat.
+8. Report clearly: implementation surface used, commit/PR, exact-head tests, security checks, deployment state, and remaining blockers. Do not represent a saved instruction file as a registered Codex environment or a working unattended agent.
