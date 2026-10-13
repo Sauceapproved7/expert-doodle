@@ -134,3 +134,21 @@ The separate additive `supabase/gatehouse_customer_direct_rls.sql` grants **only
 **Default HOLD remains:** The Render route returns 503 unless `GATEHOUSE_CUSTOMER_INTAKE_APPROVED=true` and `GATEHOUSE_SUPABASE_PUBLISHABLE_KEY` is configured. The public key is non-secret but should be injected as Render environment configuration, not hardcoded into the repository. **Do not enable enrollment** until appropriate website/privacy policies, rate limits and customer authentication UX are reviewed. A successful authenticated site submission is still only self-attested consent; actual domain control, payment and delivery are *not* verified.
 
 This route is a cost-avoiding fallback, not a bypass of the user's launch or payment gates.
+
+## v1.7 — Owner-gated existing-customer passwordless sign-in
+
+The isolated Gatehouse preview now contains a first-party `/portal/access` page, linked from `/portal`, and a passwordless email-code authentication adapter in `customer-auth.mjs`. This is preparation for an independently verified customer login path, **not activation of a new public customer account system**.
+
+`GET /api/customer/auth/capability` is a public status disclosure: `emailCodeEnabled` only when the independent `GATEHOUSE_CUSTOMER_AUTH_APPROVED=true` approval gate AND existing Supabase `GATEHOUSE_SUPABASE_PUBLISHABLE_KEY` are configured. Both are **not enabled by this PR**. The separate site-intake flag, commerce checkout, reports and subscriptions remain closed.
+
+If approved and configured later:
+- `POST /api/customer/auth/request-code` forwards only to the fixed project Supabase Auth OTP endpoint with **`create_user:false`**. No new users are registered by this flow. The response is generic to avoid distinguishing existing vs missing email accounts. An in-process 60-second per-address throttle and provider throttling apply.
+- `POST /api/customer/auth/verify-code` validates a numeric 6–8 digit email code through Supabase Auth, then independently verifies the returned access token against the fixed Supabase Auth `/user` route. Failure never grants a session.
+- A verified access token stays inside a **Secure, HttpOnly, SameSite=Strict, Path=/** `__Host-gh_customer_session` cookie, capped by the provider's short-lived access token expiry. No refresh token is persisted, so the user must sign in again after the access token expires. No browser localStorage, browser-visible access token, URL token, or external auth JS.
+- `GET /api/customer/auth/session` verifies the cookie with Supabase and returns only `signedIn`, not the account's email or raw provider token. `POST /api/customer/auth/logout` clears the cookie.
+- Mutating authentication and cookie-based site submission require the **fixed Gatehouse HTTPS Origin** and a first-party custom request header. Network requests can only reach the existing fixed Supabase project, with redirect denial and timeouts.
+- Auth still **does not** enable customer intake by itself. `GATEHOUSE_CUSTOMER_INTAKE_APPROVED` remains an independent required approval gate. An authorized customer site is only an `awaiting-domain-control` record, not permission to charge or deliver a report.
+
+**Owner / provider checks required before activating:** approve applicable privacy and customer terms, verify the Supabase Email OTP template actually sends numeric codes (Supabase defaults to a magic link unless configured), inspect configured email provider capacity and rate limits, protect route from abusive automated use, confirm owner-approved customer support and account deletion, and test OTP → cookie → Supabase owner identity → RLS → revocation end to end.
+
+The $49 Shopify Gatehouse diagnostic remains DRAFT. No new user enrollment, live email sending, additional paid provider, cash movement, payout mutation, or irreversible launch settings were performed in this implementation.
