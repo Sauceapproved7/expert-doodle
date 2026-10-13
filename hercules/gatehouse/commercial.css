@@ -22,3 +22,5 @@
 .c-verification{border-color:#34547e}.c-verification code{color:#e6c47f;font-size:12px;overflow-wrap:anywhere}
 .c-proof-steps{margin:20px 0}.c-proof-steps>div{background:#0d1726;border:1px solid #314765;border-radius:10px;padding:17px;min-width:0}
 .c-proof-steps strong{color:#f3c776;font-size:13px}.c-proof-steps p{margin:10px 0 0}
+
+.c-hero-link.c-portal-link{margin-left:12px;background:transparent;color:#edce8b;border:1px solid #ac8e55}.c-hero-link.c-portal-link:hover,.c-hero-link.c-portal-link:focus-visible{background:#2a2e3c;color:#fff}@media(max-width:780px){.c-hero-link.c-portal-link{margin-left:0;margin-top:10px;display:flex;justify-content:center}}
