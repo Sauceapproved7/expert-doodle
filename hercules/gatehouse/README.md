@@ -173,3 +173,17 @@ This release adds the next actual technical component required to monetize the $
 **Still outstanding to receive money:** owner-approved privacy and offer terms, actual authenticated customer onboarding, safe domain-control proof through the customer portal, authenticated Shopify purchase re-read (the existing backend provider vault currently lacks necessary credential refs), private stored-report creation, verified delivery to the correct buyer, and a controlled real checkout/refund test. Do not switch on paid checkout until these work together.
 
 No new paid infrastructure, Shopify product publication, DNS, payout, new Edge Function, service-role key or production deployment.
+
+## v1.9 — Private customer report vault (metadata only)
+
+Adds a new **GET-only**, owner-scoped `/api/customer/reports` endpoint and the public-but-noninteractive `/portal/reports` SauceApproved branded vault. The browser uses only the existing Secure, HttpOnly, SameSite=Strict customer session cookie; it never receives a raw Supabase access token or embeds a service-role key.
+
+**Independent closed-by-default gate:** `GATEHOUSE_CUSTOMER_REPORT_INBOX_APPROVED` must be exactly `true` **and** a preexisting `GATEHOUSE_SUPABASE_PUBLISHABLE_KEY` must be configured. This is separate from `GATEHOUSE_CUSTOMER_AUTH_APPROVED`, customer intake, checkout and report delivery. This release does not activate any of these flags.
+
+The server validates the Supabase Auth token against fixed-project `/auth/v1/user`, rejects anonymous identities, then reads **only five allowed report metadata columns** (id, site_id, owner_user_id, delivery_state, created_at) from the existing private PostgREST table, filters by the trusted user's ID and independently checks that every returned row belongs to that user and remains withheld. It never selects or serializes the `summary` report JSON, buyer information, tokens, checkout records, or arbitrary provider data. It never accepts write requests or downloadable report paths.
+
+`supabase/gatehouse_report_metadata_rls.sql` is an **additive minimal grant** of SELECT on only the five permitted columns to `authenticated` with owner-specific RLS; anonymous Supabase sessions are excluded. It does **not** grant `SELECT summary`, INSERT, UPDATE, DELETE, delivery transitions or any other privileged access. The existing composite site/owner foreign-key constraint remains intact.
+
+No stored customer reports exist at this stage. A report is only a *withheld record* until buyer identity, provider-authoritative paid/refund state, and authenticated delivery are independently verified. This upgrade does not make the $49 diagnostic sellable. Keep the Shopify product DRAFT. Do not enable sign-in or inbox flags until customer privacy/commercial terms, provider email-code sign-in and authorization tests are approved.
+
+This is isolated to the free Gatehouse preview service; no unrelated Render, Shopify, payout, DNS, or main-branch changes. The repository unit tests and Render build run `node --test hercules/gatehouse/*.test.mjs`.
