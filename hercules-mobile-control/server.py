@@ -1,7 +1,7 @@
-"""Isolated Hercules Mobile task API. No Codex credentials are exposed to clients.
+"""Isolated Hercules Mobile API and read-only operations console.
 
-Fail closed unless HERCULES_MOBILE_TOKEN is configured. Codex execution is
-unavailable until a separately authorized server-side adapter is installed.
+Codex task submission remains fail-closed unless separate authorized server-side
+configuration is present. The operations snapshot checks only fixed public URLs.
 """
 import json
 import os
@@ -11,20 +11,25 @@ from pathlib import Path
 
 from task_gateway import TaskGateway
 from codex_bridge import configured_executor, ExecutorUnavailable
+from ops_status import get_snapshot
 
 TOKEN = os.environ.get("HERCULES_MOBILE_TOKEN", "")
 PORT = int(os.environ.get("PORT", "8765"))
 HOST = os.environ.get("HERCULES_MOBILE_BIND", "127.0.0.1")
 INDEX = Path(__file__).with_name("index.html")
 
-
 class Handler(BaseHTTPRequestHandler):
+    def _common_headers(self):
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Frame-Options", "DENY")
+
     def _json(self, status, payload):
         body = json.dumps(payload).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
-        self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Content-Type-Options", "nosniff")
+        self._common_headers()
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -32,6 +37,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path == "/health":
             return self._json(200, {"service": "hercules-mobile", "status": "online", "codex": "configured" if configured_executor() else "disconnected"})
+        if self.path == "/api/ops":
+            return self._json(200, get_snapshot())
         if self.path == "/status":
             if not self._authorized():
                 return self._json(401, {"error": "unauthorized"})
@@ -40,7 +47,8 @@ class Handler(BaseHTTPRequestHandler):
             body = INDEX.read_bytes()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'")
+            self._common_headers()
+            self.send_header("Content-Security-Policy", "default-src 'none'; connect-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             return self.wfile.write(body)
@@ -73,7 +81,6 @@ class Handler(BaseHTTPRequestHandler):
             return self._json(503, {"error": "executor_unavailable"})
         status = result.pop("status")
         return self._json(status, result)
-
 
 if __name__ == "__main__":
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
