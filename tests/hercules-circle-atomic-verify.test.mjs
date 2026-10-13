@@ -67,3 +67,17 @@ test('reject invalid digest before requesting private service API',async()=>{
  await assert.rejects(()=>store.consume({tokenDigest:'ab',now:1781373600000}),/invalid_confirmation_digest/);
  assert.equal(seen.length,0);
 });
+
+test('public verification page cannot send token or claim success before sender activation',()=>{
+ const html=readFileSync(new URL('../hercules-deploy/owned-circle/free-site/verify.html',import.meta.url),'utf8');
+ const js=readFileSync(new URL('../hercules-deploy/owned-circle/free-site/verify.mjs',import.meta.url),'utf8');
+ const build=readFileSync(new URL('../scripts/build_hercules_owned_circle_static.mjs',import.meta.url),'utf8');
+ assert.match(html,/Email confirmation is not active yet/i);
+ assert.match(html,/No email address has been verified/i);
+ assert.match(html,/connect-src 'none'/);
+ assert.match(html,/verify\.mjs/);
+ assert.match(js,/history\.replaceState/);
+ assert.doesNotMatch(js,/fetch\(|localStorage|sessionStorage|document\.cookie|sendBeacon|postMessage|service_role/i);
+ assert.ok(build.includes("'verify.html'"));
+ assert.ok(build.includes("'verify.mjs'"));
+});
