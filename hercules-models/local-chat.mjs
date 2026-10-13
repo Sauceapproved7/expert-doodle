@@ -39,7 +39,8 @@ async function getJson(fetchImpl,url,opts={}){
 }
 
 export function createLocalChatAdapter({
-  enabled=false, endpoint=DEFAULT_ENDPOINT, model="",fetchImpl=globalThis.fetch
+  enabled=false, endpoint=DEFAULT_ENDPOINT, model="", protocol="ollama",
+  fetchImpl=globalThis.fetch
 }={}){
   if(typeof enabled!=="boolean")throw new TypeError("local chat enabled must be a boolean");
   const origin=checkLoopbackEndpoint(endpoint);
@@ -49,8 +50,11 @@ export function createLocalChatAdapter({
     !/^[a-zA-Z0-9][a-zA-Z0-9_.:/-]*$/.test(modelName))){
     throw new TypeError("local chat exact model must be configured");
   }
+  if(!["ollama","llama-cpp"].includes(protocol)){
+    throw new TypeError("unsupported local chat protocol");
+  }
   const status=()=>Object.freeze({
-    enabled,backend:"loopback-only",modelConfigured:Boolean(modelName),
+    enabled,backend:"loopback-only",protocol,modelConfigured:Boolean(modelName),
     inferenceVerified:false,publicReleaseApproved:false
   });
   return Object.freeze({
@@ -62,24 +66,35 @@ export function createLocalChatAdapter({
       const count=Number(maxOutputTokens);
       if(!Number.isInteger(count)||count<1||count>128)
         throw error("local_chat_output_limit_invalid",400);
-      const inventory=await getJson(fetchImpl,origin+"/api/tags",{
+      // Preserve the previous Ollama contract. llama.cpp uses OpenAI-shaped
+      // inventory and chat response structures, but NEVER a remote URL.
+      const llama=protocol==="llama-cpp";
+      const inventory=await getJson(fetchImpl,origin+(llama?"/v1/models":"/api/tags"),{
         method:"GET",headers:{accept:"application/json"}
       });
-      if(!Array.isArray(inventory.models)||
-        !inventory.models.some(item=>item&&item.name===modelName)){
+      const advertised=llama?inventory.data:inventory.models;
+      if(!Array.isArray(advertised)||
+        !advertised.some(item=>item &&
+          (llama?item.id:item.name)===modelName)){
         throw error("local_chat_model_unavailable",503);
       }
-      const response=await getJson(fetchImpl,origin+"/api/chat",{
+      const response=await getJson(fetchImpl,origin+(llama?"/v1/chat/completions":"/api/chat"),{
         method:"POST",
         headers:{"content-type":"application/json",accept:"application/json"},
-        body:JSON.stringify({
-          model:modelName,stream:false,messages:[{role:"user",content:prompt.trim()}],
-          options:{num_predict:count}
-        })
+        body:JSON.stringify(llama
+          ?{model:modelName,stream:false,temperature:0,max_tokens:count,
+              messages:[{role:"user",content:prompt.trim()}]}
+          :{model:modelName,stream:false,messages:[{role:"user",content:prompt.trim()}],
+              options:{num_predict:count}})
       });
-      const content=response.message?.content;
-      if(response.done!==true || response.model!==modelName ||
-        response.message?.role!=="assistant" ||
+      const candidate=llama?response.choices?.[0]?.message:response.message;
+      const content=candidate?.content;
+      const complete=llama?
+        (Array.isArray(response.choices) && response.choices.length===1 &&
+          response.choices[0]?.finish_reason==="stop"):
+        response.done===true;
+      if(!complete || response.model!==modelName ||
+        candidate?.role!=="assistant" ||
         typeof content!=="string"||!content.trim()||
         content.length>MAX_OUTPUT_CHARS){
         throw error("local_chat_inference_invalid",502);
