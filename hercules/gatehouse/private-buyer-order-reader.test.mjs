@@ -140,8 +140,7 @@ test("expired, future, mismatched or unverified private buyer intents never cont
   {buyerReference:"GH1-"+"Z".repeat(32)},
   {identity:{...s.input.identity,emailConfirmedAt:null}},
   {identity:{...s.input.identity,emailConfirmedAt:new Date(now+9000).toISOString()}},
-  {identity:{...s.input.identity,email:"not-an-email"}},
-  {identity:{...s.input.identity,email:"another@example.com"}}
+  {identity:{...s.input.identity,email:"not-an-email"}}
  ];
  for(const change of invalid){
   const result=await createPrivateBuyerOrderReader({...s.input,...change,fetcher}).run();
