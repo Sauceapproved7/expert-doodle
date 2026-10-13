@@ -151,6 +151,82 @@ async function exchangeShopifyToken(clientId:string,clientSecret:string){
   return String(body.access_token);
 }
 
+// Isolated order-read verification for the existing installed Hercules app.
+const GATEHOUSE_SHOPIFY_CLIENT_ID='1ed12710f0b797a7a3328c1cf4e8b1f9';
+const GATEHOUSE_SHOPIFY_PRODUCT_ID='gid://shopify/Product/15424049283392';
+const GATEHOUSE_SHOPIFY_VARIANT_ID='gid://shopify/ProductVariant/67754351460672';
+const GATEHOUSE_SHOPIFY_ORDER_QUERY=`query GatehouseBoundedPaidOrders($first: Int!) {
+ shop { id myshopifyDomain }
+ orders(first: $first, sortKey: CREATED_AT, reverse: true) {
+  pageInfo { hasNextPage endCursor }
+  edges { node {
+   id test cancelledAt displayFinancialStatus currencyCode
+   totalPriceSet { shopMoney { amount currencyCode } }
+   totalRefundedSet { shopMoney { amount currencyCode } }
+   lineItems(first: 10) {
+    pageInfo { hasNextPage }
+    nodes {
+     sku quantity product { id } variant { id }
+     originalUnitPriceSet { shopMoney { amount currencyCode } }
+    }
+   }
+  } }
+ }
+}`;
+const gatehouseCents=(value:unknown)=>{
+ if(typeof value!=='string'||!/^(0|[1-9][0-9]{0,9})\.[0-9]{2}$/.test(value))return NaN;
+ return Number(value.replace('.',''));
+};
+function gatehouseOrderCandidate(o:any){
+ const lines=o?.lineItems?.nodes;
+ if(!o||o.test!==false||o.cancelledAt!==null||o.displayFinancialStatus!=='PAID'
+  ||o.currencyCode!=='USD'||o.totalPriceSet?.shopMoney?.currencyCode!=='USD'
+  ||gatehouseCents(o.totalPriceSet?.shopMoney?.amount)<4900
+  ||o.totalRefundedSet?.shopMoney?.currencyCode!=='USD'
+  ||gatehouseCents(o.totalRefundedSet?.shopMoney?.amount)!==0
+  ||o.lineItems?.pageInfo?.hasNextPage!==false
+  ||!Array.isArray(lines)||lines.length!==1)return false;
+ const line=lines[0];
+ return line?.product?.id===GATEHOUSE_SHOPIFY_PRODUCT_ID
+  &&line?.variant?.id===GATEHOUSE_SHOPIFY_VARIANT_ID
+  &&line?.sku==='HG-DIAGNOSTIC-49'&&line?.quantity===1
+  &&line?.originalUnitPriceSet?.shopMoney?.currencyCode==='USD'
+  &&gatehouseCents(line?.originalUnitPriceSet?.shopMoney?.amount)===4900;
+}
+async function exchangeGatehouseShopifyGrant(clientId:string,clientSecret:string){
+ const response=await fetch(`https://${SHOPIFY_API_HOST}/admin/oauth/access_token`,{
+  method:'POST',redirect:'error',
+  headers:{'content-type':'application/x-www-form-urlencoded'},
+  body:new URLSearchParams({grant_type:'client_credentials',client_id:clientId,client_secret:clientSecret}),
+  signal:AbortSignal.timeout(15000)
+ });
+ const body=await response.json().catch(()=>({}));
+ if(String(body?.error_description||body?.error||'').includes('shop_not_permitted'))
+  throw new Error('shop_not_permitted');
+ if(response.status!==200||!response.ok||typeof body.access_token!=='string'
+  ||body.access_token.length<16||body.access_token.length>4096)
+  throw new Error('shopify_authorization_unavailable');
+ if(!String(body.scope||'').split(',').map((x:string)=>x.trim()).includes('read_orders'))
+  throw new Error('shopify_read_orders_scope_required');
+ const expiresIn=Number(body.expires_in);
+ if(!Number.isSafeInteger(expiresIn)||expiresIn<60||expiresIn>86400)
+  throw new Error('shopify_token_lifetime_unavailable');
+ return {token:String(body.access_token),expiresIn};
+}
+async function checkGatehouseShopifyOrderReadback(token:string,limit=1){
+ if(!Number.isInteger(limit)||limit<1||limit>10)throw new Error('gatehouse_bounded_scan_only');
+ const data=await shopifyGraphql(token,GATEHOUSE_SHOPIFY_ORDER_QUERY,{first:limit});
+ if(data?.shop?.id!==SHOP_GID||data?.shop?.myshopifyDomain!==SHOPIFY_API_HOST)
+  throw new Error('shopify_shop_attestation_failed');
+ const page=data.orders;
+ if(!Array.isArray(page?.edges)||page.edges.length>limit
+  ||typeof page.pageInfo?.hasNextPage!=='boolean'
+  ||page.edges.some((e:any)=>!e?.node||typeof e.node!=='object'))
+  throw new Error('shopify_order_page_incomplete');
+ return {ordersScanned:page.edges.length,candidateCount:page.edges.filter((e:any)=>gatehouseOrderCandidate(e.node)).length,
+  truncated:page.pageInfo.hasNextPage};
+}
+
 async function stripeRequest(key:string,path:string,init:RequestInit={}){
   const response=await fetch('https://api.stripe.com/v1/'+path,{
     ...init,
@@ -1117,6 +1193,100 @@ Deno.serve(async req=>{
         error:'shopify_domain_status_failed',
         detail:error instanceof Error?error.message:String(error)
       },502);
+    }
+  }
+
+  if(action==='configure_gatehouse_shopify_readonly'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      const clientId=String(body.client_id||'').trim();
+      const clientSecret=String(body.client_secret||'').trim();
+      if(clientId!==GATEHOUSE_SHOPIFY_CLIENT_ID||clientSecret.length<16||clientSecret.length>4096
+       ||/[\r\n]/.test(clientSecret))
+        return j({error:'matching_hercules_app_credentials_required'},400);
+      // A real provider grant, verified shop GID, original API domain and read_orders
+      // must all succeed BEFORE storing any credential references.
+      const grant=await exchangeGatehouseShopifyGrant(clientId,clientSecret);
+      await checkGatehouseShopifyOrderReadback(grant.token,1);
+      const secretRef=await storeSecret(admin,clientSecret,
+       `hercules_gatehouse_shopify_client_${org}_${crypto.randomUUID()}`,
+       'Separate Gatehouse Shopify order-read app secret, never used for webhooks.');
+      const tokenRef=await storeSecret(admin,grant.token,
+       `hercules_gatehouse_shopify_access_${org}_${crypto.randomUUID()}`,
+       'Separate Gatehouse read-only Shopify Admin token, 24h maximum.');
+      const {error}=await admin.from('gatehouse_shopify_readonly_connections').upsert({
+       organization_id:org,client_id:clientId,shop_gid:SHOP_GID,shop_domain:SHOPIFY_API_HOST,
+       secret_ref:secretRef,access_secret_ref:tokenRef,
+       access_expires_at:new Date(Date.now()+grant.expiresIn*1000).toISOString(),
+       status:'readback-only',updated_at:new Date().toISOString()
+      },{onConflict:'organization_id'});
+      if(error)throw error;
+      return j({ok:true,mode:'shopify-order-read-only',
+       readOrdersVerified:true,shopGidVerified:true,
+       checkoutEnabled:false,webhooksChanged:false,
+       payoutsChanged:false,deliveryAuthorized:false,
+       notice:'Shopify order-read authority only; Gatehouse checkout and report delivery remain held.'});
+    }catch(error){
+      // Never include Shopify token-response bodies, client secrets, raw orders or stack traces.
+      const code=error instanceof Error?error.message:'';
+      return j({error:code==='shop_not_permitted'?'shop_not_permitted':
+       code==='shopify_read_orders_scope_required'?'read_orders_permission_required':
+       'gatehouse_shopify_readonly_connection_failed',
+       hint:code==='shop_not_permitted'
+        ?'Client-credentials requires the app and shop to be in the same Shopify Dev Dashboard organization.'
+        :'Check the installed Hercules app credentials and Shopify authorization.'},502);
+    }
+  }
+
+  if(action==='gatehouse_shopify_readonly_status'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    const {data,error}=await admin.from('gatehouse_shopify_readonly_connections')
+      .select('status,shop_gid,shop_domain,access_expires_at').eq('organization_id',org)
+      .maybeSingle();
+    if(error)return j({error:'gatehouse_readonly_status_unavailable'},503);
+    if(!data)return j({connected:false,readOnly:true,checkoutEnabled:false,deliveryAuthorized:false});
+    return j({connected:data.status==='readback-only'&&data.shop_gid===SHOP_GID
+      &&data.shop_domain===SHOPIFY_API_HOST,
+     readOnly:true,tokenCurrent:Date.parse(data.access_expires_at)>Date.now()+60000,
+     checkoutEnabled:false,deliveryAuthorized:false});
+  }
+
+  if(action==='gatehouse_shopify_readonly_observe'){
+    if(String(identity.membership.role)!=='owner')return j({error:'owner_required'},403);
+    try{
+      const {data,error}=await admin.from('gatehouse_shopify_readonly_connections')
+       .select('client_id,shop_gid,shop_domain,status,secret_ref,access_secret_ref,access_expires_at')
+       .eq('organization_id',org).maybeSingle();
+      if(error||!data||data.client_id!==GATEHOUSE_SHOPIFY_CLIENT_ID
+       ||data.shop_gid!==SHOP_GID||data.shop_domain!==SHOPIFY_API_HOST
+       ||data.status!=='readback-only')return j({error:'read_only_connection_not_authorized'},503);
+      let token:string;
+      if(Date.parse(data.access_expires_at)<=Date.now()+60000){
+       const secret=await getSecret(admin,String(data.secret_ref));
+       const grant=await exchangeGatehouseShopifyGrant(data.client_id,secret);
+       token=grant.token;
+       // All refresh operations remain internal to the dedicated read-only credential table.
+       const newRef=await storeSecret(admin,token,
+        `hercules_gatehouse_shopify_access_${org}_${crypto.randomUUID()}`,
+        'Renewed Gatehouse read-only Shopify Admin token.');
+       const {error:updateError}=await admin.from('gatehouse_shopify_readonly_connections')
+        .update({access_secret_ref:newRef,
+         access_expires_at:new Date(Date.now()+grant.expiresIn*1000).toISOString(),
+         updated_at:new Date().toISOString()}).eq('organization_id',org);
+       if(updateError)throw updateError;
+      }else{
+       token=await getSecret(admin,String(data.access_secret_ref));
+      }
+      const evidence=await checkGatehouseShopifyOrderReadback(token,10);
+      return j({ok:true,source:'shopify-native-admin-read-only',shopAuthenticated:true,
+       ordersScanned:evidence.ordersScanned,candidateCount:evidence.candidateCount,
+       hasMoreOrders:evidence.truncated,
+       buyerIdentityVerified:false,providerPayoutVerified:false,
+       purchaseEnabled:false,deliveryAuthorized:false,customerEntitlementGranted:false,
+       notice:'Bounded Shopify paid-order candidates only. Not a buyer claim or permission to deliver.'});
+    }catch{
+      return j({error:'gatehouse_shopify_order_readback_failed',
+       purchaseEnabled:false,deliveryAuthorized:false},503);
     }
   }
 
