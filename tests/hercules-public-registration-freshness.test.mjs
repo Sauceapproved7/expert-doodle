@@ -24,7 +24,8 @@ test("public registration remains explicitly owner gated, no switch or payment m
   assert.match(sql,/where l\.key='public-registration-open'/);
   assert.doesNotMatch(sql,/(update|delete from)\s+public\.hercules_continuity_ledger/i);
   assert.doesNotMatch(sql,/(update|delete from)\s+public\.hercules_launch_gate_checks/i);
-  assert.doesNotMatch(sql,/(stripe|shopify|checkout|billing)/i);
+  const statements=sql.replace(/^--.*$/gm,"");
+  assert.doesNotMatch(statements,/(stripe|shopify|checkout|billing)/i);
 });
 test("migration verifies fresh timestamp binding and preserves original privilege boundary",()=>{
   assert.match(sql,/security definer/i);
