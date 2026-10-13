@@ -69,3 +69,18 @@ test("Gatehouse commercial hero uses original SauceApproved boy-in-cup art witho
   assert.match(css,/object-fit:\s*contain/);
  });
 });
+
+test("commercial preview explains verified site control without enabling public scans or collecting private data",async()=>{
+ await withServer({accessToken:"",probeUrls:[]},async base=>{
+  const response=await fetch(base+"/commercial");
+  assert.equal(response.status,200);
+  const html=await response.text();
+  assert.match(html,/HOW DOMAIN VERIFICATION WILL WORK/);
+  assert.match(html,/\.well-known\/sauceapproved-gatehouse/);
+  assert.match(html,/No domain scanning or customer onboarding is active/);
+  assert.doesNotMatch(html,/<form[^>]*action=/);
+  assert.equal((await fetch(base+"/api/commercial/verify-domain",{method:"POST"})).status,404);
+  assert.equal((await fetch(base+"/api/commercial/domain-challenge",{method:"POST"})).status,404);
+  assert.equal((await fetch(base+"/api/commercial/checkout",{method:"POST"})).status,404);
+ });
+});
