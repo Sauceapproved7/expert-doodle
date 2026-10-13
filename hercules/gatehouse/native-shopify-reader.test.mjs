@@ -74,6 +74,37 @@ test("Shopify errors, rejection, malformation, bad HTTP and exceptions fail clos
   assert.doesNotMatch(JSON.stringify(r),/secret token hidden|temporary-test-token|provider leaked/);
  }
 });
+test("duplicate Shopify order IDs fail the entire bounded observation closed",async()=>{
+ const dup=order();
+ const result=await createNativeShopifyReader({enabled:true,ownerAuthenticated:true,accessToken:token,
+  fetcher:async()=>fake(payload([dup,{...dup}]))}).run();
+ assert.equal(result.status,503);
+ assert.equal(result.body.error,"shopify-order-page-incomplete");
+ assert.equal(result.body.shopAuthenticated,false);
+ assert.equal(result.body.deliveryAuthorized,false);
+ assert.equal(result.body.customerEntitlementGranted,false);
+ assert.equal(result.body.candidateCount,undefined);
+});
+test("malformed or missing Shopify order GIDs never produce a success observation",async()=>{
+ for(const invalid of [null,"", "gid://shopify/Order/0","gid://shopify/Order/abc","gid://shopify/Product/123"]){
+  const bad={...order(),id:invalid};
+  const result=await createNativeShopifyReader({enabled:true,ownerAuthenticated:true,accessToken:token,
+   fetcher:async()=>fake(payload([bad]))}).run();
+  assert.equal(result.status,503,String(invalid));
+  assert.equal(result.body.shopAuthenticated,false);
+  assert.equal(result.body.deliveryAuthorized,false);
+ }
+});
+test("distinct canonical Shopify order IDs preserve bounded candidate counts without delivery authority",async()=>{
+ const second={...order(),id:"gid://shopify/Order/124"};
+ const result=await createNativeShopifyReader({enabled:true,ownerAuthenticated:true,accessToken:token,
+  fetcher:async()=>fake(payload([order(),second]))}).run();
+ assert.equal(result.status,200);
+ assert.equal(result.body.ordersScanned,2);
+ assert.equal(result.body.candidateCount,2);
+ assert.equal(result.body.deliveryAuthorized,false);
+ assert.equal(result.body.customerEntitlementGranted,false);
+});
 test("bad refunded, canceled, test, wrong variant, nonpaid orders are excluded",async()=>{
  const bad=[
  {...order(),test:true},{...order(),cancelledAt:"2026-10-13T15:00:00Z"},
