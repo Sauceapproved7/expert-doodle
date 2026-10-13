@@ -8,6 +8,10 @@ Function: assessReleasePassport({intent,ci,provider,runtime}).
 
 Cross-checks full 40-character Git commit, artifact SHA-256, live provider record, owner-authenticated runtime-reported commit and last-known-good rollback commit. Requires one success each from tests, security and provenance CI checks. Missing or inconsistent evidence yields HOLD.
 
+For every submitted CI check, the Passport now requires a unique, bounded name, exactly the expected two fields, and status success. Any additional failed, skipped, pending, cancelled, duplicated, missing, oversized or malformed check causes HOLD; required green checks cannot hide a separate red check.
+
+The Passport verifier also checks its exact output schema and fail-closed semantics **before** checking its checksum. A recalculated digest cannot turn releaseApproved, executionAuthority, ownerAuthorizationVerified or similar reserved flags on while returning a valid Passport. This is structural/semantic validation, not third-party signer authentication.
+
 A positive result is EVIDENCE_CONSISTENT_UNATTESTED, **not** RELEASE_APPROVED. The integrity checksum detects changes to the normalized record but **is not a signature**: anyone who can rewrite it can recalculate the SHA-256. The tool never authenticates a source's identity or grants production permissions.
 
 ## 2. Agent Authority Firewall
