@@ -1,0 +1,29 @@
+name: Hercules Native Model Lab Live Evidence
+on:
+  pull_request:
+    paths:
+      - 'scripts/probe_hercules_native_model_lab.py'
+      - 'tests/test_probe_hercules_native_model_lab.py'
+      - '.github/workflows/hercules-native-model-lab-smoke.yml'
+      - 'docs/HERCULES-NATIVE-MODEL-LAB-V1.md'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 -m unittest discover -s tests -p 'test_probe_hercules_native_model_lab.py' -v
+      - run: |
+          node scripts/verify-hercules-execution-contract.mjs
+          node scripts/verify-owner-code-only.mjs
+          node scripts/security-baseline.mjs
+  public-readonly-boundary:
+    needs: offline-contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: python3 scripts/probe_hercules_native_model_lab.py
