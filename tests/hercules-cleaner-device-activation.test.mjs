@@ -37,7 +37,13 @@ test("activation request sends only bounded product/device identity fields",()=>
   ]);
   assert.equal(request.productCode,"hercules-cleaner");
   assert.equal(request.activationCode,"HC-ABCD-1234");
-  assert.doesNotMatch(JSON.stringify(request),/file|path|capsule|hostname|serial|mac|username/i);
+  // Inspect metadata FIELD NAMES, not randomized Ed25519 public key bytes.
+  // A valid PEM may naturally contain the base64 substring "MaC".
+  assert.deepEqual(
+    Object.keys(request).filter(key=>/file|path|capsule|hostname|serial|mac|username/i.test(key)),
+    []
+  );
+  assert.equal(Object.hasOwn(request,"privateKeyPem"),false);
 });
 
 test("device credential storage is local and round-trips without writing private key to server payload",async()=>{
