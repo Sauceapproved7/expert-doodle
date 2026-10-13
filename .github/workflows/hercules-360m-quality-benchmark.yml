@@ -6,7 +6,7 @@ on:
       - "scripts/hercules-360m-quality-benchmark.mjs"
       - "tests/hercules-360m-quality-benchmark.test.mjs"
       - "docs/HERCULES-360M-QUALITY-BENCHMARK-V1.md"
-    workflow_dispatch:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
