@@ -11,3 +11,7 @@ Prior to any release: verify a separate staging runtime on resource-feasible, au
 Provenance: First-party Hercules source backport, existing ownership/law/security boundaries preserved; documentation and tests original, AI assisted; no external code or model weights introduced.
 
 Candidate governance: only an isolated test deployment may be considered until real inference, exact provider SHA, and release gate approval are independently evidenced.
+
+## Candidate source provenance
+
+The four application blobs were copied without modification from reviewed main commit `ad60d2c255b870ac8d2d0d2bd37fb1b87e94912b`, onto the base of the live Render SHA `2a5425bac77460be9ef37c2cad74d43ef6fa7763`. GitHub CI checks the complete changed-path set; a passing source test is not provider health or live release evidence.
