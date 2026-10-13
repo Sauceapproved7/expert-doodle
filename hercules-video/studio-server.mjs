@@ -1,5 +1,5 @@
 import {createServer} from "node:http";
-import {studioActivation} from "./studio-activation.mjs";
+import {studioActivation,titanWorkspace} from "./studio-activation.mjs";
 import {createStudioVideoBridge} from "./studio-video-bridge.mjs";
 import {pathToFileURL} from "node:url";
 import {readFile} from "node:fs/promises";
@@ -433,6 +433,9 @@ export function createStudioHttpHandler({
 
     if (normalizedPath==="/activate") {
       return studioActivation(request,{fetchUpstream:activationFetch});
+    }
+    if (normalizedPath==="/titan") {
+      return titanWorkspace(request,{fetchUpstream:activationFetch});
     }
 
     if (normalizedMethod==="GET" && normalizedPath==="/api/studio/video/status") {

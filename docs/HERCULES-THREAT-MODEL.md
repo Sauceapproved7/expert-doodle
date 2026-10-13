@@ -4,6 +4,12 @@
 
 The public Studio `/activate` route renders HTML only from the fixed Hercules project and Studio access selector. Browser POST requires the exact owned Studio Origin and JSON; only bounded email-link requests or bearer-authenticated Studio claims reach the fixed backend. Arbitrary targets, redirects, unsupported actions, oversized bodies/responses, and unexpected markup fail closed. Upstream cookies and headers are discarded. No service-role credentials are available to this relay. Responses are no-store, framing is denied, and CSP limits script and connection sources. Supabase validates sessions and the existing service-role-only claim RPC enforces buyer identity and product isolation. Auth callback allowlist configuration and actual email delivery require separate production verification. No commerce gate is inferred from rendering success.
 
+## Titan hosted delivery continuity
+
+The existing `/activate` callback now accepts only the additional bearer-authenticated `titan_purchase_claim` action, routed to the fixed Titan selector. The browser falls back to this claim only on an authoritative Studio email-entitlement mismatch, never on authentication or service failures. Existing product-isolated RPCs remain authoritative. Titan OTP reuses the owner's already-saved exact callback without query parameters.
+
+The public `/titan` route renders only the canonical Hercules main workspace HTML from the fixed project. It conveys no paid authority; Supabase Auth, tenant RLS and backend authorization continue to protect data and execution. Main-page JSON POST is bounded to 16 KiB and six existing actions (marketing event, privacy request, pilot request, password safety, secure signup, organization bootstrap). These remain subject to their existing server gates. Exact same-origin JSON is required; only a syntactically bounded caller bearer is forwarded, no cookies or provider credentials. Redirects and unexpected/oversized responses are refused; credentials and request bodies are cleared after use. No service-role credential is present in the Render relay. No-store, original workspace CSP and frame denial are preserved. Cross-origin API calls remain the existing Supabase authenticated routes; no universal proxy is introduced.
+
 Status: security hardening baseline
 Date: 2026-09-24
 

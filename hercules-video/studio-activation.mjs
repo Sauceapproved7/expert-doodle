@@ -16,6 +16,7 @@ async function boundedText(response){
 export async function studioActivation(request,{fetchUpstream=fetch}={}){
  const method=String(request.method||'GET').toUpperCase();
  if(!['GET','POST'].includes(method))return error(405,'method_not_allowed');
+ let backend=BACKEND;
  const options={method,redirect:'error',signal:AbortSignal.timeout(15000),headers:{}};
  if(method==='POST'){
   if(request.headers?.origin!==ORIGIN)return error(403,'same_origin_required');
@@ -25,7 +26,8 @@ export async function studioActivation(request,{fetchUpstream=fetch}={}){
   if(input?.action==='studio_access_request'){
    if(typeof input.email!=='string'||input.email.length>254)return error(400,'invalid_email');
    options.body=JSON.stringify({action:input.action,email:input.email});
-  }else if(input?.action==='studio_purchase_claim'){
+  }else if(['studio_purchase_claim','titan_purchase_claim'].includes(input?.action)){
+   if(input.action==='titan_purchase_claim')backend=BACKEND.replace('?studio_access=1','?titan_access=1');
    const bearer=request.headers?.authorization;
    if(typeof bearer!=='string'||!/^Bearer [A-Za-z0-9._-]{1,4096}$/.test(bearer))return error(401,'authenticated_user_required');
    options.headers.authorization=bearer;options.body=JSON.stringify({action:input.action});
@@ -33,7 +35,7 @@ export async function studioActivation(request,{fetchUpstream=fetch}={}){
   options.headers['content-type']='application/json';
  }
  try{
-  const response=await fetchUpstream(BACKEND,options);
+  const response=await fetchUpstream(backend,options);
   if(response.status>=300&&response.status<400)return error(502,'activation_upstream_unavailable');
   const body=await boundedText(response);
   if(method==='GET'){
@@ -45,5 +47,34 @@ export async function studioActivation(request,{fetchUpstream=fetch}={}){
   if(![200,400,401,403,409].includes(response.status)||!result||typeof result!=='object'||Array.isArray(result))return error(502,'activation_upstream_unavailable');
   return {status:response.status,headers:{...BASE_HEADERS,'content-type':'application/json; charset=utf-8'},body};
  }catch{return error(502,'activation_upstream_unavailable');}
+ finally{delete options.body;delete options.headers.authorization;}
+}
+
+// Render the existing workspace; all session/tenant authority stays in Hercules.
+export async function titanWorkspace(request,{fetchUpstream=fetch}={}){
+ const method=String(request.method||'GET').toUpperCase();
+ if(!['GET','POST'].includes(method))return error(405,'method_not_allowed');
+ const options={method,redirect:'error',signal:AbortSignal.timeout(15000),headers:{}};
+ if(method==='POST'){
+  if(request.headers?.origin!==ORIGIN)return error(403,'same_origin_required');
+  if(!String(request.headers?.['content-type']||'').toLowerCase().startsWith('application/json'))return error(400,'json_required');
+  if(typeof request.body!=='string'||Buffer.byteLength(request.body)>16384)return error(413,'request_too_large');
+  let input;try{input=JSON.parse(request.body);}catch{return error(400,'invalid_json');}
+  if(!['marketing_event','privacy_request','pilot_request','password_breach_check','secure_signup','bootstrap_organization'].includes(input?.action))return error(400,'unsupported_workspace_action');
+  const bearer=request.headers?.authorization;
+  if(bearer!==undefined){if(typeof bearer!=='string'||!/^Bearer [A-Za-z0-9._-]{1,4096}$/.test(bearer))return error(401,'authenticated_user_required');options.headers.authorization=bearer;}
+  options.headers['content-type']='application/json';options.body=JSON.stringify(input);
+ }
+ try{
+  const response=await fetchUpstream(BACKEND.split('?')[0],options);
+  const body=await boundedText(response);
+  if(method==='GET'){
+   if(response.status!==200||!body.startsWith('<!doctype html>')||!body.includes('<title>Hercules Revenue Recovery by SauceApproved</title>'))return error(502,'workspace_page_unavailable');
+   return {status:200,headers:{...HTML_HEADERS,'content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self' 'unsafe-inline'; connect-src 'self' https://xbwuablxhhwsaoomsoco.supabase.co wss://xbwuablxhhwsaoomsoco.supabase.co https://esm.sh; img-src 'self' data:; font-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"},body};
+  }
+  let result;try{result=JSON.parse(body);}catch{return error(502,'workspace_upstream_unavailable');}
+  if(![200,400,401,403,409,422,429,503].includes(response.status)||!result||typeof result!=='object'||Array.isArray(result))return error(502,'workspace_upstream_unavailable');
+  return {status:response.status,headers:{...BASE_HEADERS,'content-type':'application/json; charset=utf-8'},body};
+ }catch{return error(502,'workspace_upstream_unavailable');}
  finally{delete options.body;delete options.headers.authorization;}
 }
