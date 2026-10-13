@@ -131,7 +131,8 @@ test('same signed permit cannot be executed twice through a durable replay store
  const params={permit,signingKey:key,now:time,runCommand:runner.runCommand,consumeNonce};
  await executeSandboxHostPlan(plan,params);
  await assert.rejects(()=>executeSandboxHostPlan(plan,params),/permit_replayed/);
- assert.equal(runner.calls.length,4);
+ assert.equal(runner.calls.length,5);
+ assert.equal(runner.calls.at(-1).args[0],'info');
 });
 test('failed verification attempts bounded cleanup and does not claim success',async()=>{
  const plan=create(),permit=signer(plan),calls=[];
