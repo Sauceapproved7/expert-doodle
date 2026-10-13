@@ -7,6 +7,8 @@ on:
       - "hercules-models/qwen15-owner-host.mjs"
       - "tests/hercules-qwen15-startup-identity.test.mjs"
       - "scripts/hercules-qwen15-owner-host.mjs"
+      - "scripts/hercules-qwen15-native-systemd-probe.sh"
+      - "tests/hercules-qwen15-systemd-unit.test.mjs"
       - "tests/hercules-qwen15-cgroup-budget.test.mjs"
       - "tests/hercules-arm64-qwen15-comparison.test.mjs"
       - "scripts/hercules-arm64-system-quality-matrix.mjs"
@@ -23,7 +25,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Check fail-closed evaluator and owner/security rules
         run: |
-          node --test tests/hercules-arm64-qwen15-comparison.test.mjs tests/hercules-arm64-system-quality-matrix.test.mjs tests/hercules-qwen15-private-live-smoke.test.mjs tests/hercules-qwen15-cgroup-budget.test.mjs tests/hercules-qwen15-startup-identity.test.mjs
+          node --test tests/hercules-arm64-qwen15-comparison.test.mjs tests/hercules-arm64-system-quality-matrix.test.mjs tests/hercules-qwen15-private-live-smoke.test.mjs tests/hercules-qwen15-cgroup-budget.test.mjs tests/hercules-qwen15-startup-identity.test.mjs tests/hercules-qwen15-systemd-unit.test.mjs
           node scripts/verify-hercules-execution-contract.mjs
           node scripts/verify-owner-code-only.mjs
           node scripts/security-baseline.mjs
@@ -222,5 +224,12 @@ jobs:
             echo 'Owner credential unexpectedly appeared in child-crash log'; exit 1
           fi
           echo 'private_child_crash_failclosed_verified: owner wrapper failed and both listeners closed.'
+      - name: Prove owner-private Qwen itself restarts under native systemd
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/hercules-qwen15-native-systemd-probe.sh
+          bash scripts/hercules-qwen15-native-systemd-probe.sh
+
 
 
