@@ -93,8 +93,8 @@ test("workflow enforces Docker CPU quota, 512MiB memory, no network and time lim
   assert.match(yaml,/permissions:\s*\n\s*contents: read/);
   assert.match(yaml,/POST \/v1\/chat\/completions/);
   assert.match(yaml,/HERCULES_MODEL_REPLY_BASE64/);
-  assert.doesNotMatch(yaml,/awk\s+'\\$1/,"container shell may not break outer single quote or expand positional dollar vars");
-  assert.match(yaml,/grep\s+\"\^VmHWM:/,"read model RSS without unescaped shell positional variables");
+  assert.ok(!yaml.includes("awk '$1"),"container shell must not expand positional variables");
+  assert.ok(yaml.includes('grep "^VmHWM:"'),"read model RSS without quoting hazard");
   assert.doesNotMatch(yaml,/llama-cli|HERCULES_GENERATED_BASE64/);
   assert.doesNotMatch(yaml,/OPENAI_API_KEY|HF_TOKEN|RENDER_API_KEY|railway\.app\/graphql|supabase\.co\/functions/);
 });
