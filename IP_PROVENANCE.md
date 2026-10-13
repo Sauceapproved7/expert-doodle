@@ -1,3 +1,10 @@
+## Hercules bounded grounded-arithmetic tool — DA-45, 2026-10-13
+
+- Owned first-party, AI-assisted source: `hercules-models/grounded-arithmetic.mjs`, authenticated isolated route in `hercules-models/service.mjs`, `tests/hercules-models-grounded-arithmetic.test.mjs`, `docs/HERCULES-GROUNDED-ARITHMETIC-V1.md`.
+- Node.js standard-library-only deterministic integer arithmetic and numeric comparisons. No third-party libraries, network calls, model weights, provider API keys or copied proprietary algorithms.
+- Explicit separation of calculations from genuine model inference, source provenance, payment authority and production release approvals. `/v1/chat` remains disabled without the real independently qualified model.
+- Security: existing Bearer control authorization enforced before `POST /v1/tools/arithmetic`, strict question grammar, upper bound, refusal for unsupported and ambiguous requests. No payments, registrations, Render/Railway deployments or live runtime changes.
+
 ## Math prompt sensitivity CPU lab — DA-45, 2026-10-13
 
 - Original AI-assisted first-party Hercules code: `scripts/hercules-math-prompt-diagnostic.mjs`, an inlined, reviewed shell harness inside the governed workflow, `tests/hercules-math-prompt-diagnostic.test.mjs`, `.github/workflows/hercules-math-prompt-diagnostic.yml`, `docs/HERCULES-MATH-PROMPT-DIAGNOSTIC-V1.md`.
