@@ -97,4 +97,4 @@ jobs:
           [[ "$restart_count" =~ ^[0-9]+$ ]]
           test "$restart_count" -ge 2
           test "$restart_count" -le 3
-          echo "systemd_recovery_burst_verified: bounded on-failure restarts and start-limit-hit on ephemeral runner."
+          echo "systemd_recovery_burst_verified: native start rate-limit enforced after $restart_count restart requests (Result=$result)."
