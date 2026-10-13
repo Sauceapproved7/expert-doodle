@@ -1,5 +1,6 @@
 """Fail-closed static iPhone preview build tests; no external network or secrets."""
 import importlib.util
+from html import unescape
 import json
 from pathlib import Path
 import re
@@ -75,7 +76,7 @@ class HerculesIphonePreviewTests(unittest.TestCase):
     def test_only_generates_files_in_requested_output_directory(self):
         self.assertEqual(set(p.name for p in self.path.parent.iterdir()), {"preview"})
         html = (self.path / "index.html").read_text()
-        self.assertIn("connect-src 'none'", html)
+        self.assertIn("connect-src 'none'", unescape(html))
         self.assertNotIn('value="Bearer', html)
 
 
