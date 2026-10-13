@@ -145,7 +145,7 @@ export function assessQwen15OwnerHost(evidence){
     ...(!modelFile?["model_file_not_regular"]:[]),
     ...(!size?["model_file_size_invalid"]:[]),
     ...(!sha?["pinned_model_digest_not_verified"]:[]),
-    ...(!binary?["local_engine_not_executable"]:[]
+    ...(!binary?["local_engine_not_executable"]:[])
   ];
   return Object.freeze({
     schema:"hercules.qwen15.owner-host-preflight.v1",
