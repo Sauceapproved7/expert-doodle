@@ -1,0 +1,19 @@
+name: Hercules Mobile Control checks
+on:
+  pull_request:
+    paths:
+      - 'hercules-mobile-control/**'
+      - 'tests/test_hercules_mobile_*.py'
+      - '.github/workflows/hercules-mobile-control.yml'
+  workflow_dispatch:
+jobs:
+  mobile-control:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Run mobile control regression tests
+        run: |
+          python3 --version
+          python3 -m unittest discover -s tests -p 'test_hercules_mobile_*.py' -v
