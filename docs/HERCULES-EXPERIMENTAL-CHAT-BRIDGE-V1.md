@@ -28,3 +28,5 @@ Set `HERCULES_EXP_CHAT_TOKEN` to an authorized secret if the service must be cal
 2. **Fail-closed quality boundary**: no generated text yields no fake assistant response, and health always reports `chat_quality_verified:false`, `public_release_approved:false`.
 
 Original Hercules-owned source with AI assistance; no third-party model checkpoint is introduced. See launch blocker #909.
+
+Model quality must be measured using actual decoded outputs in a controlled staging run; a passing protocol smoke test alone is not evidence of useful language understanding.
