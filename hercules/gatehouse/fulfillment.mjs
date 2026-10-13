@@ -23,8 +23,9 @@ export function checkOrderReadback(order={}){
   order.shopDomain===SHOP_DOMAIN&&
   typeof order.orderId==="string"&&/^gid:\/\/shopify\/Order\/[1-9][0-9]{0,19}$/.test(order.orderId)&&
   order.currencyCode==="USD"&&order.totalPrice==="49.00"&&
-  order.financialStatus==="PAID"&&order.cancelledAt===null&&
+  order.financialStatus==="PAID"&&order.test===false&&order.cancelledAt===null&&
   order.refundTotal==="0.00"&&
+  order.lineItemsPageHasNextPage===false&&
   Array.isArray(order.lineItems)&&order.lineItems.length===1&&
   order.lineItems[0]?.productId===PRODUCT_ID&&
   order.lineItems[0]?.variantId===VARIANT_ID&&
