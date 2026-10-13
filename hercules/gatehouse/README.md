@@ -41,3 +41,14 @@ node --test hercules/gatehouse/gatehouse.test.mjs hercules/gatehouse/server.test
 node scripts/verify-owner-code-only.mjs
 node scripts/security-baseline.mjs
 ```
+
+## 1.2 Public evidence capsule
+
+Gatehouse retains at most **120 requested public connectivity observations in RAM**, with a 60-second read-cache. These are **not** continuous monitoring data and **not** measured uptime. They exist only after public status has been requested; the service does not perform background polling. The history resets when the Render process restarts.
+
+- `GET /api/public-history`: bounded public history, service labels, timestamps and reachable/unreachable statuses only; excludes URLs, credentials, payment data, private ledger, headers and provider response bodies.
+- `GET /api/public-evidence`: an attachment containing a fresh SHA-256-linked record chain of public observations plus an explicit warning that it is not signed or independently attested. A local saved export survives a server restart; the service itself remains ephemeral.
+- `POST` to either public route is rejected; owner-only routes are not opened by these new endpoints.
+- No paid data store, secret, checkout mutation or new network permission is needed.
+
+The public history viewer reports **only the last sampled change**. It does not estimate uptime percentages, claim a failure is caused by the service itself, or report verified revenue.
