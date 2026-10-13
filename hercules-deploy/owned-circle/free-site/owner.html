@@ -1,0 +1,29 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080c15"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' https://xbwuablxhhwsaoomsoco.supabase.co; img-src 'self'; script-src 'self'; style-src 'self'; form-action 'self'; object-src 'none'; base-uri 'none'">
+<meta name="robots" content="noindex,nofollow"><title>Hercules Circle / Owner Vault</title>
+<link rel="stylesheet" href="/app.css"><link rel="stylesheet" href="/circle-access.css">
+<script type="module" src="/owner.mjs"></script></head>
+<body><div class="grid-glow" aria-hidden="true"></div><div class="frame">
+<header class="top"><a class="brand" href="/"><span class="sigil">H<span>C</span></span><span class="brand-text"><strong>HERCULES</strong><small>OWNER VAULT / READ ONLY</small></span></a><span class="protocol">IDENTITY REQUIRED</span></header>
+<main class="owner-wrap"><div class="eyebrow"><span></span> THE OWNER VAULT / INTELLIGENCE</div>
+<h1>KNOW THE<br><em>CIRCLE.</em></h1>
+<p class="subline">Private founding-interest records are only available through your existing, active Hercules owner membership. No new owner account can be created here.</p>
+<section id="auth-zone" class="access-panel">
+ <span class="access-kicker">OWNER AUTHORIZATION / HELD</span><h2>Access your vault.</h2>
+ <p><strong>Existing owner identity only.</strong> Sign in with your already authorized Hercules Supabase owner account. This page does not create accounts or change launch access.</p>
+ <form id="owner-login" autocomplete="on">
+  <label for="owner-email">ACCOUNT EMAIL</label><input id="owner-email" name="email" type="email" autocomplete="username" required>
+  <label for="owner-password">ACCOUNT PASSWORD</label><input id="owner-password" name="password" type="password" autocomplete="current-password" required>
+  <button class="action primary" type="submit">UNLOCK READ-ONLY VAULT →</button>
+ </form>
+ <p role="status" class="message" id="login-message" aria-live="polite"></p>
+</section>
+<section id="owner-console" class="owner-console" hidden>
+ <div class="owner-toolbar"><span class="owner-authorized">EXISTING OWNER VERIFIED</span><button id="owner-logout" class="action secondary" type="button">LOCK VAULT</button></div>
+ <div class="owner-metrics"><div><span>UNVERIFIED FOUNDING INTEREST</span><strong id="founder-count">—</strong></div><div><span>UNVERIFIED EARLY TESTER REQUESTS</span><strong id="early-count">—</strong></div><div><span>VERIFIED EMAIL SUBSCRIBERS</span><strong>0</strong><small>Confirmation not active</small></div></div>
+ <div class="records"><article><h2>Founding Interest</h2><p>Private email, interest category, consent time and current status.</p><div id="founder-rows" class="record-rows"></div></article><article><h2>Early Tester Interest</h2><p>Unverified requests only—no invitation, enrollment, or hosting access.</p><div id="early-rows" class="record-rows"></div></article></div>
+ <p class="vault-footnote">Read-only and session-only. The owner access token remains in memory, never browser storage. No public account registration, outreach, or payment is enabled.</p>
+ <p id="records-message" role="status" aria-live="polite" class="message"></p>
+</section>
+<footer><span>HERCULES / NO PUBLIC CUSTOMER RECORDS</span><strong>SEEK KNOWLEDGE. BUILD POWER. PROVE EVERYTHING.</strong></footer>
+</main></div></body></html>

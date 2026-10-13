@@ -1,0 +1,46 @@
+name: Hercules Circle Owner Insights and Early Interest
+
+on:
+  pull_request:
+    paths:
+      - "hercules-deploy/owned-circle/free-site/**"
+      - "tests/hercules-circle-owner-beta.test.mjs"
+      - "supabase/migrations/*hercules_circle_owner_beta_interest*"
+      - "scripts/build_hercules_owned_circle_static.mjs"
+      - ".github/workflows/hercules-circle-owner-beta.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-deploy/owned-circle/free-site/**"
+      - "tests/hercules-circle-owner-beta.test.mjs"
+      - "supabase/migrations/*hercules_circle_owner_beta_interest*"
+      - "scripts/build_hercules_owned_circle_static.mjs"
+      - ".github/workflows/hercules-circle-owner-beta.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  circle-boundaries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Verify owner ACL, unverified requests and original static signup
+        run: |
+          node --test tests/hercules-circle-owner-beta.test.mjs tests/hercules-owned-circle-free-site.test.mjs tests/hercules-owned-circle-release.test.mjs
+          node --check hercules-deploy/owned-circle/free-site/owner.mjs
+          node --check hercules-deploy/owned-circle/free-site/early.mjs
+      - name: Package distinct zero-secret static app
+        run: |
+          node scripts/build_hercules_owned_circle_static.mjs
+          test -s dist/hercules-owned-circle/owner.html
+          test -s dist/hercules-owned-circle/owner.mjs
+          test -s dist/hercules-owned-circle/early.html
+          test -s dist/hercules-owned-circle/early.mjs
+          test -s dist/hercules-owned-circle/circle-access.css
+      - name: Preserve owner-code controls
+        run: node scripts/verify-owner-code-only.mjs

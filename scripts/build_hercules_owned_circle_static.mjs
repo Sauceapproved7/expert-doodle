@@ -4,7 +4,7 @@ import {dirname,resolve,join} from 'node:path';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const src=join(root,'hercules-deploy/owned-circle/free-site');
 const out=join(root,'dist/hercules-owned-circle');
-const files=['index.html','app.css','app.mjs'];
+const files=['index.html','app.css','app.mjs','owner.html','owner.mjs','early.html','early.mjs','circle-access.css'];
 await rm(out,{force:true,recursive:true});
 await mkdir(out,{recursive:true});
 for(const file of files)await cp(join(src,file),join(out,file));
