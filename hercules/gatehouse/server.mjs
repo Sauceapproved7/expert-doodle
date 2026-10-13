@@ -6,6 +6,7 @@ import {fileURLToPath} from "node:url";
 import {dirname,join} from "node:path";
 import {CATALOG,buildDemoReport} from "./commerce.mjs";
 import {customerAccessBridge} from "./customer-bridge.mjs";
+import {portalReadiness} from "./customer-portal-model.mjs";
 import {assessFulfillment,makeSampleReport,renderPrintableSample} from "./fulfillment.mjs";
 import {assessLaunch,sentinelAlerts,revenueRadar,recoveryPlan,simulateCheckout,
  newEvidenceLedger,appendEvidence,verifyEvidenceLedger,timeMachine,validateTarget} from "./core.mjs";
@@ -13,6 +14,9 @@ import {assessLaunch,sentinelAlerts,revenueRadar,recoveryPlan,simulateCheckout,
 const directory=dirname(fileURLToPath(import.meta.url));
 const files={"/":{name:"index.html",type:"text/html; charset=utf-8"},
  "/commercial":{name:"commercial.html",type:"text/html; charset=utf-8"},
+ "/portal":{name:"portal.html",type:"text/html; charset=utf-8"},
+ "/portal.mjs":{name:"portal.mjs",type:"text/javascript; charset=utf-8"},
+ "/portal.css":{name:"portal.css",type:"text/css; charset=utf-8"},
  "/app.mjs":{name:"app.mjs",type:"text/javascript; charset=utf-8"},
  "/local-archive.mjs":{name:"local-archive.mjs",type:"text/javascript; charset=utf-8"},
  "/device-vault.mjs":{name:"device-vault.mjs",type:"text/javascript; charset=utf-8"},
@@ -123,6 +127,10 @@ export function createServer(config={}){
   if(method==="GET"&&path==="/health")
    return send(res,200,{service:"hercules-gatehouse",status:"running",mode:"isolated-read-only",
     credentialsConfigured:Boolean(token),productionAuthorized:false});
+  if(path==="/api/customer/portal-readiness"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   return send(res,200,portalReadiness());
+  }
   if(path==="/api/customer/sites"){
    if(method!=="GET"&&method!=="POST")return send(res,405,{error:"Method not allowed"});
    if(method==="POST"){
