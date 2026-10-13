@@ -108,7 +108,8 @@ test("existing isolated HMAC library remains backward-compatible only in the old
 test("host CLI reads only public verification key, never a signing private key",async()=>{
  const {readFileSync}=await import("node:fs");
  const s=readFileSync(new URL("../hercules-deploy/cloud/host-engine-cli.mjs",import.meta.url),"utf8");
- assert.ok(s.includes("HERCULES_HOST_ENGINE_OWNER_PUBLIC_KEY_FILE"));
+ assert.ok(s.includes("loadOwnerTrustAnchor("));
+ assert.equal(s.includes("HERCULES_HOST_ENGINE_OWNER_PUBLIC_KEY_FILE"),false);
  assert.equal(s.includes("HERCULES_HOST_ENGINE_OWNER_KEY_FILE"),false);
  assert.ok(!s.includes("createPrivateKey("));
 });
