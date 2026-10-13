@@ -57,7 +57,22 @@ export function createServer(config={}){
  const token=String(config.accessToken??process.env.GATEHOUSE_ACCESS_TOKEN??"");
  const fetcher=config.fetcher??fetch;
  const probeUrls=config.probeUrls??defaultProbes;
- const targets=probeUrls.filter(p=>{try{validateTarget(p.url);return true}catch{return false}});
+ const targets=probeUrls.filter(p=>{try{return stableServices.includes(p.name)&&Boolean(validateTarget(p.url))}catch{return false}});
+ let publicCache=null,publicCacheTime=0,publicInFlight=null;
+ const publicSummary=async()=>{
+  const now=Date.now();
+  if(publicCache && now-publicCacheTime<60000)return publicCache;
+  if(publicInFlight)return publicInFlight;
+  publicInFlight=Promise.all(targets.map(p=>probeStatus(p,fetcher))).then(probed=>{
+   publicCache={mode:"public-connectivity-only",refreshedAt:new Date().toISOString(),
+    signals:probed.map(p=>({name:p.name,status:p.status})),authoritative:false,
+    moneyMoved:false,productionAuthorized:false,
+    notice:"Public HTTPS reachability only. Does not verify sales, payments, payouts, or release approval."};
+   publicCacheTime=Date.now();
+   return publicCache;
+  }).finally(()=>{publicInFlight=null});
+  return publicInFlight;
+ };
  let ledger=newEvidenceLedger(),snapshots=[];
  let latestSimulation=null;
  const authed=req=>Boolean(token) && [dayIndex(),dayIndex()-1].some(d=>safeCompare(cookieOf(req,"gh_session"),session(token,d)));
@@ -70,6 +85,11 @@ export function createServer(config={}){
   if(method==="GET"&&path==="/health")
    return send(res,200,{service:"hercules-gatehouse",status:"running",mode:"isolated-read-only",
     credentialsConfigured:Boolean(token),productionAuthorized:false});
+  if(path==="/api/public-summary"){
+   if(method!=="GET")return send(res,405,{error:"Method not allowed"});
+   try{return send(res,200,await publicSummary())}
+   catch{return send(res,503,{error:"Public connectivity checks temporarily unavailable"})}
+  }
   if(method==="POST"&&path==="/api/login"){
    if(!token)return send(res,503,{error:"owner-credential-not-configured"});
    if(req.headers["content-type"]?.split(";")[0]!=="application/json")return send(res,415,{error:"JSON required"});
