@@ -40,7 +40,13 @@ function sql(label,query,{expectError=false}={}){
  }
  if(a.status!==0){
   const category=(a.stderr||"").split("\n").find(line=>/ERROR:|FATAL:/.test(line))||"sql-execution-failed";
-  const scrubbed=category.slice(0,190)
+  const diagnostic=spawnSync("docker",["logs","--tail","24",DB],{
+   encoding:"utf8",timeout:9000,maxBuffer:8192
+  });
+  const last=(diagnostic.stderr||diagnostic.stdout||"").split("\n")
+   .filter(line=>/ERROR|FATAL|PANIC|shutting down|exited|terminat|initialization/i.test(line))
+   .slice(-4).map(line=>line.slice(0,180)).join(" ; ");
+  const scrubbed=(category+" [container] "+last).slice(0,750)
    .replace(/(?:shpat_|shprt_)[A-Za-z0-9._-]+/g,"[REDACTED]")
    .replace(/(?:password|secret)[^:]*:\s*\S+/gi,"[REDACTED_FIELD]");
   throw Error("isolated-postgres:"+label+":"+scrubbed);
