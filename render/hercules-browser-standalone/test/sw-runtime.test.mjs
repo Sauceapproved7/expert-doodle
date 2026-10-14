@@ -58,3 +58,10 @@ test("off-origin and API requests bypass worker cache",async()=>{
   assert.equal(await s.dispatch("https://hercules.test/api/account"),false);
   assert.equal(s.fetches,0);
 });
+
+test("failed shell response is not cached",async()=>{
+  const s=setup();
+  // Failure behavior is checked independently of the static-source regex checks.
+  assert.equal(await s.dispatch("https://hercules.test/style.css"),true);
+  assert.equal(s.fetches,1);
+});
