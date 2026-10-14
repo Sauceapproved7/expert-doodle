@@ -101,14 +101,19 @@ const looksInit=storeGet('looks',[]);
 const postsInit=storeGet('posts',[]);
 const likesInit=storeGet('likes',[]);
 const followsInit=storeGet('follows',[]);
+const passportInit=storeGet('passport',null);
+const safePassport=passportInit && typeof passportInit==='object'?passportInit:{};
+const accepted=(value,choices)=>choices.includes(value)?value:'all';
+const hiddenInit=storeGet('hiddenPosts',[]);
 const state={
-  category:'all',depth:'all',undertone:'all',sort:'featured',search:'',
+  category:'all',depth:accepted(safePassport.depth,['all','deep','tan','medium','light']),undertone:accepted(safePassport.undertone,['all','warm','cool','neutral','olive']),texture:accepted(safePassport.texture,['all','3b','4a','4b','4c','braids','locs','protective']),sort:'featured',search:'',
   studioRegion:'lips',currentId:'lips-0',mode:'photo',intensity:65,size:100,
   favs:new Set(Array.isArray(savedInit)?savedInit:[]),
   looks:Array.isArray(looksInit)?looksInit:[],
   posts:Array.isArray(postsInit)?postsInit:[],
   likes:new Set(Array.isArray(likesInit)?likesInit:[]),
   follows:new Set(Array.isArray(followsInit)?followsInit:[]),
+  hiddenPosts:new Set(Array.isArray(hiddenInit)?hiddenInit.filter(x=>typeof x==='string'):[]),
   layers:{},artistFilter:'all',uploadedPhoto:null,photoPos:{x:47,y:57}
 };
 const itemById=id=>ITEMS.find(i=>i.id===id);
@@ -143,12 +148,13 @@ function renderExplore(){
       if(state.depth!=='all'&&!item.tags.includes(state.depth))return false;
       if(state.undertone!=='all'&&!item.tags.includes(state.undertone))return false;
     }
+    if(item.category==='hair'&&state.texture!=='all'&&!item.tags.includes(state.texture))return false;
     const hay=(item.name+' '+item.desc+' '+item.category+' '+item.region+' '+item.tags.join(' ')).toLowerCase();
     return !state.search||hay.includes(state.search);
   });
   if(state.sort==='name')results.sort((a,b)=>a.name.localeCompare(b.name));
   if(state.sort==='category')results.sort((a,b)=>a.category.localeCompare(b.category));
-  el('resultCount').textContent=results.length+' demo looks · complexion filters apply to makeup only';
+  el('resultCount').textContent=results.length+' demo looks · skin filters apply to makeup, texture filters to hair';
   el('exploreGrid').innerHTML=results.length?results.map(itemCard).join(''):'<div class="empty-state"><strong>No matches yet.</strong><p>Try another search or remove some filters.</p><button class="cta dark" data-resetfilters>Clear filters</button></div>';
 }
 function toggleFav(id){
@@ -172,12 +178,12 @@ function renderSaved(){
   }).join(''):'<div class="empty-state"><strong>Your future looks live here.</strong><p>Build a combination in the try-on studio and save it.</p></div>';
 }
 function renderCommunity(){
-  const all=[...state.posts.slice().reverse(),...POSTS.filter(p=>!state.posts.some(local=>local.id===p.id))];
+  const all=[...state.posts.slice().reverse(),...POSTS.filter(p=>!state.posts.some(local=>local.id===p.id))].filter(p=>!state.hiddenPosts.has(p.id));
   el('feed').innerHTML=all.map(p=>{
     const local=!!p.local;const liked=state.likes.has(p.id);
     const total=p.likes+(liked?1:0);
     const comments=(p.comments||[]).map(c=>'<p><strong>'+esc(c.by)+':</strong> '+esc(c.text)+'</p>').join('');
-    return '<article class="post" data-post="'+esc(p.id)+'"><div class="post-head"><div class="avatar" style="background:'+esc(p.color||'#6e526c')+'">'+esc(p.avatar)+'</div><div><strong>'+esc(p.name)+'</strong><small>'+(local?'My private draft':'Demo inspiration')+'</small></div></div><p class="post-body">'+esc(p.text)+'</p><div class="post-chips">'+(p.tags||[]).map(t=>'<span>'+esc(t)+'</span>').join('')+'</div><div class="post-actions"><button data-like="'+esc(p.id)+'" class="'+(liked?'liked':'')+'" aria-pressed="'+liked+'">'+(liked?'♥':'♡')+' '+total+' likes</button><button data-togglecomments="'+esc(p.id)+'">✎ '+(p.comments||[]).length+' comments</button>'+(local?'<button data-deletepost="'+esc(p.id)+'">Delete</button>':'')+'</div><div class="comments" id="comments-'+esc(p.id)+'" hidden>'+comments+'<form class="comment-form" data-commentform="'+esc(p.id)+'"><input maxlength="180" placeholder="Add a private demo comment…" aria-label="Add a comment" required/><button type="submit">Add</button></form></div></article>';
+    return '<article class="post" data-post="'+esc(p.id)+'"><div class="post-head"><div class="avatar" style="background:'+esc(p.color||'#6e526c')+'">'+esc(p.avatar)+'</div><div><strong>'+esc(p.name)+'</strong><small>'+(local?'My private draft':'Demo inspiration')+'</small></div></div><p class="post-body">'+esc(p.text)+'</p><div class="post-chips">'+(p.tags||[]).map(t=>'<span>'+esc(t)+'</span>').join('')+'</div><div class="post-actions"><button data-like="'+esc(p.id)+'" class="'+(liked?'liked':'')+'" aria-pressed="'+liked+'">'+(liked?'♥':'♡')+' '+total+' likes</button><button data-togglecomments="'+esc(p.id)+'">✎ '+(p.comments||[]).length+' comments</button>'+(local?'<button data-deletepost="'+esc(p.id)+'">Delete</button>':'')+'<button data-hidepost="'+esc(p.id)+'" aria-label="Hide this demo post locally">Hide</button></div><div class="comments" id="comments-'+esc(p.id)+'" hidden>'+comments+'<form class="comment-form" data-commentform="'+esc(p.id)+'"><input maxlength="180" placeholder="Add a private demo comment…" aria-label="Add a comment" required/><button type="submit">Add</button></form></div></article>';
   }).join('');
 }
 function findPost(id){return state.posts.find(p=>p.id===id)||POSTS.find(p=>p.id===id)}
@@ -423,17 +429,22 @@ document.addEventListener('click',e=>{
   if(target.dataset.artistfilter){state.artistFilter=target.dataset.artistfilter;renderArtists();return}
   if(target.dataset.follow){if(state.follows.has(target.dataset.follow))state.follows.delete(target.dataset.follow);else state.follows.add(target.dataset.follow);storeSet('follows',[...state.follows]);renderArtists();toast('Demo follow preference saved to this browser');return}
   if(target.dataset.like){if(state.likes.has(target.dataset.like))state.likes.delete(target.dataset.like);else state.likes.add(target.dataset.like);storeSet('likes',[...state.likes]);renderCommunity();return}
+  if(target.dataset.hidepost){state.hiddenPosts.add(target.dataset.hidepost);storeSet('hiddenPosts',[...state.hiddenPosts]);renderCommunity();toast('Post hidden on this device only. No report was submitted.');return}
   if(target.dataset.togglecomments){const comments=el('comments-'+target.dataset.togglecomments);comments.hidden=!comments.hidden;return}
   if(target.dataset.deletepost){state.posts=state.posts.filter(p=>p.id!==target.dataset.deletepost);storeSet('posts',state.posts);renderCommunity();return}
   if(target.dataset.loadlook){loadLook(target.dataset.loadlook);return}
   if(target.dataset.deletelook){state.looks=state.looks.filter(l=>l.id!==target.dataset.deletelook);storeSet('looks',state.looks);renderSaved();return}
   if(target.hasAttribute('data-clearlook')){state.layers={};renderStudio();toast('Look layers cleared');return}
-  if(target.hasAttribute('data-resetfilters')){state.category='all';state.depth='all';state.undertone='all';state.search='';state.sort='featured';el('search').value='';el('depthFilter').value='all';el('toneFilter').value='all';el('sortFilter').value='featured';renderExplore();return}
+  if(target.hasAttribute('data-resetfilters')){state.category='all';state.depth='all';state.undertone='all';state.texture='all';state.search='';state.sort='featured';el('search').value='';el('depthFilter').value='all';el('toneFilter').value='all';el('textureFilter').value='all';el('sortFilter').value='featured';renderExplore();return}
 });
 el('headerSaved').addEventListener('click',()=>navigate('saved'));
 el('search').addEventListener('input',e=>{state.search=e.target.value.trim().toLowerCase();renderExplore()});
 el('depthFilter').addEventListener('change',e=>{state.depth=e.target.value;renderExplore()});
 el('toneFilter').addEventListener('change',e=>{state.undertone=e.target.value;renderExplore()});
+el('textureFilter').addEventListener('change',e=>{state.texture=e.target.value;renderExplore()});
+el('savePassport').addEventListener('click',()=>{storeSet('passport',{depth:state.depth,undertone:state.undertone,texture:state.texture});el('passportStatus').textContent='Preferences saved privately on this device';toast('Beauty Passport saved locally; no account needed.')});
+el('resetPassport').addEventListener('click',()=>{state.depth='all';state.undertone='all';state.texture='all';state.category='all';state.search='';el('search').value='';for(const id of ['depthFilter','toneFilter','textureFilter'])el(id).value='all';storeSet('passport',null);el('passportStatus').textContent='No preferences saved yet';renderExplore();toast('Beauty Passport reset.')});
+el('restoreHidden').addEventListener('click',()=>{state.hiddenPosts.clear();storeSet('hiddenPosts',[]);renderCommunity();toast('Hidden demo posts are visible again.')});
 el('sortFilter').addEventListener('change',e=>{state.sort=e.target.value;renderExplore()});
 el('clearSaved').addEventListener('click',()=>{
   state.favs.clear();storeSet('favs',[]);refreshFavs();toast('Favorites cleared in this browser');
@@ -456,6 +467,8 @@ el('feed').addEventListener('submit',e=>{
   renderCommunity();el('comments-'+post.id).hidden=false;toast('Comment saved privately on this device');
 });
 const stack=document.createElement('div');stack.id='lookStack';el('saveLook').closest('.studio-actions').before(stack);
+el('depthFilter').value=state.depth;el('toneFilter').value=state.undertone;el('textureFilter').value=state.texture;
+if(passportInit)el('passportStatus').textContent='Your saved preferences are active on this device';
 refreshFavs();renderArtists();renderCommunity();renderExplore();renderStudio();
 const initial=(location.hash||'').slice(1);
 navigate(el(initial)&&el(initial).classList.contains('view')?initial:'discover');
