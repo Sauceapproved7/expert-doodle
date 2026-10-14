@@ -59,3 +59,15 @@ footer{background:#251526;color:#f8eef3;padding:45px 0 100px;margin-top:20px}.fo
 .erase-confirm strong{font-size:15px;color:#713d4c}
 .erase-confirm .secondary-btn{margin:4px 8px 3px 0}
 @media(max-width:690px){.privacy-center{padding:18px 13px}.privacy-header h2{font-size:24px}.privacy-tag{font-size:9px}.privacy-buttons .secondary-btn{flex:1 1 190px}}
+
+
+/* Session-only AR observability: factual counters, never a shade/fit score. */
+.ar-session-health{margin-top:16px;border:1px solid #dbc4cc;border-radius:5px;background:#fffaf8;padding:19px}
+.ar-session-health h3{font:600 24px Georgia,serif;margin:7px 0 10px;color:#452b3d}
+.ar-session-health>p{font-size:12px;line-height:1.6;color:#715568;margin:10px 0}
+.ar-health-status{font-size:12px;font-weight:600;line-height:1.65;background:#f3e7e8;padding:13px;border-left:3px solid #8a6680;border-radius:3px;margin:14px 0}
+.ar-health-status[data-status="insufficient-samples"]{border-left-color:#b78354}
+.ar-health-status[data-status="observational-only"]{border-left-color:#55775d}
+.ar-session-health .secondary-btn{min-height:43px;padding:10px 15px}
+.ar-session-health .secondary-btn:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:690px){.ar-session-health{padding:15px 12px}.ar-session-health h3{font-size:21px}}
