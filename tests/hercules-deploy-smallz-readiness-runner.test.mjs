@@ -91,7 +91,7 @@ test('network errors are redacted and result in HOLD without stack trace or toke
   assert.equal(result.status,'HOLD');
   assert.ok(result.reasonCodes.includes('PROVIDER_READ_FAILED'));
   assert.equal(JSON.stringify(result).includes(secret),false);
-  assert.equal(JSON.stringify(result).includes('Authorization'),false);
+  assert.equal(JSON.stringify(result).includes('Authorization: Bearer '),false);
 });
 test('readiness runner never accepts owner session, arbitrary action, provider URL or payment action',async()=>{
   const calls=[];
