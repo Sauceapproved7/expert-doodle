@@ -156,6 +156,7 @@ function renderSupplierReviewSummary(){
     ' (not independently checked) · '+unresolved+' disputed item'+(unresolved===1?'':'s')+
     ' · '+missing+' missing evidence item'+(missing===1?'':'s')+'. '+
     'Checklist coverage: '+(marks.length-missing)+'/'+marks.length+' claimed or flagged; none independently verified. '+
+    'Next action: '+(unresolved?'Resolve disputed evidence first. ':missing?'Request missing supplier evidence. ':'Independently verify every claimed document and rights statement. ')+
     'Verification: not performed. Approved: 0. Published: 0.';
   exportButton.disabled=false;resetButton.disabled=false;
 }
