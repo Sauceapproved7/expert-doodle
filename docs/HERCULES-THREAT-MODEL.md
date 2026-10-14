@@ -189,3 +189,12 @@ The gateway has public read-only health at `/api/studio/video/status` and authen
 ### Smallz expiring Spaceship credential setup relay
 
 A bearer capability handoff link reaches GET/POST /connect/spaceship. The token is validated syntactically locally and authoritatively by the existing Hercules private bridge. The relay cannot issue tokens or grant provider authority. POST forwards exactly one bounded API key and secret to the fixed owned HTTPS backend; arbitrary targets, redirects, duplicate fields, malformed tokens, and foreign Origin headers are rejected. Cookies and Authorization headers are not forwarded. Returned credential echoes are refused; caught errors are generic, responses are no-store, scripts are disabled, framing is denied, and form submission is same-origin. The backend continues to validate the pair against Spaceship, store only in Vault, and atomically consume the one-time capability. Missing Origin relies on possession of the unguessable expiring capability and backend validation, matching the existing script-free handoff. This route does not infer consent or modify credentials by itself.
+
+
+## Smallz GET-only server credential boundary (October 13, 2026)
+
+The read-only Smallz readiness runner holds dedicated Render/GitHub provider read tokens **only in the already-authorized server process**, never in the browser, GitHub commit, CI log, report, API URL or generated file. Presence of a token is not independent verification of least-privilege scope. Credentials must be granted/revoked through their provider's legitimate owner-controlled mechanism; this change never provisions them.
+
+Default-deny controls: opt-in must equal the literal true string, both dedicated credentials must be present and properly shaped, obvious equality to deployment-control/admin token values is rejected, the direct CLI must receive its exact read-only switch, and no user-supplied URL or action is honored. The transport uses only fixed GitHub/Render HTTPS GET endpoints with bounded responses and generic network-error reporting.
+
+The command is **not** wired into a live public HTTP route, scheduled worker, deployment orchestrator, owner login or payment system. Even a healthy-looking report remains untrusted evidence; the module never attests independent provider identity, authorizes production release or proves browser health. No production service, credentials, provider permissions or billing was changed by this engineering milestone.

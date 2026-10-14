@@ -1,3 +1,10 @@
+## Hercules Smallz opt-in server-side readiness runner — October 13, 2026
+
+- Original first-party SauceApproved, AI-assisted Node 22 source: `hercules-deploy/smallz-readiness-runner.mjs`, tests `tests/hercules-deploy-smallz-readiness-runner.test.mjs` and design note `docs/HERCULES-DEPLOY-SMALLZ-READINESS-RUNNER-V1.md`; no third-party package source, customer information, model weights or additional licenses.
+- Reuses owned Smallz GET-only provider readers and advisory evidence bridge. Refuses missing opt-in/credentials and collisions with configured deployment-control/admin tokens; never grants authorization, fetches secret-store values, logs credentials or uses provider write methods.
+- TDD RED: test-only commit `201451c18fd52656a23db831175a7bbe41ac6b2e` showed expected missing-module failure with 120 existing tests green. GREEN with corrected precise credential-exposure test `e33c182b8d46b94e610a6dcd1d4b94853db85528` passed **128/128** Deploy Plane tests.
+- Isolated, unmerged and not deployed. No billing, owner authorization, production deployment, data migration, customer checkout, DNS, or Render auto-deploy configuration changed.
+
 ## Hercules Smallz Dedicated Read Audit — October 13, 2026
 
 - Original first-party SauceApproved AI-assisted Node.js implementation `hercules-deploy/smallz-read-audit.mjs`, `scripts/hercules-smallz-read-audit.mjs`, `tests/hercules-deploy-smallz-read-audit.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-READ-AUDIT-V1.md`.
