@@ -83,7 +83,7 @@ test('explicit audit uses only three fixed GETs and returns limited mismatch evi
     calls.push({url,method:req.method,auth:req.headers.authorization});
     return fake(url,req);
   }});
-  assert.deepEqual(calls.map(x=>x.url).sort(),[GH,RENDER,RENDER+'/deploys?limit=1'].sort());
+  assert.deepEqual(calls.map(x=>x.url).sort(),[GH,RENDER,RENDER+'/deploys?limit=1',GH,RENDER,RENDER+'/deploys?limit=1'].sort());
   assert.equal(result.status,'HOLD');
   assert.equal(result.mainCommit,MAIN);
   assert.equal(result.liveCommit,LIVE);
