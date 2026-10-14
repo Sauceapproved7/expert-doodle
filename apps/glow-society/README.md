@@ -114,3 +114,6 @@ A Node contract test proves that even all evidence marked as claimed cannot auth
 The supplier evidence panel also displays a live missing/claimed/disputed tally and checklist coverage. This is an organizational progress indicator only; it does not independently verify a single claim or move any product toward release eligibility.
 
 The review summary suggests the next non-authorizing action: resolve disputed evidence first, then request missing documentation, then independently verify claimed material. It never treats a completed checklist as approval.
+
+## Supplier readiness overview
+The catalog workshop displays four derived counts (all candidates, disputed, missing documents, verify claimed evidence) and a filterable list of the currently imported review candidates. Disputed issues take precedence over missing documents, then unverified claims. All states are computed in browser memory; no real supplier proof is verified, no candidate is publishable, and clearing the feed clears the dashboard.
