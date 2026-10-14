@@ -139,7 +139,19 @@ function itemCard(item){
   const tags=item.tags.slice(0,2).map(t=>'<span>'+esc(t)+'</span>').join('');
   return '<article class="product-card" data-category="'+item.category+'"><div style="position:relative">'+thumb(item)+'<button class="product-heart '+(state.favs.has(item.id)?'active':'')+'" data-fav="'+item.id+'" aria-label="'+(state.favs.has(item.id)?'Remove from':'Add to')+' favorites" aria-pressed="'+state.favs.has(item.id)+'">'+(state.favs.has(item.id)?'♥':'♡')+'</button></div><div class="product-body"><div class="product-sub">'+esc(item.category)+' · '+esc(item.region)+'</div><h3>'+esc(item.name)+'</h3><p>'+esc(item.desc)+'</p><div class="product-tags">'+tags+'</div><button class="try-btn" data-try="'+item.id+'">Try this look ↗</button></div></article>';
 }
-let catalogIntakeGeneration=0,catalogEvidenceKit=null,catalogRestoreGeneration=0,catalogRestorePreview=null;
+let catalogIntakeGeneration=0,catalogEvidenceKit=null,catalogRestoreGeneration=0,catalogRestorePreview=null,catalogRestoreUndo=null;
+function clearSupplierRestoreUndo(){
+  catalogRestoreUndo=null;
+  el('supplierRestoreUndo').hidden=true;
+  el('supplierRestoreUndo').disabled=true;
+}
+function syncSupplierReviewForm(){
+  const rows=new Map((catalogEvidenceKit?.snapshot().records||[]).map(record=>[record.sku,record]));
+  for(const select of el('catalogIntakeResults').querySelectorAll('select[data-supplier-requirement]')){
+    const current=rows.get(select.dataset.supplierSku);
+    if(current)select.value=current.requirements[select.dataset.supplierRequirement];
+  }
+}
 function clearSupplierRestorePreview(){
   catalogRestorePreview=null;
   el('supplierRestorePreview').hidden=true;
@@ -149,6 +161,7 @@ function clearSupplierRestorePreview(){
 }
 function resetSupplierRestore(message='Load a supplier feed to enable local review restoration.'){
   catalogRestoreGeneration++;
+  clearSupplierRestoreUndo();
   clearSupplierRestorePreview();
   el('supplierRestoreFile').value='';
   el('supplierRestoreStatus').textContent=message;
@@ -231,17 +244,42 @@ function confirmSupplierRestore(){
     resetSupplierRestore('Restore canceled: the active review changed. Reopen a matching packet.');
     return;
   }
+  const before=staged.kit.snapshot();
   if(!staged.kit.apply(staged.changes)){
     resetSupplierRestore('Restore rejected: the proposed choices are no longer valid.');
     return;
   }
+  const after=staged.kit.snapshot();
   const count=staged.differenceCount;
   resetSupplierRestore('Applied '+count+' unverified checklist change'+(count===1?'':'s')+
     ' to the local matching feed. Supplier rights remain unverified. Approved: 0. Published: 0.');
-  for(const select of el('catalogIntakeResults').querySelectorAll('select[data-supplier-requirement]')){
-    const current=catalogEvidenceKit.snapshot().records.find(r=>r.sku===select.dataset.supplierSku);
-    if(current)select.value=current.requirements[select.dataset.supplierRequirement];
+  catalogRestoreUndo=Object.freeze({
+    kit:staged.kit,intakeId:catalogIntakeGeneration,
+    before,after:JSON.stringify(after),count
+  });
+  el('supplierRestoreUndo').hidden=false;
+  el('supplierRestoreUndo').disabled=false;
+  syncSupplierReviewForm();
+  renderSupplierReviewSummary();
+}
+function undoSupplierRestore(){
+  const undo=catalogRestoreUndo;
+  if(!undo)return;
+  const kit=catalogEvidenceKit,after=kit?.snapshot();
+  if(undo.kit!==kit||undo.intakeId!==catalogIntakeGeneration||
+    !after||JSON.stringify(after)!==undo.after){
+    resetSupplierRestore('Undo unavailable: the active review has changed. Existing choices were left untouched.');
+    return;
   }
+  const back=window.GlowSupplierRestore.validate(undo.before,after);
+  if(back.error||!kit.apply(back.changes)){
+    resetSupplierRestore('Undo rejected: this review no longer matches the original unverified choices.');
+    return;
+  }
+  const count=undo.count;
+  resetSupplierRestore('Undid the last applied review import ('+count+
+    ' checklist change'+(count===1?'':'s')+'). Previous unverified choices restored. Approved: 0. Published: 0.');
+  syncSupplierReviewForm();
   renderSupplierReviewSummary();
 }
 function supplierStage(record){
@@ -1027,6 +1065,7 @@ el('catalogSample').addEventListener('click',()=>{
 el('catalogFile').addEventListener('change',loadCatalogFile);
 el('supplierRestoreFile').addEventListener('change',restoreSupplierReview);
 el('supplierRestoreApply').addEventListener('click',confirmSupplierRestore);
+el('supplierRestoreUndo').addEventListener('click',undoSupplierRestore);
 el('supplierRestoreCancel').addEventListener('click',()=>{
   resetSupplierRestore('Restore canceled. Your existing checklist choices were not changed.');
 });
