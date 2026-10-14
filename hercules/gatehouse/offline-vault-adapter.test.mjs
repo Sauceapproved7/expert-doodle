@@ -26,7 +26,7 @@ function setup(opts={}){
 test("default disabled and missing verified owner, service role, or RPC never reach database",async()=>{
  for(const config of [
   {enabled:false},{workerAuthorized:false},{ownerSessionVerified:false},
-  {organizationId:"some-other-org"},{ownerUserId:OTHER},{rpc:null}
+  {organizationId:"some-other-org"},{ownerUserId:"not-a-uuid"},{rpc:null}
  ]){
   const h=setup({config});const a=createGatehouseOfflineVaultAdapter(h.config);
   assert.equal(await a.acquireExclusiveGrantLease(ORG),null);
