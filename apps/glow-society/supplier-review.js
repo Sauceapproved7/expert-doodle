@@ -33,6 +33,22 @@
       row.set(requirement,status);
       return true;
     }
+    function apply(changes){
+      if(!Array.isArray(changes)||changes.length!==items.length*REQUIREMENTS.length)return false;
+      const seen=new Set();
+      for(const change of changes){
+        if(!change||typeof change.sku!=='string'||!requirementIds.has(change.requirement)||
+           !knownStatus.has(change.status))return false;
+        const sku=change.sku.toUpperCase(),key=sku+'|'+change.requirement;
+        const row=entries.get(sku);
+        if(!row||!items.some(x=>x.sku===change.sku)||seen.has(key))return false;
+        seen.add(key);
+      }
+      if(seen.size!==items.length*REQUIREMENTS.length)return false;
+      // The batch is validated completely before any existing state changes.
+      for(const change of changes)entries.get(change.sku.toUpperCase()).set(change.requirement,change.status);
+      return true;
+    }
     function reset(){
       for(const row of entries.values())for(const req of REQUIREMENTS)row.set(req.id,'not_provided');
     }
@@ -49,7 +65,7 @@
         }))),
       });
     }
-    return Object.freeze({set,reset,snapshot});
+    return Object.freeze({set,apply,reset,snapshot});
   }
   Object.defineProperty(window,'GlowSupplierReview',{value:Object.freeze({REQUIREMENTS,statuses,create}),writable:false,configurable:false});
 })();
