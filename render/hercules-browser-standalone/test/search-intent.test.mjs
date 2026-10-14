@@ -24,3 +24,13 @@ test("allows privacy-oriented DuckDuckGo search without credentials",()=>{
 test("does not accept arbitrary provider URL injection",()=>{
  assert.throws(()=>resolveHerculesInput("hoodie supplier", "https://evil.example"),/unsupported search provider/i);
 });
+
+test("search treats localhost with spaces as a query",()=>{
+ assert.equal(resolveHerculesInput("localhost setup"),"https://www.google.com/search?q=localhost%20setup");
+});
+test("rejects malformed explicit URLs",()=>{
+ assert.throws(()=>resolveHerculesInput("https://"),/invalid url/i);
+});
+test("blocks embedded URL credentials",()=>{
+ assert.throws(()=>resolveHerculesInput("https://user:password@example.com"),/credentials/i);
+});
