@@ -113,7 +113,7 @@ $("navForm").addEventListener("submit",async e=>{
   if(!input)return;
   setStatus("Searching or navigating…");
   try{
-    const url=resolveHerculesInput(input);
+    const url=resolveHerculesInput(input,$("searchProvider").value);
     const r=await api("/api/navigate",{method:"POST",body:JSON.stringify({url})});
     renderPage(r.page);
     screenMessage.hidden=false;
