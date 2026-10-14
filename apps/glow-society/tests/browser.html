@@ -38,6 +38,8 @@ async function check(document) {
  assert(document.getElementById('supplierReviewStatus').textContent.includes('10 missing evidence items'),'Every review evidence item initially missing');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('Request missing supplier evidence'),'Missing evidence produces actionable but non-authorizing guidance');
  assert(!document.getElementById('supplierReviewExport').disabled,'Unverified candidates can produce a preparation packet');
+ assert(!document.getElementById('supplierActionsExport').disabled,'Action plan can be downloaded from an unverified candidate feed');
+
  const firstProof=document.querySelector('#catalogIntakeResults select[data-supplier-requirement="resale_rights"]');
  firstProof.value='claimed_unverified';
  firstProof.dispatchEvent(new Event('change',{bubbles:true}));
@@ -58,6 +60,15 @@ async function check(document) {
  assert(downloadedPacket.approved===0&&downloadedPacket.published===0&&!downloadedPacket.releaseEligible,'Export cannot be mistaken for product approval');
  assert(downloadedPacket.ownerApproval==='not_granted'&&downloadedPacket.independentVerification==='not_performed','Export requires external owner and verifier evidence');
  assert(downloadedPacket.records[0].requirements.resale_rights==='claimed_unverified','Export preserves only the unverified proof claim');
+ let actionFilename='',actionHref='';
+ localLinkPrototype.click=function(){actionFilename=this.download;actionHref=this.href;};
+ click(document.getElementById('supplierActionsExport'),'Download priority-ordered unverified task plan');
+ localLinkPrototype.click=originalPacketClick;
+ const actionPacket=await iframe.contentWindow.fetch(actionHref).then(r=>r.json());
+ assert(actionFilename==='glow-society-unverified-action-plan.json','Action plan download has explicit unverified filename');
+ assert(actionPacket.tasks[0].priority<=actionPacket.tasks[1].priority,'Action plan sorts tasks by priority');
+ assert(actionPacket.verified===0&&actionPacket.approved===0&&actionPacket.published===0&&!actionPacket.releaseEligible,'Action plan cannot authorize sales');
+
  click(document.getElementById('supplierReviewReset'),'Reset claimed supplier evidence');
  assert(firstProof.value==='not_provided','Reset restores not-provided evidence status');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('0 claimed evidence items'),'Reset removes the claimed evidence count');
@@ -89,6 +100,7 @@ async function check(document) {
  assert(count(document,'#catalogIntakeResults .catalog-review-item')===0,'Clearing the review removes supplier candidates from memory-backed UI');
  assert(count(document,'#supplierDashboardRows .supplier-dashboard-entry')===0,'Clearing review removes dashboard candidates');
  assert(document.getElementById('supplierReviewExport').disabled,'Clear review disables stale evidence packet exports');
+ assert(document.getElementById('supplierActionsExport').disabled,'Clear review disables stale action plan download');
  assert(document.getElementById('supplierReviewReset').disabled,'Clear review disables evidence changes');
 
  assert(document.getElementById('catalogFile').value==='','Clear resets selected local supplier file');
