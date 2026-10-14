@@ -94,7 +94,7 @@ async function check(document) {
  assert(firstProof.value==='not_provided','Mismatched packet cannot modify checklist choices');
  const storageBeforeRestore=[...Object.keys(iframe.contentWindow.localStorage)].sort().join('|');
  await importReviewPacket(downloadedPacket);
- assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restored 10 unverified checklist choices'),'Matching packet restores local review choices');
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restored 10 unverified checklist choices'),'Matching packet restores local review choices: '+document.getElementById('supplierRestoreStatus').textContent);
  assert(firstProof.value==='claimed_unverified','Restored resale claim is still labeled unverified');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Restore cannot approve supplier');
  assert([...Object.keys(iframe.contentWindow.localStorage)].sort().join('|')===storageBeforeRestore,'Review restoration does not persist supplier data');
