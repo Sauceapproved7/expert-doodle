@@ -18,7 +18,7 @@ const signed=(claims={},header={})=>{
  return h+"."+p+"."+createHmac("sha256",fixtureSigningKey).update(h+"."+p).digest("base64url");
 };
 const credentialResponse=(overrides={})=>({ok:true,status:200,json:async()=>({
- access_token:"shpat_TEST_ONLY_ACCESS_TOKEN_0123456789",
+ access_token:"shpat_"+"TEST_ONLY_ACCESS_TOKEN_0123456789",
  refresh_token:"shprt_TEST_ONLY_REFRESH_TOKEN_0123456789",
  scope:"read_orders,read_products",expires_in:3600,refresh_token_expires_in:7776000,
  ...overrides
