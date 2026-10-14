@@ -8,7 +8,7 @@ self.addEventListener("activate",event=>{
 });
 self.addEventListener("fetch",event=>{
   const url=new URL(event.request.url);
-  if(event.request.method!=="GET"||url.origin!==location.origin||url.pathname.startsWith("/api/")||url.pathname==="/health"||url.pathname==="/claim")return;
+  if(event.request.method!=="GET"||event.request.mode==="navigate"||url.origin!==location.origin||url.pathname.startsWith("/api/")||url.pathname==="/health"||url.pathname==="/claim")return;
   event.respondWith(fetch(event.request).then(r=>{
     if(r.ok) {
       const copy=r.clone();
