@@ -19,11 +19,11 @@ function setup({responseOk=true}={}) {
   return {
     puts,
     get fetches(){return fetches},
-    async dispatch(url,{method="GET",mode="cors"}={}) {
+    async dispatch(url,{method="GET",mode="cors",authorization=false}={}) {
       let responded=false;
       const waits=[];
       const event={
-        request:{url,method,mode},
+        request:{url,method,mode,headers:{has:(name)=>authorization&&name.toLowerCase()==="authorization"}},
         respondWith(p){responded=true;waits.push(Promise.resolve(p))},
         waitUntil(p){waits.push(Promise.resolve(p))}
       };
@@ -63,5 +63,12 @@ test("failed shell response is not cached",async()=>{
   const s=setup({responseOk:false});
   assert.equal(await s.dispatch("https://hercules.test/style.css"),true);
   assert.equal(s.fetches,1);
+  assert.deepEqual(s.puts,[]);
+});
+
+test("authorized shell requests bypass offline cache",async()=>{
+  const s=setup();
+  assert.equal(await s.dispatch("https://hercules.test/app.js",{authorization:true}),false);
+  assert.equal(s.fetches,0);
   assert.deepEqual(s.puts,[]);
 });
