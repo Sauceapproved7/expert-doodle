@@ -164,3 +164,9 @@ footer{background:#251526;color:#f8eef3;padding:45px 0 100px;margin-top:20px}.fo
 .supplier-restore-buttons button:disabled{opacity:.6;cursor:not-allowed}
 .supplier-restore-preview[hidden]{display:none}
 @media(max-width:560px){.supplier-restore-preview{padding:10px}.supplier-restore-buttons button{flex:1 1 100%}}
+
+/* One-session undo of imported unverified evidence only. */
+.supplier-restore-undo:not([hidden]){display:inline-block;min-height:44px;margin-top:12px;border:1px solid #a66f8c;background:#fff4f9;color:#663b55;font-weight:750}
+.supplier-restore-undo:focus-visible{outline:3px solid #77475f;outline-offset:3px}
+.supplier-restore-undo[hidden]{display:none}
+@media(max-width:560px){.supplier-restore-undo:not([hidden]){width:100%}}
