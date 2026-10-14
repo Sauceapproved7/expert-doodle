@@ -72,9 +72,16 @@ async function suite(){
  if(started.error||started.status!==0)throw Error("ephemeral-postgres-container-unavailable");
  try{
   let healthy=false;
-  for(let i=0;i<75;i++){
-   if(ticks()){healthy=true;break}
-   await new Promise(resolve=>setTimeout(resolve,1500));
+  // Supabase/Postgres exposes a temporary initdb server which is intentionally
+  // shut down before the persistent server starts. Do not mistake it as ready.
+  for(let i=0;i<100;i++){
+   const out=spawnSync("docker",["logs",DB],{
+    encoding:"utf8",timeout:7500,maxBuffer:1024*1024
+   });
+   const boot=(out.stdout||"")+(out.stderr||"");
+   const initDone=/PostgreSQL init process complete/i.test(boot);
+   if(initDone&&ticks()){healthy=true;break}
+   await new Promise(resolve=>setTimeout(resolve,1600));
   }
   if(!healthy)throw Error("ephemeral-postgres-not-ready");
   const fixture=readFileSync(new URL("./fixtures/isolated-vault-bootstrap.sql",import.meta.url),"utf8");
