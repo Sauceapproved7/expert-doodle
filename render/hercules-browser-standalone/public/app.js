@@ -1,3 +1,4 @@
+import {resolveHerculesInput} from "./search-intent.mjs";
 let handoffUrl="";
 function handoffTarget(value){
   try {
@@ -35,6 +36,7 @@ let lastFrameAt=0;
 let openingTask=false;
 let navigationAttempts=0;
 let blankPage=true;
+let navigationPending=false;
 
 async function api(path,options={}){
   const r=await fetch(path,{cache:"no-store",...options,headers:{"content-type":"application/json",...(options.headers||{})}});
@@ -48,7 +50,7 @@ function renderPage(page={}){
   blankPage=!page.url||page.url==="about:blank";
   $("pageTitle").textContent=page.title||"—";
   $("pageUrl").textContent=page.url||"about:blank";
-  if(page.url&&page.url!=="about:blank")$("urlInput").value=page.url;
+  if(page.url&&page.url!=="about:blank"&&!navigationPending&&document.activeElement!==$("urlInput"))$("urlInput").value=page.url;
 }
 
 async function refreshStatus(){
@@ -108,10 +110,14 @@ screen.onerror=()=>{
 
 $("navForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const url=$("urlInput").value.trim();
-  if(!url)return;
-  setStatus("Navigating…");
+  const input=$("urlInput").value.trim();
+  if(!input||navigationPending)return;
+  navigationPending=true;
+  const submit=$("navForm").querySelector('button[type="submit"]');
+  submit.disabled=true;
+  setStatus("Searching or navigating…");
   try{
+    const url=resolveHerculesInput(input,$("searchProvider").value);
     const r=await api("/api/navigate",{method:"POST",body:JSON.stringify({url})});
     renderPage(r.page);
     screenMessage.hidden=false;
@@ -119,6 +125,15 @@ $("navForm").addEventListener("submit",async e=>{
     screen.src="/api/frame?t="+Date.now();
     setStatus("Navigation complete");
   }catch(err){setStatus(err.message)}
+  finally{navigationPending=false;submit.disabled=false}
+});
+
+document.querySelectorAll("[data-search]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    if(navigationPending)return;
+    $("urlInput").value=button.dataset.search;
+    $("navForm").requestSubmit();
+  });
 });
 
 screen.addEventListener("pointerdown",async e=>{
@@ -137,9 +152,9 @@ $("sendText").onclick=async()=>{
   const el=$("textInput");
   const text=el.value;
   if(!text)return;
-  el.value="";
   try{
     const r=await api("/api/action",{method:"POST",body:JSON.stringify({type:"text",text})});
+    el.value="";
     setStatus("Sent "+r.chars+" characters");
   }catch(err){setStatus(err.message)}
 };
