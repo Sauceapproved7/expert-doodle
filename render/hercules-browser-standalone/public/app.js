@@ -123,6 +123,13 @@ $("navForm").addEventListener("submit",async e=>{
   }catch(err){setStatus(err.message)}
 });
 
+document.querySelectorAll("[data-search]").forEach(button=>{
+  button.addEventListener("click",()=>{
+    $("urlInput").value=button.dataset.search;
+    $("navForm").requestSubmit();
+  });
+});
+
 screen.addEventListener("pointerdown",async e=>{
   if(!screen.naturalWidth||!screen.naturalHeight)return;
   e.preventDefault();
