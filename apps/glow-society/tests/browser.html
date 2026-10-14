@@ -17,6 +17,29 @@ async function check(document) {
  go(document,'explore');
  assert(active(document,'explore'),'Explore tab works');
  assert(count(document,'#exploreGrid .product-card')===47,'Catalog renders 47 inclusive demo looks');
+ const matchForm=document.getElementById('beautyMatchForm');
+ assert(Boolean(matchForm),'Beauty Match choices can be selected without camera');
+ document.getElementById('matchCategory').value='makeup';
+ document.getElementById('matchDepth').value='deep';
+ document.getElementById('matchTone').value='cool';
+ matchForm.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+ assert(count(document,'#matchResults .product-card')>=2,'Deep-cool makeup choices return multiple illustrative looks');
+ assert(document.getElementById('matchStatus').textContent.includes('not measured shade'),'Suggestions never claim measured color accuracy');
+ assert(document.getElementById('matchResults').textContent.includes('deep-depth inspiration tag'),'Suggestion explains which depth label was used');
+ document.getElementById('matchCategory').value='hair';
+ document.getElementById('matchTexture').value='4c';
+ matchForm.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+ assert(count(document,'#matchResults .product-card')>=1,'4C hair selection returns textured-style concepts');
+ assert(document.getElementById('matchResults').textContent.includes('4C Crown Coils'),'4C crown style is discoverable in the match wizard');
+ document.getElementById('matchCategory').value='makeup';
+ document.getElementById('matchDepth').value='light';
+ document.getElementById('matchTone').value='olive';
+ matchForm.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+ assert(count(document,'#matchResults .product-card')===0,'Unmatched depth/undertone combination does not fabricate a match');
+ click(document.getElementById('matchClear'),'Clear temporary match wizard selections');
+ assert(count(document,'#matchResults .product-card')===0,'Clearing wizard removes prior suggestions');
+ assert(document.getElementById('matchDepth').value==='all','Clearing wizard resets depth preference without touching Beauty Passport');
+
  const filter=document.getElementById('depthFilter');
  filter.value='deep';filter.dispatchEvent(new Event('change',{bubbles:true}));
  const deepCount=count(document,'#exploreGrid .product-card');
@@ -152,6 +175,7 @@ async function check(document) {
  click(document.getElementById('eraseLocalData'),'Reopen erasure confirmation');
  click(document.getElementById('confirmEraseLocalData'),'Confirm Glow Society-only erasure');
  assert([...Object.keys(local)].every(k=>!k.startsWith('glow-society-v1-')),'All Glow Society keys are removed from local storage');
+ assert(document.getElementById('matchDepth').value==='all'&&count(document,'#matchResults .product-card')===0,'Private-data erasure also resets any temporary Beauty Match choices');
  assert(local.getItem('another-app-test-marker')==='keep','Other origin storage remains untouched');
  assert(count(document,'#looksGrid .look-card')===0,'In-memory saved looks are cleared immediately');
  assert(count(document,'#savedGrid .product-card')===0,'In-memory favorites are cleared immediately');
