@@ -330,6 +330,48 @@ function stopCamera(){
   el('startCamera').hidden=state.mode==='photo';el('startCamera').disabled=false;el('stopCamera').hidden=true;
   cameraStatus('CAMERA OFF','Enable your camera to start on-device tracking.');
 }
+function cameraCheckReport(message,result){
+  const area=el('cameraCheckStatus');
+  area.dataset.result=result;
+  area.textContent=message;
+}
+async function checkCameraCompatibility(){
+  const button=el('runCameraCheck');
+  if(cameraStream){
+    cameraCheckReport('A live try-on camera is already active. Stop it before running a separate camera check.','unavailable');
+    return;
+  }
+  const generation=++cameraGeneration;
+  button.disabled=true;
+  cameraCheckReport('Checking browser security and requesting a brief camera stream only with your permission…','checking');
+  let testStream=null;
+  try{
+    if(!window.isSecureContext)throw new Error('Camera access requires HTTPS or localhost.');
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia)throw new Error('This browser does not expose camera access.');
+    testStream=await navigator.mediaDevices.getUserMedia({
+      audio:false,video:{facingMode:{ideal:'user'},width:{ideal:640},height:{ideal:480}}
+    });
+    if(generation!==cameraGeneration)return;
+    const tracks=testStream.getVideoTracks();
+    if(!tracks.length || tracks[0].readyState!=='live')throw new Error('No active video track was returned.');
+    const settings=typeof tracks[0].getSettings==='function'?tracks[0].getSettings():{};
+    const resolution=settings.width&&settings.height?settings.width+'×'+settings.height+' frame':'frame dimensions unavailable';
+    cameraCheckReport('Camera access verified: a '+resolution+' camera stream started and was stopped. This does not verify face tracking, nails, or shade accuracy.','passed');
+  }catch(err){
+    if(generation!==cameraGeneration)return;
+    const reason=err && err.name==='NotAllowedError'?'Permission was denied or blocked by browser settings.':
+      err && err.name==='NotFoundError'?'No matching camera was found.':
+      err && err.name==='NotReadableError'?'The camera is busy or unavailable.':
+      err && err.message?err.message:'Camera access failed.';
+    cameraCheckReport('Camera check not passed: '+reason+' Photo Lab still works without a camera.','unavailable');
+  }finally{
+    if(testStream)testStream.getTracks().forEach(track=>track.stop());
+    button.disabled=false;
+    if(generation!==cameraGeneration && el('cameraCheckStatus').dataset.result==='checking'){
+      cameraCheckReport('Check cancelled; camera is off.','cancelled');
+    }
+  }
+}
 async function startCamera(){
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('A secure HTTPS browser and camera permission are needed.');return}
   stopCamera();const gen=++cameraGeneration;
@@ -404,6 +446,7 @@ function drawTracking(time){
     }
   }
 }
+el('runCameraCheck').addEventListener('click',checkCameraCompatibility);
 el('startCamera').addEventListener('click',startCamera);
 el('stopCamera').addEventListener('click',stopCamera);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera()});
