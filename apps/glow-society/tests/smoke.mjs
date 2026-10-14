@@ -125,3 +125,17 @@ test('Beauty Match is opt-in, tag-based and independent from AR and Passport sto
   assert.match(js,/resetBeautyMatch\(\);/);
   assert.doesNotMatch(js,/fetch\([^)]*beautyMatch/);
 });
+
+test('supplier catalog intake never activates real commerce or trusts unverified sources',()=>{
+  assert.match(html,/src="\.\/catalog-intake\.js" defer/);
+  for(const id of ['catalogWorkshop','catalogFile','catalogSample','catalogTemplate','catalogReset','catalogIntakeStatus','catalogIntakeResults']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(html,/REVIEW ONLY · NOT PUBLISHED/);
+  assert.match(js,/window\.GlowCatalogIntake\.parse\(raw\)/);
+  assert.match(js,/window\.GlowCatalogIntake\.validate\(window\.GlowCatalogIntake\.sample\)/);
+  assert.match(js,/function resetCatalogReview\(\)/);
+  assert.match(js,/resetCatalogReview\(\);/);
+  assert.match(js,/Published: 0/);
+  assert.doesNotMatch(js,/fetch\([^)]*catalogFile/);
+});
