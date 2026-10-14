@@ -156,3 +156,53 @@ test('actual CLI refuses arbitrary URL arguments before making provider reads',(
   assert.deepEqual(output.reasonCodes,['UNSUPPORTED_ARGUMENTS']);
   assert.equal(output.providerQueriesAttempted,false);
 });
+
+
+test('read-only CLI takes two stable provider snapshots before accepting an observation',async()=>{
+  const seen=[];
+  const result=await inspectSmallzFromRuntime({env:readEnv,fetchImpl:fakeFetch(seen)});
+  assert.equal(seen.length,6);
+  assert.equal(seen.filter(x=>x.url===githubURL).length,2);
+  assert.equal(seen.filter(x=>x.url===renderURL).length,2);
+  assert.equal(seen.filter(x=>x.url===renderURL+'/deploys?limit=1').length,2);
+  assert.equal(result.snapshotStability,'stable');
+  assert.equal(result.executionAuthority,false);
+});
+test('GitHub main movement between provider reads triggers a fail-closed hold',async()=>{
+  let githubReads=0;
+  const fetchImpl=async(url,options)=>{
+    assert.equal(options.method,'GET');
+    if(url===githubURL)return reply({ref:'refs/heads/main',object:{sha:++githubReads===1?SHA:OTHER}});
+    if(url===renderURL)return reply({...service,autoDeploy:'no',autoDeployTrigger:'off'});
+    if(url===renderURL+'/deploys?limit=1')return reply([{deploy:deployment,cursor:'none'}]);
+    throw Error('unapproved');
+  };
+  const r=await inspectSmallzFromRuntime({env:readEnv,fetchImpl});
+  assert.equal(githubReads,2);
+  assert.equal(r.status,'HOLD');
+  assert.deepEqual(r.reasonCodes,['PROVIDER_STATE_CHANGED_DURING_READ']);
+  assert.equal(r.evidence,null);
+  assert.equal(r.snapshotStability,'changed');
+  assert.equal(r.releaseApproved,false);
+  assert.equal(r.executionAuthority,false);
+});
+test('Render live deployment changes between reads trigger a hold, without exposing provider payloads',async()=>{
+  let deploymentReads=0;
+  const fetchImpl=async(url,options)=>{
+    assert.equal(options.method,'GET');
+    if(url===githubURL)return reply({ref:'refs/heads/main',object:{sha:SHA}});
+    if(url===renderURL)return reply({...service,autoDeploy:'no',autoDeployTrigger:'off'});
+    if(url===renderURL+'/deploys?limit=1'){
+      const commit=++deploymentReads===1?SHA:OTHER;
+      return reply([{deploy:{...deployment,commit:{id:commit}},cursor:'secret-dont-log'}]);
+    }
+    throw Error('unapproved');
+  };
+  const r=await inspectSmallzFromRuntime({env:readEnv,fetchImpl});
+  assert.equal(deploymentReads,2);
+  assert.equal(r.status,'HOLD');
+  assert.deepEqual(r.reasonCodes,['PROVIDER_STATE_CHANGED_DURING_READ']);
+  assert.equal(r.snapshotStability,'changed');
+  assert.equal(JSON.stringify(r).includes('secret-dont-log'),false);
+  assert.equal(r.productionChanged,false);
+});
