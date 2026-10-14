@@ -21,6 +21,8 @@ jobs:
           node-version: "22"
       - name: Contract and verification-router tests
         run: node --test tests/hercules-implementation-enforcement.test.mjs tests/verification-evidence-router.test.mjs tests/verification-checkpoint-collector.test.mjs tests/hercules-preflight.test.mjs tests/hercules-codex-doctor.test.mjs tests/hercules-codex-cloud-handoff.test.mjs tests/hercules-codex-operator-skill.test.mjs tests/hercules-runtime-witness.test.mjs tests/hercules-smallz-release-proof.test.mjs tests/hercules-smallz-runtime-identity-route.test.mjs
+      - name: Studio offer accessibility and commerce boundary tests
+        run: node --test tests/hercules-studio-offer-accessibility.test.mjs tests/hercules-forge-software-commerce-shell.test.mjs
       # Mirror the active Render smallz-hercules service build; never deploy from CI.
       - name: Smallz Render build parity (read-only)
         run: |
