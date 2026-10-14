@@ -225,7 +225,7 @@ function erasePrivateData(){
     el('eraseConfirm').hidden=true;
     return;
   }
-  stopCamera();resetArHealth();
+  stopCamera();resetArHealth();validationKit.clear();observedModeStats={face:null,hand:null};renderValidationStatus();
   if(uploadedUrl){URL.revokeObjectURL(uploadedUrl);uploadedUrl=null}
   photo.src=DEMO_PHOTO;photo.dataset.fallback='';el('photoFile').value='';
   state.favs.clear();state.looks=[];state.posts=[];state.likes.clear();state.follows.clear();
@@ -383,6 +383,8 @@ el('saveLook').addEventListener('click',saveLook);
 
 let cameraStream=null,landmarker=null,raf=0,cameraGeneration=0,lastFrame=0,mediaPipeModule=null;
 let arSession=null,arLastSummary=null;
+const validationKit=window.GlowValidationKit.create();
+let observedModeStats={face:null,hand:null};
 let cameraStarting=false,cameraCheckPending=false;
 const video=el('cameraVideo'),canvas=el('cameraCanvas');
 const lipOuter=[61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
@@ -421,8 +423,72 @@ function exportArHealth(){
     toast('AR sample counts exported without photos, landmarks or device identifiers.');
   }catch{toast('This browser could not export session statistics.')}
 }
+function validationEvidence(mode){
+  const live=arSession?.snapshot();
+  return live?.mode===mode&&live.samples>0?live:observedModeStats[mode];
+}
+function renderValidationKit(){
+  const container=el('validationScenarios');
+  container.replaceChildren();
+  const options=[['not-tested','Not tested'],['looks-aligned','Appears aligned (self-reported)'],['needs-review','Needs review']];
+  for(const scenario of window.GlowValidationKit.scenarios){
+    const row=document.createElement('div');row.className='validation-row';
+    const label=document.createElement('label');label.textContent=scenario.label;
+    const small=document.createElement('small');small.textContent=scenario.guidance;
+    const input=document.createElement('select');
+    input.dataset.validationId=scenario.id;
+    input.setAttribute('aria-label','Observation: '+scenario.label);
+    for(const [value,title] of options){
+      const option=document.createElement('option');option.value=value;option.textContent=title;input.append(option);
+    }
+    label.append(small,input);row.append(label);container.append(row);
+  }
+  renderValidationStatus();
+}
+function renderValidationStatus(){
+  const report=validationKit.snapshot();
+  const supported=report.scenarios.filter(s=>validationEvidence(s.mode)?.samples>0);
+  for(const entry of report.scenarios){
+    const select=el('validationScenarios').querySelector('select[data-validation-id="'+entry.id+'"]');
+    if(!select)continue;
+    select.disabled=!validationEvidence(entry.mode)?.samples;
+    select.value=entry.result;
+  }
+  const marked=report.scenarios.filter(s=>s.result!=='not-tested'&&validationEvidence(s.mode)?.samples>0);
+  const needsReview=marked.filter(s=>s.result==='needs-review').length;
+  el('exportValidation').disabled=!marked.length;
+  const status=el('validationStatus');
+  status.dataset.status=marked.length?'self-reported':'unverified';
+  status.textContent=marked.length+' of '+report.scenarios.length+
+    ' scenarios marked with matching observed face/hand samples; '+needsReview+
+    ' marked needs review. '+supported.length+
+    ' scenarios currently enabled by a sampled camera mode. '+
+    'No results are independently verified or certified. No personal test data is stored.';
+}
+function exportValidationReport(){
+  const report=validationKit.snapshot();
+  const marked=report.scenarios.filter(s=>s.result!=='not-tested'&&validationEvidence(s.mode)?.samples>0);
+  if(!marked.length)return;
+  try{
+    const evidence={};
+    for(const mode of ['face','hand']){
+      const samples=validationEvidence(mode);
+      if(samples?.samples)evidence[mode]=samples;
+    }
+    const data={
+      schema:1,scope:'single-page-device-local-self-report',status:'self-reported-unverified',
+      accuracyCertified:false,scenarios:marked,evidence
+    };
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='glow-society-ar-observations.json';
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    toast('Downloaded self-reported AR observations. No selfies, landmarks or identifiers included.');
+  }catch{toast('Could not export observations on this browser.')}
+}
 function stopCamera(){
-  if(arSession){arLastSummary=arSession.snapshot();arSession=null;renderArHealth(true)}
+  if(arSession){arLastSummary=arSession.snapshot();if(arLastSummary.samples)observedModeStats[arLastSummary.mode]=arLastSummary;arSession=null;renderArHealth(true);renderValidationStatus()}
   cameraGeneration++;cameraStarting=false;cancelAnimationFrame(raf);raf=0;
   if(cameraStream){cameraStream.getTracks().forEach(track=>track.stop());cameraStream=null}
   if(landmarker){try{landmarker.close()}catch{}landmarker=null}
@@ -546,7 +612,7 @@ function drawTracking(time){
   const pts=state.mode==='hand'?results.landmarks&&results.landmarks[0]:results.faceLandmarks&&results.faceLandmarks[0];
   if(arSession&&arSession.record(performance.now()-inferenceStart,!!pts,time)){
     const snapshot=arSession.snapshot();
-    if(snapshot.samples===1||snapshot.samples%10===0)renderArHealth();
+    if(snapshot.samples===1||snapshot.samples%10===0){renderArHealth();renderValidationStatus()}
   }
   if(!pts){cameraStatus('LOOKING FOR '+(state.mode==='hand'?'A HAND':'A FACE'),'');return}
   cameraStatus('LIVE · '+(state.mode==='hand'?'HAND':'FACE')+' TRACKED','');
@@ -584,6 +650,9 @@ el('runCameraCheck').addEventListener('click',checkCameraCompatibility);
 el('startCamera').addEventListener('click',startCamera);
 el('stopCamera').addEventListener('click',stopCamera);
 el('exportArHealth').addEventListener('click',exportArHealth);
+el('exportValidation').addEventListener('click',exportValidationReport);
+el('resetValidation').addEventListener('click',()=>{validationKit.clear();renderValidationStatus();toast('Session observation checklist cleared.')});
+el('validationScenarios').addEventListener('change',e=>{if(!e.target.matches('select[data-validation-id]'))return;const id=e.target.dataset.validationId,mode=window.GlowValidationKit.scenarios.find(s=>s.id===id)?.mode;if(!mode||!validationEvidence(mode)){e.target.value='not-tested';return}validationKit.setResult(id,e.target.value);renderValidationStatus()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera()});
 window.addEventListener('pagehide',()=>{stopCamera();if(uploadedUrl)URL.revokeObjectURL(uploadedUrl)});
 
@@ -654,7 +723,7 @@ el('feed').addEventListener('submit',e=>{
 const stack=document.createElement('div');stack.id='lookStack';el('saveLook').closest('.studio-actions').before(stack);
 el('depthFilter').value=state.depth;el('toneFilter').value=state.undertone;el('textureFilter').value=state.texture;
 if(passportInit)el('passportStatus').textContent='Your saved preferences are active on this device';
-refreshFavs();renderArtists();renderCommunity();renderExplore();renderStudio();renderArHealth();
+refreshFavs();renderArtists();renderCommunity();renderExplore();renderStudio();renderArHealth();renderValidationKit();
 const initial=(location.hash||'').slice(1);
 navigate(el(initial)&&el(initial).classList.contains('view')?initial:'discover');
 })();
