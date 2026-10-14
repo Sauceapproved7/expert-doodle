@@ -25,6 +25,9 @@ jobs:
       - name: Independent Gatehouse public HTTP and anonymous privacy smoke
         timeout-minutes: 5
         run: node hercules/gatehouse/live-smoke.mjs
+      - name: Isolated real Postgres and Supabase Vault transactional integration
+        timeout-minutes: 15
+        run: node hercules/gatehouse/sql/run-vault-integration.mjs
       - name: Existing Floodgates tests
         run: node --test hercules/floodgates/floodgates-readonly.test.mjs
       - name: Owner-code-only policy
