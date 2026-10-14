@@ -139,6 +139,46 @@ function itemCard(item){
   const tags=item.tags.slice(0,2).map(t=>'<span>'+esc(t)+'</span>').join('');
   return '<article class="product-card" data-category="'+item.category+'"><div style="position:relative">'+thumb(item)+'<button class="product-heart '+(state.favs.has(item.id)?'active':'')+'" data-fav="'+item.id+'" aria-label="'+(state.favs.has(item.id)?'Remove from':'Add to')+' favorites" aria-pressed="'+state.favs.has(item.id)+'">'+(state.favs.has(item.id)?'♥':'♡')+'</button></div><div class="product-body"><div class="product-sub">'+esc(item.category)+' · '+esc(item.region)+'</div><h3>'+esc(item.name)+'</h3><p>'+esc(item.desc)+'</p><div class="product-tags">'+tags+'</div><button class="try-btn" data-try="'+item.id+'">Try this look ↗</button></div></article>';
 }
+function beautyMatchSettings(){
+  return {
+    category:el('matchCategory').value,
+    depth:el('matchDepth').value,
+    tone:el('matchTone').value,
+    texture:el('matchTexture').value,
+    vibe:el('matchVibe').value
+  };
+}
+function renderBeautyMatch(){
+  const prefs=beautyMatchSettings();
+  const matches=window.GlowBeautyMatch.recommend(ITEMS,prefs);
+  const status=el('matchStatus');
+  const grid=el('matchResults');
+  grid.replaceChildren();
+  if(!matches.length){
+    status.textContent='No concepts carry every selected tag. Try a different combination. No shade match was inferred.';
+    return;
+  }
+  status.textContent=matches.length+' illustrative look'+(matches.length===1?'':'s')+
+    ' selected from 47 fictional concepts. These are tag-based suggestions, not measured shade or hairstyle matches.';
+  // Reuse the same favorites and Studio actions as the rest of the catalog.
+  for(const suggestion of matches){
+    const item=itemById(suggestion.id);
+    if(!item)continue;
+    const wrapper=document.createElement('div');
+    wrapper.className='beauty-match-result';
+    wrapper.innerHTML=itemCard(item);
+    const explanation=document.createElement('p');
+    explanation.className='beauty-match-why';
+    explanation.textContent='Why shown: '+suggestion.reason+'.';
+    wrapper.appendChild(explanation);
+    grid.appendChild(wrapper);
+  }
+}
+function resetBeautyMatch(){
+  el('beautyMatchForm').reset();
+  el('matchResults').replaceChildren();
+  el('matchStatus').textContent='Choose what matters to you, then select Find my demo looks.';
+}
 function renderTrending(){
   el('trendingGrid').innerHTML=['lips-1','hair-1','nails-0','cheeks-1','hair-0','lips-2','nails-3','hair-2'].map(id=>itemCard(itemById(id))).join('');
 }
@@ -235,6 +275,7 @@ function erasePrivateData(){
   state.size=100;state.intensity=65;state.photoPos={x:47,y:57};
   el('search').value='';el('depthFilter').value='all';el('toneFilter').value='all';el('textureFilter').value='all';el('sortFilter').value='featured';
   el('postText').value='';el('postLength').textContent='0 / 280';
+  resetBeautyMatch();
   el('overlaySize').value='100';el('intensity').value='65';el('overlayNumber').textContent='100%';el('intensityNumber').textContent='65%';
   el('passportStatus').textContent='No preferences saved yet';
   el('eraseConfirm').hidden=true;
@@ -686,6 +727,14 @@ document.addEventListener('click',e=>{
   if(target.hasAttribute('data-resetfilters')){state.category='all';state.depth='all';state.undertone='all';state.texture='all';state.search='';state.sort='featured';el('search').value='';el('depthFilter').value='all';el('toneFilter').value='all';el('textureFilter').value='all';el('sortFilter').value='featured';renderExplore();return}
 });
 el('headerSaved').addEventListener('click',()=>navigate('saved'));
+el('beautyMatchForm').addEventListener('submit',e=>{e.preventDefault();renderBeautyMatch()});
+el('matchClear').addEventListener('click',resetBeautyMatch);
+el('matchUsePassport').addEventListener('click',()=>{
+  el('matchDepth').value=state.depth;
+  el('matchTone').value=state.undertone;
+  el('matchTexture').value=state.texture;
+  renderBeautyMatch();
+});
 el('search').addEventListener('input',e=>{state.search=e.target.value.trim().toLowerCase();renderExplore()});
 el('depthFilter').addEventListener('change',e=>{state.depth=e.target.value;renderExplore()});
 el('toneFilter').addEventListener('change',e=>{state.undertone=e.target.value;renderExplore()});
