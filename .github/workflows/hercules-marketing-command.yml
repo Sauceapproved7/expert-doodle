@@ -1,0 +1,31 @@
+name: Hercules Marketing Command
+on:
+  push:
+    paths:
+      - 'hercules-marketing-command/**'
+      - 'tests/hercules-marketing-command.test.mjs'
+      - '.github/workflows/hercules-marketing-command.yml'
+  pull_request:
+    paths:
+      - 'hercules-marketing-command/**'
+      - 'tests/hercules-marketing-command.test.mjs'
+      - '.github/workflows/hercules-marketing-command.yml'
+permissions:
+  contents: read
+jobs:
+  marketing-command:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Focused tests
+        run: node --test tests/hercules-marketing-command.test.mjs
+      - name: Execution contract
+        run: node scripts/verify-hercules-execution-contract.mjs
+      - name: Owner-code boundary
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Security baseline
+        run: node scripts/security-baseline.mjs
