@@ -1,3 +1,9 @@
+## Smallz two-pass read-only evidence drift guard — October 13, 2026
+
+- Modified original SauceApproved code in `hercules-deploy/smallz-evidence-command.mjs` and `tests/hercules-deploy-smallz-evidence-command.test.mjs` to compare two sequential normalized GitHub/Render snapshots. Any detected mid-read drift causes HOLD, not a release claim.
+- No copied third-party code, extra npm dependencies, service credentials, paid hosting or production changes. Six fixed GET calls rather than three, no additional destinations or write capabilities. All source and output remain advisory; stable snapshots cannot independently prove identity/freshness or grant owner authority.
+- Tests added first for GitHub/Render state changes and stable two-pass collection, followed by implementation. Verify exact-head CI and security results before merging.
+
 ## Hercules Smallz server-only evidence command — October 13, 2026
 
 - Original first-party SauceApproved AI-assisted Node 22 code: `hercules-deploy/smallz-evidence-command.mjs`, `scripts/hercules-smallz-evidence-read.mjs`, `tests/hercules-deploy-smallz-evidence-command.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-EVIDENCE-COMMAND-V1.md`.

@@ -41,3 +41,11 @@ A successful three-source GET read may still return \`HOLD\` because live Smallz
 - Production Smallz still runs on the previously verified Render service commit; do not merge/release without resolving tracker [#1021](https://github.com/Sauceapproved7/expert-doodle/issues/1021).
 
 No added npm packages, cloud instances, subscriptions, billing, provider permissions, environment settings or production deployments.
+
+## Two-pass consistency guard (v1.1)
+
+The local evidence command now performs **two sequential sets** of the same three authorized GET requests (GitHub main ref, Render service identity and Render latest deploy). It compares the allowlisted normalized results, not raw provider bodies or API credentials. If the head SHA, running SHA, deployment identity, configured auto-deploy setting, or reason codes change between the two observations, the command returns `HOLD` with `PROVIDER_STATE_CHANGED_DURING_READ`, `snapshotStability=changed`, and no selected release evidence. Malformed/missing provider records return `HOLD` with `snapshotStability=unverified`. Stable records set `snapshotStability=stable`, but **do not** prove the provider was authenticated independently or that either snapshot was fresh, safe or a release approval.
+
+This doubles the command's GET count from 3 to 6 per invocation and does **not** add write operations, paid resources, scheduling or new credential slots. It is a best-effort race detector only, not an atomic cross-provider transaction; simultaneous changes and maliciously consistent data may still evade it. The command never grants execution or owner authority.
+
+Regression tests cover unchanged records and GitHub or Render deployment changes between samples, along with existing missing-credential/unsupported-argument behavior. See final exact-head Deploy Plane and CodeQL checks before merging.
