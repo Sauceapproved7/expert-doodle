@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <meta name="theme-color" content="#291827"/>
+  <meta name="robots" content="noindex,nofollow,noarchive"/>
+  <meta name="description" content="Glow Society: discover inclusive beauty, try makeup and nails on your own camera, explore textured hairstyles, and join a private beauty community demo."/>
+  <title>Glow Society — Beauty in your own light</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="./styles.css"/>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="topline" role="note">A new standard in beauty <span class="topline-star" aria-hidden="true">✦</span> Made for every shade and every texture</div>
+  <header class="header">
+    <a class="brand" href="#discover" data-go="discover" aria-label="Glow Society home"><span class="brand-icon">✳</span><span>glow<span class="brand-accent">society</span><small>BEAUTY IS YOURS.</small></span></a>
+    <div class="header-right"><span class="demo-pill">PRIVATE DEMO</span><button type="button" id="headerSaved" class="circle-btn" aria-label="View saved items">♡ <span id="favCount" class="count-dot" hidden>0</span></button></div>
+  </header>
+  <main id="app">
+    <section id="discover" class="view active" aria-labelledby="discoverTitle">
+      <div class="hero">
+        <div class="hero-image" role="img" aria-label="Editorial beauty portrait celebrating deep skin and natural textured hair"></div>
+        <div class="hero-wash"></div>
+        <div class="hero-content">
+          <div class="kicker light">YOUR BEAUTY. YOUR RULES.</div>
+          <h1 id="discoverTitle">Find your <em>kind</em><br/>of beautiful.</h1>
+          <p>Explore the shades, protective styles and nail looks that feel like you. Try them before you commit.</p>
+          <button class="cta cream" data-go="studio">Enter the try-on studio <span aria-hidden="true">↗</span></button>
+        </div>
+        <div class="hero-index">01 / GLOW SOCIETY</div>
+      </div>
+      <section class="container intro-stats" aria-label="Highlights">
+        <div><strong>Every shade</strong><span>Thoughtful deep-skin discovery</span></div>
+        <div><strong>Every texture</strong><span>Coils, locs, braids and more</span></div>
+        <div><strong>Your device</strong><span>Camera stays in your control</span></div>
+      </section>
+      <section class="container section-space" aria-labelledby="shopTitle">
+        <div class="section-head"><div><div class="kicker">THE BEAUTY EDIT</div><h2 id="shopTitle">What are we <em>trying?</em></h2></div><button class="text-link" data-go="explore">Explore all <span aria-hidden="true">↗</span></button></div>
+        <div class="category-grid">
+          <button class="category-tile cat-makeup" data-category="makeup"><span class="tile-decoration lipstick-shape"></span><span class="tile-num">01</span><span>Makeup <small>Shades that show up.</small></span><span class="tile-arrow" aria-hidden="true">↗</span></button>
+          <button class="category-tile cat-hair" data-category="hair"><span class="tile-decoration hair-shape"></span><span class="tile-num">02</span><span>Hair <small>Every crown matters.</small></span><span class="tile-arrow" aria-hidden="true">↗</span></button>
+          <button class="category-tile cat-nails" data-category="nails"><span class="tile-decoration nail-shape"></span><span class="tile-num">03</span><span>Nails <small>Details that hit different.</small></span><span class="tile-arrow" aria-hidden="true">↗</span></button>
+        </div>
+      </section>
+      <section class="spotlight-band"><div class="container spotlight-inner"><div class="kicker light">DEEP SKIN. FULL SPECTRUM.</div><h2>No more <em>one shade</em><br/>fits all.</h2><p>Rich espresso, mahogany, golden brown and everything between. Filter by depth and undertone; preview with realistic expectations.</p><button class="cta borderlight" data-go="explore" data-preset="deep">Shop the deep-skin edit <span aria-hidden="true">↗</span></button><div class="spotlight-art" aria-hidden="true"><div class="shade-circle one"></div><div class="shade-circle two"></div><div class="shade-circle three"></div><div class="shade-circle four"></div></div></div></section>
+      <section class="container section-space" aria-labelledby="trendingTitle">
+        <div class="section-head"><div><div class="kicker">ON THE RADAR</div><h2 id="trendingTitle">The <em>glow list.</em></h2></div><button class="text-link" data-go="explore">View everything ↗</button></div>
+        <div id="trendingGrid" class="product-grid" aria-live="polite"></div>
+      </section>
+      <section class="container section-space community-tease"><div class="community-tease-art"><span class="floating-hearts" aria-hidden="true">♡ ✳ ♡</span><strong>Looks better<br/>together.</strong></div><div><div class="kicker">MORE THAN MAKEUP</div><h2>Find your beauty <em>people.</em></h2><p>Swap inspiration, discover creators, save tutorials, and celebrate every expression of beauty.</p><button class="cta dark" data-go="community">Explore the community <span aria-hidden="true">↗</span></button><p class="fineprint">Community interactions are local demo data, not public posts.</p></div></section>
+    </section>
+    <section id="explore" class="view" aria-labelledby="exploreTitle">
+      <div class="container subhero"><div class="kicker">FIND YOUR NEXT LOOK</div><h1 id="exploreTitle">The beauty <em>library.</em></h1><p>Beauty made for undertones, textures and self-expression—not one narrow ideal.</p></div>
+      <div class="container filters">
+        <label for="search" class="sr-only">Search looks and products</label><div class="searchwrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search berry lips, 4C coils, chrome nails…" autocomplete="off"/></div>
+        <div class="chiprow" id="categoryChips" aria-label="Product categories"></div>
+        <div class="filterline"><label>Skin depth <select id="depthFilter"><option value="all">All shades</option><option value="deep">Deep / rich</option><option value="tan">Tan / brown</option><option value="medium">Medium</option><option value="light">Light / fair</option></select></label><label>Undertone <select id="toneFilter"><option value="all">All undertones</option><option value="warm">Warm / golden</option><option value="cool">Cool / red</option><option value="neutral">Neutral</option><option value="olive">Olive</option></select></label><label>Hair texture <select id="textureFilter"><option value="all">All textures</option><option value="3b">3B curls</option><option value="4a">4A coils</option><option value="4b">4B coils</option><option value="4c">4C coils</option><option value="braids">Braids</option><option value="locs">Locs</option><option value="protective">Protective styles</option></select></label><label>Sort <select id="sortFilter"><option value="featured">Featured</option><option value="name">Name A–Z</option><option value="category">Category</option></select></label></div><div class="passport-bar"><div><strong>Your Beauty Passport</strong><p>Choose your skin depth, undertone and preferred hair looks. Save those discovery filters privately on this device; no account or face scan required.</p><small id="passportStatus">No preferences saved yet</small></div><button id="savePassport" class="secondary-btn">Save my preferences</button><button id="resetPassport" class="secondary-btn">Reset</button></div>
+        <p id="resultCount" class="fineprint" role="status"></p>
+        <div id="exploreGrid" class="product-grid"></div>
+        <p class="fineprint disclosure">All products, prices, creator profiles and endorsements are illustrative. No inventory or checkout is connected. Digital shade overlays are not a reliable foundation or hair-color match.</p>
+      </div>
+    </section>
+    <section id="studio" class="view" aria-labelledby="studioTitle">
+      <div class="container subhero"><div class="kicker">GLOW SOCIETY LAB</div><h1 id="studioTitle">Your face. <em>Your canvas.</em></h1><p>Try colors with your camera or photo. You decide when the camera starts and stops.</p></div>
+      <div class="container studio-layout">
+        <div class="studio-preview">
+          <div class="studio-tabs"><button class="studio-tab selected" data-mode="photo" aria-pressed="true">Photo lab</button><button class="studio-tab" data-mode="face" aria-pressed="false">Live face AR</button><button class="studio-tab" data-mode="hand" aria-pressed="false">Live nails AR</button></div>
+          <div id="photoLab" class="stage photo-stage">
+            <div class="photo-frame" id="photoFrame"><img id="previewPhoto" alt="Uploaded or sample portrait for manual try-on preview" crossorigin="anonymous"/><div id="manualOverlay" class="manual-overlay" role="img" aria-label="Adjustable artistic color overlay, not accurate automatic tracking" tabindex="0"></div><div class="stage-tag">MANUAL OVERLAY • NOT FACE TRACKING</div><div class="stage-credit">For inspiration only · position overlay by dragging</div></div>
+          </div>
+          <div id="cameraLab" class="stage camera-stage" hidden>
+            <div class="camera-frame"><video id="cameraVideo" playsinline muted autoplay></video><canvas id="cameraCanvas" aria-hidden="true"></canvas><div class="stage-tag" id="cameraStatus">CAMERA OFF</div><div class="camera-center" id="cameraMessage">Enable your camera to start on-device tracking.</div></div>
+          </div>
+          <div class="studio-toolbar"><label class="upload-btn">↑ Upload your photo<input id="photoFile" type="file" accept="image/png,image/jpeg,image/webp" hidden/></label><button id="startCamera" class="secondary-btn" hidden>Start camera</button><button id="stopCamera" class="secondary-btn" hidden>Stop camera</button><button id="resetPreview" class="secondary-btn">Reset</button></div>
+          <div class="privacy-note"><strong>◈ Privacy first.</strong> Images stay in this browser session and aren't sent to our server. Live tracking processes camera frames on your device, but MediaPipe may send SDK usage metrics to Google. Tap Start camera only if you agree. Stop camera anytime.</div>
+          <section class="camera-check" aria-labelledby="cameraCheckTitle">
+            <div class="camera-check-top"><div><span class="kicker">DEVICE READINESS</span><h3 id="cameraCheckTitle">Camera compatibility check</h3></div><span class="camera-check-badge">OPTIONAL</span></div>
+            <p>Test camera permission and whether your browser can start a video stream. The test does not download AR models, record photos, or measure makeup accuracy.</p>
+            <button id="runCameraCheck" type="button" class="secondary-btn">Check my camera</button>
+            <div id="cameraCheckStatus" class="camera-check-results" aria-live="polite" role="status">Not checked. Your camera stays off until you choose to test it.</div>
+            <p class="fineprint">If permission is granted, this briefly opens the front camera and immediately closes it. The result stays in this page session. Face/hand AR still requires separate real-world evaluation.</p>
+          </section>
+        </div>
+        <div class="studio-control">
+          <div class="kicker">01 / CUSTOMIZE YOUR LOOK</div><h2>Your <em>signature</em> shade.</h2>
+          <p class="studio-hint">Choose a shade below; lips, cheeks, and nails can follow real-world landmarks in supported camera modes. Hair is a manual color concept preview.</p>
+          <div class="chiprow" id="studioCategoryChips"></div>
+          <label class="field-label" for="studioItem">Choose a look</label><select id="studioItem" class="full-select"></select>
+          <div class="selected-detail"><div id="selectedSwatch" class="selected-swatch"></div><div><strong id="selectedName">Choose a color</strong><small id="selectedDesc">Preview shades</small></div><button id="favoriteCurrent" class="heart-btn" aria-label="Save selected item">♡</button></div>
+          <label class="field-label" for="intensity">Color intensity <span id="intensityNumber">65%</span></label><input id="intensity" type="range" min="10" max="100" value="65"/>
+          <div id="manualControls"><label class="field-label" for="overlaySize">Overlay size <span id="overlayNumber">100%</span></label><input id="overlaySize" type="range" min="35" max="180" value="100"/><div class="hint">Drag the color onto the area you want to visualize. An artistic demo, not an exact fitting.</div></div>
+          <div class="studio-actions"><button class="cta dark" id="saveLook">♡ Save this look</button><button class="cta soft" data-go="explore">More looks ↗</button></div>
+          <div class="fineprint">Actual results vary with lighting, camera calibration, face shape and product formulas. Hair and nail positioning are experimental previews, not a salon simulation.</div>
+        </div>
+      </div>
+    </section>
+    <section id="community" class="view" aria-labelledby="communityTitle">
+      <div class="container subhero"><div class="kicker">OUR SPACE</div><h1 id="communityTitle">Beauty is <em>community.</em></h1><p>Where your next look comes from a conversation, not an algorithm alone.</p></div>
+      <div class="container community-layout"><div><div class="banner-inline"><strong>Private demo feed</strong><span>Everything you post or like stays in your browser. Nobody else can see it.</span></div><form id="postForm" class="compose"><label for="postText">What beauty tip are you sharing?</label><textarea id="postText" maxlength="280" placeholder="Drop your favorite shade, braid tip or nail inspiration…" required></textarea><div class="compose-bottom"><span id="postLength">0 / 280</span><button type="submit" class="cta dark">Post locally ↗</button></div></form><div class="community-tools"><small>Only you can see your saved demo posts and hidden-post choices.</small><button id="restoreHidden" class="text-link">Restore hidden example posts</button></div><div id="feed" class="feed"></div></div><aside class="community-aside"><div class="aside-card"><div class="kicker">GLOW CODE</div><h3>Made for expression.</h3><p>Shade-inclusive inspiration, respectful feedback and space for every curl, color and creative choice.</p><span class="fineprint">Public accounts, content moderation, messages and creator verification are not enabled yet.</span></div><div class="aside-card editorial"><div class="kicker light">THE BEAUTY CIRCLE</div><h3>Big sister energy. <em>Every day.</em></h3><p>Come for a look. Stay for the confidence.</p></div></aside></div>
+    </section>
+    <section id="artists" class="view" aria-labelledby="artistsTitle"><div class="container subhero"><div class="kicker">THE CREATIVE DIRECTORY</div><h1 id="artistsTitle">Meet the <em>artists.</em></h1><p>From deep-skin makeup specialists to loc artists and nail designers. Featured profiles are fictional examples.</p></div><div class="container"><div class="chiprow" id="artistFilters"></div><div id="artistGrid" class="artist-grid"></div><p class="disclosure fineprint">Professional listings are demo profiles; appointments, identity verification, location search and payments are not yet available.</p></div></section>
+    <section id="saved" class="view" aria-labelledby="savedTitle"><div class="container subhero"><div class="kicker">YOUR PRIVATE LOOKBOOK</div><h1 id="savedTitle">Saved <em>glow.</em></h1><p>Your favorites and looks are saved to this browser only. Clear your browser storage to erase them.</p></div><div class="container"><div class="section-head"><h2>Favorite finds</h2><button class="text-link" id="clearSaved">Clear favorites</button></div><div id="savedGrid" class="product-grid"></div><div class="section-head looks-head"><h2>Your saved looks</h2></div><div id="looksGrid" class="looks-grid"></div></div></section>
+  </main>
+  <nav class="bottom-nav" aria-label="Main navigation"><button data-go="discover" class="nav-item current" aria-current="page"><span aria-hidden="true">⌂</span><small>Home</small></button><button data-go="explore" class="nav-item"><span aria-hidden="true">◇</span><small>Explore</small></button><button data-go="studio" class="nav-item"><span aria-hidden="true">✧</span><small>Try on</small></button><button data-go="community" class="nav-item"><span aria-hidden="true">♧</span><small>Circle</small></button><button data-go="saved" class="nav-item"><span aria-hidden="true">♡</span><small>Saved</small></button></nav>
+  <footer><div class="container footer-content"><div class="brand footbrand"><span class="brand-icon">✳</span><span>glow<span class="brand-accent">society</span></span></div><p>Beauty is yours. A standalone, inclusive concept prototype—no actual purchases, public community accounts or professional bookings.</p><button data-go="artists" class="footer-link">Discover artists ↗</button><small>© 2026 Glow Society · Private demo</small></div></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body></html>

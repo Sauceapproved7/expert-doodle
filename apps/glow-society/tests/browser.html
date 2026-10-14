@@ -1,0 +1,127 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Glow Society browser QA</title>
+<h1>Glow Society independent browser interaction QA</h1><pre id="result" data-status="running">Running real Chromium DOM checks...</pre>
+<iframe id="app" src="../index.html#discover" title="App under test" width="390" height="840" style="border:1px solid #ddd"></iframe>
+<script>
+const output=document.getElementById('result');
+const iframe=document.getElementById('app');
+const steps=[];
+const wait=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+function assert(value,message){if(!value)throw Error(message);steps.push('PASS '+message)}
+function click(element,message){assert(Boolean(element),'Control exists: '+message);element.click();}
+function active(document,id){return document.querySelector('#'+id+'.view.active')!==null}
+function count(document,selector){return document.querySelectorAll(selector).length}
+function go(document,name){click(document.querySelector('[data-go="'+name+'"]'),'Navigate to '+name)}
+async function check(document) {
+ assert(active(document,'discover'),'Home initially active');
+ assert(count(document,'#trendingGrid .product-card')===8,'Eight illustrated trending looks rendered');
+ go(document,'explore');
+ assert(active(document,'explore'),'Explore tab works');
+ assert(count(document,'#exploreGrid .product-card')===47,'Catalog renders 47 inclusive demo looks');
+ const filter=document.getElementById('depthFilter');
+ filter.value='deep';filter.dispatchEvent(new Event('change',{bubbles:true}));
+ const deepCount=count(document,'#exploreGrid .product-card');
+ assert(deepCount>0 && deepCount<47,'Deep-complexion filter narrows makeup while preserving hair/nail categories');
+ const texture=document.getElementById('textureFilter');
+ texture.value='4c';texture.dispatchEvent(new Event('change',{bubbles:true}));
+ assert(count(document,'#exploreGrid .product-card')<deepCount,'4C texture discovery narrows hairstyle choices');
+ texture.value='all';texture.dispatchEvent(new Event('change',{bubbles:true}));
+ click(document.getElementById('savePassport'),'Save private Beauty Passport');
+ assert(Boolean(iframe.contentWindow.localStorage.getItem('glow-society-v1-passport')),'Beauty Passport saved to local browser storage');
+ click(document.getElementById('resetPassport'),'Reset private Beauty Passport');
+ assert(iframe.contentWindow.localStorage.getItem('glow-society-v1-passport')==='null','Beauty Passport can be erased without an account');
+ const search=document.getElementById('search');
+ search.value='locs';search.dispatchEvent(new Event('input',{bubbles:true}));
+ assert(count(document,'#exploreGrid .product-card')>=2,'Loc discovery returns textured hair looks');
+ search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));
+ filter.value='all';filter.dispatchEvent(new Event('change',{bubbles:true}));
+ click(document.querySelector('#exploreGrid [data-fav]'),'Favorite a look');
+ go(document,'saved');
+ assert(active(document,'saved'),'Saved tab works');
+ assert(count(document,'#savedGrid .product-card')>=1,'Favorite persisted to private lookbook');
+ click(document.querySelector('#savedGrid [data-try]'),'Open selected look in Try On Studio');
+ assert(active(document,'studio'),'Studio opens from lookbook');
+ assert(Boolean(document.querySelector('#photoLab:not([hidden])')),'Manual photo mode initially available');
+ const intensity=document.getElementById('intensity');
+ intensity.value='85';intensity.dispatchEvent(new Event('input',{bubbles:true}));
+ assert(document.getElementById('intensityNumber').textContent==='85%','Overlay intensity works');
+ const media=iframe.contentWindow.navigator.mediaDevices;
+ assert(Boolean(media&&media.getUserMedia),'Browser provides camera API for controlled tests');
+ const originalGetUserMedia=media.getUserMedia.bind(media);
+ let videoTrackStopped=false;let microphoneRequested=false;
+ media.getUserMedia=async constraints=>{
+   microphoneRequested=Boolean(constraints.audio);
+   const fakeTrack={readyState:'live',getSettings:()=>({width:640,height:480}),stop:()=>{videoTrackStopped=true;fakeTrack.readyState='ended';}};
+   return {getVideoTracks:()=>[fakeTrack],getTracks:()=>[fakeTrack]};
+ };
+ click(document.getElementById('runCameraCheck'),'Start user-controlled mocked camera check');
+ await wait(20);
+ assert(document.getElementById('cameraCheckStatus').dataset.result==='passed','Permission-granted camera simulation reports correct readiness');
+ assert(videoTrackStopped,'Temporary video stream tracks are stopped on success');
+ assert(!microphoneRequested,'Camera check never requests audio');
+ assert(document.getElementById('cameraCheckStatus').textContent.includes('does not verify face tracking'),'Camera test does not overclaim real-world AR quality');
+ assert(!document.getElementById('runCameraCheck').disabled,'Camera test returns control after stopping stream');
+ media.getUserMedia=async()=>{const denied=new Error('Permission denied');denied.name='NotAllowedError';throw denied;};
+ click(document.getElementById('runCameraCheck'),'Simulate denied camera permission');
+ await wait(20);
+ assert(document.getElementById('cameraCheckStatus').dataset.result==='unavailable','Permission denial has a graceful fallback');
+ assert(document.getElementById('cameraCheckStatus').textContent.includes('Photo Lab still works'),'Camera denial offers photo-mode alternative');
+ // A camera compatibility request can resolve after the user leaves Studio.
+ let finishCheck=null;
+ let cancelledCheckTrackStopped=false;
+ media.getUserMedia=()=>new Promise(resolve=>{finishCheck=resolve});
+ click(document.getElementById('runCameraCheck'),'Start delayed camera compatibility check');
+ assert(document.getElementById('runCameraCheck').disabled,'Repeated camera checks cannot overlap');
+ click(document.querySelector('[data-mode="face"]'),'Navigate away from photo mode during pending permission');
+ assert(document.getElementById('cameraCheckStatus').dataset.result==='cancelled','Navigating between camera modes cancels pending check');
+ click(document.getElementById('startCamera'),'Attempt live camera while permission check pending');
+ assert(document.getElementById('cameraStatus').textContent==='CAMERA OFF','Live session does not overlap a pending check');
+ const cancelledCheckTrack={readyState:'live',stop(){cancelledCheckTrackStopped=true;this.readyState='ended';},getSettings:()=>({width:640,height:480})};
+ finishCheck({getTracks:()=>[cancelledCheckTrack],getVideoTracks:()=>[cancelledCheckTrack]});
+ await wait(20);
+ assert(cancelledCheckTrackStopped,'Late camera compatibility grant is immediately stopped');
+ assert(document.getElementById('cameraCheckStatus').dataset.result==='cancelled','Late permission must not overwrite cancelled status');
+
+ // Live AR permission can also arrive only after leaving the Studio.
+ let finishLive=null;
+ let staleLiveTrackStopped=false;
+ media.getUserMedia=()=>new Promise(resolve=>{finishLive=resolve});
+ click(document.getElementById('startCamera'),'Start live face camera with delayed permission');
+ assert(document.getElementById('cameraStatus').textContent==='LOADING','Delayed live session shows loading');
+ click(document.querySelector('[data-mode="photo"]'),'Cancel live face mode before permission resolves');
+ const staleLiveTrack={readyState:'live',stop(){staleLiveTrackStopped=true;this.readyState='ended';}};
+ finishLive({getTracks:()=>[staleLiveTrack],getVideoTracks:()=>[staleLiveTrack]});
+ await wait(20);
+ assert(staleLiveTrackStopped,'Late live permission closes stream after navigation');
+ assert(document.getElementById('cameraVideo').srcObject===null,'Cancelled camera session leaves no video stream attached');
+ assert(document.getElementById('cameraStatus').textContent==='CAMERA OFF','Stale session cannot turn camera on');
+ media.getUserMedia=originalGetUserMedia;
+ click(document.querySelector('[data-mode="face"]'),'Choose live face mode without starting camera');
+ assert(Boolean(document.querySelector('#cameraLab:not([hidden])')),'Face camera affordance shown');
+ assert(document.getElementById('startCamera').hidden===false,'Camera is opt-in, not auto-started');
+ click(document.querySelector('[data-mode="photo"]'),'Return to manual photo');
+ click(document.getElementById('saveLook'),'Save a selected look');
+ go(document,'saved');
+ assert(count(document,'#looksGrid .look-card')>=1,'Saved look is shown');
+ go(document,'community');
+ assert(active(document,'community'),'Community demo tab works');
+ const field=document.getElementById('postText');
+ field.value='My test note stays in this browser.';
+ field.dispatchEvent(new Event('input',{bubbles:true}));
+ document.getElementById('postForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+ assert(document.getElementById('feed').textContent.includes('My test note stays in this browser.'),'Private post appears in local-only feed');
+ click(document.querySelector('#feed [data-post="seed-1"] [data-hidepost]'),'Hide unwanted sample post locally');
+ assert(!document.querySelector('#feed [data-post="seed-1"]'),'Hidden sample post disappears from this device');
+ click(document.getElementById('restoreHidden'),'Restore hidden demo posts');
+ assert(Boolean(document.querySelector('#feed [data-post="seed-1"]')),'Hidden post is restored');
+ go(document,'artists');
+ assert(count(document,'#artistGrid .artist-card')===8,'Creator directory renders eight fictional artist profiles');
+ assert(document.querySelector('meta[name="robots"]').getAttribute('content').includes('noindex'),'Preview metadata discourages indexing');
+ assert(Boolean(window.localStorage),'Browser local storage is available');
+}
+iframe.onload=async()=>{try{await wait(500);const doc=iframe.contentDocument;await check(doc);
+ const local=iframe.contentWindow.localStorage;
+ assert([...Object.keys(local)].some(k=>k.includes('glow-society-v1')),'Lookbook and community demo use browser-local data');
+ output.dataset.status='pass';output.textContent=steps.join('\n')+'\nALL '+steps.length+' BROWSER CHECKS PASSED';
+ }catch(err){output.dataset.status='fail';output.textContent=steps.join('\n')+'\nFAIL '+(err.stack||err.message);}
+};
+</script></html>

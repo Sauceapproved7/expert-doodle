@@ -1,0 +1,30 @@
+name: Glow Society isolated QA
+
+on:
+  push:
+    branches:
+      - feature/glow-society-standalone-v1-20261013
+    paths:
+      - 'apps/glow-society/**'
+      - '.github/workflows/glow-society-qa.yml'
+  pull_request:
+    paths:
+      - 'apps/glow-society/**'
+      - '.github/workflows/glow-society-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Static app checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Verify JavaScript and app contracts
+        run: |
+          node apps/glow-society/test.mjs
+          node --test apps/glow-society/tests/smoke.mjs
+      - name: Mobile-width Chromium interaction QA
+        run: node apps/glow-society/tests/browser-runner.mjs
