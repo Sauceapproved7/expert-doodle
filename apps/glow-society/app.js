@@ -180,6 +180,67 @@ function renderSaved(){
   }).join(''):'<div class="empty-state"><strong>Your future looks live here.</strong><p>Build a combination in the try-on studio and save it.</p></div>';
   updatePrivacySummary();
 }
+function updatePrivacySummary(){
+  const counts=[
+    state.favs.size+' favorites',
+    state.looks.length+' saved looks',
+    state.posts.filter(p=>p.local).length+' private posts',
+    state.hiddenPosts.size+' hidden posts',
+    state.mutedAuthors.size+' muted demo creators'
+  ];
+  el('privacySummary').textContent=counts.join(' · ')+'. Beauty Passport, comments, likes and follow preferences are also covered by export and erase.';
+}
+function localDataSnapshot(){
+  const prefix=ROOT+'-';
+  const data={};
+  for(const key of Object.keys(localStorage)){
+    if(!key.startsWith(prefix))continue;
+    const raw=localStorage.getItem(key);
+    try{data[key.slice(prefix.length)]=JSON.parse(raw)}catch{data[key.slice(prefix.length)]=raw}
+  }
+  return data;
+}
+function exportPrivateData(){
+  try{
+    const snapshot={product:'Glow Society',schemaVersion:1,exportedAt:new Date().toISOString(),scope:'browser-local-demo-data-only',data:localDataSnapshot()};
+    const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download='glow-society-private-data.json';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    toast('Local data exported to a JSON file on this device. Keep it private.');
+  }catch{
+    toast('Data export could not start. Your browser may restrict downloads or local storage.');
+  }
+}
+function erasePrivateData(){
+  let keys=[];
+  try{
+    keys=Object.keys(localStorage).filter(k=>k.startsWith(ROOT+'-'));
+    for(const key of keys)localStorage.removeItem(key);
+    if(keys.some(k=>localStorage.getItem(k)!==null))throw new Error('Stored values remain');
+  }catch{
+    toast('Could not fully clear this browser’s storage. Check browser site-data settings.');
+    el('eraseConfirm').hidden=true;
+    return;
+  }
+  stopCamera();
+  if(uploadedUrl){URL.revokeObjectURL(uploadedUrl);uploadedUrl=null}
+  photo.src=DEMO_PHOTO;photo.dataset.fallback='';el('photoFile').value='';
+  state.favs.clear();state.looks=[];state.posts=[];state.likes.clear();state.follows.clear();
+  state.hiddenPosts.clear();state.mutedAuthors.clear();state.layers={};state.uploadedPhoto=null;
+  state.depth='all';state.undertone='all';state.texture='all';state.category='all';state.search='';state.sort='featured';
+  state.artistFilter='all';state.mode='photo';state.studioRegion='lips';state.currentId='lips-0';
+  state.size=100;state.intensity=65;state.photoPos={x:47,y:57};
+  el('search').value='';el('depthFilter').value='all';el('toneFilter').value='all';el('textureFilter').value='all';el('sortFilter').value='featured';
+  el('postText').value='';el('postLength').textContent='0 / 280';
+  el('overlaySize').value='100';el('intensity').value='65';el('overlayNumber').textContent='100%';el('intensityNumber').textContent='65%';
+  el('passportStatus').textContent='No preferences saved yet';
+  el('eraseConfirm').hidden=true;
+  refreshFavs();renderExplore();renderArtists();renderCommunity();renderStudio();navigate('saved');updatePrivacySummary();
+  toast('Glow Society demo data erased from this browser. Other site data was not touched.');
+}
 function renderCommunity(){
   const all=[...state.posts.slice().reverse(),...POSTS.filter(p=>!state.posts.some(local=>local.id===p.id))].filter(p=>!state.hiddenPosts.has(p.id) && (p.local || !state.mutedAuthors.has(p.name)));
   el('feed').innerHTML=all.map(p=>{
@@ -521,6 +582,11 @@ el('savePassport').addEventListener('click',()=>{storeSet('passport',{depth:stat
 el('resetPassport').addEventListener('click',()=>{state.depth='all';state.undertone='all';state.texture='all';state.category='all';state.search='';el('search').value='';for(const id of ['depthFilter','toneFilter','textureFilter'])el(id).value='all';storeSet('passport',null);el('passportStatus').textContent='No preferences saved yet';renderExplore();toast('Beauty Passport reset.')});
 el('restoreHidden').addEventListener('click',()=>{state.hiddenPosts.clear();storeSet('hiddenPosts',[]);renderCommunity();toast('Hidden demo posts are visible again.')});
 el('restoreMuted').addEventListener('click',()=>{state.mutedAuthors.clear();storeSet('mutedAuthors',[]);renderCommunity();toast('Fictional creators are visible again.')});
+el('exportLocalData').addEventListener('click',exportPrivateData);
+el('eraseLocalData').addEventListener('click',()=>{el('eraseConfirm').hidden=false;el('confirmEraseLocalData').focus()});
+el('cancelEraseLocalData').addEventListener('click',()=>{el('eraseConfirm').hidden=true;el('eraseLocalData').focus()});
+el('confirmEraseLocalData').addEventListener('click',erasePrivateData);
+
 el('sortFilter').addEventListener('change',e=>{state.sort=e.target.value;renderExplore()});
 el('clearSaved').addEventListener('click',()=>{
   state.favs.clear();storeSet('favs',[]);refreshFavs();toast('Favorites cleared in this browser');
