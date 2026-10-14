@@ -28,7 +28,9 @@ try{
  await new Promise((done,fail)=>{server.listen(0,'127.0.0.1',done);server.on('error',fail)});
  const url='http://127.0.0.1:'+server.address().port+'/tests/browser.html';
  const args=['--headless=new','--disable-gpu','--disable-dev-shm-usage','--no-sandbox','--no-first-run','--no-default-browser-check',
-  '--disable-extensions','--disable-background-networking','--no-proxy-server','--window-size=390,844',
+  '--disable-extensions','--disable-background-networking','--no-proxy-server',
+  '--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream',
+  '--autoplay-policy=no-user-gesture-required','--window-size=390,844',
   '--virtual-time-budget=9000','--user-data-dir='+profile,'--dump-dom',url];
  const result=await new Promise((done,fail)=>{
   let stdout='',stderr='';
