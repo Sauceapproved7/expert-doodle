@@ -4,7 +4,7 @@ export function resolveHerculesInput(value, provider="google"){
  if(!["google","duckduckgo"].includes(provider))throw new Error("unsupported search provider");
  const input=String(value??"").trim();
  if(!input)throw new Error("empty search");
- if(input.startsWith("//")||input.startsWith("\\\\"))throw new Error("unsupported ambiguous URL");
+ if(input.startsWith("//")||input.startsWith("\\"))throw new Error("unsupported ambiguous URL");
  if(/^https?:\/\//i.test(input)){
    let url;
    try{url=new URL(input)}catch{throw new Error("invalid URL")}
