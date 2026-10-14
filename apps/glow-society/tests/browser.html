@@ -24,6 +24,28 @@ async function check(document) {
  assert(document.getElementById('catalogIntakeStatus').textContent.includes('Approved: 0'),'No supplier record begins approved');
  click(document.getElementById('catalogSample'),'Run fictional sample review');
  assert(count(document,'#catalogIntakeResults .catalog-review-item')===2,'Two fictional supplier records are structurally reviewed');
+ assert(count(document,'#catalogIntakeResults select[data-supplier-requirement]')===10,'Five independent proof requirements per candidate');
+ assert(!document.getElementById('supplierReviewExport').disabled,'Unverified candidates can produce a preparation packet');
+ const firstProof=document.querySelector('#catalogIntakeResults select[data-supplier-requirement="resale_rights"]');
+ firstProof.value='claimed_unverified';
+ firstProof.dispatchEvent(new Event('change',{bubbles:true}));
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('1 claimed evidence item'),'Self-reported evidence status updates locally');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Claimed evidence cannot authorize a sale');
+ let packetFilename='',packetHref='';
+ const localLinkPrototype=iframe.contentWindow.HTMLAnchorElement.prototype,originalPacketClick=localLinkPrototype.click;
+ localLinkPrototype.click=function(){packetFilename=this.download;packetHref=this.href;};
+ click(document.getElementById('supplierReviewExport'),'Download explicitly unverified supplier handoff');
+ localLinkPrototype.click=originalPacketClick;
+ assert(packetFilename==='glow-society-supplier-review-unverified.json','Export filename signals unverified evidence');
+ assert(packetHref.startsWith('blob:'),'Packet uses local Blob download rather than service submission');
+ const downloadedPacket=await iframe.contentWindow.fetch(packetHref).then(r=>r.json());
+ assert(downloadedPacket.approved===0&&downloadedPacket.published===0&&!downloadedPacket.releaseEligible,'Export cannot be mistaken for product approval');
+ assert(downloadedPacket.ownerApproval==='not_granted'&&downloadedPacket.independentVerification==='not_performed','Export requires external owner and verifier evidence');
+ assert(downloadedPacket.records[0].requirements.resale_rights==='claimed_unverified','Export preserves only the unverified proof claim');
+ click(document.getElementById('supplierReviewReset'),'Reset claimed supplier evidence');
+ assert(firstProof.value==='not_provided','Reset restores not-provided evidence status');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('0 claimed evidence items'),'Reset removes the claimed evidence count');
+
  assert(document.getElementById('catalogIntakeStatus').textContent.includes('Published: 0'),'Sample review cannot silently publish products');
  assert(count(document,'#catalogIntakeResults a')===0,'Unverified candidate source URLs are not active links');
  assert(count(document,'#exploreGrid .product-card')===47,'Supplier candidates never enter the 47 demo discoveries');
@@ -40,11 +62,17 @@ async function check(document) {
  localFileInput.dispatchEvent(new Event('change',{bubbles:true}));
  await wait(80);
  assert(count(document,'#catalogIntakeResults .catalog-review-item')===1,'Only structurally valid local supplier candidates are previewed');
+ assert(count(document,'#catalogIntakeResults select[data-supplier-requirement]')===5,'Rejected candidate cannot receive an evidence review checklist');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('0 claimed evidence items'),'New upload cannot inherit old supplier review claims');
+
  assert(count(document,'#catalogIntakeResults .catalog-rejected')===1,'Unsafe local supplier URL is rejected');
  assert(document.getElementById('catalogIntakeStatus').textContent.includes('Approved: 0'),'Imported candidate cannot assert seller authority');
  assert([...Object.keys(iframe.contentWindow.localStorage)].sort().join('|')===localKeysBeforeCatalog,'Supplier feed is not written to browser storage');
  click(document.getElementById('catalogReset'),'Clear all supplier candidates');
  assert(count(document,'#catalogIntakeResults .catalog-review-item')===0,'Clearing the review removes supplier candidates from memory-backed UI');
+ assert(document.getElementById('supplierReviewExport').disabled,'Clear review disables stale evidence packet exports');
+ assert(document.getElementById('supplierReviewReset').disabled,'Clear review disables evidence changes');
+
  assert(document.getElementById('catalogFile').value==='','Clear resets selected local supplier file');
 
  const matchForm=document.getElementById('beautyMatchForm');
@@ -206,6 +234,7 @@ async function check(document) {
  click(document.getElementById('confirmEraseLocalData'),'Confirm Glow Society-only erasure');
  assert([...Object.keys(local)].every(k=>!k.startsWith('glow-society-v1-')),'All Glow Society keys are removed from local storage');
  assert(!document.getElementById('catalogIntakeResults').children.length,'Private-data erasure also clears transient candidate review');
+ assert(document.getElementById('supplierReviewExport').disabled,'Private data erasure invalidates supplier review packet');
  assert(document.getElementById('matchDepth').value==='all'&&count(document,'#matchResults .product-card')===0,'Private-data erasure also resets any temporary Beauty Match choices');
  assert(local.getItem('another-app-test-marker')==='keep','Other origin storage remains untouched');
  assert(count(document,'#looksGrid .look-card')===0,'In-memory saved looks are cleared immediately');
