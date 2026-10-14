@@ -19,11 +19,11 @@ function setup({responseOk=true}={}) {
   return {
     puts,
     get fetches(){return fetches},
-    async dispatch(url,{method="GET",mode="cors",authorization=false}={}) {
+    async dispatch(url,{method="GET",mode="cors",authorization=false,credentials="same-origin"}={}) {
       let responded=false;
       const waits=[];
       const event={
-        request:{url,method,mode,headers:{has:(name)=>authorization&&name.toLowerCase()==="authorization"}},
+        request:{url,method,mode,credentials,headers:{has:(name)=>authorization&&name.toLowerCase()==="authorization"}},
         respondWith(p){responded=true;waits.push(Promise.resolve(p))},
         waitUntil(p){waits.push(Promise.resolve(p))}
       };
@@ -69,6 +69,13 @@ test("failed shell response is not cached",async()=>{
 test("authorized shell requests bypass offline cache",async()=>{
   const s=setup();
   assert.equal(await s.dispatch("https://hercules.test/app.js",{authorization:true}),false);
+  assert.equal(s.fetches,0);
+  assert.deepEqual(s.puts,[]);
+});
+
+test("credentialed shell requests bypass offline cache",async()=>{
+  const s=setup();
+  assert.equal(await s.dispatch("https://hercules.test/app.js",{credentials:"include"}),false);
   assert.equal(s.fetches,0);
   assert.deepEqual(s.puts,[]);
 });
