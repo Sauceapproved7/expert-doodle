@@ -69,3 +69,8 @@ test('small screens and reduced-motion visitors are supported', () => {
   assert.match(css, /@media\(max-width:690px\)/);
   assert.match(css, /prefers-reduced-motion:reduce/);
 });
+test('preview is explicitly not indexed', () => {
+  const robots = readFileSync(new URL('robots.txt', base), 'utf8');
+  assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"\/>/);
+  assert.match(robots, /Disallow: \/\s*$/m);
+});
