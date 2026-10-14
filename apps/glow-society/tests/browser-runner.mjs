@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert/strict';
 
-const root=fileURLToPath(new URL('../',import.meta.url));
+const root=resolve(fileURLToPath(new URL('../',import.meta.url)));
 const preferred=process.env.CHROME_BIN;
 const browsers=[preferred,'/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser','/opt/google/chrome/chrome'].filter(Boolean);
 const browser=browsers.find(executable=>existsSync(executable));
