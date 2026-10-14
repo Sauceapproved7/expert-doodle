@@ -26,6 +26,7 @@ async function check(document) {
  assert(count(document,'#catalogIntakeResults .catalog-review-item')===2,'Two fictional supplier records are structurally reviewed');
  assert(count(document,'#catalogIntakeResults select[data-supplier-requirement]')===10,'Five independent proof requirements per candidate');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('10 missing evidence items'),'Every review evidence item initially missing');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('Request missing supplier evidence'),'Missing evidence produces actionable but non-authorizing guidance');
  assert(!document.getElementById('supplierReviewExport').disabled,'Unverified candidates can produce a preparation packet');
  const firstProof=document.querySelector('#catalogIntakeResults select[data-supplier-requirement="resale_rights"]');
  firstProof.value='claimed_unverified';
@@ -33,6 +34,7 @@ async function check(document) {
  assert(document.getElementById('supplierReviewStatus').textContent.includes('1 claimed evidence item'),'Self-reported evidence status updates locally');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('9 missing evidence items'),'Claim updates missing evidence count without verifying proof');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('none independently verified'),'Coverage does not imply verification');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('Request missing supplier evidence'),'Partial claims still require missing documents');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Claimed evidence cannot authorize a sale');
  let packetFilename='',packetHref='';
  const localLinkPrototype=iframe.contentWindow.HTMLAnchorElement.prototype,originalPacketClick=localLinkPrototype.click;
