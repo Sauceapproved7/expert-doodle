@@ -84,3 +84,18 @@ test('cancelled asynchronous camera models are closed and camera sessions do not
   assert.match(js, /if\(gen!==cameraGeneration\)return;\s*const vision=/);
   assert.match(html, /id="runCameraCheck"/);
 });
+
+
+test('data vault uses two-step local-only deletion and safe download', () => {
+  for (const id of ['exportLocalData','eraseLocalData','confirmEraseLocalData','cancelEraseLocalData','privacySummary','restoreMuted']) {
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(js, /function localDataSnapshot\(\)/);
+  assert.match(js, /key\.startsWith\(prefix\)/);
+  assert.match(js, /localStorage\.removeItem\(key\)/);
+  assert.match(js, /scope:'browser-local-demo-data-only'/);
+  assert.match(js, /new Blob\(\[JSON\.stringify\(snapshot,null,2\)\]/);
+  assert.match(js, /state\.mutedAuthors\.clear\(\)/);
+  assert.match(js, /if\(uploadedUrl\)\{URL\.revokeObjectURL\(uploadedUrl\)/);
+  assert.doesNotMatch(js, /fetch\([^)]*\/report\b/);
+});
