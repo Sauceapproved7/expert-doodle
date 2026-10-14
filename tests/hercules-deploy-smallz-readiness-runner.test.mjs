@@ -119,3 +119,15 @@ test('CLI without explicit --read-only switch does not perform reads or print se
   assert.equal(r.stdout.includes(secret),false);
   assert.equal(r.stderr.includes(secret),false);
 });
+
+
+test('test transport rejects lookalike provider hosts and arbitrary URLs',async()=>{
+  const stub=stubFetch();
+  const opts={method:'GET',headers:{authorization:'Bearer synthetic'}};
+  for(const url of [
+    'https://api.github.com.attacker.invalid/repos/Sauceapproved7/expert-doodle/git/ref/heads/main',
+    'https://api.render.com.attacker.invalid/v1/services/srv-db08fglg1s2s73d0o2rg',
+    'https://attacker.invalid/v1/services/srv-db08fglg1s2s73d0o2rg/deploys?limit=1',
+    'https://attacker.invalid/api.github.com/resource'
+  ])await assert.rejects(stub(url,opts),/unexpected URL/,url);
+});
