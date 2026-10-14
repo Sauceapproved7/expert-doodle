@@ -172,7 +172,7 @@ function renderSaved(){
   }).join(''):'<div class="empty-state"><strong>Your future looks live here.</strong><p>Build a combination in the try-on studio and save it.</p></div>';
 }
 function renderCommunity(){
-  const all=[...state.posts.slice().reverse(),...POSTS];
+  const all=[...state.posts.slice().reverse(),...POSTS.filter(p=>!state.posts.some(local=>local.id===p.id))];
   el('feed').innerHTML=all.map(p=>{
     const local=!!p.local;const liked=state.likes.has(p.id);
     const total=p.likes+(liked?1:0);
@@ -402,9 +402,9 @@ window.addEventListener('pagehide',()=>{stopCamera();if(uploadedUrl)URL.revokeOb
 // One delegated click handler for all dynamic demo views.
 document.addEventListener('click',e=>{
   const target=e.target.closest('button,a[data-go]');if(!target)return;
+  if(target.dataset.preset==='deep'){state.depth='deep';state.category='makeup';el('depthFilter').value='deep';navigate('explore');return}
   if(target.dataset.go){e.preventDefault();navigate(target.dataset.go);return}
   if(target.dataset.category){state.category=target.dataset.category;state.depth='all';state.undertone='all';el('depthFilter').value='all';el('toneFilter').value='all';navigate('explore');return}
-  if(target.dataset.preset==='deep'){state.depth='deep';el('depthFilter').value='deep';navigate('explore');return}
   if(target.dataset.explorecat){state.category=target.dataset.explorecat;renderExplore();return}
   if(target.dataset.try){pickItem(target.dataset.try,true);return}
   if(target.dataset.fav){toggleFav(target.dataset.fav);return}
@@ -451,7 +451,7 @@ el('feed').addEventListener('submit',e=>{
   local.comments.push({by:'You',text:input.value.trim().slice(0,180)});storeSet('posts',state.posts);
   renderCommunity();el('comments-'+post.id).hidden=false;toast('Comment saved privately on this device');
 });
-const stack=document.createElement('div');stack.id='lookStack';el('studioControlDummy')||el('saveLook').closest('.studio-actions').before(stack);
+const stack=document.createElement('div');stack.id='lookStack';el('saveLook').closest('.studio-actions').before(stack);
 refreshFavs();renderArtists();renderCommunity();renderExplore();renderStudio();
 const initial=(location.hash||'').slice(1);
 navigate(el(initial)&&el(initial).classList.contains('view')?initial:'discover');
