@@ -39,8 +39,11 @@ function sql(label,query,{expectError=false}={}){
   return null;
  }
  if(a.status!==0){
-  // Query text and raw error messages are intentionally never logged.
-  throw Error("isolated-postgres:"+label+":failed");
+  const category=(a.stderr||"").split("\n").find(line=>/ERROR:|FATAL:/.test(line))||"sql-execution-failed";
+  const scrubbed=category.slice(0,190)
+   .replace(/(?:shpat_|shprt_)[A-Za-z0-9._-]+/g,"[REDACTED]")
+   .replace(/(?:password|secret)[^:]*:\s*\S+/gi,"[REDACTED_FIELD]");
+  throw Error("isolated-postgres:"+label+":"+scrubbed);
  }
  passed++;
  return (a.stdout||"").trim().split("\n").filter(Boolean).at(-1)||"";
