@@ -99,3 +99,16 @@ test('data vault uses two-step local-only deletion and safe download', () => {
   assert.match(js, /if\(uploadedUrl\)\{URL\.revokeObjectURL\(uploadedUrl\)/);
   assert.doesNotMatch(js, /fetch\([^)]*\/report\b/);
 });
+
+
+test('human-reviewed physical AR checklist is session only and cannot certify accuracy',()=>{
+  assert.match(html, /src="\.\/validation-kit\.js" defer/);
+  assert.match(html, /id="validationScenarios"/);
+  assert.match(html, /id="exportValidation"[^>]*disabled/);
+  assert.match(html, /self-reported observation/);
+  assert.match(js, /function validationEvidence\(mode\)/);
+  assert.match(js, /if\(!marked\.length\)return/);
+  assert.match(js, /validationKit\.clear\(\);observedModeStats=\{face:null,hand:null\}/);
+  assert.match(js, /status:'self-reported-unverified'/);
+  assert.doesNotMatch(js, /fetch\([^)]*validationReport/);
+});
