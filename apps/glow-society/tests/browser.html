@@ -44,6 +44,11 @@ async function check(document) {
  const intensity=document.getElementById('intensity');
  intensity.value='85';intensity.dispatchEvent(new Event('input',{bubbles:true}));
  assert(document.getElementById('intensityNumber').textContent==='85%','Overlay intensity works');
+ click(document.getElementById('runCameraCheck'),'Start user-controlled synthetic camera readiness check');
+ for(let attempt=0;attempt<40&&(['checking',''].includes(document.getElementById('cameraCheckStatus').dataset.result||''));attempt++)await wait(125);
+ assert(document.getElementById('cameraCheckStatus').dataset.result==='passed','Synthetic Chromium camera permission and stream check succeeds');
+ assert(document.getElementById('cameraCheckStatus').textContent.includes('does not verify face tracking'),'Camera test does not overclaim real-world AR quality');
+ assert(!document.getElementById('runCameraCheck').disabled,'Camera test returns control after stopping stream');
  click(document.querySelector('[data-mode="face"]'),'Choose live face mode without starting camera');
  assert(Boolean(document.querySelector('#cameraLab:not([hidden])')),'Face camera affordance shown');
  assert(document.getElementById('startCamera').hidden===false,'Camera is opt-in, not auto-started');
