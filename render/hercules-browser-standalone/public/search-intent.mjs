@@ -11,10 +11,9 @@ export function resolveHerculesInput(value, provider="google"){
    if(url.username||url.password)throw new Error("unsupported URL credentials");
    return url.href;
  }
- if(BLOCKED_SCHEME.test(input) && !/\s/.test(input))throw new Error("unsupported URL scheme");
  if(/^(?:localhost|(?:[a-z\d-]+\.)+[a-z]{2,})(?::\d+)?(?:[/?#][^\s]*)?$/i.test(input)){
-   const url=new URL("https://"+input);
-   return url.href;
+   try{return new URL("https://"+input).href}catch{throw new Error("invalid URL")}
  }
+ if(BLOCKED_SCHEME.test(input) && !/\s/.test(input))throw new Error("unsupported URL scheme");
  return (provider==="duckduckgo"?"https://duckduckgo.com/?q=":"https://www.google.com/search?q=")+encodeURIComponent(input);
 }
