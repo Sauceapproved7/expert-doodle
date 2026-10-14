@@ -1,0 +1,48 @@
+name: Hercules Browser Release Tests
+on:
+  push:
+    branches:
+      - feature/hercules-search-release-20261014
+    paths:
+      - 'render/hercules-browser-standalone/**'
+      - '.github/workflows/hercules-browser-release-tests.yml'
+  pull_request:
+    paths:
+      - 'render/hercules-browser-standalone/**'
+      - '.github/workflows/hercules-browser-release-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hercules-browser-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: render/hercules-browser-standalone
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: render/hercules-browser-standalone/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
+      - name: Run all browser service tests
+        run: npm test
+      - name: Validate JavaScript syntax
+        run: |
+          node --check server.mjs
+          node --check public/sw.js
+          node --check public/app.js
+      - name: Report exact candidate
+        run: echo "Validated commit ${GITHUB_SHA}"
