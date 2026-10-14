@@ -106,3 +106,11 @@ test('unknown paths or body-provided proof cannot unlock held transport',async t
  assert.equal(missing.status,404);
  assert.equal(calls.length,0);
 });
+
+test('static ready flag cannot bypass fresh sender verification',async t=>{
+ const {post,calls}=await withApi(t,{ready:true});
+ const response=await post('/api/confirm/request',{email:'member@example.net'});
+ assert.equal(response.status,503,'static ready:true must never unlock outbound requests');
+ assert.equal((await response.json()).error,'confirmation_held');
+ assert.equal(calls.length,0);
+});
