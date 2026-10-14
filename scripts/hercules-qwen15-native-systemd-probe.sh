@@ -31,14 +31,18 @@ trap 'cleanup' EXIT
 sudo install -d -m 0755 "$root" "$root/scripts" "$root/hercules-models" "$root/engine" "$root/weights"
 sudo cp -a hercules-models/. "$root/hercules-models/"
 sudo install -m 0644 scripts/hercules-qwen15-owner-host.mjs "$root/scripts/hercules-qwen15-owner-host.mjs"
-sudo install -m 0644 /dev/null "$root/weights/candidate.gguf"
+# CI-owned immutable copies avoid /tmp mount namespace ambiguity while
+# retaining ProtectHome=yes, PrivateTmp=yes and ProtectSystem=strict.
+sudo install -m 0644 "$model_source" "$root/weights/candidate.gguf"
+sudo cp -a "$engine_source"/. "$root/engine/"
+test -s "$root/weights/candidate.gguf"
+test -x "$root/engine/llama-server"
 for rule in ProtectHome=yes PrivateTmp=yes IPAddressDeny=any IPAddressAllow=localhost MemoryMax=4G CPUQuota=200% RestartSec=30s; do
   test "$(grep -Fxc "$rule" "$source_unit")" -eq 1
 done
 ci_group="$(id -gn nobody)"
 awk -v node="$node_path" -v root="$root" -v grp="$ci_group" \
-    -v envfile="$env_path" -v gate="$approval" \
-    -v weights="$model_source" -v engine="$engine_source" '
+    -v envfile="$env_path" -v gate="$approval" '
   /^Description=/ {print "Description=Hercules isolated native model CI"; next}
   /^User=/ {print "User=nobody"; next}
   /^Group=/ {print "Group=" grp; next}
@@ -46,11 +50,6 @@ awk -v node="$node_path" -v root="$root" -v grp="$ci_group" \
   /^EnvironmentFile=/ {print "EnvironmentFile=" envfile; next}
   /^ConditionPathExists=/ {print "ConditionPathExists=" gate; next}
   /^ExecStart=/ {print "ExecStart=" node " " root "/scripts/hercules-qwen15-owner-host.mjs"; next}
-  /^\[Install\]$/ {
-    print "BindReadOnlyPaths=" weights ":" root "/weights/candidate.gguf";
-    print "BindReadOnlyPaths=" engine ":" root "/engine";
-    print; next
-  }
   {print}
 ' "$source_unit" | sudo tee "$unit_path" >/dev/null
 for rule in ProtectHome=yes PrivateTmp=yes IPAddressDeny=any IPAddressAllow=localhost MemoryMax=4G CPUQuota=200%; do
