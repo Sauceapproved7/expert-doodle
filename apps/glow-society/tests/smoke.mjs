@@ -139,3 +139,17 @@ test('supplier catalog intake never activates real commerce or trusts unverified
   assert.match(js,/Published: 0/);
   assert.doesNotMatch(js,/fetch\([^)]*catalogFile/);
 });
+
+test('supplier evidence review remains offline, unverified and fails closed',()=>{
+  assert.match(html,/src="\.\/supplier-review\.js" defer/);
+  for(const id of ['supplierReviewStatus','supplierReviewExport','supplierReviewReset']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(html,/No selection establishes supplier legitimacy/);
+  assert.match(js,/window\.GlowSupplierReview\.create\(report\.items\)/);
+  assert.match(js,/supplierReviewExport/);
+  assert.match(js,/downloadSupplierReview/);
+  assert.match(js,/catalogEvidenceKit=null;/);
+  assert.match(js,/Approved: 0\. Published: 0/);
+  assert.doesNotMatch(js,/fetch\([^)]*supplierReview/);
+});
