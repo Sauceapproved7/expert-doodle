@@ -146,9 +146,9 @@ $("sendText").onclick=async()=>{
   const el=$("textInput");
   const text=el.value;
   if(!text)return;
-  el.value="";
   try{
     const r=await api("/api/action",{method:"POST",body:JSON.stringify({type:"text",text})});
+    el.value="";
     setStatus("Sent "+r.chars+" characters");
   }catch(err){setStatus(err.message)}
 };
