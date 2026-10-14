@@ -4,7 +4,7 @@ import {createHmac} from "node:crypto";
 import {createEmbeddedShopifyReadOnlyGrant,verifyEmbeddedShopifyIdToken} from "./embedded-shopify-grant.mjs";
 
 const clientId="1ed12710f0b797a7a3328c1cf4e8b1f9";
-const secret="TEST_ONLY_HERCULES_APP_SECRET_1234567890";
+const fixtureSigningKey="TEST_ONLY_HERCULES_APP_SECRET_1234567890";
 const shop="azymhc-x0.myshopify.com";
 const now=Date.parse("2026-10-13T21:00:00.000Z");
 const signed=(claims={},header={})=>{
@@ -15,7 +15,7 @@ const signed=(claims={},header={})=>{
   nbf:Math.floor(now/1000)-5,sub:"shopify-staff-123",
   ...claims
  })).toString("base64url");
- return h+"."+p+"."+createHmac("sha256",secret).update(h+"."+p).digest("base64url");
+ return h+"."+p+"."+createHmac("sha256",fixtureSigningKey).update(h+"."+p).digest("base64url");
 };
 const credentialResponse=(overrides={})=>({ok:true,status:200,json:async()=>({
  access_token:"shpat_TEST_ONLY_ACCESS_TOKEN_0123456789",
@@ -35,7 +35,7 @@ function adapter(overrides={}){
  };
  const storePrivateGrant=async row=>{stored.push(row);};
  return {calls,stored,config:{
-  enabled:true,ownerAuthenticated:true,clientId,clientSecret:secret,
+  enabled:true,ownerAuthenticated:true,clientId,clientSecret:fixtureSigningKey,
   idToken:signed(),now,fetcher,storePrivateGrant,...overrides
  }};
 }
@@ -52,7 +52,7 @@ test("disabled or missing owner identity/secret/storage never calls Shopify",asy
  }
 });
 test("valid short-lived pinned-shop App Bridge ID token is verified",()=>{
- assert.deepEqual(verifyEmbeddedShopifyIdToken({idToken:signed(),clientId,clientSecret:secret,now}),
+ assert.deepEqual(verifyEmbeddedShopifyIdToken({idToken:signed(),clientId,clientSecret:fixtureSigningKey,now}),
   {shopDomain:shop});
 });
 test("forged, stale, future, wrong shop, wrong app and wrong JWT algorithm fail before network",async()=>{
