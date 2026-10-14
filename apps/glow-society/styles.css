@@ -105,3 +105,25 @@ footer{background:#251526;color:#f8eef3;padding:45px 0 100px;margin-top:20px}.fo
 .beauty-match-why{font-size:11px;line-height:1.5;color:#65475a;background:#fff8fa;padding:11px 13px;border:1px solid #eadde3;margin:0}
 @media(max-width:900px){.beauty-match-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:690px){.beauty-match{padding:16px 12px}.beauty-match-heading h2{font-size:27px}.beauty-match-heading{flex-direction:column;gap:8px}.beauty-match-form{grid-template-columns:1fr}.beauty-match-actions .cta,.beauty-match-actions .secondary-btn{flex:1 1 100%}}
+
+/* Separated supplier-candidate intake; never a live store or verified catalog. */
+.catalog-intake{margin:27px 0 35px;border:1px solid #decbd2;border-radius:5px;background:#fffaf8}
+.catalog-intake>summary{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:17px 19px;font-weight:750;font-size:14px;color:#503349}
+.catalog-intake>summary:focus-visible{outline:3px solid #8e6980;outline-offset:3px}
+.catalog-pill{font-size:9px;font-weight:800;border:1px solid #b895a6;border-radius:15px;padding:6px 9px;letter-spacing:.04em;white-space:nowrap;color:#8d536d}
+.catalog-intake-body{padding:0 19px 22px}
+.catalog-intake-body h3{font:600 24px Georgia,serif;color:#4c3344;margin:10px 0}
+.catalog-intake-body>p{font-size:12px;color:#6d5364;line-height:1.7;margin:12px 0}
+.catalog-intake-actions{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:15px 0}
+.catalog-intake-actions .secondary-btn,.catalog-file-label{min-height:45px;padding:10px 13px}
+.catalog-file-label{display:grid;align-items:center;gap:5px;border:1px solid #c1a8b6;background:#f5e8ed;border-radius:3px;font-size:12px;font-weight:700;color:#58384b}
+.catalog-file-label input{max-width:220px;font-size:11px}
+.catalog-intake-status{padding:12px 14px;margin:16px 0;background:#f2e3e9;border-left:3px solid #a76986;border-radius:3px;font-size:12px;font-weight:600;line-height:1.7;color:#533347}
+.catalog-intake-results{display:grid;gap:9px}
+.catalog-review-item{padding:13px;border:1px solid #e4d5dc;background:#fff;border-radius:3px;overflow-wrap:anywhere}
+.catalog-review-item h4{margin:0 0 6px;font-size:13px;color:#4d3145}
+.catalog-review-item p{font-size:11px;line-height:1.5;margin:5px 0;color:#6d5265}
+.catalog-review-item .catalog-source{color:#785c70}
+.catalog-review-item .catalog-blocked{font-weight:750;color:#8b3e56}
+.catalog-rejected{padding:9px 12px;font-size:12px;background:#f9e7e7;border-left:3px solid #b55b59;color:#753b40}
+@media(max-width:690px){.catalog-intake>summary{flex-wrap:wrap;padding:14px 12px}.catalog-intake-body{padding:0 12px 15px}.catalog-intake-actions>.secondary-btn,.catalog-file-label{flex:1 1 100%}.catalog-file-label input{max-width:100%}.catalog-intake-body h3{font-size:21px}}
