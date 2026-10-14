@@ -17,6 +17,36 @@ async function check(document) {
  go(document,'explore');
  assert(active(document,'explore'),'Explore tab works');
  assert(count(document,'#exploreGrid .product-card')===47,'Catalog renders 47 inclusive demo looks');
+ const catalog=document.getElementById('catalogWorkshop');
+ assert(Boolean(catalog),'Read-only supplier intake workshop exists separately from demo items');
+ assert(catalog.open===false,'Supplier review does not crowd the default exploration view');
+ catalog.open=true;
+ assert(document.getElementById('catalogIntakeStatus').textContent.includes('Approved: 0'),'No supplier record begins approved');
+ click(document.getElementById('catalogSample'),'Run fictional sample review');
+ assert(count(document,'#catalogIntakeResults .catalog-review-item')===2,'Two fictional supplier records are structurally reviewed');
+ assert(document.getElementById('catalogIntakeStatus').textContent.includes('Published: 0'),'Sample review cannot silently publish products');
+ assert(count(document,'#catalogIntakeResults a')===0,'Unverified candidate source URLs are not active links');
+ assert(count(document,'#exploreGrid .product-card')===47,'Supplier candidates never enter the 47 demo discoveries');
+ assert(document.getElementById('catalogIntakeResults').textContent.includes('Not available for sale'),'Unverified supplier candidates remain blocked');
+ const localKeysBeforeCatalog=[...Object.keys(iframe.contentWindow.localStorage)].sort().join('|');
+ const candidateFeed={schemaVersion:1,products:[
+    {sku:'REVIEW-01',brand:'Trial Concept Brand',name:'Unverified Hair Product',category:'hair',sourceUrl:'https://example.com/for-demo-only',tags:['4c','protective']},
+    {sku:'REVIEW-02',brand:'Trial Concept Brand',name:'Unsafe Entry',category:'makeup',sourceUrl:'javascript:alert(1)',tags:['deep']}
+ ]};
+ const localFileInput=document.getElementById('catalogFile');
+ const fileTransfer=new iframe.contentWindow.DataTransfer();
+ fileTransfer.items.add(new iframe.contentWindow.File([JSON.stringify(candidateFeed)],'test-feed.json',{type:'application/json'}));
+ localFileInput.files=fileTransfer.files;
+ localFileInput.dispatchEvent(new Event('change',{bubbles:true}));
+ await wait(80);
+ assert(count(document,'#catalogIntakeResults .catalog-review-item')===1,'Only structurally valid local supplier candidates are previewed');
+ assert(count(document,'#catalogIntakeResults .catalog-rejected')===1,'Unsafe local supplier URL is rejected');
+ assert(document.getElementById('catalogIntakeStatus').textContent.includes('Approved: 0'),'Imported candidate cannot assert seller authority');
+ assert([...Object.keys(iframe.contentWindow.localStorage)].sort().join('|')===localKeysBeforeCatalog,'Supplier feed is not written to browser storage');
+ click(document.getElementById('catalogReset'),'Clear all supplier candidates');
+ assert(count(document,'#catalogIntakeResults .catalog-review-item')===0,'Clearing the review removes supplier candidates from memory-backed UI');
+ assert(document.getElementById('catalogFile').value==='','Clear resets selected local supplier file');
+
  const matchForm=document.getElementById('beautyMatchForm');
  assert(Boolean(matchForm),'Beauty Match choices can be selected without camera');
  document.getElementById('matchCategory').value='makeup';
@@ -175,6 +205,7 @@ async function check(document) {
  click(document.getElementById('eraseLocalData'),'Reopen erasure confirmation');
  click(document.getElementById('confirmEraseLocalData'),'Confirm Glow Society-only erasure');
  assert([...Object.keys(local)].every(k=>!k.startsWith('glow-society-v1-')),'All Glow Society keys are removed from local storage');
+ assert(!document.getElementById('catalogIntakeResults').children.length,'Private-data erasure also clears transient candidate review');
  assert(document.getElementById('matchDepth').value==='all'&&count(document,'#matchResults .product-card')===0,'Private-data erasure also resets any temporary Beauty Match choices');
  assert(local.getItem('another-app-test-marker')==='keep','Other origin storage remains untouched');
  assert(count(document,'#looksGrid .look-card')===0,'In-memory saved looks are cleared immediately');
