@@ -12,7 +12,7 @@ const SHOP_TOKEN="SYNTHETIC_PRIVATE_SHOPIFY_TOKEN_NOT_REAL";
 const DB_TOKEN="SYNTHETIC_PRIVATE_DB_SERVICE_ROLE_NOT_REAL";
 const goodProvider={
  organization_id:ORG,provider:"shopify",client_id:APP,status:"active",
- metadata:{shop_domain:SHOP}
+ shop_domain:SHOP
 };
 const goodGatehouse={
  organization_id:ORG,client_id:APP,shop_gid:GID,shop_domain:SHOP,
@@ -70,7 +70,7 @@ test("trusted, read-only adapters confirm exact two-store identity and expose no
 });
 
 test("real observed Supabase wrong-shop identity stays HOLD even with correct Shopify shop",async()=>{
- const h=httpFake({provider:[{...goodProvider,metadata:{shop_domain:"sauceapproved-2.myshopify.com"}}]});
+ const h=httpFake({provider:[{...goodProvider,shop_domain:"sauceapproved-2.myshopify.com"}]});
  assert.equal((await assessGatehouseShopIdentity(h.create())).matched,false);
 });
 
@@ -123,7 +123,7 @@ test("GraphQL provider errors, wrong shop, oversized responses and HTTP redirect
 test("untrusted GraphQL and database responses are not confused with unqualified approvals",async()=>{
  const h=httpFake({shop:{data:{shop:{id:GID,myshopifyDomain:SHOP}},errors:[{message:"bad auth"}]}});
  assert.equal((await assessGatehouseShopIdentity(h.create())).matched,false);
- const bogus=httpFake({provider:[{...goodProvider,metadata:{shop_domain:SHOP},client_id:APP,
+ const bogus=httpFake({provider:[{...goodProvider,shop_domain:SHOP,client_id:APP,
   injected_shop_gid:GID}],gatehouse:[{...goodGatehouse,shop_gid:null}]});
  assert.equal((await assessGatehouseShopIdentity(bogus.create())).matched,false);
 });
