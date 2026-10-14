@@ -1,5 +1,5 @@
 const CACHE_NAME="hercules-browser-shell-v3";
-const SHELL=["/","/style.css","/app.js","/search-intent.mjs","/manifest.webmanifest","/icon-192.svg","/icon-512.svg"];
+const SHELL=["/style.css","/app.js","/search-intent.mjs","/manifest.webmanifest","/icon-192.svg","/icon-512.svg"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
@@ -8,7 +8,7 @@ self.addEventListener("activate",event=>{
 });
 self.addEventListener("fetch",event=>{
   const url=new URL(event.request.url);
-  if(event.request.method!=="GET"||event.request.mode==="navigate"||url.origin!==location.origin||url.pathname.startsWith("/api/")||url.pathname==="/health"||url.pathname==="/claim")return;
+  if(event.request.method!=="GET"||event.request.mode==="navigate"||url.origin!==location.origin||!SHELL.includes(url.pathname))return;
   event.respondWith(fetch(event.request).then(r=>{
     if(r.ok) {
       const copy=r.clone();
