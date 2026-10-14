@@ -81,7 +81,11 @@ async function check(document) {
    transfer.items.add(new iframe.contentWindow.File([JSON.stringify(packet)],name,{type:'application/json'}));
    restoreFileInput.files=transfer.files;
    restoreFileInput.dispatchEvent(new Event('change',{bubbles:true}));
-   await wait(100);
+   for(let attempt=0;attempt<50;attempt++){
+     await wait(40);
+     if(!document.getElementById('supplierRestoreStatus').textContent.startsWith('Reading local packet'))return;
+   }
+   throw Error('Timed out waiting for local review packet validation');
  }
  const forgedReview={...downloadedPacket,ownerApproval:'granted'};
  await importReviewPacket(forgedReview);
