@@ -99,3 +99,14 @@ The Explore page has a collapsed, optional workshop for inspecting supplier prod
 - To connect real products in the future, independent supplier/provenance authorization, accurate feed updates, rights/terms, product compliance and freshness checks, and explicit owner approval are still required. A pasted `sourceUrl` or internally successful test is **not** sufficient proof of catalog authority or inventory.
 
 Unit and Chromium tests verify input bounds, unsafe URLs and metadata, duplicate SKUs, explicit unverified status, no storefront pollution and browser-local deletion.
+
+## Supplier provenance review packet — not a license or approval
+
+After reviewing a local supplier feed, the browser now shows an offline evidence tracker for each structurally acceptable candidate. Its five required topics are supplier identity, resale authorization, creative/media rights, cosmetic labeling/claim compliance and catalog freshness. Each topic can be marked `Evidence not supplied`, `Evidence claimed (unverified)` or `Conflict / needs review`.
+
+- **All outcomes are unverified.** Selecting an option does not inspect a URL, contact a seller, validate legal rights, accept a policy, authorize an order, turn on payouts, move candidates into public discovery, or change product status.
+- **Download unverified review packet** creates a local JSON summary containing candidate identifier, brand, name and five fixed checklist states. It always records `independentVerification: not_performed`, `ownerApproval: not_granted`, `approved: 0`, `published: 0` and `releaseEligible: false`. No photos, source documents, private contact details or credentials are included.
+- Review choices are *in-memory only* and scoped to the current feed. Loading a new feed, using Clear Review, or confirming Glow's local-data erasure discards them. No server calls, persistent supplier records or new costs are introduced.
+- Authentic supplier verification, written licensing and intellectual-property permissions, product/claims compliance, source freshness and owner approval are **separate, unfinished external gates**. This worksheet prepares questions; it does not satisfy those gates.
+
+A Node contract test proves that even all evidence marked as claimed cannot authorize publication, and browser QA verifies the unverified download, candidate isolation, reset and erasure behavior.
