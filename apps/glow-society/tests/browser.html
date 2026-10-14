@@ -44,6 +44,9 @@ async function check(document) {
  const intensity=document.getElementById('intensity');
  intensity.value='85';intensity.dispatchEvent(new Event('input',{bubbles:true}));
  assert(document.getElementById('intensityNumber').textContent==='85%','Overlay intensity works');
+ assert(document.getElementById('arHealthStatus').dataset.status==='unmeasured','AR metrics start as unmeasured rather than fabricated');
+ assert(document.getElementById('exportArHealth').disabled,'Cannot export unobserved landmark session statistics');
+ assert(document.getElementById('arHealthStatus').textContent.includes('Not measured'),'AR panel makes non-observation explicit');
  const media=iframe.contentWindow.navigator.mediaDevices;
  assert(Boolean(media&&media.getUserMedia),'Browser provides camera API for controlled tests');
  const originalGetUserMedia=media.getUserMedia.bind(media);
@@ -147,6 +150,7 @@ async function check(document) {
  assert(count(document,'#looksGrid .look-card')===0,'In-memory saved looks are cleared immediately');
  assert(count(document,'#savedGrid .product-card')===0,'In-memory favorites are cleared immediately');
  assert(document.getElementById('privacySummary').textContent.includes('0 favorites'),'Privacy summary reflects empty state');
+ assert(document.getElementById('exportArHealth').disabled,'Erasure leaves no stale AR session export enabled');
  go(document,'community');
  assert(!document.getElementById('feed').textContent.includes('My test note stays in this browser.'),'Private demo posts disappear after confirmed erasure');
  assert(document.querySelector('meta[name="robots"]').getAttribute('content').includes('noindex'),'Preview metadata discourages indexing');
