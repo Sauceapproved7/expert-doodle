@@ -15,6 +15,7 @@ const BASE=Object.freeze({
   reasonCodes:Object.freeze(['DEDICATED_READ_CREDENTIALS_UNAVAILABLE']),
   evidence:null,
   providerQueriesAttempted:false,
+  snapshotStability:'unverified',
   providerRecordsIndependentlyAuthenticated:false,
   ownerAuthorizationVerified:false,
   runtimeHealthVerified:false,
@@ -52,15 +53,38 @@ export async function inspectSmallzFromRuntime({env=process.env,fetchImpl=global
       githubApiToken:github,
       fetchImpl
     });
-    const evidence=await collectSmallzEvidence(readers);
-    // A caller-provided fetch can be a test double. This module never upgrades
-    // caller claims to independently verified provider, runtime or owner proof.
+    // Sequential double-read detects drift during a single inspection.
+    // Two consistent caller-provided snapshots still do NOT authenticate
+    // the provider, establish freshness, or authorize production actions.
+    const first=await collectSmallzEvidence(readers);
+    const second=await collectSmallzEvidence(readers);
+    if(JSON.stringify(first)!==JSON.stringify(second)){
+      return Object.freeze({
+        ...hold('PROVIDER_STATE_CHANGED_DURING_READ'),
+        providerQueriesAttempted:true,
+        snapshotStability:'changed'
+      });
+    }
+    // Repeated matching errors are not a stable release observation.
+    const verifiedShape=first.mainCommit!==null
+      &&first.liveCommit!==null
+      &&first.liveDeploymentId!==null
+      &&!first.reasonCodes.includes('PROVIDER_READ_FAILED');
+    if(!verifiedShape){
+      return Object.freeze({
+        ...hold('PROVIDER_READ_FAILED'),
+        providerQueriesAttempted:true
+      });
+    }
+    // A caller-provided fetch can be a test double. We do not promote
+    // correlated JSON to independent provider or owner authentication.
     return Object.freeze({
       ...BASE,
-      status:evidence.status,
-      reasonCodes:Object.freeze([...evidence.reasonCodes]),
-      evidence,
-      providerQueriesAttempted:true
+      status:second.status,
+      reasonCodes:Object.freeze([...second.reasonCodes]),
+      evidence:second,
+      providerQueriesAttempted:true,
+      snapshotStability:'stable'
     });
   }catch{
     return Object.freeze({...hold('PROVIDER_READ_FAILED'),providerQueriesAttempted:true});
