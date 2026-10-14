@@ -6,6 +6,7 @@ import {runSmallzReadiness} from '../hercules-deploy/smallz-readiness-runner.mjs
 const token=(letter)=>letter.repeat(32);
 const env=()=>({
   HERCULES_SMALLZ_EVIDENCE_READ_ENABLED:'true',
+  HERCULES_SMALLZ_READ_AUDIT_ENABLED:'true',
   HERCULES_SMALLZ_RENDER_READ_TOKEN:token('r'),
   HERCULES_SMALLZ_GITHUB_READ_TOKEN:token('g'),
 });
@@ -71,7 +72,7 @@ test('opted-in reader performs only three pinned GET requests and reports no own
   assert.equal(result.mainCommit,sha);
   assert.equal(result.liveCommit,sha);
   assert.equal(result.readsAttempted,true);
-  assert.equal(calls.length,3);
+  assert.equal(calls.length,6);
   for(const call of calls){assert.equal(call.method,'GET');assert.match(call.auth,/^Bearer /);}
   assert.equal(result.providerRecordsIndependentlyAuthenticated,false);
   assert.equal(result.ownerAuthorizationVerified,false);
@@ -106,7 +107,7 @@ test('readiness runner never accepts owner session, arbitrary action, provider U
   assert.equal(result.ownerRuntimeRecordAligned,false);
   assert.equal(result.releaseApproved,false);
   assert.equal(result.executionAuthority,false);
-  assert.equal(calls.length,3);
+  assert.equal(calls.length,6);
 });
 test('CLI without explicit --read-only switch does not perform reads or print server secrets',()=>{
   const secret=token('r');
@@ -153,7 +154,7 @@ test('readiness command must use six GETs and identify a commit change between s
 });
 test('readiness command refuses to read if underlying audit opt-in is not also explicit',async()=>{
   let calls=0;
-  const result=await runSmallzReadiness({env:env(),fetchImpl:async()=>{
+  const result=await runSmallzReadiness({env:{...env(),HERCULES_SMALLZ_READ_AUDIT_ENABLED:undefined},fetchImpl:async()=>{
     calls++;return response({});
   }});
   assert.equal(calls,0);

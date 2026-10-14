@@ -1,93 +1,87 @@
 /**
- * Hercules Smallz server-side read-only readiness runner.
- * Fixed, no-write GitHub/Render evidence reads using separate server-custodied
- * credentials. The report is advisory and cannot attest independent provider
- * identity, owner authorization, runtime health or production readiness.
+ * Hercules Smallz unified server-side read-only readiness CLI.
+ * The single source of credential custody and stable snapshots is
+ * runSmallzReleaseReadAudit. Both explicit opt-ins are required.
  *
- * NOT an HTTP route and NOT a deployer. Only the explicit CLI '--read-only'
- * switch can run this standalone entry point. No third-party dependencies.
+ * NO HTTP route, scheduler, token reads, write-methods, deploys or approvals.
  */
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {createSmallzProviderReaders} from './smallz-provider-readers.mjs';
-import {collectSmallzEvidence} from './smallz-evidence-bridge.mjs';
+import {runSmallzReleaseReadAudit} from './smallz-read-audit.mjs';
 
 const SERVICE_ID='srv-db08fglg1s2s73d0o2rg';
 const SHA=/^[a-f0-9]{40}$/u;
 const DEPLOY_ID=/^dep-[A-Za-z0-9_-]{8,80}$/u;
-
+const safeSha=v=>typeof v==='string'&&SHA.test(v)?v:null;
+const safeDeploy=v=>typeof v==='string'&&DEPLOY_ID.test(v)?v:null;
 function hold(reason){
   return Object.freeze({
     schema:'sauceapproved.hercules.smallz-readiness-runner.v1',
     status:'HOLD',reasonCodes:[reason],
     serviceId:SERVICE_ID,mainCommit:null,liveCommit:null,liveDeploymentId:null,
-    readsAttempted:false,ownerRuntimeRecordAligned:false,
+    readsAttempted:false,snapshotStability:'unverified',
+    ownerRuntimeRecordAligned:false,
     providerRecordsIndependentlyAuthenticated:false,
     ownerAuthorizationVerified:false,runtimeHealthVerified:false,
-    productionChanged:false,releaseApproved:false,executionAuthority:false,
+    productionChanged:false,releaseApproved:false,executionAuthority:false
   });
 }
-const credential=v=>typeof v==='string'&&v.length>=24&&v.length<=512&&!/\s/u.test(v);
-const safeSha=v=>typeof v==='string'&&SHA.test(v)?v:null;
-const safeDeploy=v=>typeof v==='string'&&DEPLOY_ID.test(v)?v:null;
+function reasonCodes(record){
+  if(!Array.isArray(record?.reasonCodes))return ['PROVIDER_READ_FAILED'];
+  const replacements={
+    DEDICATED_READ_CREDENTIALS_REQUIRED:'READ_CREDENTIALS_UNAVAILABLE',
+    CREDENTIAL_BOUNDARY_VIOLATION:'CREDENTIAL_ROLE_COLLISION'
+  };
+  const reasons=record.reasonCodes.filter(x=>typeof x==='string'
+    &&/^[A-Z][A-Z0-9_]{0,127}$/u.test(x))
+    .map(x=>replacements[x]??x);
+  return [...new Set(reasons)].sort();
+}
 
 /**
- * No implicit reading from process.env here. The standalone entry point
- * passes process.env only upon explicit execution with '--read-only'.
- * Caller-injected fetch in tests is not a provider trust anchor.
+ * Programmatic usage still requires BOTH literal opt-ins. Credential checks,
+ * snapshot stability and trust policy remain centralized in the audit.
+ * No caller-provided owner read, action, URL or method can be passed through.
  */
 export async function runSmallzReadiness({env={},fetchImpl=globalThis.fetch}={}){
   const e=env&&typeof env==='object'&&!Array.isArray(env)?env:{};
   if(e.HERCULES_SMALLZ_EVIDENCE_READ_ENABLED!=='true')
     return hold('READ_ONLY_MODE_DISABLED');
-  const render=e.HERCULES_SMALLZ_RENDER_READ_TOKEN;
-  const github=e.HERCULES_SMALLZ_GITHUB_READ_TOKEN;
-  if(!credential(render)||!credential(github))
-    return hold('READ_CREDENTIALS_UNAVAILABLE');
-
-  // Do not silently reuse credentials previously intended for writing,
-  // running the worker, or administering the Deploy Plane. These checks do
-  // not independently verify the actual provider privileges of a token.
-  const privileged=[
-    e.HERCULES_RENDER_API_TOKEN,e.HERCULES_DEPLOY_CONTROL_TOKEN,
-    e.RENDER_API_KEY,e.GITHUB_TOKEN,e.GH_TOKEN
-  ].filter(x=>typeof x==='string'&&x.length);
-  if(render===github||privileged.includes(render)||privileged.includes(github))
-    return hold('CREDENTIAL_ROLE_COLLISION');
+  if(e.HERCULES_SMALLZ_READ_AUDIT_ENABLED!=='true')
+    return hold('AUDIT_SECOND_OPT_IN_REQUIRED');
   if(typeof fetchImpl!=='function')return hold('PROVIDER_READ_FAILED');
-
   try{
-    const readers=createSmallzProviderReaders({
-      renderApiToken:render,githubApiToken:github,fetchImpl
-    });
-    const evidence=await collectSmallzEvidence(readers);
-    const reasons=Array.isArray(evidence?.reasonCodes)
-      ?evidence.reasonCodes.filter(x=>typeof x==='string'&&/^[A-Z][A-Z0-9_]{0,127}$/u.test(x)).sort()
-      :['PROVIDER_READ_FAILED'];
-    const status=evidence?.status==='CONSISTENT_UNATTESTED'&&reasons.length===0
+    const audit=await runSmallzReleaseReadAudit({env:e,fetchImpl});
+    const reasons=reasonCodes(audit);
+    const stability=audit?.snapshotStability;
+    const snapshotStability=['stable','changed','unverified'].includes(stability)
+      ?stability:'unverified';
+    const status=audit?.status==='CONSISTENT_UNATTESTED'
+      &&reasons.length===0&&snapshotStability==='stable'
       ?'CONSISTENT_UNATTESTED':'HOLD';
     return Object.freeze({
       schema:'sauceapproved.hercules.smallz-readiness-runner.v1',
-      status,reasonCodes:reasons.length||status==='CONSISTENT_UNATTESTED'
-        ?[...new Set(reasons)]:['PROVIDER_READ_FAILED'],
+      status,reasonCodes:status==='HOLD'&&reasons.length===0
+        ?['PROVIDER_READ_FAILED']:reasons,
       serviceId:SERVICE_ID,
-      mainCommit:safeSha(evidence?.mainCommit),
-      liveCommit:safeSha(evidence?.liveCommit),
-      liveDeploymentId:safeDeploy(evidence?.liveDeploymentId),
-      readsAttempted:true,
+      mainCommit:status==='HOLD'&&snapshotStability==='changed'
+        ?null:safeSha(audit?.mainCommit),
+      liveCommit:status==='HOLD'&&snapshotStability==='changed'
+        ?null:safeSha(audit?.liveCommit),
+      liveDeploymentId:status==='HOLD'&&snapshotStability==='changed'
+        ?null:safeDeploy(audit?.liveDeploymentId),
+      readsAttempted:audit?.networkOperationsPerformedByModule===true,
+      snapshotStability,
       ownerRuntimeRecordAligned:false,
       providerRecordsIndependentlyAuthenticated:false,
       ownerAuthorizationVerified:false,runtimeHealthVerified:false,
-      productionChanged:false,releaseApproved:false,executionAuthority:false,
+      productionChanged:false,releaseApproved:false,executionAuthority:false
     });
   }catch{
-    // Exception text may contain provider credentials, network headers, or
-    // user-supplied content; never include exception messages in reports.
     return hold('PROVIDER_READ_FAILED');
   }
 }
-
-/** Running this file directly never falls through into deployment code. */
+/** Direct execution never passes through to any deployment control. */
 async function main(){
   const args=process.argv.slice(2);
   const result=args.length===1&&args[0]==='--read-only'
