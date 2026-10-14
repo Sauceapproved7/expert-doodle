@@ -1,3 +1,4 @@
+import {resolveHerculesInput} from "./search-intent.mjs";
 let handoffUrl="";
 function handoffTarget(value){
   try {
@@ -108,10 +109,11 @@ screen.onerror=()=>{
 
 $("navForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  const url=$("urlInput").value.trim();
-  if(!url)return;
-  setStatus("Navigating…");
+  const input=$("urlInput").value.trim();
+  if(!input)return;
+  setStatus("Searching or navigating…");
   try{
+    const url=resolveHerculesInput(input);
     const r=await api("/api/navigate",{method:"POST",body:JSON.stringify({url})});
     renderPage(r.page);
     screenMessage.hidden=false;
