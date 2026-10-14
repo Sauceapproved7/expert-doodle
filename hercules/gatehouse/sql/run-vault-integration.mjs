@@ -109,6 +109,17 @@ async function suite(){
    expectError:true});
   sql("missing-owner-rejected",svc+"SELECT public.gatehouse_offline_acquire("+
    uid(ORG)+","+uid(OTHER)+");",{expectError:true});
+  assert.equal(v("service-role-rpc-grant-present",
+   "SELECT has_function_privilege('service_role',"+
+   "'public.gatehouse_offline_acquire(uuid,uuid)','EXECUTE')::int;"),"1");
+  sql("revoke-synthetic-owner-membership",
+   "UPDATE public.hercules_memberships SET status='inactive' "+
+   "WHERE organization_id="+uid(ORG)+" AND user_id="+uid(OWNER)+";");
+  sql("inactive-owner-denied",svc+"SELECT public.gatehouse_offline_acquire("+
+   uid(ORG)+","+uid(OWNER)+");",{expectError:true});
+  sql("restore-synthetic-owner-membership",
+   "UPDATE public.hercules_memberships SET status='active' "+
+   "WHERE organization_id="+uid(ORG)+" AND user_id="+uid(OWNER)+";");
   const before=Number(v("count-real-vault-secret-rows","SELECT count(*) FROM vault.secrets;"));
   assert.deepEqual(j("first-owner-bootstrap-creates-atomic-pair",bootstrap("A","A")),
    {stored:true,generation:1});
