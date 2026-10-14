@@ -127,3 +127,18 @@ footer{background:#251526;color:#f8eef3;padding:45px 0 100px;margin-top:20px}.fo
 .catalog-review-item .catalog-blocked{font-weight:750;color:#8b3e56}
 .catalog-rejected{padding:9px 12px;font-size:12px;background:#f9e7e7;border-left:3px solid #b55b59;color:#753b40}
 @media(max-width:690px){.catalog-intake>summary{flex-wrap:wrap;padding:14px 12px}.catalog-intake-body{padding:0 12px 15px}.catalog-intake-actions>.secondary-btn,.catalog-file-label{flex:1 1 100%}.catalog-file-label input{max-width:100%}.catalog-intake-body h3{font-size:21px}}
+
+/* Candidate-level supplier evidence tracker: never a commerce approval workflow. */
+.supplier-review-panel{margin-top:18px;padding:16px;border:1px solid #dbc2cf;background:#f8eef2;border-radius:4px}
+.supplier-review-panel h4{font:600 23px Georgia,serif;color:#4c3145;margin:9px 0}
+.supplier-review-panel>p{font-size:12px;line-height:1.7;color:#674d60;margin:10px 0}
+.supplier-review-panel .secondary-btn{padding:10px 14px;min-height:44px;margin:4px 8px 4px 0}
+.supplier-review-panel .secondary-btn:disabled{opacity:.6;cursor:not-allowed}
+.supplier-review-status{padding:12px 14px;margin:13px 0;background:#f2e4ea;border-left:3px solid #9c6480;color:#513348;font-size:12px;line-height:1.7}
+.supplier-evidence{border:1px solid #dfd0d8;padding:12px;margin:13px 0 0;border-radius:4px}
+.supplier-evidence legend{font-size:12px;font-weight:700;color:#76536a;padding:0 6px}
+.supplier-evidence-row{display:block;font-size:12px;color:#52384b;font-weight:650;margin:8px 0 12px}
+.supplier-evidence-row span,.supplier-evidence-row small{display:block;line-height:1.5}
+.supplier-evidence-row small{font-size:11px;font-weight:400;color:#786173;margin:4px 0 7px}
+.supplier-evidence-row select{width:100%;min-height:44px;font-size:12px;color:#4a3544;background:#fff;border:1px solid #baa1b0;border-radius:3px;padding:9px}
+@media(max-width:690px){.supplier-review-panel{padding:12px 10px}.supplier-review-panel h4{font-size:21px}.supplier-review-panel .secondary-btn{width:100%;margin:5px 0}}
