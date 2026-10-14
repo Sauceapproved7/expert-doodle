@@ -1,3 +1,9 @@
+## Smallz Read Audit two-pass race guard — October 13, 2026
+
+- Extended the **existing** first-party SauceApproved `hercules-deploy/smallz-read-audit.mjs` rather than shipping a parallel command, with bounded, sequential, fixed-endpoint read-only consistency checks and offline regression tests.
+- Implemented tests first: RED `537a0b0941b9f77a3f22f3b4c75c12817fa2defe` with 120 existing passes and four new expected fails, then GREEN `ee7d0ecf81b83ef042c085812471c70fa30bacbc` with 124/124 Deploy Plane tests. No third-party code copied, no new packages, secrets, production writes, deployment or paid service.
+- The only added workload is three additional pinned GET operations per explicit read audit; stable normalized records are not cryptographic provenance, independent provider authenticity or authority.
+
 ## Hercules Smallz Dedicated Read Audit — October 13, 2026
 
 - Original first-party SauceApproved AI-assisted Node.js implementation `hercules-deploy/smallz-read-audit.mjs`, `scripts/hercules-smallz-read-audit.mjs`, `tests/hercules-deploy-smallz-read-audit.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-READ-AUDIT-V1.md`.
