@@ -200,9 +200,13 @@ function renderStudio(){
   el('studioItem').innerHTML=choices.map(i=>'<option value="'+i.id+'" '+(i.id===state.currentId?'selected':'')+'>'+esc(i.name)+' — '+esc(i.desc)+'</option>').join('');
   document.querySelectorAll('.studio-tab').forEach(b=>{const selected=b.dataset.mode===state.mode;b.classList.toggle('selected',selected);b.setAttribute('aria-pressed',String(selected))});
   const isPhoto=state.mode==='photo';
-  el('photoLab').hidden=!isPhoto;el('cameraLab').hidden=isPhoto;el('startCamera').hidden=isPhoto;el('stopCamera').hidden=true;
+  el('photoLab').hidden=!isPhoto;el('cameraLab').hidden=isPhoto;el('startCamera').hidden=isPhoto||!!cameraStream;el('stopCamera').hidden=isPhoto||!cameraStream;
   el('photoFile').closest('label').hidden=!isPhoto;
   el('manualControls').hidden=!isPhoto;
+  // The front camera is mirrored for lipstick/blush; the rear hand camera is not.
+  const mirrored=state.mode==='face';
+  video.style.transform=mirrored?'scaleX(-1)':'none';
+  canvas.style.transform=mirrored?'scaleX(-1)':'none';
   updateStudioDetail();
 }
 function updateStudioDetail(){
