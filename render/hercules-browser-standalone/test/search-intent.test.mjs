@@ -17,3 +17,10 @@ test("does not navigate unsafe schemes",()=>{
 test("rejects blank input",()=>{
  assert.throws(()=>resolveHerculesInput("   "),/empty/i);
 });
+
+test("allows privacy-oriented DuckDuckGo search without credentials",()=>{
+ assert.equal(resolveHerculesInput("hoodie supplier", "duckduckgo"),"https://duckduckgo.com/?q=hoodie%20supplier");
+});
+test("does not accept arbitrary provider URL injection",()=>{
+ assert.throws(()=>resolveHerculesInput("hoodie supplier", "https://evil.example"),/unsupported search provider/i);
+});
