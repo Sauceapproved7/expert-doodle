@@ -117,3 +117,6 @@ The review summary suggests the next non-authorizing action: resolve disputed ev
 
 ## Supplier readiness overview
 The catalog workshop displays four derived counts (all candidates, disputed, missing documents, verify claimed evidence) and a filterable list of the currently imported review candidates. Disputed issues take precedence over missing documents, then unverified claims. All states are computed in browser memory; no real supplier proof is verified, no candidate is publishable, and clearing the feed clears the dashboard.
+
+## Local prioritized supplier action plan
+The readiness dashboard now offers a separate JSON action plan. It sorts individual document gaps by dispute, missing proof, then claims awaiting independent verification. The downloaded file explicitly records zero verified, zero approved and zero published; it carries no authorization, credentials or personal contact information. Clear Review and private-data erasure disable further export until another valid feed is loaded.
