@@ -130,6 +130,7 @@ $("navForm").addEventListener("submit",async e=>{
 
 document.querySelectorAll("[data-search]").forEach(button=>{
   button.addEventListener("click",()=>{
+    if(navigationPending)return;
     $("urlInput").value=button.dataset.search;
     $("navForm").requestSubmit();
   });
