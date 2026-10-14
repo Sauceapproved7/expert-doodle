@@ -58,3 +58,7 @@ h1{font-size:16px;line-height:1.1;margin:0}
   .brand p{display:none}
   .statusbar span:last-child{display:none}
 }
+
+/* Search provider stays legible on the compact mobile omnibox. */
+.omnibox select{border:1px solid var(--line);background:var(--soft);color:var(--text);border-radius:11px;padding:0 8px;min-height:42px;max-width:120px}
+@media(max-width:600px){.toolbar{flex-wrap:wrap}.omnibox{flex-basis:100%;order:2}.omnibox select{max-width:94px;font-size:12px}.omnibox button{padding:0 9px;font-size:12px}}
