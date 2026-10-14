@@ -5,7 +5,8 @@ export function resolveHerculesInput(value, provider="google"){
  const input=String(value??"").trim();
  if(!input)throw new Error("empty search");
  if(/^https?:\/\//i.test(input)){
-   const url=new URL(input);
+   let url;
+   try{url=new URL(input)}catch{throw new Error("invalid URL")}
    if(url.username||url.password)throw new Error("unsupported URL credentials");
    return url.href;
  }
