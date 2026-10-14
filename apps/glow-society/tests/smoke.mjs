@@ -160,7 +160,13 @@ test('local review restoration requires exact unverified packet and matching fee
     assert.match(html,new RegExp('id="'+id+'"'));
   }
   assert.match(html,/First load the exact same supplier feed/);
-  assert.match(js,/window\.GlowSupplierRestore\.parse\(raw,kit\.snapshot\(\)\)/);
+  assert.match(js,/window\\.GlowSupplierRestore\\.parse\\(raw,baseline\\)/);
+  assert.match(js,/window\\.GlowSupplierRestore\\.preview\\(validation,baseline\\)/);
+  assert.match(js,/function confirmSupplierRestore\\(\\)/);
+  assert.match(js,/staged\\.kit\\.apply\\(staged\\.changes\\)/);
+  for(const id of ['supplierRestorePreview','supplierRestorePreviewSummary','supplierRestoreChanges','supplierRestoreApply','supplierRestoreCancel']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
   assert.match(js,/function resetSupplierRestore\(/);
   assert.match(js,/catalogRestoreGeneration/);
   assert.match(js,/Restore rejected/);
