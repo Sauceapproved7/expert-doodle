@@ -75,3 +75,14 @@ The Studio contains a six-scenario test matrix for observing face/lip/cheek over
 - This report lives only in the current page session until explicitly downloaded; it is not stored in Beauty Passport, sent to the server, or synced. The Reset button clears observations, and Glow's confirmed local-data erasure also clears all session metrics and observations.
 - Reports cannot certify model fit, facial features, shade fidelity, gender representation or physical-device performance. A human must actually inspect a real iPhone and other devices under diverse lighting to make release claims.
 - For any potential public launch, a separate documented opt-in device test protocol, accessibility and accuracy audit across diverse complexions, third-party SDK telemetry review and independent results would still be necessary.
+
+## Beauty Match — chosen-preference discovery
+
+The Explore view now includes a tag-based Beauty Match selector with category, skin depth, undertone, hair preference and optional soft/statement style direction. It is built for deep and rich skin beauty discovery and natural or protective hair, while letting people skip any field.
+
+- All results come from **47 fictional catalog concepts**; the engine does not call a network service, read a photo, inspect face or hand landmarks, collect protected traits, or infer identity.
+- Skin depth and undertone tags apply only to makeup; hair texture preferences apply only to hair. Nail styles are included for inspiration **without claiming they match a skin tone**. When tags do not match, the app shows an honest no-results state rather than claiming the wrong shade is appropriate.
+- Suggestions give a short **Why shown** explanation based on the matched tags or descriptive style keywords, with working favorite and manual/photo try-on actions.
+- Choices live only in this page session. Visitors can load saved Beauty Passport filters deliberately, but a Beauty Match is not saved automatically, uploaded to a server, or added to the Passport. The Clear and private-data erasure actions reset the wizard.
+- Discovery tags are editorial and not scientifically validated color calibration; deep-complexion users should verify real shades under appropriate lighting before a purchase. No purchase is offered here.
+- Node tests check depth and undertone exclusions, 4C hair options, cross-category concepts, safe no-results behavior and nonmutation. Browser checks cover interaction and erasure.
