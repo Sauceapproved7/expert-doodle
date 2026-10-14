@@ -74,3 +74,13 @@ test('preview is explicitly not indexed', () => {
   assert.match(html, /<meta name="robots" content="noindex,nofollow,noarchive"\/>/);
   assert.match(robots, /Disallow: \/\s*$/m);
 });
+
+test('cancelled asynchronous camera models are closed and camera sessions do not overlap', () => {
+  assert.match(js, /if\(gen!==cameraGeneration\)return;\s*landmarker=pendingLandmarker/);
+  assert.match(js, /if\(pendingLandmarker\)\{try\{pendingLandmarker\.close\(\)\}catch\{\}\}/);
+  assert.match(js, /if\(cameraCheckPending\)\{toast\('Wait for the camera check/);
+  assert.match(js, /if\(cameraStream\|\|cameraStarting\|\|cameraCheckPending\)/);
+  assert.match(js, /if\(gen!==cameraGeneration\)\{stream\.getTracks\(\)\.forEach/);
+  assert.match(js, /if\(gen!==cameraGeneration\)return;\s*const vision=/);
+  assert.match(html, /id="runCameraCheck"/);
+});
