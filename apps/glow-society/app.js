@@ -318,17 +318,19 @@ el('favoriteCurrent').addEventListener('click',()=>toggleFav(state.currentId));
 el('saveLook').addEventListener('click',saveLook);
 
 let cameraStream=null,landmarker=null,raf=0,cameraGeneration=0,lastFrame=0,mediaPipeModule=null;
+let cameraStarting=false,cameraCheckPending=false;
 const video=el('cameraVideo'),canvas=el('cameraCanvas');
 const lipOuter=[61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
 const lipInner=[78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,81,80,191];
 function cameraStatus(s,msg){el('cameraStatus').textContent=s;el('cameraMessage').textContent=msg||'';el('cameraMessage').hidden=!msg}
 function stopCamera(){
-  cameraGeneration++;cancelAnimationFrame(raf);raf=0;
+  cameraGeneration++;cameraStarting=false;cancelAnimationFrame(raf);raf=0;
   if(cameraStream){cameraStream.getTracks().forEach(track=>track.stop());cameraStream=null}
   if(landmarker){try{landmarker.close()}catch{}landmarker=null}
   video.pause();video.srcObject=null;canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
   el('startCamera').hidden=state.mode==='photo';el('startCamera').disabled=false;el('stopCamera').hidden=true;
   cameraStatus('CAMERA OFF','Enable your camera to start on-device tracking.');
+  if(cameraCheckPending)cameraCheckReport('Camera check cancelled. Any pending permission request will be closed when it resolves.','cancelled');
 }
 function cameraCheckReport(message,result){
   const area=el('cameraCheckStatus');
@@ -337,11 +339,12 @@ function cameraCheckReport(message,result){
 }
 async function checkCameraCompatibility(){
   const button=el('runCameraCheck');
-  if(cameraStream){
-    cameraCheckReport('A live try-on camera is already active. Stop it before running a separate camera check.','unavailable');
+  if(cameraStream||cameraStarting||cameraCheckPending){
+    cameraCheckReport('Another camera session or check is in progress. Stop it or wait before testing again.','unavailable');
     return;
   }
   const generation=++cameraGeneration;
+  cameraCheckPending=true;
   button.disabled=true;
   cameraCheckReport('Checking browser security and requesting a brief camera stream only with your permission…','checking');
   let testStream=null;
@@ -366,6 +369,7 @@ async function checkCameraCompatibility(){
     cameraCheckReport('Camera check not passed: '+reason+' Photo Lab still works without a camera.','unavailable');
   }finally{
     if(testStream)testStream.getTracks().forEach(track=>track.stop());
+    cameraCheckPending=false;
     button.disabled=false;
     if(generation!==cameraGeneration && el('cameraCheckStatus').dataset.result==='checking'){
       cameraCheckReport('Check cancelled; camera is off.','cancelled');
@@ -373,36 +377,60 @@ async function checkCameraCompatibility(){
   }
 }
 async function startCamera(){
+  if(cameraCheckPending){toast('Wait for the camera check to finish before starting live try-on.');return}
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){toast('A secure HTTPS browser and camera permission are needed.');return}
   stopCamera();const gen=++cameraGeneration;
+  const requestedMode=state.mode;
+  let pendingLandmarker=null;
+  cameraStarting=true;
   el('startCamera').disabled=true;
   cameraStatus('LOADING','Requesting permission and loading on-device tracking…');
   try {
-    const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:state.mode==='hand'?'environment':'user',width:{ideal:640},height:{ideal:480}}});
+    const stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:requestedMode==='hand'?'environment':'user',width:{ideal:640},height:{ideal:480}}});
     if(gen!==cameraGeneration){stream.getTracks().forEach(t=>t.stop());return}
     cameraStream=stream;
     video.srcObject=stream;await video.play();
+    if(gen!==cameraGeneration)return;
     if(!mediaPipeModule)mediaPipeModule=await import(ESM);
     if(gen!==cameraGeneration)return;
     const vision=await mediaPipeModule.FilesetResolver.forVisionTasks(WASM);
-    const Ctor=state.mode==='hand'?mediaPipeModule.HandLandmarker:mediaPipeModule.FaceLandmarker;
-    const options={baseOptions:{modelAssetPath:state.mode==='hand'?MODEL_HAND:MODEL_FACE,delegate:'GPU'},runningMode:'VIDEO'};
-    if(state.mode==='hand')options.numHands=1;else options.numFaces=1;
-    try{landmarker=await Ctor.createFromOptions(vision,options)}catch{options.baseOptions.delegate='CPU';landmarker=await Ctor.createFromOptions(vision,options)}
     if(gen!==cameraGeneration)return;
+    const Ctor=requestedMode==='hand'?mediaPipeModule.HandLandmarker:mediaPipeModule.FaceLandmarker;
+    const options={baseOptions:{modelAssetPath:requestedMode==='hand'?MODEL_HAND:MODEL_FACE,delegate:'GPU'},runningMode:'VIDEO'};
+    if(requestedMode==='hand')options.numHands=1;else options.numFaces=1;
+    try{
+      pendingLandmarker=await Ctor.createFromOptions(vision,options);
+    }catch(error){
+      if(gen!==cameraGeneration)return;
+      options.baseOptions.delegate='CPU';
+      pendingLandmarker=await Ctor.createFromOptions(vision,options);
+    }
+    if(gen!==cameraGeneration)return;
+    landmarker=pendingLandmarker;
+    pendingLandmarker=null;
     el('startCamera').hidden=true;el('stopCamera').hidden=false;cameraStatus('LIVE · ON DEVICE','');
     lastFrame=0;
     const loop=(time)=>{
       if(gen!==cameraGeneration||!landmarker)return;
       raf=requestAnimationFrame(loop);
       if(time-lastFrame<65||video.readyState<2)return;lastFrame=time;
-      try{drawTracking(time)}catch(error){console.warn('AR tracking error',error);cameraStatus('TRACKING UNAVAILABLE','Try another browser or use photo lab.');stopCamera()}
+      try{drawTracking(time)}catch(error){
+        console.warn('AR tracking error',error);
+        stopCamera();
+        cameraStatus('TRACKING UNAVAILABLE','Try another browser or use photo lab.');
+      }
     };
     raf=requestAnimationFrame(loop);
-  } catch(e){
-    console.warn('Camera not available',e);stopCamera();
+  }catch(error){
+    if(gen!==cameraGeneration)return;
+    console.warn('Camera not available',error);
+    stopCamera();
     cameraStatus('UNAVAILABLE','Camera was denied or tracking could not load. Photo lab is still available.');
     toast('Camera tracking unavailable. The private photo lab still works.');
+  }finally{
+    // MediaPipe can finish initializing after a user navigates away. Never retain its orphan instance.
+    if(pendingLandmarker){try{pendingLandmarker.close()}catch{}}
+    if(gen===cameraGeneration)cameraStarting=false;
   }
 }
 function fillLoop(ctx,pts,indices,w,h){
