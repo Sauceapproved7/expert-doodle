@@ -34,3 +34,10 @@ test("rejects malformed explicit URLs",()=>{
 test("blocks embedded URL credentials",()=>{
  assert.throws(()=>resolveHerculesInput("https://user:password@example.com"),/credentials/i);
 });
+
+test("does not misclassify colon-containing research queries as URL schemes",()=>{
+ assert.equal(resolveHerculesInput("pricing: free hosting"),"https://www.google.com/search?q=pricing%3A%20free%20hosting");
+});
+test("does not misclassify a URL-looking question as a domain",()=>{
+ assert.equal(resolveHerculesInput("example.com alternatives"),"https://www.google.com/search?q=example.com%20alternatives");
+});
