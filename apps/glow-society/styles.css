@@ -41,3 +41,21 @@ footer{background:#251526;color:#f8eef3;padding:45px 0 100px;margin-top:20px}.fo
 .camera-check-results[data-result="unavailable"]{border-left:3px solid #ae704d}
 .camera-check-results[data-result="checking"]{border-left:3px solid #80627e}
 @media(max-width:690px){.camera-check{padding:15px}.camera-check h3{font-size:22px}}
+
+
+/* Local-only community safety and private-data vault */
+.safety-actions{display:flex;flex-wrap:wrap;align-items:center;gap:8px 15px}
+.privacy-center{margin:45px 0 35px;padding:26px;border:1px solid #dfccd2;border-top:4px solid #7b4f69;border-radius:5px;background:#fffaf7}
+.privacy-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.privacy-header h2{font-size:30px;margin:8px 0 0}
+.privacy-tag{font-size:10px;font-weight:800;letter-spacing:.1em;border:1px solid #bda6b3;border-radius:20px;color:#725168;padding:7px 11px;white-space:nowrap}
+.privacy-center>p,.erase-confirm p{font-size:13px;color:#725965;line-height:1.75;max-width:760px;margin:15px 0}
+.privacy-summary{font-size:12px;font-weight:650;color:#533448;background:#f3e5e9;border-radius:4px;padding:13px 15px;line-height:1.7;margin:16px 0}
+.privacy-buttons{display:flex;flex-wrap:wrap;gap:11px}
+.privacy-center .secondary-btn{min-height:43px;padding:10px 16px}
+.danger-outline{border-color:#9b5265!important;color:#863f53!important}
+.danger-filled{background:#8b344b!important;color:#fff!important;border-color:#8b344b!important}
+.erase-confirm{margin-top:16px;padding:17px;border:1px solid #be8fa0;background:#f9edf0;border-radius:3px}
+.erase-confirm strong{font-size:15px;color:#713d4c}
+.erase-confirm .secondary-btn{margin:4px 8px 3px 0}
+@media(max-width:690px){.privacy-center{padding:18px 13px}.privacy-header h2{font-size:24px}.privacy-tag{font-size:9px}.privacy-buttons .secondary-btn{flex:1 1 190px}}
