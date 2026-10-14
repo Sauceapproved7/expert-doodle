@@ -26,3 +26,18 @@ footer{background:#251526;color:#f8eef3;padding:45px 0 100px;margin-top:20px}.fo
 .community-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:16px 2px 5px}.community-tools small{color:#796571;font-size:11px}
 .look-chips{display:flex;flex-wrap:wrap;gap:7px}.look-chip{display:flex;align-items:center;gap:7px;background:#fff7f4;border:1px solid #d7c3ca;padding:7px 10px;border-radius:30px;font-size:11px}.look-chip span{width:12px;height:12px;border-radius:50%;background:var(--look-color)}
 @media(max-width:690px){.passport-bar{padding:15px 12px}.passport-bar strong{font-size:20px}.passport-bar .secondary-btn{flex:1}.community-tools{align-items:flex-start}}
+
+
+/* User-initiated camera capability check. Never implies AR accuracy. */
+.camera-check{margin-top:16px;padding:18px;border:1px solid #dfcdd3;background:#fffaf8;border-radius:5px}
+.camera-check-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.camera-check h3{font-size:25px;margin:6px 0 0}
+.camera-check-badge{font-size:9px;font-weight:800;letter-spacing:.12em;border:1px solid #c8a5b4;border-radius:20px;padding:6px 9px;color:#795369}
+.camera-check p{font-size:12px;line-height:1.6;color:#705a68;margin:12px 0}
+.camera-check .secondary-btn{background:#39213b;color:#fff;min-height:43px;border:0}
+.camera-check .secondary-btn:disabled{opacity:.55}
+.camera-check-results{padding:12px 14px;margin-top:12px;background:#f3e7e5;border-radius:3px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}
+.camera-check-results[data-result="passed"]{border-left:3px solid #527357}
+.camera-check-results[data-result="unavailable"]{border-left:3px solid #ae704d}
+.camera-check-results[data-result="checking"]{border-left:3px solid #80627e}
+@media(max-width:690px){.camera-check{padding:15px}.camera-check h3{font-size:22px}}
