@@ -74,6 +74,34 @@ async function check(document) {
  assert(document.getElementById('supplierReviewStatus').textContent.includes('0 claimed evidence items'),'Reset removes the claimed evidence count');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('10 missing evidence items'),'Reset restores all missing proof requirements');
 
+ const restoreFileInput=document.getElementById('supplierRestoreFile');
+ assert(!restoreFileInput.disabled,'Matching local packet import becomes available for loaded feed');
+ async function importReviewPacket(packet,name='unverified-review.json'){
+   const transfer=new iframe.contentWindow.DataTransfer();
+   transfer.items.add(new iframe.contentWindow.File([JSON.stringify(packet)],name,{type:'application/json'}));
+   restoreFileInput.files=transfer.files;
+   restoreFileInput.dispatchEvent(new Event('change',{bubbles:true}));
+   await wait(100);
+ }
+ const forgedReview={...downloadedPacket,ownerApproval:'granted'};
+ await importReviewPacket(forgedReview);
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restore rejected'),'Owner-approval forgery is rejected');
+ assert(firstProof.value==='not_provided','Forged restore does not modify existing checklist choices');
+ const alteredIdentity=JSON.parse(JSON.stringify(downloadedPacket));
+ alteredIdentity.records[0].name='Impersonated Supplier Look';
+ await importReviewPacket(alteredIdentity);
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restore rejected'),'Mismatched product identity is rejected');
+ assert(firstProof.value==='not_provided','Mismatched packet cannot modify checklist choices');
+ const storageBeforeRestore=[...Object.keys(iframe.contentWindow.localStorage)].sort().join('|');
+ await importReviewPacket(downloadedPacket);
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restored 10 unverified checklist choices'),'Matching packet restores local review choices');
+ assert(firstProof.value==='claimed_unverified','Restored resale claim is still labeled unverified');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Restore cannot approve supplier');
+ assert([...Object.keys(iframe.contentWindow.localStorage)].sort().join('|')===storageBeforeRestore,'Review restoration does not persist supplier data');
+ click(document.getElementById('supplierReviewReset'),'Clear successfully restored review choices');
+ assert(firstProof.value==='not_provided','Evidence reset after restore clears imported claims');
+
+
  assert(document.getElementById('catalogIntakeStatus').textContent.includes('Published: 0'),'Sample review cannot silently publish products');
  assert(count(document,'#catalogIntakeResults a')===0,'Unverified candidate source URLs are not active links');
  assert(count(document,'#exploreGrid .product-card')===47,'Supplier candidates never enter the 47 demo discoveries');
@@ -93,6 +121,11 @@ async function check(document) {
  assert(count(document,'#catalogIntakeResults select[data-supplier-requirement]')===5,'Rejected candidate cannot receive an evidence review checklist');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('0 claimed evidence items'),'New upload cannot inherit old supplier review claims');
 
+ await importReviewPacket(downloadedPacket);
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restore rejected'),'Packet from a different supplier feed cannot be imported');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('0 claimed evidence items'),'Failed cross-feed import leaves current checklist unchanged');
+
+
  assert(count(document,'#catalogIntakeResults .catalog-rejected')===1,'Unsafe local supplier URL is rejected');
  assert(document.getElementById('catalogIntakeStatus').textContent.includes('Approved: 0'),'Imported candidate cannot assert seller authority');
  assert([...Object.keys(iframe.contentWindow.localStorage)].sort().join('|')===localKeysBeforeCatalog,'Supplier feed is not written to browser storage');
@@ -102,6 +135,10 @@ async function check(document) {
  assert(document.getElementById('supplierReviewExport').disabled,'Clear review disables stale evidence packet exports');
  assert(document.getElementById('supplierActionsExport').disabled,'Clear review disables stale action plan download');
  assert(document.getElementById('supplierReviewReset').disabled,'Clear review disables evidence changes');
+
+ assert(document.getElementById('supplierRestoreFile').disabled,'Clear review disables stale packet restoration');
+ assert(document.getElementById('supplierRestoreFile').value==='','Clear review removes chosen packet file');
+
 
  assert(document.getElementById('catalogFile').value==='','Clear resets selected local supplier file');
 
