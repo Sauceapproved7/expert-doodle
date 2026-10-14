@@ -2,6 +2,7 @@
  * No service-role key, no new Edge Function, no arbitrary URL fetch, no money movement.
  */
 import {buildTenantSiteRow,publicAccountState,assessDelivery} from "./client-onboarding.mjs";
+import {normalizeIntake} from "./commerce.mjs";
 const BASE="https://xbwuablxhhwsaoomsoco.supabase.co";
 const UID=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function outcome(status,body){return {status,body}}
@@ -67,15 +68,27 @@ export function customerAccessBridge({enabled=false,reportsEnabled=false,publish
   }
   if(action==="list"){
    try{
-    const url="/rest/v1/gatehouse_customer_sites?select=id%2Corigin%2Cstage%2Cauthorized_at&owner_user_id=eq."+encodeURIComponent(owner.id)+"&limit=25";
+    // owner_user_id is projected only for private server-side tenant integrity.
+    // RLS and explicit SELECT grants remain separate database authorization requirements.
+    const url="/rest/v1/gatehouse_customer_sites?select=id%2Corigin%2Cstage%2Cauthorized_at%2Cowner_user_id&owner_user_id=eq."+encodeURIComponent(owner.id)+"&limit=25";
     const found=await remote(url,"GET",owner.token);
-    if(!found.ok||!Array.isArray(found.data))return outcome(503,{error:"private-site-storage-unavailable"});
-    return outcome(200,{sites:found.data.map(v=>({
-      id:UID.test(v?.id||"")?v.id:null,
-      origin:typeof v?.origin==="string"&&v.origin.length<=256?v.origin:null,
-      stage:v?.stage==="awaiting-domain-control"?"awaiting-domain-control":"unknown",
-      authorizedAt:typeof v?.authorized_at==="string"?v.authorized_at:null
-     })),purchaseEnabled:false,deliveryAuthorized:false});
+    if(!found.ok||!Array.isArray(found.data)||found.data.length>25)
+     return outcome(503,{error:"private-site-storage-unavailable"});
+    const seen=new Set(),sites=[];
+    for(const v of found.data){
+     if(!v||!UID.test(v.id||"")||v.owner_user_id!==owner.id||
+      seen.has(v.id)||v.stage!=="awaiting-domain-control"||
+      typeof v.authorized_at!=="string"||v.authorized_at.length>60||
+      !Number.isFinite(Date.parse(v.authorized_at)))
+      return outcome(503,{error:"private-site-storage-unavailable"});
+     let origin;
+     try{origin=normalizeIntake({website:v.origin,authorized:true}).website}
+     catch{return outcome(503,{error:"private-site-storage-unavailable"})}
+     if(origin!==v.origin)return outcome(503,{error:"private-site-storage-unavailable"});
+     seen.add(v.id);
+     sites.push({id:v.id,origin,stage:v.stage,authorizedAt:v.authorized_at});
+    }
+    return outcome(200,{sites,purchaseEnabled:false,deliveryAuthorized:false});
    }catch{return outcome(503,{error:"private-site-storage-unavailable"})}
   }
   return outcome(404,{error:"route-not-available"});
