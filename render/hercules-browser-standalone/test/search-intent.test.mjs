@@ -50,7 +50,7 @@ test("rejects backslash-prefixed URL ambiguity",()=>{
 });
 
 test("rejects single-backslash-prefixed navigation",()=>{
- assert.throws(()=>resolveHerculesInput("\\example.com"),/unsupported/i);
+ assert.throws(()=>resolveHerculesInput(String.raw`\example.com`),/unsupported/i);
 });
 test("searches colon queries with spaces",()=>{
  assert.equal(resolveHerculesInput("hosting: free tier"),"https://www.google.com/search?q=hosting%3A%20free%20tier");
