@@ -6,7 +6,11 @@ import {createRequire} from 'node:module';
 // founder. A real network POST is permitted ONLY with an empty email and false
 // consent. Every valid-looking form request is intercepted inside Chromium
 // before it can reach PostgREST.
-const loadBrowser=createRequire(new URL('../render/hercules-browser-standalone/package.json',import.meta.url));
+// The repository checkout stays clean: browser dependencies are installed
+// only in the GitHub runner's ephemeral temp directory.
+const ciRuntime=process.env.HERCULES_CI_BROWSER_RUNTIME;
+assert.ok(ciRuntime,'isolated Hercules Browser CI runtime must be configured');
+const loadBrowser=createRequire(ciRuntime+'/package.json');
 const {chromium}=loadBrowser('playwright-core');
 const ORIGIN='https://hercules-cloud-origin-preview.onrender.com';
 const RPC='https://xbwuablxhhwsaoomsoco.supabase.co/rest/v1/rpc/hercules_cloud_join_founders';
