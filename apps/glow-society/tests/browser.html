@@ -65,6 +65,35 @@ async function check(document) {
  await wait(20);
  assert(document.getElementById('cameraCheckStatus').dataset.result==='unavailable','Permission denial has a graceful fallback');
  assert(document.getElementById('cameraCheckStatus').textContent.includes('Photo Lab still works'),'Camera denial offers photo-mode alternative');
+ // A camera compatibility request can resolve after the user leaves Studio.
+ let finishCheck=null;
+ let cancelledCheckTrackStopped=false;
+ media.getUserMedia=()=>new Promise(resolve=>{finishCheck=resolve});
+ click(document.getElementById('runCameraCheck'),'Start delayed camera compatibility check');
+ assert(document.getElementById('runCameraCheck').disabled,'Repeated camera checks cannot overlap');
+ click(document.querySelector('[data-mode="face"]'),'Navigate away from photo mode during pending permission');
+ assert(document.getElementById('cameraCheckStatus').dataset.result==='cancelled','Navigating between camera modes cancels pending check');
+ click(document.getElementById('startCamera'),'Attempt live camera while permission check pending');
+ assert(document.getElementById('cameraStatus').textContent==='CAMERA OFF','Live session does not overlap a pending check');
+ const cancelledCheckTrack={readyState:'live',stop(){cancelledCheckTrackStopped=true;this.readyState='ended';},getSettings:()=>({width:640,height:480})};
+ finishCheck({getTracks:()=>[cancelledCheckTrack],getVideoTracks:()=>[cancelledCheckTrack]});
+ await wait(20);
+ assert(cancelledCheckTrackStopped,'Late camera compatibility grant is immediately stopped');
+ assert(document.getElementById('cameraCheckStatus').dataset.result==='cancelled','Late permission must not overwrite cancelled status');
+
+ // Live AR permission can also arrive only after leaving the Studio.
+ let finishLive=null;
+ let staleLiveTrackStopped=false;
+ media.getUserMedia=()=>new Promise(resolve=>{finishLive=resolve});
+ click(document.getElementById('startCamera'),'Start live face camera with delayed permission');
+ assert(document.getElementById('cameraStatus').textContent==='LOADING','Delayed live session shows loading');
+ click(document.querySelector('[data-mode="photo"]'),'Cancel live face mode before permission resolves');
+ const staleLiveTrack={readyState:'live',stop(){staleLiveTrackStopped=true;this.readyState='ended';}};
+ finishLive({getTracks:()=>[staleLiveTrack],getVideoTracks:()=>[staleLiveTrack]});
+ await wait(20);
+ assert(staleLiveTrackStopped,'Late live permission closes stream after navigation');
+ assert(document.getElementById('cameraVideo').srcObject===null,'Cancelled camera session leaves no video stream attached');
+ assert(document.getElementById('cameraStatus').textContent==='CAMERA OFF','Stale session cannot turn camera on');
  media.getUserMedia=originalGetUserMedia;
  click(document.querySelector('[data-mode="face"]'),'Choose live face mode without starting camera');
  assert(Boolean(document.querySelector('#cameraLab:not([hidden])')),'Face camera affordance shown');
