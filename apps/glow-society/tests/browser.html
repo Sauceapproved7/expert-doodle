@@ -25,11 +25,14 @@ async function check(document) {
  click(document.getElementById('catalogSample'),'Run fictional sample review');
  assert(count(document,'#catalogIntakeResults .catalog-review-item')===2,'Two fictional supplier records are structurally reviewed');
  assert(count(document,'#catalogIntakeResults select[data-supplier-requirement]')===10,'Five independent proof requirements per candidate');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('10 missing evidence items'),'Every review evidence item initially missing');
  assert(!document.getElementById('supplierReviewExport').disabled,'Unverified candidates can produce a preparation packet');
  const firstProof=document.querySelector('#catalogIntakeResults select[data-supplier-requirement="resale_rights"]');
  firstProof.value='claimed_unverified';
  firstProof.dispatchEvent(new Event('change',{bubbles:true}));
  assert(document.getElementById('supplierReviewStatus').textContent.includes('1 claimed evidence item'),'Self-reported evidence status updates locally');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('9 missing evidence items'),'Claim updates missing evidence count without verifying proof');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('none independently verified'),'Coverage does not imply verification');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Claimed evidence cannot authorize a sale');
  let packetFilename='',packetHref='';
  const localLinkPrototype=iframe.contentWindow.HTMLAnchorElement.prototype,originalPacketClick=localLinkPrototype.click;
@@ -45,6 +48,7 @@ async function check(document) {
  click(document.getElementById('supplierReviewReset'),'Reset claimed supplier evidence');
  assert(firstProof.value==='not_provided','Reset restores not-provided evidence status');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('0 claimed evidence items'),'Reset removes the claimed evidence count');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('10 missing evidence items'),'Reset restores all missing proof requirements');
 
  assert(document.getElementById('catalogIntakeStatus').textContent.includes('Published: 0'),'Sample review cannot silently publish products');
  assert(count(document,'#catalogIntakeResults a')===0,'Unverified candidate source URLs are not active links');
