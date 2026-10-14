@@ -25,6 +25,16 @@ async function check(document) {
  click(document.getElementById('catalogSample'),'Run fictional sample review');
  assert(count(document,'#catalogIntakeResults .catalog-review-item')===2,'Two fictional supplier records are structurally reviewed');
  assert(count(document,'#catalogIntakeResults select[data-supplier-requirement]')===10,'Five independent proof requirements per candidate');
+ assert(count(document,'#supplierDashboardMetrics .supplier-dashboard-tile')===4,'Four aggregate readiness metrics appear');
+ assert(count(document,'#supplierDashboardRows .supplier-dashboard-entry')===2,'Two sample candidates appear as unverified review rows');
+ assert(document.getElementById('supplierDashboardMetrics').textContent.includes('Missing documents'),'Missing documents are separately counted');
+ const stageFilter=document.getElementById('supplierDashboardFilter');
+ stageFilter.value='disputed';stageFilter.dispatchEvent(new Event('change',{bubbles:true}));
+ assert(count(document,'#supplierDashboardRows .supplier-dashboard-entry')===0,'Disputed filter excludes undisputed candidate rows');
+ stageFilter.value='missing';stageFilter.dispatchEvent(new Event('change',{bubbles:true}));
+ assert(count(document,'#supplierDashboardRows .supplier-dashboard-entry')===2,'Missing-documents filter displays pending rows');
+ stageFilter.value='all';stageFilter.dispatchEvent(new Event('change',{bubbles:true}));
+
  assert(document.getElementById('supplierReviewStatus').textContent.includes('10 missing evidence items'),'Every review evidence item initially missing');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('Request missing supplier evidence'),'Missing evidence produces actionable but non-authorizing guidance');
  assert(!document.getElementById('supplierReviewExport').disabled,'Unverified candidates can produce a preparation packet');
@@ -32,6 +42,7 @@ async function check(document) {
  firstProof.value='claimed_unverified';
  firstProof.dispatchEvent(new Event('change',{bubbles:true}));
  assert(document.getElementById('supplierReviewStatus').textContent.includes('1 claimed evidence item'),'Self-reported evidence status updates locally');
+ assert(count(document,'#supplierDashboardRows .supplier-dashboard-entry')===2,'Claim updates preserve candidate dashboard scope');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('9 missing evidence items'),'Claim updates missing evidence count without verifying proof');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('none independently verified'),'Coverage does not imply verification');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('Request missing supplier evidence'),'Partial claims still require missing documents');
@@ -76,6 +87,7 @@ async function check(document) {
  assert([...Object.keys(iframe.contentWindow.localStorage)].sort().join('|')===localKeysBeforeCatalog,'Supplier feed is not written to browser storage');
  click(document.getElementById('catalogReset'),'Clear all supplier candidates');
  assert(count(document,'#catalogIntakeResults .catalog-review-item')===0,'Clearing the review removes supplier candidates from memory-backed UI');
+ assert(count(document,'#supplierDashboardRows .supplier-dashboard-entry')===0,'Clearing review removes dashboard candidates');
  assert(document.getElementById('supplierReviewExport').disabled,'Clear review disables stale evidence packet exports');
  assert(document.getElementById('supplierReviewReset').disabled,'Clear review disables evidence changes');
 
