@@ -40,9 +40,9 @@ test("query-bearing shell assets bypass caching",async()=>{
   assert.equal(s.fetches,0);
   assert.deepEqual(s.puts,[]);
 });
-test("normal shell asset is cached",async()=>{
+test("explicitly credential-free shell asset is cached",async()=>{
   const s=setup();
-  assert.equal(await s.dispatch("https://hercules.test/app.js"),true);
+  assert.equal(await s.dispatch("https://hercules.test/app.js",{credentials:"omit"}),true);
   assert.equal(s.fetches,1);
   assert.deepEqual(s.puts,["https://hercules.test/app.js"]);
 });
@@ -76,6 +76,14 @@ test("authorized shell requests bypass offline cache",async()=>{
 test("credentialed shell requests bypass offline cache",async()=>{
   const s=setup();
   assert.equal(await s.dispatch("https://hercules.test/app.js",{credentials:"include"}),false);
+  assert.equal(s.fetches,0);
+  assert.deepEqual(s.puts,[]);
+});
+
+
+test("default same-origin credential mode bypasses runtime cache",async()=>{
+  const s=setup();
+  assert.equal(await s.dispatch("https://hercules.test/app.js"),false);
   assert.equal(s.fetches,0);
   assert.deepEqual(s.puts,[]);
 });
