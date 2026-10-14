@@ -76,6 +76,13 @@
           </div>
           <div class="studio-toolbar"><label class="upload-btn">↑ Upload your photo<input id="photoFile" type="file" accept="image/png,image/jpeg,image/webp" hidden/></label><button id="startCamera" class="secondary-btn" hidden>Start camera</button><button id="stopCamera" class="secondary-btn" hidden>Stop camera</button><button id="resetPreview" class="secondary-btn">Reset</button></div>
           <div class="privacy-note"><strong>◈ Privacy first.</strong> Images stay in this browser session and aren't sent to our server. Live tracking processes camera frames on your device, but MediaPipe may send SDK usage metrics to Google. Tap Start camera only if you agree. Stop camera anytime.</div>
+          <section class="camera-check" aria-labelledby="cameraCheckTitle">
+            <div class="camera-check-top"><div><span class="kicker">DEVICE READINESS</span><h3 id="cameraCheckTitle">Camera compatibility check</h3></div><span class="camera-check-badge">OPTIONAL</span></div>
+            <p>Test camera permission and whether your browser can start a video stream. The test does not download AR models, record photos, or measure makeup accuracy.</p>
+            <button id="runCameraCheck" type="button" class="secondary-btn">Check my camera</button>
+            <div id="cameraCheckStatus" class="camera-check-results" aria-live="polite" role="status">Not checked. Your camera stays off until you choose to test it.</div>
+            <p class="fineprint">If permission is granted, this briefly opens the front camera and immediately closes it. The result stays in this page session. Face/hand AR still requires separate real-world evaluation.</p>
+          </section>
         </div>
         <div class="studio-control">
           <div class="kicker">01 / CUSTOMIZE YOUR LOOK</div><h2>Your <em>signature</em> shade.</h2>
