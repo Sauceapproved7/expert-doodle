@@ -84,3 +84,72 @@ test('cancelled asynchronous camera models are closed and camera sessions do not
   assert.match(js, /if\(gen!==cameraGeneration\)return;\s*const vision=/);
   assert.match(html, /id="runCameraCheck"/);
 });
+
+
+test('data vault uses two-step local-only deletion and safe download', () => {
+  for (const id of ['exportLocalData','eraseLocalData','confirmEraseLocalData','cancelEraseLocalData','privacySummary','restoreMuted']) {
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(js, /function localDataSnapshot\(\)/);
+  assert.match(js, /key\.startsWith\(prefix\)/);
+  assert.match(js, /localStorage\.removeItem\(key\)/);
+  assert.match(js, /scope:'browser-local-demo-data-only'/);
+  assert.match(js, /new Blob\(\[JSON\.stringify\(snapshot,null,2\)\]/);
+  assert.match(js, /state\.mutedAuthors\.clear\(\)/);
+  assert.match(js, /if\(uploadedUrl\)\{URL\.revokeObjectURL\(uploadedUrl\)/);
+  assert.doesNotMatch(js, /fetch\([^)]*\/report\b/);
+});
+
+
+test('human-reviewed physical AR checklist is session only and cannot certify accuracy',()=>{
+  assert.match(html, /src="\.\/validation-kit\.js" defer/);
+  assert.match(html, /id="validationScenarios"/);
+  assert.match(html, /id="exportValidation"[^>]*disabled/);
+  assert.match(html, /self-reported observation/);
+  assert.match(js, /function validationEvidence\(mode\)/);
+  assert.match(js, /if\(!marked\.length\)return/);
+  assert.match(js, /validationKit\.clear\(\);observedModeStats=\{face:null,hand:null\}/);
+  assert.match(js, /status:'self-reported-unverified'/);
+  assert.doesNotMatch(js, /fetch\([^)]*validationReport/);
+});
+
+
+test('Beauty Match is opt-in, tag-based and independent from AR and Passport storage',()=>{
+  assert.match(html,/src="\.\/beauty-match\.js" defer/);
+  for(const id of ['beautyMatchForm','matchDepth','matchTone','matchTexture','matchCategory','matchVibe','matchClear','matchUsePassport','matchResults']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(html,/not your face, an actual product shade/);
+  assert.match(js,/window\.GlowBeautyMatch\.recommend\(ITEMS,prefs\)/);
+  assert.match(js,/function resetBeautyMatch\(\)/);
+  assert.match(js,/resetBeautyMatch\(\);/);
+  assert.doesNotMatch(js,/fetch\([^)]*beautyMatch/);
+});
+
+test('supplier catalog intake never activates real commerce or trusts unverified sources',()=>{
+  assert.match(html,/src="\.\/catalog-intake\.js" defer/);
+  for(const id of ['catalogWorkshop','catalogFile','catalogSample','catalogTemplate','catalogReset','catalogIntakeStatus','catalogIntakeResults']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(html,/REVIEW ONLY · NOT PUBLISHED/);
+  assert.match(js,/window\.GlowCatalogIntake\.parse\(raw\)/);
+  assert.match(js,/window\.GlowCatalogIntake\.validate\(window\.GlowCatalogIntake\.sample\)/);
+  assert.match(js,/function resetCatalogReview\(\)/);
+  assert.match(js,/resetCatalogReview\(\);/);
+  assert.match(js,/Published: 0/);
+  assert.doesNotMatch(js,/fetch\([^)]*catalogFile/);
+});
+
+test('supplier evidence review remains offline, unverified and fails closed',()=>{
+  assert.match(html,/src="\.\/supplier-review\.js" defer/);
+  for(const id of ['supplierReviewStatus','supplierReviewExport','supplierReviewReset']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(html,/No selection establishes supplier legitimacy/);
+  assert.match(js,/window\.GlowSupplierReview\.create\(report\.items\)/);
+  assert.match(js,/supplierReviewExport/);
+  assert.match(js,/downloadSupplierReview/);
+  assert.match(js,/catalogEvidenceKit=null;/);
+  assert.match(js,/Approved: 0\. Published: 0/);
+  assert.doesNotMatch(js,/fetch\([^)]*supplierReview/);
+});

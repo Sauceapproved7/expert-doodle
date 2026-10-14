@@ -11,6 +11,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="./styles.css"/>
+  <script src="./ar-metrics.js" defer></script>
+  <script src="./validation-kit.js" defer></script>
+  <script src="./beauty-match.js" defer></script>
+  <script src="./catalog-intake.js" defer></script>
+  <script src="./supplier-review.js" defer></script>
+  <script src="./supplier-actions.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -54,6 +60,23 @@
     </section>
     <section id="explore" class="view" aria-labelledby="exploreTitle">
       <div class="container subhero"><div class="kicker">FIND YOUR NEXT LOOK</div><h1 id="exploreTitle">The beauty <em>library.</em></h1><p>Beauty made for undertones, textures and self-expression—not one narrow ideal.</p></div>
+      <section class="container beauty-match" aria-labelledby="beautyMatchTitle">
+        <div class="beauty-match-heading">
+          <div><div class="kicker">PERSONALIZED BY YOUR CHOICES</div><h2 id="beautyMatchTitle">Find your <em>beauty edit.</em></h2><p>Tell us what inspires you. This matches tags on fictional makeup, hair and nail concepts—not your face, an actual product shade, or a professional's recommendation.</p></div>
+          <span class="match-label">NO FACE SCAN</span>
+        </div>
+        <form id="beautyMatchForm" class="beauty-match-form">
+          <label>Explore <select id="matchCategory"><option value="all">Everything</option><option value="makeup">Makeup</option><option value="hair">Hair</option><option value="nails">Nails</option></select></label>
+          <label>Skin depth <select id="matchDepth"><option value="all">Any / skip</option><option value="deep">Deep / rich</option><option value="tan">Tan / brown</option><option value="medium">Medium</option><option value="light">Light / fair</option></select></label>
+          <label>Undertone <select id="matchTone"><option value="all">Any / unsure</option><option value="warm">Warm / golden</option><option value="cool">Cool / red</option><option value="neutral">Neutral</option><option value="olive">Olive</option></select></label>
+          <label>Hair preference <select id="matchTexture"><option value="all">Any style</option><option value="3b">3B curls</option><option value="4a">4A coils</option><option value="4b">4B coils</option><option value="4c">4C coils</option><option value="braids">Braids</option><option value="locs">Locs</option><option value="protective">Protective styles</option></select></label>
+          <label>Look direction <select id="matchVibe"><option value="all">Surprise me</option><option value="everyday">Everyday / soft</option><option value="statement">Statement / bold</option></select></label>
+          <div class="beauty-match-actions"><button type="submit" class="cta dark">Find my demo looks</button><button type="button" class="secondary-btn" id="matchUsePassport">Use my Beauty Passport</button><button type="button" class="secondary-btn" id="matchClear">Start over</button></div>
+        </form>
+        <p class="fineprint">Skin depth and undertone filter only makeup concepts; texture filters only hair concepts. Nail inspiration is not skin-tone matched. Choices are not uploaded, saved or used for automated face analysis.</p>
+        <div id="matchStatus" role="status" class="beauty-match-status" aria-live="polite">Choose what matters to you, then select Find my demo looks.</div>
+        <div id="matchResults" class="product-grid" aria-label="Your suggested beauty concepts"></div>
+      </section>
       <div class="container filters">
         <label for="search" class="sr-only">Search looks and products</label><div class="searchwrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search berry lips, 4C coils, chrome nails…" autocomplete="off"/></div>
         <div class="chiprow" id="categoryChips" aria-label="Product categories"></div>
@@ -61,6 +84,46 @@
         <p id="resultCount" class="fineprint" role="status"></p>
         <div id="exploreGrid" class="product-grid"></div>
         <p class="fineprint disclosure">All products, prices, creator profiles and endorsements are illustrative. No inventory or checkout is connected. Digital shade overlays are not a reliable foundation or hair-color match.</p>
+        <details class="catalog-intake" id="catalogWorkshop">
+          <summary>Product catalog intake workshop <span class="catalog-pill">REVIEW ONLY · NOT PUBLISHED</span></summary>
+          <div class="catalog-intake-body">
+            <div class="kicker">FUTURE REAL PRODUCTS · HOLD AT REVIEW</div>
+            <h3>Inspect a supplier feed without launching a sale.</h3>
+            <p>This optional local workshop checks up to 30 candidate records for required fields, duplicate SKUs, simple editorial tags and HTTPS source references. It does not visit a link, verify a supplier, approve the brand, use a paid integration, or publish anything.</p>
+            <div class="catalog-intake-actions">
+              <label class="catalog-file-label" for="catalogFile">Choose local JSON feed <input id="catalogFile" type="file" accept=".json,application/json" /></label>
+              <button id="catalogSample" type="button" class="secondary-btn">Check fictional sample</button>
+              <button id="catalogTemplate" type="button" class="secondary-btn">Download JSON example</button>
+              <button id="catalogReset" type="button" class="secondary-btn">Clear review</button>
+            </div>
+            <p class="fineprint">No feed data is uploaded or placed in browser storage. The file remains in page memory until you clear it or leave. Imported candidates never appear in Beauty Match, the public grid, saved looks or checkout. URLs are text-only, not opened automatically.</p>
+            <div id="catalogIntakeStatus" class="catalog-intake-status" role="status" aria-live="polite">No supplier feed loaded. Approved: 0. Published: 0.</div>
+            <div id="catalogIntakeResults" class="catalog-intake-results"></div>
+            <section class="supplier-review-panel" aria-labelledby="supplierReviewTitle">
+              <div class="kicker">NEXT GATE · EVIDENCE PREPARATION</div>
+              <h4 id="supplierReviewTitle">Supplier proof checklist</h4>
+              <p>For structurally reviewable records, record whether evidence is missing, claimed or disputed. No selection establishes supplier legitimacy, image rights or permission to sell; independent source verification and explicit owner approval are still required.</p>
+              <div id="supplierReviewStatus" class="supplier-review-status" role="status" aria-live="polite">Load a candidate feed to prepare a supplier evidence packet. Approved: 0. Published: 0.</div>
+              <div class="supplier-dashboard" aria-labelledby="supplierDashboardTitle">
+                <h5 id="supplierDashboardTitle">Supplier readiness overview <span>REVIEW ONLY</span></h5>
+                <div id="supplierDashboardMetrics" class="supplier-dashboard-metrics" aria-label="Candidate evidence breakdown"></div>
+                <label for="supplierDashboardFilter">Show candidate stage</label>
+                <select id="supplierDashboardFilter">
+                  <option value="all">All candidates</option>
+                  <option value="disputed">Disputed evidence</option>
+                  <option value="missing">Missing documentation</option>
+                  <option value="verification">Claims needing independent verification</option>
+                </select>
+                <div id="supplierDashboardRows" class="supplier-dashboard-rows"></div>
+                <p class="fineprint">These are documentation stages, not product approval stages. Zero products can be released or sold from this dashboard.</p>
+              </div>
+              <button type="button" id="supplierReviewExport" class="secondary-btn" disabled>Download unverified review packet</button>
+              <button type="button" id="supplierActionsExport" class="secondary-btn" disabled>Download prioritized action plan</button>
+              <button type="button" id="supplierReviewReset" class="secondary-btn" disabled>Reset evidence choices</button>
+              <p class="fineprint">The packet is a local JSON handoff for later independent verification. It contains no documents, personal contact information or approval token. Checklists stay in this tab only and are erased when review is cleared. No data is sent to suppliers or servers.</p>
+            </section>
+          </div>
+        </details>
       </div>
     </section>
     <section id="studio" class="view" aria-labelledby="studioTitle">
@@ -83,6 +146,26 @@
             <div id="cameraCheckStatus" class="camera-check-results" aria-live="polite" role="status">Not checked. Your camera stays off until you choose to test it.</div>
             <p class="fineprint">If permission is granted, this briefly opens the front camera and immediately closes it. The result stays in this page session. Face/hand AR still requires separate real-world evaluation.</p>
           </section>
+          <section class="ar-session-health" aria-labelledby="arHealthTitle">
+            <div class="kicker">LIVE AR ENGINEERING · SESSION ONLY</div>
+            <h3 id="arHealthTitle">Landmark session diagnostics</h3>
+            <p>Once you voluntarily start live face or nail tracking, this panel counts sampled frames, landmark detections and average processing time on this device. No camera image, face landmarks, identity, location or device identifier is saved or included in exports.</p>
+            <div id="arHealthStatus" class="ar-health-status" role="status" aria-live="polite">Not measured. Start a live face or hand session to collect observations.</div>
+            <button id="exportArHealth" type="button" class="secondary-btn" disabled>Export session statistics</button>
+            <p class="fineprint">Fewer than 30 samples is insufficient for even preliminary diagnostics. Higher landmark detection does not prove makeup fit, nail geometry, or accurate color on Black or other complexions. Real iPhone testing is still required.</p>
+          </section>
+          <section class="validation-kit" aria-labelledby="validationTitle">
+            <div class="kicker">INCLUSIVE DEVICE TEST MATRIX</div>
+            <h3 id="validationTitle">Real-world AR observation kit</h3>
+            <p>Use these optional scenarios when a real person is testing the app on a physical device. Mark what you actually observe after starting face or nail AR. This checklist cannot inspect your appearance or verify a tester's results.</p>
+            <div id="validationScenarios" class="validation-scenarios"></div>
+            <div id="validationStatus" class="validation-status" role="status" aria-live="polite">No physical-device observations have been recorded.</div>
+            <div class="validation-actions">
+              <button id="exportValidation" type="button" class="secondary-btn" disabled>Export observation report</button>
+              <button id="resetValidation" type="button" class="secondary-btn">Reset observations</button>
+            </div>
+            <p class="fineprint">Checklist choices are kept only in this page session, not in your Beauty Passport. Export requires at least one sampled camera frame in the corresponding face/hand mode. A checked scenario remains a self-reported observation—not an independent iPhone, skin-tone, color, or fit certification. Do not include selfies or identity details in a report.</p>
+          </section>
         </div>
         <div class="studio-control">
           <div class="kicker">01 / CUSTOMIZE YOUR LOOK</div><h2>Your <em>signature</em> shade.</h2>
@@ -99,10 +182,27 @@
     </section>
     <section id="community" class="view" aria-labelledby="communityTitle">
       <div class="container subhero"><div class="kicker">OUR SPACE</div><h1 id="communityTitle">Beauty is <em>community.</em></h1><p>Where your next look comes from a conversation, not an algorithm alone.</p></div>
-      <div class="container community-layout"><div><div class="banner-inline"><strong>Private demo feed</strong><span>Everything you post or like stays in your browser. Nobody else can see it.</span></div><form id="postForm" class="compose"><label for="postText">What beauty tip are you sharing?</label><textarea id="postText" maxlength="280" placeholder="Drop your favorite shade, braid tip or nail inspiration…" required></textarea><div class="compose-bottom"><span id="postLength">0 / 280</span><button type="submit" class="cta dark">Post locally ↗</button></div></form><div class="community-tools"><small>Only you can see your saved demo posts and hidden-post choices.</small><button id="restoreHidden" class="text-link">Restore hidden example posts</button></div><div id="feed" class="feed"></div></div><aside class="community-aside"><div class="aside-card"><div class="kicker">GLOW CODE</div><h3>Made for expression.</h3><p>Shade-inclusive inspiration, respectful feedback and space for every curl, color and creative choice.</p><span class="fineprint">Public accounts, content moderation, messages and creator verification are not enabled yet.</span></div><div class="aside-card editorial"><div class="kicker light">THE BEAUTY CIRCLE</div><h3>Big sister energy. <em>Every day.</em></h3><p>Come for a look. Stay for the confidence.</p></div></aside></div>
+      <div class="container community-layout"><div><div class="banner-inline"><strong>Private demo feed</strong><span>Everything you post or like stays in your browser. Nobody else can see it.</span></div><form id="postForm" class="compose"><label for="postText">What beauty tip are you sharing?</label><textarea id="postText" maxlength="280" placeholder="Drop your favorite shade, braid tip or nail inspiration…" required></textarea><div class="compose-bottom"><span id="postLength">0 / 280</span><button type="submit" class="cta dark">Post locally ↗</button></div></form><div class="community-tools"><small>Only you can see your saved demo posts and hidden-post choices.</small><div class="safety-actions"><button id="restoreHidden" class="text-link">Restore hidden example posts</button><button id="restoreMuted" class="text-link">Unmute demo creators</button></div></div><div id="feed" class="feed"></div></div><aside class="community-aside"><div class="aside-card"><div class="kicker">GLOW CODE</div><h3>Made for expression.</h3><p>Shade-inclusive inspiration, respectful feedback and space for every curl, color and creative choice.</p><span class="fineprint">Public accounts, content moderation, messages and creator verification are not enabled yet.</span></div><div class="aside-card editorial"><div class="kicker light">THE BEAUTY CIRCLE</div><h3>Big sister energy. <em>Every day.</em></h3><p>Come for a look. Stay for the confidence.</p></div></aside></div>
     </section>
     <section id="artists" class="view" aria-labelledby="artistsTitle"><div class="container subhero"><div class="kicker">THE CREATIVE DIRECTORY</div><h1 id="artistsTitle">Meet the <em>artists.</em></h1><p>From deep-skin makeup specialists to loc artists and nail designers. Featured profiles are fictional examples.</p></div><div class="container"><div class="chiprow" id="artistFilters"></div><div id="artistGrid" class="artist-grid"></div><p class="disclosure fineprint">Professional listings are demo profiles; appointments, identity verification, location search and payments are not yet available.</p></div></section>
-    <section id="saved" class="view" aria-labelledby="savedTitle"><div class="container subhero"><div class="kicker">YOUR PRIVATE LOOKBOOK</div><h1 id="savedTitle">Saved <em>glow.</em></h1><p>Your favorites and looks are saved to this browser only. Clear your browser storage to erase them.</p></div><div class="container"><div class="section-head"><h2>Favorite finds</h2><button class="text-link" id="clearSaved">Clear favorites</button></div><div id="savedGrid" class="product-grid"></div><div class="section-head looks-head"><h2>Your saved looks</h2></div><div id="looksGrid" class="looks-grid"></div></div></section>
+    <section id="saved" class="view" aria-labelledby="savedTitle"><div class="container subhero"><div class="kicker">YOUR PRIVATE LOOKBOOK</div><h1 id="savedTitle">Saved <em>glow.</em></h1><p>Your favorites and looks are saved to this browser only. Clear your browser storage to erase them.</p></div><div class="container"><div class="section-head"><h2>Favorite finds</h2><button class="text-link" id="clearSaved">Clear favorites</button></div><div id="savedGrid" class="product-grid"></div><div class="section-head looks-head"><h2>Your saved looks</h2></div><div id="looksGrid" class="looks-grid"></div>
+      <section class="privacy-center" aria-labelledby="privacyCenterTitle">
+        <div class="privacy-header"><div><div class="kicker">YOU CONTROL YOUR DATA</div><h2 id="privacyCenterTitle">Your private data vault.</h2></div><span class="privacy-tag">DEVICE ONLY</span></div>
+        <p>The demo can save favorites, looks, Beauty Passport choices, local posts, comments, likes, follows, hidden posts and muted creators in this browser. You can export or erase all of those records here. Uploaded photos and camera frames are not part of saved data.</p>
+        <div class="privacy-summary" id="privacySummary" role="status" aria-live="polite">Checking this browser's Glow Society data…</div>
+        <div class="privacy-buttons">
+          <button type="button" id="exportLocalData" class="secondary-btn">Export my demo data (JSON)</button>
+          <button type="button" id="eraseLocalData" class="secondary-btn danger-outline">Erase my saved demo data</button>
+        </div>
+        <div class="erase-confirm" id="eraseConfirm" hidden>
+          <strong>Erase this browser's Glow Society data?</strong>
+          <p>This clears the app's saved preferences, favorites, looks, local posts and safety choices. It does not erase another app's data or anything on another device. This cannot be undone unless you previously exported a copy.</p>
+          <button type="button" id="confirmEraseLocalData" class="secondary-btn danger-filled">Yes, erase Glow Society data</button>
+          <button type="button" id="cancelEraseLocalData" class="secondary-btn">Cancel</button>
+        </div>
+        <p class="fineprint">No public user accounts are connected. These controls do not send an account-deletion request to any service; there is currently no shared Glow Society account database.</p>
+      </section>
+    </div></section>
   </main>
   <nav class="bottom-nav" aria-label="Main navigation"><button data-go="discover" class="nav-item current" aria-current="page"><span aria-hidden="true">⌂</span><small>Home</small></button><button data-go="explore" class="nav-item"><span aria-hidden="true">◇</span><small>Explore</small></button><button data-go="studio" class="nav-item"><span aria-hidden="true">✧</span><small>Try on</small></button><button data-go="community" class="nav-item"><span aria-hidden="true">♧</span><small>Circle</small></button><button data-go="saved" class="nav-item"><span aria-hidden="true">♡</span><small>Saved</small></button></nav>
   <footer><div class="container footer-content"><div class="brand footbrand"><span class="brand-icon">✳</span><span>glow<span class="brand-accent">society</span></span></div><p>Beauty is yours. A standalone, inclusive concept prototype—no actual purchases, public community accounts or professional bookings.</p><button data-go="artists" class="footer-link">Discover artists ↗</button><small>© 2026 Glow Society · Private demo</small></div></footer>
