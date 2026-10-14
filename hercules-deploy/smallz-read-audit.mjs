@@ -65,11 +65,32 @@ export async function runSmallzReleaseReadAudit({env={},fetchImpl=globalThis.fet
       githubApiToken:github,
       fetchImpl
     });
-    const result=await collectSmallzEvidence(readers);
-    // The audit invokes GET-only readers, unlike the pure evidence normalizer.
+    // Sequential, normalized reads detect mid-inspection drift. They are
+    // advisory: agreement alone is neither independent authentication nor an
+    // atomic multi-provider snapshot and never grants execution authority.
+    const first=await collectSmallzEvidence(readers);
+    const second=await collectSmallzEvidence(readers);
+    if(JSON.stringify(first)!==JSON.stringify(second)){
+      return Object.freeze({
+        ...baseline('HOLD','PROVIDER_STATE_CHANGED_DURING_READ'),
+        snapshotStability:'changed',
+        networkOperationsPerformedByModule:true
+      });
+    }
+    // Matching error records are not valid evidence of stable provider state.
+    if(first.mainCommit===null||first.liveCommit===null
+      ||first.liveDeploymentId===null
+      ||first.reasonCodes.includes('PROVIDER_READ_FAILED')){
+      return Object.freeze({
+        ...baseline('HOLD','PROVIDER_READ_FAILED'),
+        snapshotStability:'unverified',
+        networkOperationsPerformedByModule:true
+      });
+    }
     return Object.freeze({
-      ...result,
+      ...second,
       schema:'sauceapproved.hercules.smallz-read-audit.v1',
+      snapshotStability:'stable',
       networkOperationsPerformedByModule:true,
       providerRecordsIndependentlyAuthenticated:false,
       recordFreshnessIndependentlyVerified:false,
