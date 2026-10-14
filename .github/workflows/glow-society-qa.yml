@@ -23,4 +23,8 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Verify JavaScript and app contracts
-        run: node --test apps/glow-society/tests/smoke.mjs
+        run: |
+          node apps/glow-society/test.mjs
+          node --test apps/glow-society/tests/smoke.mjs
+      - name: Mobile-width Chromium interaction QA
+        run: node apps/glow-society/tests/browser-runner.mjs
