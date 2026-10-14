@@ -139,7 +139,51 @@ function itemCard(item){
   const tags=item.tags.slice(0,2).map(t=>'<span>'+esc(t)+'</span>').join('');
   return '<article class="product-card" data-category="'+item.category+'"><div style="position:relative">'+thumb(item)+'<button class="product-heart '+(state.favs.has(item.id)?'active':'')+'" data-fav="'+item.id+'" aria-label="'+(state.favs.has(item.id)?'Remove from':'Add to')+' favorites" aria-pressed="'+state.favs.has(item.id)+'">'+(state.favs.has(item.id)?'♥':'♡')+'</button></div><div class="product-body"><div class="product-sub">'+esc(item.category)+' · '+esc(item.region)+'</div><h3>'+esc(item.name)+'</h3><p>'+esc(item.desc)+'</p><div class="product-tags">'+tags+'</div><button class="try-btn" data-try="'+item.id+'">Try this look ↗</button></div></article>';
 }
-let catalogIntakeGeneration=0,catalogEvidenceKit=null;
+let catalogIntakeGeneration=0,catalogEvidenceKit=null,catalogRestoreGeneration=0;
+function resetSupplierRestore(message='Load a supplier feed to enable local review restoration.'){
+  catalogRestoreGeneration++;
+  el('supplierRestoreFile').value='';
+  el('supplierRestoreStatus').textContent=message;
+}
+async function restoreSupplierReview(){
+  const input=el('supplierRestoreFile'),file=input.files?.[0],kit=catalogEvidenceKit;
+  if(!file||!kit)return;
+  const restoreId=++catalogRestoreGeneration,intakeId=catalogIntakeGeneration;
+  const status=el('supplierRestoreStatus');
+  status.textContent='Reading local packet without uploading it.';
+  if(!file.name.toLowerCase().endsWith('.json')||file.size>window.GlowSupplierRestore.maxBytes){
+    status.textContent='Restore rejected: select a .json packet no larger than 64 KiB. Existing review choices unchanged.';
+    input.value='';return;
+  }
+  try{
+    const raw=await file.text();
+    if(restoreId!==catalogRestoreGeneration||intakeId!==catalogIntakeGeneration||catalogEvidenceKit!==kit)return;
+    const validation=window.GlowSupplierRestore.parse(raw,kit.snapshot());
+    if(validation.error){
+      status.textContent='Restore rejected: '+validation.error+'. Existing review choices unchanged.';
+      input.value='';return;
+    }
+    // Complete validation is performed BEFORE changing any in-memory checklist state.
+    for(const change of validation.changes){
+      if(!kit.set(change.sku,change.requirement,change.status)){
+        status.textContent='Restore rejected: unexpected checklist mismatch.';
+        input.value='';return;
+      }
+    }
+    for(const select of el('catalogIntakeResults').querySelectorAll('select[data-supplier-requirement]')){
+      const matched=validation.changes.find(x=>x.sku===select.dataset.supplierSku&&x.requirement===select.dataset.supplierRequirement);
+      if(matched)select.value=matched.status;
+    }
+    renderSupplierReviewSummary();
+    status.textContent='Restored '+validation.changes.length+' unverified checklist choices for the matching local feed. Supplier rights still unverified. Approved: 0. Published: 0.';
+    input.value='';
+  }catch{
+    if(restoreId===catalogRestoreGeneration&&intakeId===catalogIntakeGeneration){
+      status.textContent='Restore failed while reading the local file. Existing review choices unchanged.';
+      input.value='';
+    }
+  }
+}
 function supplierStage(record){
   const statuses=Object.values(record.requirements);
   if(statuses.includes('needs_review'))return 'disputed';
@@ -183,7 +227,7 @@ function renderSupplierReviewSummary(){
   const report=catalogEvidenceKit?.snapshot();
   if(!report||!report.records.length){
     status.textContent='Load a candidate feed to prepare a supplier evidence packet. Approved: 0. Published: 0.';
-    exportButton.disabled=true;resetButton.disabled=true;el('supplierActionsExport').disabled=true;renderSupplierDashboard();return;
+    exportButton.disabled=true;resetButton.disabled=true;el('supplierActionsExport').disabled=true;el('supplierRestoreFile').disabled=true;renderSupplierDashboard();return;
   }
   const marks=report.records.flatMap(row=>Object.values(row.requirements));
   const claimed=marks.filter(x=>x==='claimed_unverified').length;
@@ -196,10 +240,11 @@ function renderSupplierReviewSummary(){
     'Checklist coverage: '+(marks.length-missing)+'/'+marks.length+' claimed or flagged; none independently verified. '+
     'Next action: '+(unresolved?'Resolve disputed evidence first. ':missing?'Request missing supplier evidence. ':'Independently verify every claimed document and rights statement. ')+
     'Verification: not performed. Approved: 0. Published: 0.';
-  exportButton.disabled=false;resetButton.disabled=false;el('supplierActionsExport').disabled=false;
+  exportButton.disabled=false;resetButton.disabled=false;el('supplierActionsExport').disabled=false;el('supplierRestoreFile').disabled=false;
   renderSupplierDashboard();
 }
 function resetSupplierReview(){
+  resetSupplierRestore(catalogEvidenceKit?'Checklist reset. Restore a matching unverified packet if needed.':'Load a supplier feed to enable local review restoration.');
   if(catalogEvidenceKit)catalogEvidenceKit.reset();
   for(const select of el('catalogIntakeResults').querySelectorAll('select[data-supplier-requirement]')){
     select.value='not_provided';
@@ -233,6 +278,7 @@ function downloadSupplierReview(){
   }catch{toast('The browser could not download the review packet.')}
 }
 function resetCatalogReview(){
+  resetSupplierRestore();
   catalogEvidenceKit=null;
   catalogIntakeGeneration++;
   el('catalogFile').value='';
@@ -241,6 +287,7 @@ function resetCatalogReview(){
   renderSupplierReviewSummary();
 }
 function showCatalogReview(report,isExample=false){
+  resetSupplierRestore();
   catalogEvidenceKit=null;
   const output=el('catalogIntakeResults');
   output.replaceChildren();
@@ -296,6 +343,7 @@ async function loadCatalogFile(){
   const file=el('catalogFile').files?.[0];
   if(!file)return;
   const generation=++catalogIntakeGeneration;
+  resetSupplierRestore();
   catalogEvidenceKit=null;
   el('catalogIntakeResults').replaceChildren();renderSupplierReviewSummary();
   el('catalogIntakeStatus').textContent='Reading local feed for schema review; nothing has been uploaded.';
@@ -917,6 +965,7 @@ el('catalogSample').addEventListener('click',()=>{
   showCatalogReview(window.GlowCatalogIntake.validate(window.GlowCatalogIntake.sample),true);
 });
 el('catalogFile').addEventListener('change',loadCatalogFile);
+el('supplierRestoreFile').addEventListener('change',restoreSupplierReview);
 el('catalogTemplate').addEventListener('click',downloadCatalogExample);
 el('catalogReset').addEventListener('click',resetCatalogReview);
 el('supplierReviewExport').addEventListener('click',downloadSupplierReview);
@@ -926,6 +975,7 @@ el('supplierDashboardFilter').addEventListener('change',renderSupplierDashboard)
 el('catalogIntakeResults').addEventListener('change',e=>{
   const select=e.target.closest('select[data-supplier-requirement]');
   if(!select||!catalogEvidenceKit)return;
+  catalogRestoreGeneration++; // A pending restore cannot overwrite a manual choice.
   if(!catalogEvidenceKit.set(select.dataset.supplierSku,select.dataset.supplierRequirement,select.value)){
     select.value='not_provided';
     return;

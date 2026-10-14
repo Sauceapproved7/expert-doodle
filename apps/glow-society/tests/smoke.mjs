@@ -153,3 +153,16 @@ test('supplier evidence review remains offline, unverified and fails closed',()=
   assert.match(js,/Approved: 0\. Published: 0/);
   assert.doesNotMatch(js,/fetch\([^)]*supplierReview/);
 });
+
+test('local review restoration requires exact unverified packet and matching feed',()=>{
+  assert.match(html,/src="\.\/supplier-restore\.js" defer/);
+  for(const id of ['supplierRestoreFile','supplierRestoreStatus','supplierRestoreHelp']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(html,/First load the exact same supplier feed/);
+  assert.match(js,/window\.GlowSupplierRestore\.parse\(raw,kit\.snapshot\(\)\)/);
+  assert.match(js,/function resetSupplierRestore\(/);
+  assert.match(js,/catalogRestoreGeneration/);
+  assert.match(js,/Restore rejected/);
+  assert.doesNotMatch(js,/fetch\([^)]*supplierRestore/);
+});
