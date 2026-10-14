@@ -50,7 +50,7 @@ function renderPage(page={}){
   blankPage=!page.url||page.url==="about:blank";
   $("pageTitle").textContent=page.title||"—";
   $("pageUrl").textContent=page.url||"about:blank";
-  if(page.url&&page.url!=="about:blank")$("urlInput").value=page.url;
+  if(page.url&&page.url!=="about:blank"&&!navigationPending&&document.activeElement!==$("urlInput"))$("urlInput").value=page.url;
 }
 
 async function refreshStatus(){
