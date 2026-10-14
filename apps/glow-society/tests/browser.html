@@ -90,7 +90,7 @@ async function check(document) {
  const alteredIdentity=JSON.parse(JSON.stringify(downloadedPacket));
  alteredIdentity.records[0].name='Impersonated Supplier Look';
  await importReviewPacket(alteredIdentity);
- assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restore rejected'),'Mismatched product identity is rejected');
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restore rejected'),'Mismatched product identity is rejected: '+document.getElementById('supplierRestoreStatus').textContent);
  assert(firstProof.value==='not_provided','Mismatched packet cannot modify checklist choices');
  const storageBeforeRestore=[...Object.keys(iframe.contentWindow.localStorage)].sort().join('|');
  await importReviewPacket(downloadedPacket);
