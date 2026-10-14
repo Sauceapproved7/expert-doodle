@@ -1,6 +1,7 @@
 // Hercules Search: a provider-independent input resolver. No API key or tracking proxy.
 const BLOCKED_SCHEME=/^[a-z][a-z\d+.-]*:/i;
-export function resolveHerculesInput(value){
+export function resolveHerculesInput(value, provider="google"){
+ if(!["google","duckduckgo"].includes(provider))throw new Error("unsupported search provider");
  const input=String(value??"").trim();
  if(!input)throw new Error("empty search");
  if(/^https?:\/\//i.test(input)){
@@ -13,5 +14,5 @@ export function resolveHerculesInput(value){
    const url=new URL("https://"+input);
    return url.href;
  }
- return "https://www.google.com/search?q="+encodeURIComponent(input);
+ return (provider==="duckduckgo"?"https://duckduckgo.com/?q=":"https://www.google.com/search?q=")+encodeURIComponent(input);
 }
