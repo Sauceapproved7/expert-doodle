@@ -55,3 +55,13 @@ Do not point an existing live service or domain at this branch.
 - Example creator muting and unmuting operates locally for fictional sample profiles. Hiding/muting is **not** reporting to an external moderation service. No public safety or moderation claim is made.
 - Client/browser QA verifies the confirmation and cancel controls, Blob export, storage scoping, current-session reset, and mute/unmute behavior.
 - No real users, public profiles, moderation queue, user reporting endpoint, account deletion service or cross-device sync are present.
+
+## Landmark diagnostics (session only)
+
+The Studio's **Landmark session diagnostics** panel observes only the number of processed face/hand frames, number with detectable landmarks, average model-detection time and approximate sampling frequency. It runs **only after Start camera** is granted and the model begins tracking.
+
+- No photos, camera frames, biometric landmarks, device identifiers, location or account credentials are collected or exported by this diagnostic. Metrics remain in page memory, are cleared when Glow's local data is erased and are never sent to a Glow backend.
+- The report is downloadable as `glow-society-ar-session.json` once at least one frame has actually been sampled. The export uses a local Blob.
+- Fewer than 30 samples are marked `insufficient-samples`; larger samples are marked `observational-only`. These counters can reveal video pipeline behavior, **not** overlay fit, color correctness, skin-tone fairness, nail geometry, real-device reliability or a public launch gate.
+- Live third-party MediaPipe runtime/model resources may still emit standard asset/CDN requests and MediaPipe SDK usage telemetry as disclosed in the Studio. The diagnostic adds no telemetry.
+- Node contract tests verify sample counting and absent fake certification. Chromium tests verify no fabricated metrics before a session starts.
