@@ -12,6 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="./styles.css"/>
   <script src="./ar-metrics.js" defer></script>
+  <script src="./validation-kit.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -91,6 +92,18 @@
             <div id="arHealthStatus" class="ar-health-status" role="status" aria-live="polite">Not measured. Start a live face or hand session to collect observations.</div>
             <button id="exportArHealth" type="button" class="secondary-btn" disabled>Export session statistics</button>
             <p class="fineprint">Fewer than 30 samples is insufficient for even preliminary diagnostics. Higher landmark detection does not prove makeup fit, nail geometry, or accurate color on Black or other complexions. Real iPhone testing is still required.</p>
+          </section>
+          <section class="validation-kit" aria-labelledby="validationTitle">
+            <div class="kicker">INCLUSIVE DEVICE TEST MATRIX</div>
+            <h3 id="validationTitle">Real-world AR observation kit</h3>
+            <p>Use these optional scenarios when a real person is testing the app on a physical device. Mark what you actually observe after starting face or nail AR. This checklist cannot inspect your appearance or verify a tester's results.</p>
+            <div id="validationScenarios" class="validation-scenarios"></div>
+            <div id="validationStatus" class="validation-status" role="status" aria-live="polite">No physical-device observations have been recorded.</div>
+            <div class="validation-actions">
+              <button id="exportValidation" type="button" class="secondary-btn" disabled>Export observation report</button>
+              <button id="resetValidation" type="button" class="secondary-btn">Reset observations</button>
+            </div>
+            <p class="fineprint">Checklist choices are kept only in this page session, not in your Beauty Passport. Export requires at least one sampled camera frame in the corresponding face/hand mode. A checked scenario remains a self-reported observation—not an independent iPhone, skin-tone, color, or fit certification. Do not include selfies or identity details in a report.</p>
           </section>
         </div>
         <div class="studio-control">
