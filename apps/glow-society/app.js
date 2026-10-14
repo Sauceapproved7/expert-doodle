@@ -225,7 +225,7 @@ function erasePrivateData(){
     el('eraseConfirm').hidden=true;
     return;
   }
-  stopCamera();
+  stopCamera();resetArHealth();
   if(uploadedUrl){URL.revokeObjectURL(uploadedUrl);uploadedUrl=null}
   photo.src=DEMO_PHOTO;photo.dataset.fallback='';el('photoFile').value='';
   state.favs.clear();state.looks=[];state.posts=[];state.likes.clear();state.follows.clear();
@@ -382,12 +382,47 @@ el('favoriteCurrent').addEventListener('click',()=>toggleFav(state.currentId));
 el('saveLook').addEventListener('click',saveLook);
 
 let cameraStream=null,landmarker=null,raf=0,cameraGeneration=0,lastFrame=0,mediaPipeModule=null;
+let arSession=null,arLastSummary=null;
 let cameraStarting=false,cameraCheckPending=false;
 const video=el('cameraVideo'),canvas=el('cameraCanvas');
 const lipOuter=[61,146,91,181,84,17,314,405,321,375,291,409,270,269,267,0,37,39,40,185];
 const lipInner=[78,95,88,178,87,14,317,402,318,324,308,415,310,311,312,13,82,81,80,191];
 function cameraStatus(s,msg){el('cameraStatus').textContent=s;el('cameraMessage').textContent=msg||'';el('cameraMessage').hidden=!msg}
+function renderArHealth(ended=false){
+  const report=arSession?arSession.snapshot():arLastSummary;
+  const panel=el('arHealthStatus'),button=el('exportArHealth');
+  if(!report || !report.samples){
+    panel.textContent='Not measured. Start a live face or hand session to collect observations.';
+    panel.dataset.status='unmeasured';button.disabled=true;return;
+  }
+  const sessionEnded=ended||(!arSession && !!arLastSummary);
+  panel.dataset.status=report.validity;
+  const pct=report.detectionPercent===null?'n/a':report.detectionPercent+'%';
+  const processing=report.meanInferenceMs===null?'n/a':report.meanInferenceMs+' ms';
+  const rate=report.sampleRateHz===null?'n/a':report.sampleRateHz+' samples/sec';
+  panel.textContent=(sessionEnded?'Session ended. ':'Session running. ')+
+    report.mode+' · '+report.samples+' sampled frames · '+report.detectedSamples+' detected ('+pct+
+    ') · mean detection time '+processing+' · sampling rate '+rate+'. '+
+    (report.validity==='insufficient-samples'?'Insufficient samples for preliminary diagnostics. ':
+    'Observational result only. ')+
+    'No shade accuracy or fit certification.';
+  button.disabled=false;
+}
+function resetArHealth(){arSession=null;arLastSummary=null;renderArHealth()}
+function exportArHealth(){
+  const report=arSession?arSession.snapshot():arLastSummary;
+  if(!report||!report.samples)return;
+  try{
+    const blob=new Blob([JSON.stringify({scope:'local-session-metrics-only',...report},null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='glow-society-ar-session.json';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    toast('AR sample counts exported without photos, landmarks or device identifiers.');
+  }catch{toast('This browser could not export session statistics.')}
+}
 function stopCamera(){
+  if(arSession){arLastSummary=arSession.snapshot();arSession=null;renderArHealth(true)}
   cameraGeneration++;cameraStarting=false;cancelAnimationFrame(raf);raf=0;
   if(cameraStream){cameraStream.getTracks().forEach(track=>track.stop());cameraStream=null}
   if(landmarker){try{landmarker.close()}catch{}landmarker=null}
@@ -472,6 +507,8 @@ async function startCamera(){
     if(gen!==cameraGeneration)return;
     landmarker=pendingLandmarker;
     pendingLandmarker=null;
+    arSession=window.GlowArMetrics.createSession(requestedMode);
+    arLastSummary=null;renderArHealth();
     el('startCamera').hidden=true;el('stopCamera').hidden=false;cameraStatus('LIVE · ON DEVICE','');
     lastFrame=0;
     const loop=(time)=>{
@@ -504,8 +541,13 @@ function drawTracking(time){
   const width=video.videoWidth,height=video.videoHeight;if(!width||!height)return;
   if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height}
   const ctx=canvas.getContext('2d');ctx.clearRect(0,0,width,height);
+  const inferenceStart=performance.now();
   const results=landmarker.detectForVideo(video,time);
   const pts=state.mode==='hand'?results.landmarks&&results.landmarks[0]:results.faceLandmarks&&results.faceLandmarks[0];
+  if(arSession&&arSession.record(performance.now()-inferenceStart,!!pts,time)){
+    const snapshot=arSession.snapshot();
+    if(snapshot.samples===1||snapshot.samples%10===0)renderArHealth();
+  }
   if(!pts){cameraStatus('LOOKING FOR '+(state.mode==='hand'?'A HAND':'A FACE'),'');return}
   cameraStatus('LIVE · '+(state.mode==='hand'?'HAND':'FACE')+' TRACKED','');
   const alpha=state.intensity/100;
@@ -541,6 +583,7 @@ function drawTracking(time){
 el('runCameraCheck').addEventListener('click',checkCameraCompatibility);
 el('startCamera').addEventListener('click',startCamera);
 el('stopCamera').addEventListener('click',stopCamera);
+el('exportArHealth').addEventListener('click',exportArHealth);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)stopCamera()});
 window.addEventListener('pagehide',()=>{stopCamera();if(uploadedUrl)URL.revokeObjectURL(uploadedUrl)});
 
@@ -611,7 +654,7 @@ el('feed').addEventListener('submit',e=>{
 const stack=document.createElement('div');stack.id='lookStack';el('saveLook').closest('.studio-actions').before(stack);
 el('depthFilter').value=state.depth;el('toneFilter').value=state.undertone;el('textureFilter').value=state.texture;
 if(passportInit)el('passportStatus').textContent='Your saved preferences are active on this device';
-refreshFavs();renderArtists();renderCommunity();renderExplore();renderStudio();
+refreshFavs();renderArtists();renderCommunity();renderExplore();renderStudio();renderArHealth();
 const initial=(location.hash||'').slice(1);
 navigate(el(initial)&&el(initial).classList.contains('view')?initial:'discover');
 })();
