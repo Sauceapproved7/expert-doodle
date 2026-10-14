@@ -33,7 +33,10 @@ jobs:
         run: node --test tests/hercules-cloud-founders-public-negative.test.mjs
       - name: Prepare bounded Chromium test runtime
         run: |
-          npm install --prefix render/hercules-browser-standalone --no-save --no-package-lock --ignore-scripts --no-audit --no-fund
+          mkdir -p "$RUNNER_TEMP/da47-browser-runtime"
+          cp render/hercules-browser-standalone/package.json "$RUNNER_TEMP/da47-browser-runtime/package.json"
+          npm install --prefix "$RUNNER_TEMP/da47-browser-runtime" --no-save --no-package-lock --ignore-scripts --no-audit --no-fund
+          echo "HERCULES_CI_BROWSER_RUNTIME=$RUNNER_TEMP/da47-browser-runtime" >> "$GITHUB_ENV"
           chrome=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
           test -n "$chrome"
           echo "HERCULES_CI_CHROME=$chrome" >> "$GITHUB_ENV"
