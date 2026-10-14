@@ -150,10 +150,13 @@ function renderSupplierReviewSummary(){
   const marks=report.records.flatMap(row=>Object.values(row.requirements));
   const claimed=marks.filter(x=>x==='claimed_unverified').length;
   const unresolved=marks.filter(x=>x==='needs_review').length;
+  const missing=marks.filter(x=>x==='not_provided').length;
   status.textContent=report.records.length+' candidate'+(report.records.length===1?'':'s')+
     ' · '+claimed+' claimed evidence item'+(claimed===1?'':'s')+
     ' (not independently checked) · '+unresolved+' disputed item'+(unresolved===1?'':'s')+
-    '. Verification: not performed. Approved: 0. Published: 0.';
+    ' · '+missing+' missing evidence item'+(missing===1?'':'s')+'. '+
+    'Checklist coverage: '+(marks.length-missing)+'/'+marks.length+' claimed or flagged; none independently verified. '+
+    'Verification: not performed. Approved: 0. Published: 0.';
   exportButton.disabled=false;resetButton.disabled=false;
 }
 function resetSupplierReview(){
