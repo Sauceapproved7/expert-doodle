@@ -110,3 +110,5 @@ After reviewing a local supplier feed, the browser now shows an offline evidence
 - Authentic supplier verification, written licensing and intellectual-property permissions, product/claims compliance, source freshness and owner approval are **separate, unfinished external gates**. This worksheet prepares questions; it does not satisfy those gates.
 
 A Node contract test proves that even all evidence marked as claimed cannot authorize publication, and browser QA verifies the unverified download, candidate isolation, reset and erasure behavior.
+
+The supplier evidence panel also displays a live missing/claimed/disputed tally and checklist coverage. This is an organizational progress indicator only; it does not independently verify a single claim or move any product toward release eligibility.
