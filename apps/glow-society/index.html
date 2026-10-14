@@ -14,6 +14,7 @@
   <script src="./ar-metrics.js" defer></script>
   <script src="./validation-kit.js" defer></script>
   <script src="./beauty-match.js" defer></script>
+  <script src="./catalog-intake.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -81,6 +82,23 @@
         <p id="resultCount" class="fineprint" role="status"></p>
         <div id="exploreGrid" class="product-grid"></div>
         <p class="fineprint disclosure">All products, prices, creator profiles and endorsements are illustrative. No inventory or checkout is connected. Digital shade overlays are not a reliable foundation or hair-color match.</p>
+        <details class="catalog-intake" id="catalogWorkshop">
+          <summary>Product catalog intake workshop <span class="catalog-pill">REVIEW ONLY · NOT PUBLISHED</span></summary>
+          <div class="catalog-intake-body">
+            <div class="kicker">FUTURE REAL PRODUCTS · HOLD AT REVIEW</div>
+            <h3>Inspect a supplier feed without launching a sale.</h3>
+            <p>This optional local workshop checks up to 30 candidate records for required fields, duplicate SKUs, simple editorial tags and HTTPS source references. It does not visit a link, verify a supplier, approve the brand, use a paid integration, or publish anything.</p>
+            <div class="catalog-intake-actions">
+              <label class="catalog-file-label" for="catalogFile">Choose local JSON feed <input id="catalogFile" type="file" accept=".json,application/json" /></label>
+              <button id="catalogSample" type="button" class="secondary-btn">Check fictional sample</button>
+              <button id="catalogTemplate" type="button" class="secondary-btn">Download JSON example</button>
+              <button id="catalogReset" type="button" class="secondary-btn">Clear review</button>
+            </div>
+            <p class="fineprint">No feed data is uploaded or placed in browser storage. The file remains in page memory until you clear it or leave. Imported candidates never appear in Beauty Match, the public grid, saved looks or checkout. URLs are text-only, not opened automatically.</p>
+            <div id="catalogIntakeStatus" class="catalog-intake-status" role="status" aria-live="polite">No supplier feed loaded. Approved: 0. Published: 0.</div>
+            <div id="catalogIntakeResults" class="catalog-intake-results"></div>
+          </div>
+        </details>
       </div>
     </section>
     <section id="studio" class="view" aria-labelledby="studioTitle">
