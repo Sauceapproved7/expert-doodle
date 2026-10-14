@@ -24,3 +24,7 @@ test("offline worker never caches non-GET or navigation requests",()=>{
 test("offline worker only caches successful responses",()=>{
   assert.match(worker,/if\(r\.ok\)/);
 });
+
+test("offline worker rejects query-string cache variants",()=>{
+  assert.match(worker,/url\.search/);
+});
