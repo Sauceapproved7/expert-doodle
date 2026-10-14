@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import vm from "node:vm";
 
-function setup() {
+function setup({responseOk=true}={}) {
   const handlers = {};
   const puts = [];
   let fetches = 0;
@@ -13,7 +13,7 @@ function setup() {
     location: {origin:"https://hercules.test"},
     self: {addEventListener:(kind,callback)=>{handlers[kind]=callback}},
     caches: {open:async()=>cache, match:async()=>null, keys:async()=>[]},
-    fetch: async()=>{fetches++; return {ok:true,clone(){return this}}}
+    fetch: async()=>{fetches++; return {ok:responseOk,clone(){return this}}}
   };
   vm.runInNewContext(readFileSync(new URL("../public/sw.js",import.meta.url),"utf8"),context);
   return {
@@ -60,8 +60,8 @@ test("off-origin and API requests bypass worker cache",async()=>{
 });
 
 test("failed shell response is not cached",async()=>{
-  const s=setup();
-  // Failure behavior is checked independently of the static-source regex checks.
+  const s=setup({responseOk:false});
   assert.equal(await s.dispatch("https://hercules.test/style.css"),true);
   assert.equal(s.fetches,1);
+  assert.deepEqual(s.puts,[]);
 });
