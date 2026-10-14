@@ -140,12 +140,50 @@ function itemCard(item){
   return '<article class="product-card" data-category="'+item.category+'"><div style="position:relative">'+thumb(item)+'<button class="product-heart '+(state.favs.has(item.id)?'active':'')+'" data-fav="'+item.id+'" aria-label="'+(state.favs.has(item.id)?'Remove from':'Add to')+' favorites" aria-pressed="'+state.favs.has(item.id)+'">'+(state.favs.has(item.id)?'♥':'♡')+'</button></div><div class="product-body"><div class="product-sub">'+esc(item.category)+' · '+esc(item.region)+'</div><h3>'+esc(item.name)+'</h3><p>'+esc(item.desc)+'</p><div class="product-tags">'+tags+'</div><button class="try-btn" data-try="'+item.id+'">Try this look ↗</button></div></article>';
 }
 let catalogIntakeGeneration=0,catalogEvidenceKit=null;
+function supplierStage(record){
+  const statuses=Object.values(record.requirements);
+  if(statuses.includes('needs_review'))return 'disputed';
+  if(statuses.includes('not_provided'))return 'missing';
+  return 'verification';
+}
+function renderSupplierDashboard(){
+  const metrics=el('supplierDashboardMetrics'),rows=el('supplierDashboardRows');
+  metrics.replaceChildren();rows.replaceChildren();
+  const packet=catalogEvidenceKit?.snapshot(),records=packet?.records||[];
+  const counts={all:records.length,disputed:0,missing:0,verification:0};
+  for(const record of records)counts[supplierStage(record)]++;
+  const labels={all:'Candidates',disputed:'Disputed',missing:'Missing documents',verification:'Verify claims'};
+  for(const stage of ['all','disputed','missing','verification']){
+    const tile=document.createElement('div');tile.className='supplier-dashboard-tile';
+    const figure=document.createElement('strong');figure.textContent=String(counts[stage]);
+    const label=document.createElement('span');label.textContent=labels[stage];
+    tile.append(figure,label);metrics.appendChild(tile);
+  }
+  const filter=el('supplierDashboardFilter').value;
+  const shown=records.filter(record=>filter==='all'||supplierStage(record)===filter);
+  if(!shown.length){
+    const empty=document.createElement('p');
+    empty.textContent=records.length?'No candidates in this documentation stage.':'Load a supplier feed to see its documentation stages.';
+    rows.appendChild(empty);return;
+  }
+  for(const record of shown){
+    const entry=document.createElement('div');entry.className='supplier-dashboard-entry';
+    const title=document.createElement('strong');title.textContent=record.brand+' — '+record.name;
+    const id=document.createElement('span');id.textContent='SKU: '+record.sku;
+    const stage=supplierStage(record);
+    const action=document.createElement('p');
+    action.textContent=stage==='disputed'?'Resolve disputed documents before further review':
+      stage==='missing'?'Request outstanding documentation':'Independently verify all claimed documentation';
+    const hold=document.createElement('small');hold.textContent='UNVERIFIED · APPROVED 0 · PUBLISHED 0';
+    entry.append(title,id,action,hold);rows.appendChild(entry);
+  }
+}
 function renderSupplierReviewSummary(){
   const status=el('supplierReviewStatus'),exportButton=el('supplierReviewExport'),resetButton=el('supplierReviewReset');
   const report=catalogEvidenceKit?.snapshot();
   if(!report||!report.records.length){
     status.textContent='Load a candidate feed to prepare a supplier evidence packet. Approved: 0. Published: 0.';
-    exportButton.disabled=true;resetButton.disabled=true;return;
+    exportButton.disabled=true;resetButton.disabled=true;renderSupplierDashboard();return;
   }
   const marks=report.records.flatMap(row=>Object.values(row.requirements));
   const claimed=marks.filter(x=>x==='claimed_unverified').length;
@@ -159,6 +197,7 @@ function renderSupplierReviewSummary(){
     'Next action: '+(unresolved?'Resolve disputed evidence first. ':missing?'Request missing supplier evidence. ':'Independently verify every claimed document and rights statement. ')+
     'Verification: not performed. Approved: 0. Published: 0.';
   exportButton.disabled=false;resetButton.disabled=false;
+  renderSupplierDashboard();
 }
 function resetSupplierReview(){
   if(catalogEvidenceKit)catalogEvidenceKit.reset();
@@ -868,6 +907,7 @@ el('catalogTemplate').addEventListener('click',downloadCatalogExample);
 el('catalogReset').addEventListener('click',resetCatalogReview);
 el('supplierReviewExport').addEventListener('click',downloadSupplierReview);
 el('supplierReviewReset').addEventListener('click',resetSupplierReview);
+el('supplierDashboardFilter').addEventListener('change',renderSupplierDashboard);
 el('catalogIntakeResults').addEventListener('change',e=>{
   const select=e.target.closest('select[data-supplier-requirement]');
   if(!select||!catalogEvidenceKit)return;
