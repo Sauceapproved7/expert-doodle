@@ -112,3 +112,16 @@ test('human-reviewed physical AR checklist is session only and cannot certify ac
   assert.match(js, /status:'self-reported-unverified'/);
   assert.doesNotMatch(js, /fetch\([^)]*validationReport/);
 });
+
+
+test('Beauty Match is opt-in, tag-based and independent from AR and Passport storage',()=>{
+  assert.match(html,/src="\.\/beauty-match\.js" defer/);
+  for(const id of ['beautyMatchForm','matchDepth','matchTone','matchTexture','matchCategory','matchVibe','matchClear','matchUsePassport','matchResults']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(html,/not your face, an actual product shade/);
+  assert.match(js,/window\.GlowBeautyMatch\.recommend\(ITEMS,prefs\)/);
+  assert.match(js,/function resetBeautyMatch\(\)/);
+  assert.match(js,/resetBeautyMatch\(\);/);
+  assert.doesNotMatch(js,/fetch\([^)]*beautyMatch/);
+});
