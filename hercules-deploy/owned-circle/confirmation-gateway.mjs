@@ -11,6 +11,19 @@ const EMAIL=/^[a-z0-9][a-z0-9._+%-]*@[a-z0-9][a-z0-9.-]*\.[a-z]{2,24}$/;
 const TOKEN=/^[a-f0-9]{64}$/;
 const MAX_BYTES=2048;
 const HOUR=3600000;
+const MAX_EVIDENCE_AGE_MS=120000;
+const FUTURE_SKEW_MS=5000;
+const READINESS_CHECK_TIMEOUT_MS=2000;
+const REQUIRED_PROOFS=Object.freeze([
+ 'senderDomainVerified','providerConnectionVerified','outboundReceiptVerified',
+ 'durableRateLimitReady','privateChallengeStoreReady','ownerReleaseApproved'
+]);
+function currentEvidence(evidence,stamp){
+ if(!evidence||typeof evidence!=='object'||Array.isArray(evidence))return false;
+ if(!Number.isSafeInteger(stamp)||!Number.isSafeInteger(evidence.checkedAt))return false;
+ if(evidence.checkedAt>stamp+FUTURE_SKEW_MS||stamp-evidence.checkedAt>MAX_EVIDENCE_AGE_MS)return false;
+ return REQUIRED_PROOFS.every(key=>evidence[key]===true);
+}
 function json(res,status,data,allowOrigin=false){
  const headers={
   'content-type':'application/json; charset=utf-8',
@@ -46,13 +59,27 @@ function fieldsExactly(payload,keys){
  return actual.length===keys.length&&actual.every(key=>keys.includes(key));
 }
 export function createCircleConfirmationApi({
- engine,readiness={ready:false},now=Date.now,maxRequestsPerHour=5
+ engine,readiness,now=Date.now,maxRequestsPerHour=5
 }={}){
  if(typeof engine?.request!=='function'||typeof engine?.confirm!=='function')
   throw Error('private_confirmation_engine_required');
  if(typeof now!=='function'||!Number.isInteger(maxRequestsPerHour)||maxRequestsPerHour<1||maxRequestsPerHour>60)
   throw Error('invalid_gateway_options');
- const active=readiness?.ready===true;
+ // A client or static configuration must never assert an operational release.
+ // This function must be implemented by a trusted backend that independently
+ // checks provider, delivery receipt, durable abuse controls and owner release.
+ async function activeNow(){
+  if(typeof readiness!=='function')return false;
+  let timer;
+  try{
+   const evidence=await Promise.race([
+    Promise.resolve().then(()=>readiness()),
+    new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error('readiness_timeout')),READINESS_CHECK_TIMEOUT_MS)})
+   ]);
+   return currentEvidence(evidence,now());
+  }catch{return false}
+  finally{clearTimeout(timer)}
+ }
  const counts=new Map();
  function limit(ip){
   const stamp=now();
@@ -69,7 +96,7 @@ export function createCircleConfirmationApi({
   const path=(req.url??'').split('?')[0];
   const method=req.method??'GET';
   if(path===HEALTH&&method==='GET'){
-   json(res,200,{ok:true,service:'hercules-owned-circle-confirmation',confirmation:active?'eligible':'held'});
+   json(res,200,{ok:true,service:'hercules-owned-circle-confirmation',confirmation:(await activeNow())?'eligible':'held'});
    return;
   }
   if(![REQUEST_PATH,VERIFY_PATH].includes(path)){
@@ -101,7 +128,7 @@ export function createCircleConfirmationApi({
   if(path===VERIFY_PATH&&(!fieldsExactly(input,['token'])||typeof input.token!=='string'||!TOKEN.test(input.token))){
    json(res,400,{ok:false,error:'invalid_or_expired_token'},true);return;
   }
-  if(!active){
+  if(!(await activeNow())){
    json(res,503,{ok:false,error:'confirmation_held'},true);return;
   }
   // Only use the actual socket address; X-Forwarded-For is client-controlled.

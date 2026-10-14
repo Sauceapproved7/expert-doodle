@@ -21,6 +21,22 @@ This is original Hercules-owned Node HTTP request-handling logic to connect the 
 - No verified SMTP server, SPF/DKIM/DMARC sender setup or actual external email receipt exists yet. The SauceApproved continuity ledger still shows `waiting_provider_authorization`.
 - Do not publish project administrative tokens in browser code or logs. The sensitive DB adapter is server-only.
 
+## Live fail-closed readiness (source-only, not a sender)
+
+The gateway no longer accepts `readiness: {ready:true}` or any other static truthy flag as release authority. The constructor accepts an **owner-server-only asynchronous `readiness()` function**, not an HTTP/client field. This function must independently check each of these conditions and return an evidence object:
+
+- `checkedAt`: integer epoch milliseconds observed at the trusted backend, at most 120 seconds old and no more than five seconds into the future
+- `senderDomainVerified`: provider explicitly verifies the actual sending domain (not merely that DNS looks plausible)
+- `providerConnectionVerified`: currently authenticated and authorized sending transport
+- `outboundReceiptVerified`: independently observed genuine external delivery proof, not a simulated/mock send
+- `durableRateLimitReady`: owner-controlled global durable anti-abuse enforcement, not the gateway's in-memory counter alone
+- `privateChallengeStoreReady`: private backend challenge and single-use confirmation store independently operational
+- `ownerReleaseApproved`: current explicit owner-controlled release decision
+
+**Every flag must be exactly `true`**. Gateway calls `readiness()` for each health/request/verify check, with a 2-second timeout. Missing, stale, malformed, throwing, revoked or timed-out evidence responds as held before any engine request/consume call. Client-provided flags never count. An "eligible" health response is not permission to deploy; deployment remains a separate owner-controlled operation.
+
+**As of October 13:** Resend reports the business sending domain `failed` (DKIM and SPF records failed). The owner continuity ledger records `waiting_provider_authorization`, `dnsReady=false`, `providerConnectionReady=false`; Spaceship OAuth remains pending. Therefore any truthful readiness implementation returns held. **No actual production readiness function has been connected and no email has been sent by this module.**
+
 ## Independent proof
 
 The unit/integration suite boots a temporary local HTTP server, tests held mode, strict origin/CORS, no enumeration, 2 KB bounds, rate limiting, token rejection and successful mocked redemption. It never sends emails, creates real subscribers or makes live database calls.
