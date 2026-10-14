@@ -7,6 +7,10 @@ on:
     paths:
       - 'apps/glow-society/**'
       - '.github/workflows/glow-society-qa.yml'
+  pull_request:
+    paths:
+      - 'apps/glow-society/**'
+      - '.github/workflows/glow-society-qa.yml'
   workflow_dispatch:
 
 permissions:
