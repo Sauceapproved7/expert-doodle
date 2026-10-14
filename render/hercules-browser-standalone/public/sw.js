@@ -1,5 +1,5 @@
-const CACHE_NAME="hercules-browser-shell-v2";
-const SHELL=["/","/style.css","/app.js","/search-intent.mjs","/manifest.webmanifest","/icon-192.svg","/icon-512.svg"];
+const CACHE_NAME="hercules-browser-shell-v1";
+const SHELL=["/","/style.css","/app.js","/manifest.webmanifest","/icon-192.svg","/icon-512.svg"];
 self.addEventListener("install",event=>{
   event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
