@@ -151,7 +151,9 @@ test("real model unit is copied rather than relaxing original security policy",(
   assert.match(script,/PrivateTmp=yes/);
   assert.match(script,/IPAddressDeny=any/);
   assert.match(script,/IPAddressAllow=localhost/);
-  assert.match(script,/BindReadOnlyPaths=/);
+  assert.match(script,/sudo install -m 0644 "\$model_source" "\$root\/weights\/candidate\.gguf"/);
+  assert.match(script,/sudo cp -a "\$engine_source"\/\. "\$root\/engine\/"/);
+  assert.doesNotMatch(script,/BindReadOnlyPaths=/);
   assert.match(script,/rm -f/);
 });
 test("lab documents no live host, no billing and limited recovery proof",()=>{
