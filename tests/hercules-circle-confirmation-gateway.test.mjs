@@ -5,6 +5,14 @@ import {once} from 'node:events';
 import {createCircleConfirmationApi} from '../hercules-deploy/owned-circle/confirmation-gateway.mjs';
 
 const ORIGIN='https://hercules-owned-circle-free.onrender.com';
+const NOW=1770777600000;
+function validEvidence(overrides={}){
+ return {
+  checkedAt:NOW,senderDomainVerified:true,providerConnectionVerified:true,
+  outboundReceiptVerified:true,durableRateLimitReady:true,
+  privateChallengeStoreReady:true,ownerReleaseApproved:true,...overrides
+ };
+}
 async function withApi(t,options={}){
  const calls=[];
  const engine={
@@ -12,7 +20,7 @@ async function withApi(t,options={}){
   async confirm(token){calls.push(['confirm',token]);if(token==='0'.repeat(64))throw Error('invalid_or_expired_token');return {ok:true,status:'email_confirmed_no_entitlement'}}
  };
  const handler=createCircleConfirmationApi({
-  engine,readiness:{ready:options.ready??false},now:()=>1770777600000,maxRequestsPerHour:options.maxRequestsPerHour??5
+  engine,readiness:Object.hasOwn(options,'readiness')?options.readiness:(options.ready===true?()=>validEvidence():undefined),now:()=>NOW,maxRequestsPerHour:options.maxRequestsPerHour??5
  });
  const server=createServer(handler);
  server.listen(0,'127.0.0.1');
@@ -108,9 +116,49 @@ test('unknown paths or body-provided proof cannot unlock held transport',async t
 });
 
 test('static ready flag cannot bypass fresh sender verification',async t=>{
- const {post,calls}=await withApi(t,{ready:true});
+ const {post,calls}=await withApi(t,{readiness:{ready:true}});
  const response=await post('/api/confirm/request',{email:'member@example.net'});
  assert.equal(response.status,503,'static ready:true must never unlock outbound requests');
  assert.equal((await response.json()).error,'confirmation_held');
+ assert.equal(calls.length,0);
+});
+
+test('revoked provider DNS or authorization stops every subsequent request and changes health to held',async t=>{
+ let evidence=validEvidence();
+ const {post,url,calls}=await withApi(t,{readiness:async()=>evidence});
+ assert.equal((await fetch(url+'/health').then(r=>r.json())).confirmation,'eligible');
+ const first=await post('/api/confirm/request',{email:'member@example.net'});
+ assert.equal(first.status,202);
+ assert.deepEqual(calls,[['request','member@example.net']]);
+ evidence=validEvidence({senderDomainVerified:false});
+ assert.equal((await fetch(url+'/health').then(r=>r.json())).confirmation,'held');
+ const after=await post('/api/confirm/request',{email:'member@example.net'});
+ assert.equal(after.status,503);
+ assert.equal((await after.json()).error,'confirmation_held');
+ const verified=await post('/api/confirm/verify',{token:'a'.repeat(64)});
+ assert.equal(verified.status,503);
+ assert.deepEqual(calls,[['request','member@example.net']],'no request or token redemption after revocation');
+});
+
+test('stale, incomplete, future, failed and throwing evidence fail closed',async t=>{
+ const bad=[
+  validEvidence({checkedAt:NOW-120001}),
+  validEvidence({checkedAt:NOW+5001}),
+  validEvidence({providerConnectionVerified:false}),
+  validEvidence({outboundReceiptVerified:false}),
+  validEvidence({durableRateLimitReady:false}),
+  validEvidence({privateChallengeStoreReady:false}),
+  validEvidence({ownerReleaseApproved:false}),
+  {ready:true,checkedAt:NOW},
+  null
+ ];
+ for(const evidence of bad){
+  const {post,calls}=await withApi(t,{readiness:()=>evidence});
+  const r=await post('/api/confirm/request',{email:'member@example.net'});
+  assert.equal(r.status,503,'incomplete or invalid readiness must remain held');
+  assert.equal(calls.length,0);
+ }
+ const {post,calls}=await withApi(t,{readiness:async()=>{throw Error('provider_failed')}});
+ assert.equal((await post('/api/confirm/request',{email:'member@example.net'})).status,503);
  assert.equal(calls.length,0);
 });
