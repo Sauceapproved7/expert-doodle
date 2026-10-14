@@ -6,6 +6,7 @@ const OWNER="0388a570-7e32-4d63-9bee-9df0c877bbf9";
 const OTHER="8388a570-7e32-4d63-9bee-9df0c877bbf9";
 const SHOP="azymhc-x0.myshopify.com";
 const GID="gid://shopify/Shop/100002726208";
+const APP="1ed12710f0b797a7a3328c1cf4e8b1f9";
 const LEASE="df01a570-7e32-4d63-9bee-9df0c877bbf9";
 const ACCESS="shpat_"+"SYNTHETIC_ACCESS_TOKEN_0123456789";
 const REFRESH="shprt_"+"SYNTHETIC_REFRESH_TOKEN_0123456789";
@@ -20,13 +21,18 @@ function setup(opts={}){
   return {data:typeof answer==="function"?answer(params):answer??null,error:null};
  };
  const config={enabled:true,workerAuthorized:true,ownerSessionVerified:true,
-  organizationId:ORG,ownerUserId:OWNER,rpc,...opts.config};
+  organizationId:ORG,ownerUserId:OWNER,rpc,
+  readShopifyIdentity:opts.readShopifyIdentity??(async()=>({id:GID,myshopifyDomain:SHOP})),
+  readProviderIdentity:opts.readProviderIdentity??(async()=>({
+   organizationId:ORG,shopDomain:SHOP,shopGid:GID,clientId:APP
+  })),...opts.config};
  return {calls,config};
 }
 test("default disabled and missing verified owner, service role, or RPC never reach database",async()=>{
  for(const config of [
   {enabled:false},{workerAuthorized:false},{ownerSessionVerified:false},
-  {organizationId:"some-other-org"},{ownerUserId:"not-a-uuid"},{rpc:null}
+  {organizationId:"some-other-org"},{ownerUserId:"not-a-uuid"},{rpc:null},
+  {readShopifyIdentity:null},{readProviderIdentity:null}
  ]){
   const h=setup({config});const a=createGatehouseOfflineVaultAdapter(h.config);
   assert.equal(await a.acquireExclusiveGrantLease(ORG),null);
@@ -154,4 +160,55 @@ test("lease release is once-only and uses nonce; all failures are sanitized",asy
  const h2=setup({responses:{gatehouse_offline_acquire:row},throwOn:"gatehouse_offline_release"});
  const badLease=await createGatehouseOfflineVaultAdapter(h2.config).acquireExclusiveGrantLease(ORG);
  await assert.rejects(badLease.release(),/private-vault/);
+});
+
+test("production Shopify and Supabase registry mismatch blocks ALL private Vault RPCs",async()=>{
+ const h=setup({
+  readProviderIdentity:async()=>({
+   organizationId:ORG,shopDomain:"sauceapproved-2.myshopify.com",
+   shopGid:GID,clientId:APP
+  }),
+  responses:{gatehouse_offline_bootstrap:{stored:true,generation:1}}
+ });
+ const a=createGatehouseOfflineVaultAdapter(h.config);
+ await assert.rejects(a.storePrivateGrant(TOKENS),/private-vault-not-ready/);
+ assert.equal(await a.acquireExclusiveGrantLease(ORG),null);
+ assert.equal(h.calls.length,0);
+});
+
+test("missing client ID or different Shopify GID blocks lease and bootstrap before RPC",async()=>{
+ for(const override of [{clientId:null},{shopGid:"gid://shopify/Shop/999"}]){
+  const h=setup({readProviderIdentity:async()=>({
+   organizationId:ORG,shopDomain:SHOP,shopGid:GID,clientId:APP,...override
+  })});
+  const a=createGatehouseOfflineVaultAdapter(h.config);
+  await assert.rejects(a.storePrivateGrant(TOKENS),/private-vault-not-ready/);
+  assert.equal(await a.acquireExclusiveGrantLease(ORG),null);
+  assert.equal(h.calls.length,0);
+ }
+});
+
+test("source-of-truth drift after lease acquisition blocks credential rotation",async()=>{
+ let providerShopDomain=SHOP;
+ const row={leased:true,organization_id:ORG,shop_domain:SHOP,shop_gid:GID,
+  lease_nonce:LEASE,generation:7,refresh_token:REFRESH,
+  access_expires_at:"2026-10-13T21:00:00Z",
+  refresh_expires_at:"2027-01-13T21:00:00Z"};
+ const h=setup({
+  readProviderIdentity:async()=>({
+   organizationId:ORG,shopDomain:providerShopDomain,shopGid:GID,clientId:APP
+  }),
+  responses:{gatehouse_offline_acquire:row,
+   gatehouse_offline_commit:{stored:true,generation:8}}
+ });
+ const lease=await createGatehouseOfflineVaultAdapter(h.config).acquireExclusiveGrantLease(ORG);
+ assert.equal(lease.leased,true);
+ providerShopDomain="sauceapproved-2.myshopify.com";
+ await assert.rejects(lease.commitRotation({
+  organizationId:ORG,expectedGeneration:7,
+  accessToken:ACCESS,refreshToken:REFRESH+"NEW",shopDomain:SHOP,shopGid:GID,
+  accessExpiresAt:"2026-10-13T21:50:00Z",
+  refreshExpiresAt:"2027-01-13T21:50:00Z"
+ }),/private-vault-not-ready/);
+ assert.deepEqual(h.calls.map(c=>c.name),["gatehouse_offline_acquire"]);
 });

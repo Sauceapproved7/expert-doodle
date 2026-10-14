@@ -5,6 +5,7 @@
  * worker with a confidential service-role client; disabled by default.
  * SQL RPCs must enforce their own service role and owner membership.
  */
+import {assessGatehouseShopIdentity} from "./shop-identity-preflight.mjs";
 const ORG="ea5fb196-67f9-42fa-b592-49eeb3b84346";
 const SHOP="azymhc-x0.myshopify.com";
 const SHOP_ID="gid://shopify/Shop/100002726208";
@@ -22,13 +23,22 @@ const validPair=(row)=>{
 const singleData=x=>Array.isArray(x)?x.length===1?x[0]:null:x;
 export function createGatehouseOfflineVaultAdapter({
  enabled=false,workerAuthorized=false,ownerSessionVerified=false,
- organizationId="",ownerUserId="",rpc=null
+ organizationId="",ownerUserId="",rpc=null,
+ readShopifyIdentity=null,readProviderIdentity=null
 }={}){
  const ready=enabled===true&&workerAuthorized===true&&
   ownerSessionVerified===true&&organizationId===ORG&&UID.test(ownerUserId)&&
-  typeof rpc==="function";
+  typeof rpc==="function"&&
+  typeof readShopifyIdentity==="function"&&
+  typeof readProviderIdentity==="function";
  async function call(name,params){
   if(!ready)throw fault();
+  // Every private RPC re-reads both trusted identities; never allow a stale
+  // lease or caller-supplied storefront label to bypass the project conflict.
+  const preflight=await assessGatehouseShopIdentity({
+   readShopifyIdentity,readProviderIdentity
+  });
+  if(!preflight.matched)throw fault();
   try{
    const result=await rpc(name,params);
    if(result?.error)throw fault();
