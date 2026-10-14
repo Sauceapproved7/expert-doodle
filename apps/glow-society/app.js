@@ -183,7 +183,7 @@ function renderSupplierReviewSummary(){
   const report=catalogEvidenceKit?.snapshot();
   if(!report||!report.records.length){
     status.textContent='Load a candidate feed to prepare a supplier evidence packet. Approved: 0. Published: 0.';
-    exportButton.disabled=true;resetButton.disabled=true;renderSupplierDashboard();return;
+    exportButton.disabled=true;resetButton.disabled=true;el('supplierActionsExport').disabled=true;renderSupplierDashboard();return;
   }
   const marks=report.records.flatMap(row=>Object.values(row.requirements));
   const claimed=marks.filter(x=>x==='claimed_unverified').length;
@@ -196,7 +196,7 @@ function renderSupplierReviewSummary(){
     'Checklist coverage: '+(marks.length-missing)+'/'+marks.length+' claimed or flagged; none independently verified. '+
     'Next action: '+(unresolved?'Resolve disputed evidence first. ':missing?'Request missing supplier evidence. ':'Independently verify every claimed document and rights statement. ')+
     'Verification: not performed. Approved: 0. Published: 0.';
-  exportButton.disabled=false;resetButton.disabled=false;
+  exportButton.disabled=false;resetButton.disabled=false;el('supplierActionsExport').disabled=false;
   renderSupplierDashboard();
 }
 function resetSupplierReview(){
@@ -205,6 +205,20 @@ function resetSupplierReview(){
     select.value='not_provided';
   }
   renderSupplierReviewSummary();
+}
+function downloadSupplierActions(){
+ const packet=catalogEvidenceKit?.snapshot();
+ if(!packet||!packet.records.length)return;
+ const actions=window.GlowSupplierActions.prepare(packet);
+ if(!actions)return;
+ try{
+  const blob=new Blob([JSON.stringify(actions,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download='glow-society-unverified-action-plan.json';
+  document.body.appendChild(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+  toast('Unverified action plan downloaded. No rights or claims were approved.');
+ }catch{toast('The browser could not download the action plan.')}
 }
 function downloadSupplierReview(){
   const packet=catalogEvidenceKit?.snapshot();
@@ -906,6 +920,7 @@ el('catalogFile').addEventListener('change',loadCatalogFile);
 el('catalogTemplate').addEventListener('click',downloadCatalogExample);
 el('catalogReset').addEventListener('click',resetCatalogReview);
 el('supplierReviewExport').addEventListener('click',downloadSupplierReview);
+el('supplierActionsExport').addEventListener('click',downloadSupplierActions);
 el('supplierReviewReset').addEventListener('click',resetSupplierReview);
 el('supplierDashboardFilter').addEventListener('change',renderSupplierDashboard);
 el('catalogIntakeResults').addEventListener('change',e=>{
