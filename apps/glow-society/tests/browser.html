@@ -154,7 +154,7 @@ async function check(document) {
 }
 iframe.onload=async()=>{try{await wait(500);const doc=iframe.contentDocument;await check(doc);
  const local=iframe.contentWindow.localStorage;
- assert([...Object.keys(local)].some(k=>k.includes('glow-society-v1')),'Lookbook and community demo use browser-local data');
+ assert([...Object.keys(local)].every(k=>!k.startsWith('glow-society-v1-')),'Confirmed erase leaves no Glow Society demo keys');
  output.dataset.status='pass';output.textContent=steps.join('\n')+'\nALL '+steps.length+' BROWSER CHECKS PASSED';
  }catch(err){output.dataset.status='fail';output.textContent=steps.join('\n')+'\nFAIL '+(err.stack||err.message);}
 };
