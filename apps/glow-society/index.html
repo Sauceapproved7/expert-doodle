@@ -103,6 +103,19 @@
               <h4 id="supplierReviewTitle">Supplier proof checklist</h4>
               <p>For structurally reviewable records, record whether evidence is missing, claimed or disputed. No selection establishes supplier legitimacy, image rights or permission to sell; independent source verification and explicit owner approval are still required.</p>
               <div id="supplierReviewStatus" class="supplier-review-status" role="status" aria-live="polite">Load a candidate feed to prepare a supplier evidence packet. Approved: 0. Published: 0.</div>
+              <div class="supplier-dashboard" aria-labelledby="supplierDashboardTitle">
+                <h5 id="supplierDashboardTitle">Supplier readiness overview <span>REVIEW ONLY</span></h5>
+                <div id="supplierDashboardMetrics" class="supplier-dashboard-metrics" aria-label="Candidate evidence breakdown"></div>
+                <label for="supplierDashboardFilter">Show candidate stage</label>
+                <select id="supplierDashboardFilter">
+                  <option value="all">All candidates</option>
+                  <option value="disputed">Disputed evidence</option>
+                  <option value="missing">Missing documentation</option>
+                  <option value="verification">Claims needing independent verification</option>
+                </select>
+                <div id="supplierDashboardRows" class="supplier-dashboard-rows"></div>
+                <p class="fineprint">These are documentation stages, not product approval stages. Zero products can be released or sold from this dashboard.</p>
+              </div>
               <button type="button" id="supplierReviewExport" class="secondary-btn" disabled>Download unverified review packet</button>
               <button type="button" id="supplierReviewReset" class="secondary-btn" disabled>Reset evidence choices</button>
               <p class="fineprint">The packet is a local JSON handoff for later independent verification. It contains no documents, personal contact information or approval token. Checklists stay in this tab only and are erased when review is cleared. No data is sent to suppliers or servers.</p>
