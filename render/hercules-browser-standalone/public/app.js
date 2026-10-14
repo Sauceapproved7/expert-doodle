@@ -36,6 +36,7 @@ let lastFrameAt=0;
 let openingTask=false;
 let navigationAttempts=0;
 let blankPage=true;
+let navigationPending=false;
 
 async function api(path,options={}){
   const r=await fetch(path,{cache:"no-store",...options,headers:{"content-type":"application/json",...(options.headers||{})}});
@@ -110,7 +111,10 @@ screen.onerror=()=>{
 $("navForm").addEventListener("submit",async e=>{
   e.preventDefault();
   const input=$("urlInput").value.trim();
-  if(!input)return;
+  if(!input||navigationPending)return;
+  navigationPending=true;
+  const submit=$("navForm").querySelector('button[type="submit"]');
+  submit.disabled=true;
   setStatus("Searching or navigating…");
   try{
     const url=resolveHerculesInput(input,$("searchProvider").value);
@@ -121,6 +125,7 @@ $("navForm").addEventListener("submit",async e=>{
     screen.src="/api/frame?t="+Date.now();
     setStatus("Navigation complete");
   }catch(err){setStatus(err.message)}
+  finally{navigationPending=false;submit.disabled=false}
 });
 
 document.querySelectorAll("[data-search]").forEach(button=>{
