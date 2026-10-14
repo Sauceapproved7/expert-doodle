@@ -112,3 +112,5 @@ After reviewing a local supplier feed, the browser now shows an offline evidence
 A Node contract test proves that even all evidence marked as claimed cannot authorize publication, and browser QA verifies the unverified download, candidate isolation, reset and erasure behavior.
 
 The supplier evidence panel also displays a live missing/claimed/disputed tally and checklist coverage. This is an organizational progress indicator only; it does not independently verify a single claim or move any product toward release eligibility.
+
+The review summary suggests the next non-authorizing action: resolve disputed evidence first, then request missing documentation, then independently verify claimed material. It never treats a completed checklist as approval.
