@@ -54,7 +54,34 @@
     try{return validate(JSON.parse(text),baseline);}
     catch{return fail('Review packet is invalid JSON');}
   }
+  function preview(validation,baseline){
+    if(!validation||validation.error!==null||!Array.isArray(validation.changes)||
+      !baseline||!Array.isArray(baseline.records)||!baseline.records.length)
+      return fail('A matching unverified review packet is required');
+    const records=new Map(baseline.records.map(record=>[record.sku.toUpperCase(),record]));
+    const expected=baseline.records.length*requiredIds.length;
+    if(validation.changes.length!==expected||records.size!==baseline.records.length)
+      return fail('Review packet changes do not cover the complete loaded feed');
+    const seen=new Set(),differences=[];
+    for(const change of validation.changes){
+      if(!change||typeof change.sku!=='string'||!requiredIds.includes(change.requirement)||
+        !validStatuses.has(change.status))return fail('Review packet contains invalid changes');
+      const record=records.get(change.sku.toUpperCase()),id=change.sku.toUpperCase()+'|'+change.requirement;
+      if(!record||record.sku!==change.sku||seen.has(id))return fail('Review packet has stale or duplicate changes');
+      seen.add(id);
+      const oldStatus=record.requirements?.[change.requirement];
+      if(!validStatuses.has(oldStatus))return fail('Active review has unsupported evidence choices');
+      if(oldStatus!==change.status)differences.push(Object.freeze({
+        sku:record.sku,name:record.name,requirement:change.requirement,
+        before:oldStatus,after:change.status
+      }));
+    }
+    if(seen.size!==expected)return fail('Review packet changes are incomplete');
+    return Object.freeze({error:null,total:expected,
+      unchanged:expected-differences.length,
+      differences:Object.freeze(differences)});
+  }
   Object.defineProperty(window,'GlowSupplierRestore',{
-    value:Object.freeze({parse,validate,maxBytes:MAX_BYTES}),writable:false,configurable:false
+    value:Object.freeze({parse,validate,preview,maxBytes:MAX_BYTES}),writable:false,configurable:false
   });
 })();
