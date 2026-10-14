@@ -20,7 +20,7 @@ test("all four private SQL RPC entrypoints restrict public access and require se
   assert.match(sql,new RegExp("grant execute on function public\\.gatehouse_offline_"+name+"\\(","i"));
  }
  assert.match(sql,/security definer\s+set search_path = ''/i);
- assert.match(sql,/auth\.role\(\)\s*(?:<>|!=)\s*'service_role'/i);
+ assert.match(sql,/coalesce\(auth\.role\(\),\s*''\)\s*(?:<>|!=)\s*'service_role'/i);
  assert.match(sql,/from public\.hercules_memberships/i);
  assert.match(sql,/role\s*=\s*'owner'/i);
  assert.match(sql,/status\s*=\s*'active'/i);
