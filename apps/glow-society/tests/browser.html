@@ -105,7 +105,7 @@ async function check(document) {
  assert(document.getElementById('supplierRestoreStatus').textContent.includes('Inspect the proposed changes'),'Matching packet stages a preview rather than applying choices');
  assert(!restorePreview.hidden&&!restoreApply.disabled,'Matching packet makes an explicit confirmation available');
  assert(document.getElementById('supplierRestorePreviewSummary').textContent.includes('1 proposed checklist change'),'Preview counts only checklist choices that differ');
- assert(document.getElementById('supplierRestoreChanges').textContent.includes('Resale authorization'),'Preview identifies the unverified evidence being changed');
+ assert(document.getElementById('supplierRestoreChanges').textContent.includes('Distribution and resale authorization'),'Preview identifies the unverified evidence being changed');
  assert(firstProof.value==='not_provided','Unconfirmed import cannot overwrite any existing choice');
  assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Staged preview cannot grant supplier approval');
  click(restoreCancel,'Cancel a valid staged review import');
