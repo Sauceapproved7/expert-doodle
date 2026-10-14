@@ -86,3 +86,16 @@ The Explore view now includes a tag-based Beauty Match selector with category, s
 - Choices live only in this page session. Visitors can load saved Beauty Passport filters deliberately, but a Beauty Match is not saved automatically, uploaded to a server, or added to the Passport. The Clear and private-data erasure actions reset the wizard.
 - Discovery tags are editorial and not scientifically validated color calibration; deep-complexion users should verify real shades under appropriate lighting before a purchase. No purchase is offered here.
 - Node tests check depth and undertone exclusions, 4C hair options, cross-category concepts, safe no-results behavior and nonmutation. Browser checks cover interaction and erasure.
+
+## Supplier Catalog Intake Workshop — review-only foundation
+
+The Explore page has a collapsed, optional workshop for inspecting supplier product data from a local JSON file (up to 64 KiB and 30 rows). This is infrastructure for **future real catalogs**, not an active supplier connection.
+
+- Supported schema is `{"schemaVersion":1,"products":[{"sku":"...","brand":"...","name":"...","category":"makeup|hair|nails","sourceUrl":"https://...","tags":["deep"]}]}`. Download the fictional example from the page for the exact structure.
+- Strict checks reject duplicate SKUs, unexpected fields (including price, inventory, image and fake approval attributes), missing brand/name, invalid categories/tags, unsafe source URL schemes and local/private-origin host references. Only HTTPS references pass structural checks; the app **does not fetch or validate who controls them**.
+- Schema-valid rows appear only as **source unverified, owner approval required, not for sale** in a separate text-only review. They are never merged into the 47 fictional demo concepts, Beauty Match, checkout, public inventory, saved looks or any server database.
+- File contents are parsed in the visitor's browser, held in page memory, and never uploaded. URLs are rendered as text, not active links. The workshop also supports one explicit fictional demonstration and an offline-downloadable JSON example.
+- Clear Review or confirmed local-data erasure clears the workshop and any selected file. Normal page unloading also discards parsed candidates. No account creation, API token, subscription, supplier integration, checkout, advertising, automatic pricing or recurring cost is added.
+- To connect real products in the future, independent supplier/provenance authorization, accurate feed updates, rights/terms, product compliance and freshness checks, and explicit owner approval are still required. A pasted `sourceUrl` or internally successful test is **not** sufficient proof of catalog authority or inventory.
+
+Unit and Chromium tests verify input bounds, unsafe URLs and metadata, duplicate SKUs, explicit unverified status, no storefront pollution and browser-local deletion.
