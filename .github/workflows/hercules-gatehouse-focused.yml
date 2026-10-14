@@ -22,6 +22,9 @@ jobs:
           node --check hercules/gatehouse/app.mjs
       - name: Isolated feature tests
         run: node --test hercules/gatehouse/*.test.mjs
+      - name: Independent Gatehouse public HTTP and anonymous privacy smoke
+        timeout-minutes: 5
+        run: node hercules/gatehouse/live-smoke.mjs
       - name: Existing Floodgates tests
         run: node --test hercules/floodgates/floodgates-readonly.test.mjs
       - name: Owner-code-only policy
