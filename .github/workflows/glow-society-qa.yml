@@ -28,5 +28,6 @@ jobs:
           node --test apps/glow-society/tests/smoke.mjs
           node --test apps/glow-society/tests/ar-metrics.test.mjs
           node --test apps/glow-society/tests/validation-kit.test.mjs
+          node --test apps/glow-society/tests/beauty-match.test.mjs
       - name: Mobile-width Chromium interaction QA
         run: node apps/glow-society/tests/browser-runner.mjs
