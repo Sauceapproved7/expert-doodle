@@ -10,6 +10,9 @@ const env=()=>({
   HERCULES_SMALLZ_GITHUB_READ_TOKEN:token('g'),
 });
 const serviceId='srv-db08fglg1s2s73d0o2rg',sha='a'.repeat(40);
+const GITHUB_MAIN='https://api.github.com/repos/Sauceapproved7/expert-doodle/git/ref/heads/main';
+const RENDER_SERVICE='https://api.render.com/v1/services/'+serviceId;
+const RENDER_DEPLOYS=RENDER_SERVICE+'/deploys?limit=1';
 const service={
   id:serviceId,name:'smallz-hercules',repo:'https://github.com/Sauceapproved7/expert-doodle',
   branch:'main',suspended:'not_suspended',autoDeploy:'no',autoDeployTrigger:'off',
@@ -18,9 +21,9 @@ const service={
 const response=x=>new Response(JSON.stringify(x),{status:200,headers:{'content-type':'application/json'}});
 const stubFetch=(calls=[])=>async(url,options)=>{
   calls.push({url,method:options.method,auth:options.headers.authorization});
-  if(url.includes('api.github.com'))return response({ref:'refs/heads/main',object:{sha}});
-  if(url.endsWith('/deploys?limit=1'))return response([{deploy:{id:'dep-'+'b'.repeat(18),status:'live',commit:{id:sha}}}]);
-  if(url.includes('api.render.com'))return response(service);
+  if(url===GITHUB_MAIN)return response({ref:'refs/heads/main',object:{sha}});
+  if(url===RENDER_DEPLOYS)return response([{deploy:{id:'dep-'+'b'.repeat(18),status:'live',commit:{id:sha}}}]);
+  if(url===RENDER_SERVICE)return response(service);
   throw Error('unexpected URL');
 };
 test('readiness runner is disabled by default, makes zero network calls and leaks no credentials',async()=>{
