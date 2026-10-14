@@ -13,6 +13,7 @@
   <link rel="stylesheet" href="./styles.css"/>
   <script src="./ar-metrics.js" defer></script>
   <script src="./validation-kit.js" defer></script>
+  <script src="./beauty-match.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -56,6 +57,23 @@
     </section>
     <section id="explore" class="view" aria-labelledby="exploreTitle">
       <div class="container subhero"><div class="kicker">FIND YOUR NEXT LOOK</div><h1 id="exploreTitle">The beauty <em>library.</em></h1><p>Beauty made for undertones, textures and self-expression—not one narrow ideal.</p></div>
+      <section class="container beauty-match" aria-labelledby="beautyMatchTitle">
+        <div class="beauty-match-heading">
+          <div><div class="kicker">PERSONALIZED BY YOUR CHOICES</div><h2 id="beautyMatchTitle">Find your <em>beauty edit.</em></h2><p>Tell us what inspires you. This matches tags on fictional makeup, hair and nail concepts—not your face, an actual product shade, or a professional's recommendation.</p></div>
+          <span class="match-label">NO FACE SCAN</span>
+        </div>
+        <form id="beautyMatchForm" class="beauty-match-form">
+          <label>Explore <select id="matchCategory"><option value="all">Everything</option><option value="makeup">Makeup</option><option value="hair">Hair</option><option value="nails">Nails</option></select></label>
+          <label>Skin depth <select id="matchDepth"><option value="all">Any / skip</option><option value="deep">Deep / rich</option><option value="tan">Tan / brown</option><option value="medium">Medium</option><option value="light">Light / fair</option></select></label>
+          <label>Undertone <select id="matchTone"><option value="all">Any / unsure</option><option value="warm">Warm / golden</option><option value="cool">Cool / red</option><option value="neutral">Neutral</option><option value="olive">Olive</option></select></label>
+          <label>Hair preference <select id="matchTexture"><option value="all">Any style</option><option value="3b">3B curls</option><option value="4a">4A coils</option><option value="4b">4B coils</option><option value="4c">4C coils</option><option value="braids">Braids</option><option value="locs">Locs</option><option value="protective">Protective styles</option></select></label>
+          <label>Look direction <select id="matchVibe"><option value="all">Surprise me</option><option value="everyday">Everyday / soft</option><option value="statement">Statement / bold</option></select></label>
+          <div class="beauty-match-actions"><button type="submit" class="cta dark">Find my demo looks</button><button type="button" class="secondary-btn" id="matchUsePassport">Use my Beauty Passport</button><button type="button" class="secondary-btn" id="matchClear">Start over</button></div>
+        </form>
+        <p class="fineprint">Skin depth and undertone filter only makeup concepts; texture filters only hair concepts. Nail inspiration is not skin-tone matched. Choices are not uploaded, saved or used for automated face analysis.</p>
+        <div id="matchStatus" role="status" class="beauty-match-status" aria-live="polite">Choose what matters to you, then select Find my demo looks.</div>
+        <div id="matchResults" class="product-grid" aria-label="Your suggested beauty concepts"></div>
+      </section>
       <div class="container filters">
         <label for="search" class="sr-only">Search looks and products</label><div class="searchwrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Search berry lips, 4C coils, chrome nails…" autocomplete="off"/></div>
         <div class="chiprow" id="categoryChips" aria-label="Product categories"></div>
