@@ -11,6 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="./styles.css"/>
+  <script src="./ar-metrics.js" defer></script>
   <script src="./app.js" defer></script>
 </head>
 <body>
@@ -82,6 +83,14 @@
             <button id="runCameraCheck" type="button" class="secondary-btn">Check my camera</button>
             <div id="cameraCheckStatus" class="camera-check-results" aria-live="polite" role="status">Not checked. Your camera stays off until you choose to test it.</div>
             <p class="fineprint">If permission is granted, this briefly opens the front camera and immediately closes it. The result stays in this page session. Face/hand AR still requires separate real-world evaluation.</p>
+          </section>
+          <section class="ar-session-health" aria-labelledby="arHealthTitle">
+            <div class="kicker">LIVE AR ENGINEERING · SESSION ONLY</div>
+            <h3 id="arHealthTitle">Landmark session diagnostics</h3>
+            <p>Once you voluntarily start live face or nail tracking, this panel counts sampled frames, landmark detections and average processing time on this device. No camera image, face landmarks, identity, location or device identifier is saved or included in exports.</p>
+            <div id="arHealthStatus" class="ar-health-status" role="status" aria-live="polite">Not measured. Start a live face or hand session to collect observations.</div>
+            <button id="exportArHealth" type="button" class="secondary-btn" disabled>Export session statistics</button>
+            <p class="fineprint">Fewer than 30 samples is insufficient for even preliminary diagnostics. Higher landmark detection does not prove makeup fit, nail geometry, or accurate color on Black or other complexions. Real iPhone testing is still required.</p>
           </section>
         </div>
         <div class="studio-control">
