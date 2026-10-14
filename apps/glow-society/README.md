@@ -65,3 +65,13 @@ The Studio's **Landmark session diagnostics** panel observes only the number of 
 - Fewer than 30 samples are marked `insufficient-samples`; larger samples are marked `observational-only`. These counters can reveal video pipeline behavior, **not** overlay fit, color correctness, skin-tone fairness, nail geometry, real-device reliability or a public launch gate.
 - Live third-party MediaPipe runtime/model resources may still emit standard asset/CDN requests and MediaPipe SDK usage telemetry as disclosed in the Studio. The diagnostic adds no telemetry.
 - Node contract tests verify sample counting and absent fake certification. Chromium tests verify no fabricated metrics before a session starts.
+
+## Inclusive AR field observation kit (optional)
+
+The Studio contains a six-scenario test matrix for observing face/lip/cheek overlays and nail concepts on a **real physical device** in daylight, warm indoor light, mixed light, and movement. It calls out deep/rich complexions and darker hands explicitly, without treating one result as representative of all Black women or all skin tones.
+
+- Every scenario initially displays **Not tested**. It becomes selectable only after the browser has processed at least one camera frame with a matching face or hand model. A test result is a person's **self-reported observation**, not independently verified.
+- A user can mark **Appears aligned** or **Needs review** and choose **Export observation report**. The exported JSON contains fixed test scenario names, self-reported outcomes and aggregate counts/timing for sampled modes. It never contains images, coordinates, name, account, location or device identifier.
+- This report lives only in the current page session until explicitly downloaded; it is not stored in Beauty Passport, sent to the server, or synced. The Reset button clears observations, and Glow's confirmed local-data erasure also clears all session metrics and observations.
+- Reports cannot certify model fit, facial features, shade fidelity, gender representation or physical-device performance. A human must actually inspect a real iPhone and other devices under diverse lighting to make release claims.
+- For any potential public launch, a separate documented opt-in device test protocol, accessibility and accuracy audit across diverse complexions, third-party SDK telemetry review and independent results would still be necessary.
