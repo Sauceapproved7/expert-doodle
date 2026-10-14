@@ -10,8 +10,10 @@ self.addEventListener("fetch",event=>{
   const url=new URL(event.request.url);
   if(event.request.method!=="GET"||url.origin!==location.origin||url.pathname.startsWith("/api/")||url.pathname==="/health"||url.pathname==="/claim")return;
   event.respondWith(fetch(event.request).then(r=>{
-    const copy=r.clone();
-    if(r.ok) caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy)).catch(()=>{});
+    if(r.ok) {
+      const copy=r.clone();
+      event.waitUntil(caches.open(CACHE_NAME).then(cache=>cache.put(event.request,copy)).catch(()=>{}));
+    }
     return r;
   }).catch(()=>caches.match(event.request)));
 });
