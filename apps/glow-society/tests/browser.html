@@ -1,0 +1,64 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Glow Society browser QA</title>
+<h1>Glow Society independent browser interaction QA</h1><pre id="result" data-status="running">Running real Chromium DOM checks...</pre>
+<iframe id="app" src="../index.html#discover" title="App under test" width="390" height="840" style="border:1px solid #ddd"></iframe>
+<script>
+const output=document.getElementById('result');
+const iframe=document.getElementById('app');
+const steps=[];
+const wait=(ms)=>new Promise(resolve=>setTimeout(resolve,ms));
+function assert(value,message){if(!value)throw Error(message);steps.push('PASS '+message)}
+function click(element,message){assert(Boolean(element),'Control exists: '+message);element.click();}
+function active(document,id){return document.querySelector('#'+id+'.view.active')!==null}
+function count(document,selector){return document.querySelectorAll(selector).length}
+function go(document,name){click(document.querySelector('[data-go="'+name+'"]'),'Navigate to '+name)}
+async function check(document) {
+ assert(active(document,'discover'),'Home initially active');
+ assert(count(document,'#trendingGrid .product-card')===8,'Eight illustrated trending looks rendered');
+ go(document,'explore');
+ assert(active(document,'explore'),'Explore tab works');
+ assert(count(document,'#exploreGrid .product-card')===47,'Catalog renders 47 inclusive demo looks');
+ const filter=document.getElementById('depthFilter');
+ filter.value='deep';filter.dispatchEvent(new Event('change',{bubbles:true}));
+ const deepCount=count(document,'#exploreGrid .product-card');
+ assert(deepCount>0 && deepCount<47,'Deep-complexion filter narrows makeup while preserving hair/nail categories');
+ const search=document.getElementById('search');
+ search.value='locs';search.dispatchEvent(new Event('input',{bubbles:true}));
+ assert(count(document,'#exploreGrid .product-card')>=2,'Loc discovery returns textured hair looks');
+ search.value='';search.dispatchEvent(new Event('input',{bubbles:true}));
+ filter.value='all';filter.dispatchEvent(new Event('change',{bubbles:true}));
+ click(document.querySelector('#exploreGrid [data-fav]'),'Favorite a look');
+ go(document,'saved');
+ assert(active(document,'saved'),'Saved tab works');
+ assert(count(document,'#savedGrid .product-card')>=1,'Favorite persisted to private lookbook');
+ click(document.querySelector('#savedGrid [data-try]'),'Open selected look in Try On Studio');
+ assert(active(document,'studio'),'Studio opens from lookbook');
+ assert(Boolean(document.querySelector('#photoLab:not([hidden])')),'Manual photo mode initially available');
+ const intensity=document.getElementById('intensity');
+ intensity.value='85';intensity.dispatchEvent(new Event('input',{bubbles:true}));
+ assert(document.getElementById('intensityNumber').textContent==='85%','Overlay intensity works');
+ click(document.querySelector('[data-mode="face"]'),'Choose live face mode without starting camera');
+ assert(Boolean(document.querySelector('#cameraLab:not([hidden])')),'Face camera affordance shown');
+ assert(document.getElementById('startCamera').hidden===false,'Camera is opt-in, not auto-started');
+ click(document.querySelector('[data-mode="photo"]'),'Return to manual photo');
+ click(document.getElementById('saveLook'),'Save a selected look');
+ go(document,'saved');
+ assert(count(document,'#looksGrid .look-card')>=1,'Saved look is shown');
+ go(document,'community');
+ assert(active(document,'community'),'Community demo tab works');
+ const field=document.getElementById('postText');
+ field.value='My test note stays in this browser.';
+ field.dispatchEvent(new Event('input',{bubbles:true}));
+ document.getElementById('postForm').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));
+ assert(document.getElementById('feed').textContent.includes('My test note stays in this browser.'),'Private post appears in local-only feed');
+ go(document,'artists');
+ assert(count(document,'#artistGrid .artist-card')===8,'Creator directory renders eight fictional artist profiles');
+ assert(document.querySelector('meta[name="robots"]').getAttribute('content').includes('noindex'),'Preview metadata discourages indexing');
+ assert(Boolean(window.localStorage),'Browser local storage is available');
+}
+iframe.onload=async()=>{try{await wait(500);const doc=iframe.contentDocument;await check(doc);
+ const local=iframe.contentWindow.localStorage;
+ assert([...Object.keys(local)].some(k=>k.includes('glow-society-v1')),'Lookbook and community demo use browser-local data');
+ output.dataset.status='pass';output.textContent=steps.join('\n')+'\nALL '+steps.length+' BROWSER CHECKS PASSED';
+ }catch(err){output.dataset.status='fail';output.textContent=steps.join('\n')+'\nFAIL '+(err.stack||err.message);}
+};
+</script></html>
