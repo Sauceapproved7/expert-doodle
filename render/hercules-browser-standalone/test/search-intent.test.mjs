@@ -48,3 +48,10 @@ test("rejects protocol-relative URLs rather than silently navigating",()=>{
 test("rejects backslash-prefixed URL ambiguity",()=>{
  assert.throws(()=>resolveHerculesInput("\\\\example.com"),/unsupported/i);
 });
+
+test("rejects single-backslash-prefixed navigation",()=>{
+ assert.throws(()=>resolveHerculesInput("\\example.com"),/unsupported/i);
+});
+test("searches colon queries with spaces",()=>{
+ assert.equal(resolveHerculesInput("hosting: free tier"),"https://www.google.com/search?q=hosting%3A%20free%20tier");
+});
