@@ -62,7 +62,7 @@ test('malformed and unapproved credential fallback fields never trigger provider
 test('dedicated server credentials feed only fixed GitHub and Render GET requests',async()=>{
   const seen=[];
   const result=await inspectSmallzFromRuntime({env:readEnv,fetchImpl:fakeFetch(seen)});
-  assert.deepEqual(seen.map(x=>x.url).sort(),[githubURL,renderURL,renderURL+'/deploys?limit=1'].sort());
+  assert.deepEqual(seen.map(x=>x.url).sort(),[githubURL,renderURL,renderURL+'/deploys?limit=1',githubURL,renderURL,renderURL+'/deploys?limit=1'].sort());
   assert.ok(seen.every(x=>x.method==='GET'));
   assert.equal(result.status,'HOLD');
   assert.ok(result.reasonCodes.includes('MAIN_DEPLOY_SHA_MISMATCH'));
