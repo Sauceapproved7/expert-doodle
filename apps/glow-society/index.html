@@ -121,8 +121,18 @@
               <div class="supplier-restore-controls">
                 <label for="supplierRestoreFile">Resume a previous unverified review (JSON)</label>
                 <input id="supplierRestoreFile" type="file" accept=".json,application/json" disabled aria-describedby="supplierRestoreHelp supplierRestoreStatus">
-                <p id="supplierRestoreHelp" class="fineprint">First load the exact same supplier feed, then select the previously downloaded review packet. The app rejects changed products, unknown fields, approvals and malformed packets. It never checks documents or grants selling rights.</p>
+                <p id="supplierRestoreHelp" class="fineprint">First load the exact same supplier feed, then select the previously downloaded review packet. Review the proposed changes and explicitly apply or cancel them. The app rejects changed products, unknown fields, approvals and malformed packets. It never checks documents or grants selling rights.</p>
                 <p id="supplierRestoreStatus" class="supplier-restore-status" role="status" aria-live="polite">Load a supplier feed to enable local review restoration.</p>
+                <div id="supplierRestorePreview" class="supplier-restore-preview" hidden aria-labelledby="supplierRestorePreviewTitle">
+                  <h5 id="supplierRestorePreviewTitle">Review changes before restoring</h5>
+                  <p id="supplierRestorePreviewSummary">No changes staged.</p>
+                  <div id="supplierRestoreChanges" class="supplier-restore-changes"></div>
+                  <div class="supplier-restore-buttons">
+                    <button type="button" id="supplierRestoreApply" class="secondary-btn" disabled>Apply unverified choices</button>
+                    <button type="button" id="supplierRestoreCancel" class="secondary-btn">Cancel restore</button>
+                  </div>
+                  <p class="fineprint">Only the listed checklist choices will change. No supplier identity, rights, or products will be approved. Your review remains on this device.</p>
+                </div>
               </div>
               <button type="button" id="supplierReviewExport" class="secondary-btn" disabled>Download unverified review packet</button>
               <button type="button" id="supplierActionsExport" class="secondary-btn" disabled>Download prioritized action plan</button>
