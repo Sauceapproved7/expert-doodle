@@ -105,6 +105,7 @@ const passportInit=storeGet('passport',null);
 const safePassport=passportInit && typeof passportInit==='object'?passportInit:{};
 const accepted=(value,choices)=>choices.includes(value)?value:'all';
 const hiddenInit=storeGet('hiddenPosts',[]);
+const mutedInit=storeGet('mutedAuthors',[]);
 const state={
   category:'all',depth:accepted(safePassport.depth,['all','deep','tan','medium','light']),undertone:accepted(safePassport.undertone,['all','warm','cool','neutral','olive']),texture:accepted(safePassport.texture,['all','3b','4a','4b','4c','braids','locs','protective']),sort:'featured',search:'',
   studioRegion:'lips',currentId:'lips-0',mode:'photo',intensity:65,size:100,
@@ -114,6 +115,7 @@ const state={
   likes:new Set(Array.isArray(likesInit)?likesInit:[]),
   follows:new Set(Array.isArray(followsInit)?followsInit:[]),
   hiddenPosts:new Set(Array.isArray(hiddenInit)?hiddenInit.filter(x=>typeof x==='string'):[]),
+  mutedAuthors:new Set(Array.isArray(mutedInit)?mutedInit.filter(name=>POSTS.some(p=>p.name===name)):[]),
   layers:{},artistFilter:'all',uploadedPhoto:null,photoPos:{x:47,y:57}
 };
 const itemById=id=>ITEMS.find(i=>i.id===id);
@@ -176,14 +178,15 @@ function renderSaved(){
     const colors=Object.values(look.layers||{}).map(id=>itemById(id)).filter(Boolean);
     return '<article class="look-card"><div class="look-colors">'+colors.map(i=>'<span style="background:'+i.color+'"></span>').join('')+'</div><h3>'+esc(look.title||'My look')+'</h3><small>'+colors.map(i=>esc(i.name)).join(' · ')+'</small><button data-loadlook="'+esc(look.id)+'">Try this saved look</button> <button data-deletelook="'+esc(look.id)+'">Delete</button></article>'
   }).join(''):'<div class="empty-state"><strong>Your future looks live here.</strong><p>Build a combination in the try-on studio and save it.</p></div>';
+  updatePrivacySummary();
 }
 function renderCommunity(){
-  const all=[...state.posts.slice().reverse(),...POSTS.filter(p=>!state.posts.some(local=>local.id===p.id))].filter(p=>!state.hiddenPosts.has(p.id));
+  const all=[...state.posts.slice().reverse(),...POSTS.filter(p=>!state.posts.some(local=>local.id===p.id))].filter(p=>!state.hiddenPosts.has(p.id) && (p.local || !state.mutedAuthors.has(p.name)));
   el('feed').innerHTML=all.map(p=>{
     const local=!!p.local;const liked=state.likes.has(p.id);
     const total=p.likes+(liked?1:0);
     const comments=(p.comments||[]).map(c=>'<p><strong>'+esc(c.by)+':</strong> '+esc(c.text)+'</p>').join('');
-    return '<article class="post" data-post="'+esc(p.id)+'"><div class="post-head"><div class="avatar" style="background:'+esc(p.color||'#6e526c')+'">'+esc(p.avatar)+'</div><div><strong>'+esc(p.name)+'</strong><small>'+(local?'My private draft':'Demo inspiration')+'</small></div></div><p class="post-body">'+esc(p.text)+'</p><div class="post-chips">'+(p.tags||[]).map(t=>'<span>'+esc(t)+'</span>').join('')+'</div><div class="post-actions"><button data-like="'+esc(p.id)+'" class="'+(liked?'liked':'')+'" aria-pressed="'+liked+'">'+(liked?'♥':'♡')+' '+total+' likes</button><button data-togglecomments="'+esc(p.id)+'">✎ '+(p.comments||[]).length+' comments</button>'+(local?'<button data-deletepost="'+esc(p.id)+'">Delete</button>':'')+'<button data-hidepost="'+esc(p.id)+'" aria-label="Hide this demo post locally">Hide</button></div><div class="comments" id="comments-'+esc(p.id)+'" hidden>'+comments+'<form class="comment-form" data-commentform="'+esc(p.id)+'"><input maxlength="180" placeholder="Add a private demo comment…" aria-label="Add a comment" required/><button type="submit">Add</button></form></div></article>';
+    return '<article class="post" data-post="'+esc(p.id)+'"><div class="post-head"><div class="avatar" style="background:'+esc(p.color||'#6e526c')+'">'+esc(p.avatar)+'</div><div><strong>'+esc(p.name)+'</strong><small>'+(local?'My private draft':'Demo inspiration')+'</small></div></div><p class="post-body">'+esc(p.text)+'</p><div class="post-chips">'+(p.tags||[]).map(t=>'<span>'+esc(t)+'</span>').join('')+'</div><div class="post-actions"><button data-like="'+esc(p.id)+'" class="'+(liked?'liked':'')+'" aria-pressed="'+liked+'">'+(liked?'♥':'♡')+' '+total+' likes</button><button data-togglecomments="'+esc(p.id)+'">✎ '+(p.comments||[]).length+' comments</button>'+(local?'<button data-deletepost="'+esc(p.id)+'">Delete</button>':'')+'<button data-hidepost="'+esc(p.id)+'" aria-label="Hide this demo post locally">Hide</button>'+(local?'':'<button data-muteauthor="'+esc(p.name)+'" aria-label="Mute this fictional demo creator locally">Mute creator</button>')+'</div><div class="comments" id="comments-'+esc(p.id)+'" hidden>'+comments+'<form class="comment-form" data-commentform="'+esc(p.id)+'"><input maxlength="180" placeholder="Add a private demo comment…" aria-label="Add a comment" required/><button type="submit">Add</button></form></div></article>';
   }).join('');
 }
 function findPost(id){return state.posts.find(p=>p.id===id)||POSTS.find(p=>p.id===id)}
@@ -501,6 +504,7 @@ document.addEventListener('click',e=>{
   if(target.dataset.follow){if(state.follows.has(target.dataset.follow))state.follows.delete(target.dataset.follow);else state.follows.add(target.dataset.follow);storeSet('follows',[...state.follows]);renderArtists();toast('Demo follow preference saved to this browser');return}
   if(target.dataset.like){if(state.likes.has(target.dataset.like))state.likes.delete(target.dataset.like);else state.likes.add(target.dataset.like);storeSet('likes',[...state.likes]);renderCommunity();return}
   if(target.dataset.hidepost){state.hiddenPosts.add(target.dataset.hidepost);storeSet('hiddenPosts',[...state.hiddenPosts]);renderCommunity();toast('Post hidden on this device only. No report was submitted.');return}
+  if(target.dataset.muteauthor && POSTS.some(p=>p.name===target.dataset.muteauthor)){state.mutedAuthors.add(target.dataset.muteauthor);storeSet('mutedAuthors',[...state.mutedAuthors]);renderCommunity();toast('Fictional creator muted on this device only. No report was submitted.');return}
   if(target.dataset.togglecomments){const comments=el('comments-'+target.dataset.togglecomments);comments.hidden=!comments.hidden;return}
   if(target.dataset.deletepost){state.posts=state.posts.filter(p=>p.id!==target.dataset.deletepost);storeSet('posts',state.posts);renderCommunity();return}
   if(target.dataset.loadlook){loadLook(target.dataset.loadlook);return}
@@ -516,6 +520,7 @@ el('textureFilter').addEventListener('change',e=>{state.texture=e.target.value;r
 el('savePassport').addEventListener('click',()=>{storeSet('passport',{depth:state.depth,undertone:state.undertone,texture:state.texture});el('passportStatus').textContent='Preferences saved privately on this device';toast('Beauty Passport saved locally; no account needed.')});
 el('resetPassport').addEventListener('click',()=>{state.depth='all';state.undertone='all';state.texture='all';state.category='all';state.search='';el('search').value='';for(const id of ['depthFilter','toneFilter','textureFilter'])el(id).value='all';storeSet('passport',null);el('passportStatus').textContent='No preferences saved yet';renderExplore();toast('Beauty Passport reset.')});
 el('restoreHidden').addEventListener('click',()=>{state.hiddenPosts.clear();storeSet('hiddenPosts',[]);renderCommunity();toast('Hidden demo posts are visible again.')});
+el('restoreMuted').addEventListener('click',()=>{state.mutedAuthors.clear();storeSet('mutedAuthors',[]);renderCommunity();toast('Fictional creators are visible again.')});
 el('sortFilter').addEventListener('change',e=>{state.sort=e.target.value;renderExplore()});
 el('clearSaved').addEventListener('click',()=>{
   state.favs.clear();storeSet('favs',[]);refreshFavs();toast('Favorites cleared in this browser');
