@@ -139,20 +139,60 @@ function itemCard(item){
   const tags=item.tags.slice(0,2).map(t=>'<span>'+esc(t)+'</span>').join('');
   return '<article class="product-card" data-category="'+item.category+'"><div style="position:relative">'+thumb(item)+'<button class="product-heart '+(state.favs.has(item.id)?'active':'')+'" data-fav="'+item.id+'" aria-label="'+(state.favs.has(item.id)?'Remove from':'Add to')+' favorites" aria-pressed="'+state.favs.has(item.id)+'">'+(state.favs.has(item.id)?'♥':'♡')+'</button></div><div class="product-body"><div class="product-sub">'+esc(item.category)+' · '+esc(item.region)+'</div><h3>'+esc(item.name)+'</h3><p>'+esc(item.desc)+'</p><div class="product-tags">'+tags+'</div><button class="try-btn" data-try="'+item.id+'">Try this look ↗</button></div></article>';
 }
-let catalogIntakeGeneration=0;
+let catalogIntakeGeneration=0,catalogEvidenceKit=null;
+function renderSupplierReviewSummary(){
+  const status=el('supplierReviewStatus'),exportButton=el('supplierReviewExport'),resetButton=el('supplierReviewReset');
+  const report=catalogEvidenceKit?.snapshot();
+  if(!report||!report.records.length){
+    status.textContent='Load a candidate feed to prepare a supplier evidence packet. Approved: 0. Published: 0.';
+    exportButton.disabled=true;resetButton.disabled=true;return;
+  }
+  const marks=report.records.flatMap(row=>Object.values(row.requirements));
+  const claimed=marks.filter(x=>x==='claimed_unverified').length;
+  const unresolved=marks.filter(x=>x==='needs_review').length;
+  status.textContent=report.records.length+' candidate'+(report.records.length===1?'':'s')+
+    ' · '+claimed+' claimed evidence item'+(claimed===1?'':'s')+
+    ' (not independently checked) · '+unresolved+' disputed item'+(unresolved===1?'':'s')+
+    '. Verification: not performed. Approved: 0. Published: 0.';
+  exportButton.disabled=false;resetButton.disabled=false;
+}
+function resetSupplierReview(){
+  if(catalogEvidenceKit)catalogEvidenceKit.reset();
+  for(const select of el('catalogIntakeResults').querySelectorAll('select[data-supplier-requirement]')){
+    select.value='not_provided';
+  }
+  renderSupplierReviewSummary();
+}
+function downloadSupplierReview(){
+  const packet=catalogEvidenceKit?.snapshot();
+  if(!packet||!packet.records.length)return;
+  try{
+    const blob=new Blob([JSON.stringify(packet,null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob),link=document.createElement('a');
+    link.href=url;link.download='glow-society-supplier-review-unverified.json';
+    document.body.appendChild(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),3000);
+    toast('Review packet downloaded. No supplier proof has been verified or approved.');
+  }catch{toast('The browser could not download the review packet.')}
+}
 function resetCatalogReview(){
+  catalogEvidenceKit=null;
   catalogIntakeGeneration++;
   el('catalogFile').value='';
   el('catalogIntakeResults').replaceChildren();
   el('catalogIntakeStatus').textContent='No supplier feed loaded. Approved: 0. Published: 0.';
+  renderSupplierReviewSummary();
 }
 function showCatalogReview(report,isExample=false){
+  catalogEvidenceKit=null;
   const output=el('catalogIntakeResults');
   output.replaceChildren();
   if(report.error){
     el('catalogIntakeStatus').textContent='Review failed: '+report.error+'. Approved: 0. Published: 0.';
+    renderSupplierReviewSummary();
     return;
   }
+  catalogEvidenceKit=window.GlowSupplierReview.create(report.items);
   el('catalogIntakeStatus').textContent=(isExample?'Fictional example. ':'Unverified local input. ')+
     report.items.length+' structurally reviewable, '+report.rejected.length+
     ' rejected. Supplier proof: unverified. Approved: 0. Published: 0.';
@@ -169,18 +209,38 @@ function showCatalogReview(report,isExample=false){
     source.textContent='Unverified source reference (not opened): '+candidate.sourceUrl;
     const status=document.createElement('p');status.className='catalog-blocked';
     status.textContent='Needs independent provenance and owner approval · Not available for sale';
-    card.append(heading,meta,source,status);output.appendChild(card);
+    card.append(heading,meta,source,status);
+    const proof=document.createElement('fieldset');proof.className='supplier-evidence';
+    const legend=document.createElement('legend');legend.textContent='Evidence tracking (unverified; cannot approve)';
+    proof.appendChild(legend);
+    for(const rule of window.GlowSupplierReview.REQUIREMENTS){
+      const label=document.createElement('label');label.className='supplier-evidence-row';
+      const heading=document.createElement('span');heading.textContent=rule.label;
+      const hint=document.createElement('small');hint.textContent=rule.question;
+      const select=document.createElement('select');
+      select.dataset.supplierSku=candidate.sku;
+      select.dataset.supplierRequirement=rule.id;
+      select.setAttribute('aria-label',rule.label+' for '+candidate.name);
+      for(const option of window.GlowSupplierReview.statuses){
+        const node=document.createElement('option');node.value=option.value;node.textContent=option.label;
+        select.appendChild(node);
+      }
+      label.append(heading,hint,select);proof.appendChild(label);
+    }
+    card.appendChild(proof);output.appendChild(card);
   }
   for(const invalid of report.rejected){
     const row=document.createElement('p');row.className='catalog-rejected';
     row.textContent='Row '+invalid.row+' rejected: '+invalid.reason;output.appendChild(row);
   }
+  renderSupplierReviewSummary();
 }
 async function loadCatalogFile(){
   const file=el('catalogFile').files?.[0];
   if(!file)return;
   const generation=++catalogIntakeGeneration;
-  el('catalogIntakeResults').replaceChildren();
+  catalogEvidenceKit=null;
+  el('catalogIntakeResults').replaceChildren();renderSupplierReviewSummary();
   el('catalogIntakeStatus').textContent='Reading local feed for schema review; nothing has been uploaded.';
   if(!file.name.toLowerCase().endsWith('.json')||file.size>window.GlowCatalogIntake.maxBytes){
     if(generation===catalogIntakeGeneration)showCatalogReview({error:'Select a .json file no larger than 64 KiB'});
@@ -802,6 +862,17 @@ el('catalogSample').addEventListener('click',()=>{
 el('catalogFile').addEventListener('change',loadCatalogFile);
 el('catalogTemplate').addEventListener('click',downloadCatalogExample);
 el('catalogReset').addEventListener('click',resetCatalogReview);
+el('supplierReviewExport').addEventListener('click',downloadSupplierReview);
+el('supplierReviewReset').addEventListener('click',resetSupplierReview);
+el('catalogIntakeResults').addEventListener('change',e=>{
+  const select=e.target.closest('select[data-supplier-requirement]');
+  if(!select||!catalogEvidenceKit)return;
+  if(!catalogEvidenceKit.set(select.dataset.supplierSku,select.dataset.supplierRequirement,select.value)){
+    select.value='not_provided';
+    return;
+  }
+  renderSupplierReviewSummary();
+});
 el('beautyMatchForm').addEventListener('submit',e=>{e.preventDefault();renderBeautyMatch()});
 el('matchClear').addEventListener('click',resetBeautyMatch);
 el('matchUsePassport').addEventListener('click',()=>{
