@@ -97,13 +97,43 @@ async function check(document) {
  assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restore rejected'),'Mismatched product identity is rejected: '+document.getElementById('supplierRestoreStatus').textContent);
  assert(firstProof.value==='not_provided','Mismatched packet cannot modify checklist choices');
  const storageBeforeRestore=[...Object.keys(iframe.contentWindow.localStorage)].sort().join('|');
+ const restorePreview=document.getElementById('supplierRestorePreview');
+ const restoreApply=document.getElementById('supplierRestoreApply');
+ const restoreCancel=document.getElementById('supplierRestoreCancel');
+ assert(restorePreview.hidden&&restoreApply.disabled,'Review import confirmation starts closed and disabled');
  await importReviewPacket(downloadedPacket);
- assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restored 10 unverified checklist choices'),'Matching packet restores local review choices: '+document.getElementById('supplierRestoreStatus').textContent);
- assert(firstProof.value==='claimed_unverified','Restored resale claim is still labeled unverified');
- assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Restore cannot approve supplier');
- assert([...Object.keys(iframe.contentWindow.localStorage)].sort().join('|')===storageBeforeRestore,'Review restoration does not persist supplier data');
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Inspect the proposed changes'),'Matching packet stages a preview rather than applying choices');
+ assert(!restorePreview.hidden&&!restoreApply.disabled,'Matching packet makes an explicit confirmation available');
+ assert(document.getElementById('supplierRestorePreviewSummary').textContent.includes('1 proposed checklist change'),'Preview counts only checklist choices that differ');
+ assert(document.getElementById('supplierRestoreChanges').textContent.includes('Resale authorization'),'Preview identifies the unverified evidence being changed');
+ assert(firstProof.value==='not_provided','Unconfirmed import cannot overwrite any existing choice');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Staged preview cannot grant supplier approval');
+ click(restoreCancel,'Cancel a valid staged review import');
+ assert(firstProof.value==='not_provided','Cancel leaves existing review choices untouched');
+ assert(restorePreview.hidden&&restoreApply.disabled,'Cancel removes the preview and disables confirmation');
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Restore canceled'),'Cancellation confirms no local change');
+ await importReviewPacket(downloadedPacket);
+ assert(!restorePreview.hidden,'Restaging matching review allows explicit confirmation');
+ click(restoreApply,'Confirm imported unverified review choices');
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('Applied 1 unverified checklist change'),'Confirmed restore reports only changed choice count');
+ assert(firstProof.value==='claimed_unverified','Confirmed import restores the unverified resale claim');
+ assert(restorePreview.hidden&&restoreApply.disabled,'Applied review clears pending preview');
+ assert(document.getElementById('supplierReviewStatus').textContent.includes('Approved: 0'),'Confirmed review never grants supplier approval');
+ assert([...Object.keys(iframe.contentWindow.localStorage)].sort().join('|')===storageBeforeRestore,'Preview and confirmation never persist supplier data');
+ await importReviewPacket(downloadedPacket);
+ assert(document.getElementById('supplierRestoreStatus').textContent.includes('already match'),'Identical packet is safely treated as a no-op');
+ assert(restorePreview.hidden&&restoreApply.disabled,'No-op packet cannot enable an unnecessary confirmation');
  click(document.getElementById('supplierReviewReset'),'Clear successfully restored review choices');
  assert(firstProof.value==='not_provided','Evidence reset after restore clears imported claims');
+ await importReviewPacket(downloadedPacket);
+ assert(!restorePreview.hidden,'Preview can stage again after resetting evidence');
+ const manualProof=document.querySelector('#catalogIntakeResults select[data-supplier-requirement="supplier_identity"]');
+ manualProof.value='needs_review';
+ manualProof.dispatchEvent(new Event('change',{bubbles:true}));
+ assert(restorePreview.hidden&&restoreApply.disabled,'Manual edits cancel a stale restore preview');
+ assert(firstProof.value==='not_provided','Stale preview cannot change other checklist values');
+ click(document.getElementById('supplierReviewReset'),'Reset after stale manual change');
+ assert(firstProof.value==='not_provided','Reset after stale preview restores default choice');
 
 
  assert(document.getElementById('catalogIntakeStatus').textContent.includes('Published: 0'),'Sample review cannot silently publish products');
@@ -141,6 +171,7 @@ async function check(document) {
  assert(document.getElementById('supplierReviewReset').disabled,'Clear review disables evidence changes');
 
  assert(document.getElementById('supplierRestoreFile').disabled,'Clear review disables stale packet restoration');
+ assert(document.getElementById('supplierRestorePreview').hidden&&document.getElementById('supplierRestoreApply').disabled,'Clear review removes any preview authority');
  assert(document.getElementById('supplierRestoreFile').value==='','Clear review removes chosen packet file');
 
 
