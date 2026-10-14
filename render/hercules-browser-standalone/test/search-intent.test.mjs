@@ -55,3 +55,10 @@ test("rejects single-backslash-prefixed navigation",()=>{
 test("searches colon queries with spaces",()=>{
  assert.equal(resolveHerculesInput("hosting: free tier"),"https://www.google.com/search?q=hosting%3A%20free%20tier");
 });
+
+test("navigates domains with explicit ports",()=>{
+ assert.equal(resolveHerculesInput("example.com:8080"),"https://example.com:8080/");
+});
+test("rejects invalid explicit domain ports",()=>{
+ assert.throws(()=>resolveHerculesInput("example.com:99999"),/invalid URL/i);
+});
