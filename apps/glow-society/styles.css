@@ -88,3 +88,20 @@ footer{background:#251526;color:#f8eef3;padding:45px 0 100px;margin-top:20px}.fo
 .validation-actions .secondary-btn{min-height:43px;padding:10px 14px}
 .validation-actions .secondary-btn:disabled{opacity:.55}
 @media(max-width:690px){.validation-kit{padding:14px 11px}.validation-kit h3{font-size:21px}.validation-actions .secondary-btn{flex:1 1 160px}}
+
+/* Beauty Match: consent-free, session-only filters over fictional catalog tags. */
+.beauty-match{margin-top:30px;margin-bottom:35px;padding:25px;background:#f8f0f2;border:1px solid #e2d1d8;border-radius:6px}
+.beauty-match-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.beauty-match-heading h2{font:600 33px Georgia,serif;color:#482d3d;margin:8px 0}
+.beauty-match-heading p{max-width:680px;font-size:13px;line-height:1.7;color:#6c5365}
+.match-label{flex-shrink:0;border:1px solid #a88a9d;color:#79566d;padding:7px 10px;border-radius:20px;font-size:10px;font-weight:750;letter-spacing:.09em}
+.beauty-match-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:18px 0 12px}
+.beauty-match-form label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700;color:#573e52}
+.beauty-match-form select{width:100%;min-height:46px;padding:10px;border:1px solid #c9b6c1;border-radius:4px;background:#fff;color:#452b3d;font-size:13px}
+.beauty-match-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:end;grid-column:1/-1}
+.beauty-match-actions .secondary-btn{min-height:44px;padding:10px 13px}
+.beauty-match-status{font-size:12px;line-height:1.6;border-left:3px solid #9d7289;background:#efe0e6;color:#53374d;border-radius:4px;padding:11px 14px;margin:15px 0}
+.beauty-match-result .product-card{height:auto}
+.beauty-match-why{font-size:11px;line-height:1.5;color:#65475a;background:#fff8fa;padding:11px 13px;border:1px solid #eadde3;margin:0}
+@media(max-width:900px){.beauty-match-form{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:690px){.beauty-match{padding:16px 12px}.beauty-match-heading h2{font-size:27px}.beauty-match-heading{flex-direction:column;gap:8px}.beauty-match-form{grid-template-columns:1fr}.beauty-match-actions .cta,.beauty-match-actions .secondary-btn{flex:1 1 100%}}
