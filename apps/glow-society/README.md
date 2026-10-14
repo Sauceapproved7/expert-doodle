@@ -47,3 +47,11 @@ Render Static Site may use:
 - Auto deploy: **off** to prevent unreviewed changes.
 
 Do not point an existing live service or domain at this branch.
+
+## Privacy vault and community safety demo
+
+- The Saved view has a **device-only privacy vault**: export an archive of Glow Society `localStorage` records to JSON or erase those records after a separate confirmation. Export includes private posts and personal preferences; handle the downloaded file as private. Neither export nor erasure communicates with an account backend.
+- Erasure targets only keys prefixed `glow-society-v1-` so storage owned by other apps sharing an origin is left intact. It also clears in-memory saved looks and favorites, cancels the camera, and revokes any user-uploaded photo URL.
+- Example creator muting and unmuting operates locally for fictional sample profiles. Hiding/muting is **not** reporting to an external moderation service. No public safety or moderation claim is made.
+- Client/browser QA verifies the confirmation and cancel controls, Blob export, storage scoping, current-session reset, and mute/unmute behavior.
+- No real users, public profiles, moderation queue, user reporting endpoint, account deletion service or cross-device sync are present.
