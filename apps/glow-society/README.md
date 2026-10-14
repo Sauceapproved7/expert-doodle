@@ -120,3 +120,11 @@ The catalog workshop displays four derived counts (all candidates, disputed, mis
 
 ## Local prioritized supplier action plan
 The readiness dashboard now offers a separate JSON action plan. It sorts individual document gaps by dispute, missing proof, then claims awaiting independent verification. The downloaded file explicitly records zero verified, zero approved and zero published; it carries no authorization, credentials or personal contact information. Clear Review and private-data erasure disable further export until another valid feed is loaded.
+
+## Resume an unverified supplier review — local only
+
+A reviewer can download the existing *unverified review packet* and later restore the same checklist choices in the same or another browser without creating an account. First load the **same local catalog feed**, then choose the previously exported review JSON under **Resume a previous unverified review**. This does not restore or import an action plan: only the specific review-packet format is accepted.
+
+Validation rejects unknown or extra fields, missing products, duplicate identifiers, changed SKUs/brands/names, unsupported evidence statuses, changed approval/verification flags, malformed JSON and files over 64 KiB. It validates the full packet before applying a single change. A mismatch leaves existing review choices unchanged. A new feed, a manual choice, reset or local-data erasure cancels any in-flight read. The file and restored states remain in browser memory only; no supplier APIs, database, network upload or persistent vendor records are involved.
+
+**No uploaded packet can establish supplier authority.** The record must state independent verification was never performed, owner approval not granted, and zero verified/published candidate products. Real seller due diligence, legal permissions and safe live catalog integration are still outstanding. Automated Node contract tests and independent Chromium tests enforce this behavior.
