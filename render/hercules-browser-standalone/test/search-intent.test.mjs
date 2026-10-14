@@ -41,3 +41,10 @@ test("does not misclassify colon-containing research queries as URL schemes",()=
 test("does not misclassify a URL-looking question as a domain",()=>{
  assert.equal(resolveHerculesInput("example.com alternatives"),"https://www.google.com/search?q=example.com%20alternatives");
 });
+
+test("rejects protocol-relative URLs rather than silently navigating",()=>{
+ assert.throws(()=>resolveHerculesInput("//example.com"),/unsupported/i);
+});
+test("rejects backslash-prefixed URL ambiguity",()=>{
+ assert.throws(()=>resolveHerculesInput("\\\\example.com"),/unsupported/i);
+});
