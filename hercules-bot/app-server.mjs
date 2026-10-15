@@ -13,6 +13,7 @@ import {createAbyssRuntimeBoundary} from "./abyss-runtime-boundary.mjs";
 import {createSmallzOwnerBridge} from "./owner-session-bridge.mjs";
 import {createSmallzRequestAuth} from "./request-auth.mjs";
 import {createSmallzTraceIngressFromEnv} from "./prompt-trace-ingress.mjs";
+import {createSmallzTraceEmitterFromEnv} from "./prompt-trace-emitter.mjs";
 import {credentialSetup} from "./credential-setup.mjs";
 import {smallzRuntimeIdentity} from "../hercules-runtime/smallz-release-proof.mjs";
 
@@ -46,11 +47,13 @@ function createServerSideDeployRequest(){
   };
 }
 
-export function createHerculesBotApp({port=Number(process.env.PORT||38801),boundary=createAbyssRuntimeBoundary(),credentialFetch=fetch,renderEnv=process.env,traceIngress=undefined}={}){
+export function createHerculesBotApp({port=Number(process.env.PORT||38801),boundary=createAbyssRuntimeBoundary(),credentialFetch=fetch,renderEnv=process.env,traceIngress=undefined,traceEmitter=undefined,browserBridge=undefined}={}){
   const promptTraceIngress=traceIngress===undefined?createSmallzTraceIngressFromEnv(renderEnv):traceIngress;
+  const traceRequired=renderEnv.HERCULES_PROMPT_TRACE_ENFORCE_BROWSER==="true";
+  const promptTraceEmitter=traceEmitter===undefined?(traceRequired?createSmallzTraceEmitterFromEnv(renderEnv,{traceIngress:promptTraceIngress}):null):traceEmitter;
   const body=createSimulatedBodyAdapter();
   const mcpWorkEndpoint=process.env.HERCULES_MCP_WORK_URL;
-  const ownerBridge=mcpWorkEndpoint?createSmallzOwnerBridge({endpoint:mcpWorkEndpoint}):null;
+  const ownerBridge=browserBridge===undefined?(mcpWorkEndpoint?createSmallzOwnerBridge({endpoint:mcpWorkEndpoint}):null):browserBridge;
   const browser=createBrowserAdapter({submit:createServerSideBrowserSubmit()});
   const deployer=createDeployerAdapter({request:createServerSideDeployRequest()});
   const controller=createOperatorController({adapters:{body,system:{status:async()=>({ok:true,mode:"software"})},vault:{inspect:async()=>({available:true,mode:"read-only"})},forge:{inspect:async()=>({available:true,mode:"read-only"})},browser,deployer}});
@@ -91,8 +94,13 @@ export function createHerculesBotApp({port=Number(process.env.PORT||38801),bound
 
     if(method==="POST"&&url==="/api/browser")return owner(req,async principal=>{
       if(!ownerBridge)return json(503,{error:"smallz-browser-bridge-not-configured"});
+      if(traceRequired&&!promptTraceEmitter)return json(503,{error:"browser-trace-not-configured"});
       try{
         const {ownerAuthorization,body:request}=createSmallzRequestAuth({authorization:req.authorization,body:req.body});
+        if(traceRequired){
+          try{await promptTraceEmitter({action:request.action});}
+          catch{return json(503,{error:"browser-trace-admission-failed"});}
+        }
         return json(200,await ownerBridge({ownerAuthorization,action:request.action,url:request.url}));
       }catch{return json(400,{error:"browser-request-rejected"});}
     });
