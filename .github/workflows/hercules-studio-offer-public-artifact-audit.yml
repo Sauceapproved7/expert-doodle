@@ -42,12 +42,18 @@ jobs:
           const digest = bytes => createHash('sha256').update(bytes).digest('hex');
           const source = await readFile('hercules-forge/offers/sauceapproved-studio/index.html');
           if (digest(source) !== expectedSource) throw new Error('approved_source_hash_changed');
-          const response = await fetch(oldUrl, {
-            method: 'GET', redirect: 'manual', credentials: 'omit',
-            cache: 'no-store', referrerPolicy: 'no-referrer',
-            headers: { accept: 'text/html' }, signal: AbortSignal.timeout(8000),
-          });
-          if (response.status !== 200 || response.redirected ||
+          let response = null;
+          for (const attempt of [1,2,3]) {
+            response = await fetch(oldUrl, {
+              method: 'GET', redirect: 'manual', credentials: 'omit',
+              cache: 'no-store', referrerPolicy: 'no-referrer',
+              headers: { accept: 'text/html' }, signal: AbortSignal.timeout(8000),
+            });
+            if (response.status !== 503) break;
+            await response.body?.cancel().catch(() => {});
+            if (attempt < 3) await new Promise(resolve => setTimeout(resolve, 6000));
+          }
+          if (!response || response.status !== 200 || response.redirected ||
               !/^text\/html(?:\s*;|\s*$)/i.test(response.headers.get('content-type') || '')) {
             throw new Error('legacy_offer_html_not_available');
           }
