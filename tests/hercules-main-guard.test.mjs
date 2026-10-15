@@ -9,7 +9,8 @@ const REQUIRED = [
   "codeql",
   "workflow-integrity",
   "provenance-attestation",
-  "main-guard-contract"
+  "main-guard-contract",
+  "universal-merge-gates"
 ];
 
 async function guardModule() {
@@ -74,7 +75,7 @@ test("merged pull request without the universal completeness-admission check mus
   const decision = classifyMainPush({
     event: { before: "a", after: "b", sender: { login: "web-flow" }, head_commit: { message: "merge" } },
     associatedPrs: [{ number: 1080, merged_at: "2026-10-15T08:01:00Z", base: { ref: "main" }, head: { sha: "head" } }],
-    checkRuns: { check_runs: REQUIRED.map(name => ({ name, status: "completed", conclusion: "success" })) }
+    checkRuns: { check_runs: REQUIRED.filter(name => name !== "universal-merge-gates").map(name => ({ name, status: "completed", conclusion: "success" })) }
   });
   assert.equal(decision.authorized, false);
   assert.match(decision.reason, /universal-merge-gates/);
