@@ -130,7 +130,23 @@ export async function verifyExecutionContract() {
     ["founderDirectives.doYouExecutionCommand.useBestProfessionalJudgment", policy.founderDirectives?.doYouExecutionCommand?.useBestProfessionalJudgment, true],
     ["founderDirectives.doYouExecutionCommand.doNotRequireFounderToDirectRoutineTechnicalWork", policy.founderDirectives?.doYouExecutionCommand?.doNotRequireFounderToDirectRoutineTechnicalWork, true],
     ["founderDirectives.doYouExecutionCommand.preserveOwnerOnlySecurityAndAuthorizationBoundaries", policy.founderDirectives?.doYouExecutionCommand?.preserveOwnerOnlySecurityAndAuthorizationBoundaries, true],
-    ["founderDirectives.nightlyWholeHerculesAudit.requiredOperatingTarget", policy.founderDirectives?.nightlyWholeHerculesAudit?.requiredOperatingTarget, true]
+    ["founderDirectives.nightlyWholeHerculesAudit.requiredOperatingTarget", policy.founderDirectives?.nightlyWholeHerculesAudit?.requiredOperatingTarget, true],
+    ["completenessStandard.enabled", policy.completenessStandard?.enabled, true],
+    ["completenessStandard.preBuildResearchRequired", policy.completenessStandard?.preBuildResearchRequired, true],
+    ["completenessStandard.mandatoryRedGreenRefactorForBehaviorChanges", policy.completenessStandard?.mandatoryRedGreenRefactorForBehaviorChanges, true],
+    ["completenessStandard.requireMeasurableAcceptanceCriteria", policy.completenessStandard?.requireMeasurableAcceptanceCriteria, true],
+    ["completenessStandard.requireApplicableTestsAndDocumentation", policy.completenessStandard?.requireApplicableTestsAndDocumentation, true],
+    ["completenessStandard.requireScopeCriticalClosure", policy.completenessStandard?.requireScopeCriticalClosure, true],
+    ["completenessStandard.requireEvidenceForCompletionClaims", policy.completenessStandard?.requireEvidenceForCompletionClaims, true],
+    ["completenessStandard.preferPermanentSafeAuthorizedSolutionOverWorkaround", policy.completenessStandard?.preferPermanentSafeAuthorizedSolutionOverWorkaround, true],
+    ["completenessStandard.doNotDeferInScopeAuthorizedCompletion", policy.completenessStandard?.doNotDeferInScopeAuthorizedCompletion, true],
+    ["completenessStandard.requireVerifiedExactHeadCIBeforeMerge", policy.completenessStandard?.requireVerifiedExactHeadCIBeforeMerge, true],
+    ["completenessStandard.sourceOnlyIsNotDeployment", policy.completenessStandard?.sourceOnlyIsNotDeployment, true],
+    ["completenessStandard.preserveOwnerOnlyAndSecurityGates", policy.completenessStandard?.preserveOwnerOnlyAndSecurityGates, true],
+    ["completenessStandard.evidenceGate", policy.completenessStandard?.evidenceGate, "scripts/hercules-completeness-gate.mjs"],
+    ["completenessStandard.test", policy.completenessStandard?.test, "tests/hercules-completeness-gate.test.mjs"],
+    ["completenessStandard.documentation", policy.completenessStandard?.documentation, "docs/HERCULES-BOIL-THE-OCEAN-V1.md"],
+    ["completenessStandard.maxUnresolvedScopeCriticalThreadsForComplete", policy.completenessStandard?.maxUnresolvedScopeCriticalThreadsForComplete, 0]
   ];
 
   for (const [name, actual, expected] of exact) {
@@ -139,6 +155,18 @@ export async function verifyExecutionContract() {
 
   if (JSON.stringify(policy.fullWorkflow) !== JSON.stringify(FULL_WORKFLOW)) {
     errors.push("fullWorkflow does not match the canonical execution chain");
+  }
+
+  const closurePhases = ["research", "design", "implementation", "tests", "security", "documentation", "release", "verification"];
+  if (JSON.stringify(policy.completenessStandard?.phases) !== JSON.stringify(closurePhases)) {
+    errors.push("completenessStandard.phases must match the required closure phases");
+  }
+  for (const path of ["docs/HERCULES-BOIL-THE-OCEAN-V1.md", "scripts/hercules-completeness-gate.mjs", "tests/hercules-completeness-gate.test.mjs"]) {
+    try {
+      if (!(await readFile(path, "utf8")).trim()) errors.push(`${path} is empty`);
+    } catch (error) {
+      errors.push(`cannot load required completeness artifact ${path}: ${error.message}`);
+    }
   }
 
   if (JSON.stringify(policy.businessPriority) !== JSON.stringify(BUSINESS_PRIORITY)) {
@@ -157,6 +185,7 @@ export async function verifyExecutionContract() {
     "Revenue → Customers → Repeat customers → Recurring revenue → Scalable software/products → Durable company assets",
     "What changed → What was verified → What remains → Next highest-value action",
     '### "DO YOU" EXECUTION COMMAND',
+    "## BOIL THE OCEAN — COMPLETENESS DIRECTIVE",
     'When the founder says "do you," Hercules should handle the work using its best professional judgment'
   ];
 
@@ -170,6 +199,7 @@ export async function verifyExecutionContract() {
       if (!text.includes(MARKER)) errors.push(`${path} does not load ${MARKER}`);
       if (!text.includes(POLICY_PATH)) errors.push(`${path} does not reference ${POLICY_PATH}`);
       if (!text.includes(MASTER_PATH)) errors.push(`${path} does not reference ${MASTER_PATH}`);
+      if (!text.includes("docs/HERCULES-BOIL-THE-OCEAN-V1.md")) errors.push(`${path} does not load the Boil the Ocean standard`);
     } catch (error) {
       errors.push(`cannot load required agent entry surface ${path}: ${error.message}`);
     }
