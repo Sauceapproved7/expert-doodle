@@ -23,7 +23,8 @@ test("Hercules GitHub App enforces main protection server-side", async () => {
     "security-baseline",
     "codeql",
     "workflow-integrity",
-    "provenance-attestation"
+    "provenance-attestation",
+    "universal-merge-gates"
   ]) {
     assert.match(source, new RegExp(check));
   }

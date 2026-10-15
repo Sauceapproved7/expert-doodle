@@ -7,7 +7,8 @@ export const REQUIRED_MAIN_CHECKS = Object.freeze([
   "codeql",
   "workflow-integrity",
   "provenance-attestation",
-  "main-guard-contract"
+  "main-guard-contract",
+  "universal-merge-gates"
 ]);
 
 export const RESTORE_MARKER = "Hercules main guard: restore protected tree";

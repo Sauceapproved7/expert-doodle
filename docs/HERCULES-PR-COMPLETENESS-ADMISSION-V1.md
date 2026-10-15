@@ -42,3 +42,24 @@ In GitHub Actions the PR gate reads `GITHUB_EVENT_PATH` and emits a JSON decisio
 This gate validates **structure and file existence**, not truth of claimed execution. Actual regression, security, release, and provider verification are established by independent exact-head CI checks and target-specific records. The CI script itself executes on the PR checkout; write permissions are not granted. Independent review, required status checks, CODEOWNERS protections, and repository branch rules remain necessary to prevent a malicious contributor from editing the gate itself.
 
 The complete workflow remains: **research → acceptance → test → implement → security → document → release where applicable → verify → close threads**.
+
+
+## Merge integrity requires the completion check (October 15, 2026)
+
+The `universal-merge-gates` check is now required on **both** the post-merge main integrity guard's verified PR head and the future native GitHub App branch-protection configuration. This closes a prior mismatch where the completion-admission workflow could fail or never run but the after-the-fact guard would still accept other passing checks.
+
+Three synchronized implementation surfaces:
+
+- `scripts/hercules-main-guard.mjs` — fail closed when `universal-merge-gates` is absent or not successful.
+- `.github/workflows/hercules-main-integrity-guard.yml` — collect the same required check by exact job name on the merged PR head.
+- `supabase/functions/hercules-github-app/index.ts` — include the check when a properly installed GitHub App with repository administration permission activates server-side branch protection.
+
+Test with:
+
+```sh
+node --test tests/hercules-main-guard.test.mjs tests/hercules-github-main-protection.test.mjs
+```
+
+**Do not confuse code correctness with provider enforcement.** A GitHub post-push restore is best-effort and cannot prevent an unprotected branch from receiving a merge or direct push. The native GitHub branch protection API requires an owner/admin or App installation token with repository Administration (write). The currently observed GitHub `main` branch is unprotected and the Hercules GitHub App registration is pending; neither deployment nor GitHub administrative activation is claimed by this source change.
+
+Once an authorized GitHub App becomes available, verify the **actual** GitHub branch reports `protected=true`, requires `universal-merge-gates` and other critical checks, and disallows direct pushes and force pushes before declaring the branch protected. Do not publish or request tokens in chat or bypass account consent.

@@ -1,0 +1,140 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Require Boil the Ocean completeness admission on main integrity and future native protection",
+  "intendedOutcome": "An absent or failed universal-merge-gates check prevents Hercules main-integrity authorization and is required by the native branch-protection source contract",
+  "scope": "source-only",
+  "changedFiles": [
+    ".github/workflows/hercules-main-integrity-guard.yml",
+    ".hercules/completion-evidence/main-universal-gate.json",
+    "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+    "scripts/hercules-main-guard.mjs",
+    "supabase/functions/hercules-github-app/index.ts",
+    "tests/hercules-github-main-protection.test.mjs",
+    "tests/hercules-main-guard.test.mjs"
+  ],
+  "research": [
+    {
+      "question": "Does main integrity require the universal-merge-gates completeness admission check?",
+      "finding": "Prior required-check arrays omitted universal-merge-gates in the runtime guard, its CI collection workflow, and native GitHub App protection; reused each established surface",
+      "evidencePaths": [
+        "scripts/hercules-main-guard.mjs",
+        ".github/workflows/hercules-main-integrity-guard.yml",
+        "supabase/functions/hercules-github-app/index.ts",
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Merged PR without universal-merge-gates success is rejected",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-main-guard.test.mjs",
+        "scripts/hercules-main-guard.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Main integrity workflow collects universal-merge-gates check before authorization",
+      "status": "verified",
+      "evidencePaths": [
+        ".github/workflows/hercules-main-integrity-guard.yml",
+        "tests/hercules-main-guard.test.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Future native GitHub protection requires universal-merge-gates with existing security controls",
+      "status": "verified",
+      "evidencePaths": [
+        "supabase/functions/hercules-github-app/index.ts",
+        "tests/hercules-github-main-protection.test.mjs",
+        "tests/hercules-main-guard.test.mjs"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "An otherwise valid PR remains authorized when all required checks, including universal-merge-gates, pass",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-main-guard.test.mjs"
+      ]
+    },
+    {
+      "id": "A5",
+      "requirement": "No live branch-protection activation or deployment is falsely claimed",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+        "tests/hercules-main-guard.test.mjs"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+        ".github/workflows/hercules-main-integrity-guard.yml"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-main-guard.mjs",
+        ".github/workflows/hercules-main-integrity-guard.yml",
+        "supabase/functions/hercules-github-app/index.ts"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-main-guard.test.mjs",
+        "tests/hercules-github-main-protection.test.mjs"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-main-guard.test.mjs",
+        "supabase/functions/hercules-github-app/index.ts",
+        ".github/workflows/hercules-main-integrity-guard.yml"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "This pull request changes source and CI guard configuration only; live Supabase or GitHub administration deployment is not within this source-only scope"
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-main-guard.test.mjs",
+        "tests/hercules-github-main-protection.test.mjs",
+        ".github/workflows/hercules-main-integrity-guard.yml"
+      ]
+    }
+  ],
+  "openThreads": []
+}
