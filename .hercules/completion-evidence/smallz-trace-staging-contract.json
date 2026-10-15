@@ -2,7 +2,7 @@
   "schema": "sauceapproved.hercules.completion-evidence",
   "version": 1,
   "title": "Smallz isolated trace admission contract",
-  "scope": "test-only",
+  "scope": "source-only",
   "intendedOutcome": "Verify owner browser request traverses signing, fixed RPC, ingress, replay and dispatch using synthetic data",
   "changedFiles": [
     "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
