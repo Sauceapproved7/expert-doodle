@@ -135,3 +135,20 @@ test('rollback write errors are explicit instead of silently certifying old page
   assert.equal(result.reason,'rollback_failed');
   assert.equal(JSON.stringify(result).includes('secret backtrace'),false);
 });
+
+test('real deployed controller wiring preserves owner authorization and scopes guarded action to the Studio offer',()=>{
+  const src=readFileSync(new URL('../supabase/functions/hercules-deploy-controller/index.ts',import.meta.url),'utf8');
+  const login=src.indexOf("const internalOk=await internal(req)");
+  const gate=src.indexOf("if(!internalOk&&!a)return out({error:'owner_admin_or_internal_required'},403)");
+  const action=src.indexOf("if(action==='deploy_static'){");
+  const studio=src.indexOf("const studioOnly=slug===STUDIO_OFFER_SLUG;",action);
+  assert.ok(login>0&&gate>login&&action>gate&&studio>action);
+  assert.match(src,/from '\.\/studio-offer-release-guard\.mjs'/);
+  assert.match(src,/studioReleaseSourceCheck\(/);
+  assert.match(src,/guardedStudioPresentationWrite\(/);
+  assert.match(src,/pinnedPreviousSha:STUDIO_LEGACY_SHA/);
+  assert.match(src,/if\(studioOnly\)/);
+  assert.match(src,/if\(!guarded\.ok\)throw new Error/);
+  assert.match(src,/await verifyUrl\(stableUrl\)/);
+  assert.doesNotMatch(src,/process\.env\.|SUPABASE_SERVICE_ROLE_KEY\s*=\s*['"]/);
+});
