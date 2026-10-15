@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import {studioOfferPreflight,studioOfferCorsResponse} from "./studio-offer-cors.mjs";
 import {pilotAdmissionGet,pilotAdmissionPost} from "./pilot-admission.ts";
 import {isStudioAccessPage,studioAccessPage,studioAccessRequest,studioAccessClaim} from "./studio-access.ts";
 import {isTitanAccessPage,titanAccessPage,titanAccessRequest,titanAccessClaim} from "./titan-access.ts";
@@ -891,6 +892,8 @@ sb.auth.onAuthStateChange((_e,s)=>{if(!s&&$("app").classList.contains("hidden")=
 </html>`.replaceAll("__URL__",U).replaceAll("__KEY__",K);
 
 Deno.serve(async(req:Request)=>{
+  const studioPreflight=studioOfferPreflight(req);
+  if(studioPreflight)return studioPreflight;
   const url=new URL(req.url);
   if(url.searchParams.get("storefront")==="1"){
     try{
@@ -963,8 +966,8 @@ Deno.serve(async(req:Request)=>{
     const action=cleanText((body as any).action,64);
     try{
       if(action==="software_access_request"){
-        try{const result=await softwareAccessRequest(req,body);return Response.json(result.body,{status:result.status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
-        catch(error){const detail=error instanceof Error?error.message:"software_access_request_failed";const status=detail==="request_rate_limited"?429:detail==="invalid_email"||detail==="product_unavailable"||detail==="plan_unavailable"?400:503;return Response.json({ok:false,error:detail},{status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}})}
+        try{const result=await softwareAccessRequest(req,body);return studioOfferCorsResponse(req,Response.json(result.body,{status:result.status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}}))}
+        catch(error){const detail=error instanceof Error?error.message:"software_access_request_failed";const status=detail==="request_rate_limited"?429:detail==="invalid_email"||detail==="product_unavailable"||detail==="plan_unavailable"?400:503;return studioOfferCorsResponse(req,Response.json({ok:false,error:detail},{status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}}))}
       }
       if(action==="password_breach_check"){
         const password=typeof (body as any).password==="string"?(body as any).password:"";
