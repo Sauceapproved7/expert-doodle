@@ -112,3 +112,24 @@ test("execution-contract verifier reports compliant repository state", async () 
   assert.equal(result.ok, true, result.errors?.join("\n"));
   assert.equal(result.schema, "sauceapproved.hercules.execution-contract-verification");
 });
+
+test("Boil the Ocean is a fail-closed material-build policy with a checked-in gate", async () => {
+  const p = JSON.parse(await readFile(policyPath, "utf8"));
+  const closure = p.completenessStandard;
+  assert.equal(closure.name, "Boil the Ocean");
+  assert.equal(closure.enabled, true);
+  assert.equal(closure.requireScopeCriticalClosure, true);
+  assert.equal(closure.requireEvidenceForCompletionClaims, true);
+  assert.equal(closure.requireVerifiedExactHeadCIBeforeMerge, true);
+  assert.equal(closure.maxUnresolvedScopeCriticalThreadsForComplete, 0);
+  assert.deepEqual(closure.phases, [
+    "research", "design", "implementation", "tests",
+    "security", "documentation", "release", "verification"
+  ]);
+  for (const path of [closure.evidenceGate, closure.test, closure.documentation]) {
+    assert.ok((await readFile(path, "utf8")).length > 0, path);
+  }
+  for (const path of requiredTextFiles) {
+    assert.match(await readFile(path, "utf8"), /docs\/HERCULES-BOIL-THE-OCEAN-V1\.md/);
+  }
+});
