@@ -1,0 +1,112 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Smallz bounded replay window",
+  "scope": "source-only",
+  "intendedOutcome": "Deduplicate bounded out-of-order signed trace claims in disposable PostgreSQL",
+  "changedFiles": [
+    "supabase/migrations/20261015180000_hercules_prompt_trace_replay_window_v1.sql",
+    "tests/hercules-prompt-intelligence-replay-window-db.sql",
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+  ],
+  "research": [
+    {
+      "question": "Can out-of-order unseen sequences be accepted?",
+      "finding": "Original counter rejects all lower sequence values, requiring a bounded deduplicating window.",
+      "evidencePaths": [
+        "supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Late unseen claim accepted and duplicate denied",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Historical and expired claims rejected",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Real disposable PostgreSQL migration and rollback tested",
+      "status": "verified",
+      "evidencePaths": [
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+      ]
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-window-db.sql",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "Source-only, no live rollout"
+    }
+  ],
+  "openThreads": []
+}
