@@ -52,6 +52,8 @@ test('real disposable PostgREST: authenticated owner -> signed ingress -> replay
   const rpc=createSmallzTraceRpc({projectUrl:PROJECT,serverKey:'synthetic-test-only',fetchImpl:withRole('service_role')});
   const ingress=createSmallzTraceIngress({projectUrl:PROJECT,serverKey:'synthetic-test-only',signingKey,fetchImpl:withRole('service_role')});
   const emitter=createSmallzTraceEmitter({signingKey,reserveSequence:source=>rpc('hercules_prompt_trace_reserve_sequence',{p_source:source}),ingestTrace:ingress});
+  const preflight=await emitter({action:'bot_browser_scrape'});
+  assert.equal(preflight.accepted,true);
   let dispatched=0;
   const app=createHerculesBotApp({
     renderEnv:{HERCULES_PROMPT_TRACE_ENFORCE_BROWSER:'true'},
