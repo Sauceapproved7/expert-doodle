@@ -4,6 +4,7 @@ on:
     paths:
       - "supabase/functions/hercules-private-bridge/studio-commerce.mjs"
       - "tests/hercules-studio-commerce.test.mjs"
+      - "tests/hercules-launch-studio-offer-cors.test.mjs"
       - "tests/hercules-studio-commerce-webhook.test.mjs"
       - "tests/hercules-titan-shopify-entitlement.test.mjs"
       - "supabase/functions/hercules-private-bridge/**"
