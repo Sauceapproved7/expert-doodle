@@ -1,0 +1,136 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Smallz owner-authenticated Prompt Intelligence trace ingress (source-only)",
+  "intendedOutcome": "Owner-authenticated Smallz trace ingestion verifies HMAC emitter, executes only fixed server-side replay RPC, and returns a minimal non-sensitive receipt without granting browser or deployment authority",
+  "scope": "source-only",
+  "changedFiles": [
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    ".hercules/completion-evidence/prompt-intelligence-smallz-ingress.json",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-INGRESS-V1.md",
+    "hercules-bot/app-server.mjs",
+    "hercules-bot/prompt-trace-ingress.mjs",
+    "tests/hercules-prompt-intelligence-smallz-ingress.test.mjs"
+  ],
+  "research": [
+    {
+      "question": "Which existing canonical controls govern Smallz, browser traces and replay?",
+      "finding": "Reused Smallz's existing owner-authenticated app route and canonical signed trace, durable replay callback and completion gate. No new public authorization framework or direct browser control was added.",
+      "evidencePaths": [
+        "hercules-bot/app-server.mjs",
+        "hercules-runtime/prompt-intelligence/trace.mjs",
+        "hercules-runtime/prompt-intelligence/durable-replay.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "No trace access without established Smallz owner authentication, and no enabled ingress without all server-only configuration",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-ingress.test.mjs",
+        "hercules-bot/app-server.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Verified HMAC source and signed event use only fixed Supabase HTTPS RPC with no redirects, no client key exposure, and authenticated durable replay rejection",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-ingress.test.mjs",
+        "hercules-bot/prompt-trace-ingress.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "No browser URL, page text, credential, user-provided permission or raw RPC error is echoed in the receipt",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-ingress.test.mjs",
+        "hercules-bot/prompt-trace-ingress.mjs"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Network errors, malformed RPC responses, invalid inputs and forged event sources fail closed and cannot execute tool actions",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-ingress.test.mjs",
+        "hercules-bot/prompt-trace-ingress.mjs"
+      ]
+    },
+    {
+      "id": "A5",
+      "requirement": "Existing Smallz and Hercules security checks are included and release boundaries documented",
+      "status": "verified",
+      "evidencePaths": [
+        ".github/workflows/hercules-prompt-intelligence.yml",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-INGRESS-V1.md"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md",
+        "hercules-bot/app-server.mjs"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-INGRESS-V1.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "hercules-bot/prompt-trace-ingress.mjs",
+        "hercules-bot/app-server.mjs"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-ingress.test.mjs",
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-ingress.test.mjs",
+        "hercules-bot/prompt-trace-ingress.mjs"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-INGRESS-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "This pull request integrates an inactive, server-config-gated source route only; no live Smallz or Supabase deployment or credential change is in scope."
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-ingress.test.mjs",
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
+    }
+  ],
+  "openThreads": []
+}
