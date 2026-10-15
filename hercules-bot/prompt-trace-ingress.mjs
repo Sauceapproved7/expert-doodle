@@ -15,7 +15,7 @@ function validatedProject(value) {
     return target.origin;
   }catch{ throw new TypeError('invalid_trace_project'); }
 }
-function keyFromBase64(value){
+export function decodeTraceKeyFromBase64(value){
   if(typeof value!=='string' || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) return null;
   const decoded=Buffer.from(value,'base64');
   return decoded.length>=32 && decoded.toString('base64')===value ? decoded:null;
@@ -26,18 +26,17 @@ function keyFromBase64(value){
  * authenticated; its content NEVER authorizes tool actions. The response
  * is metadata-only and never returns raw browser page text, URL or credentials.
  */
-export function createSmallzTraceIngress({projectUrl,serverKey,signingKey,fetchImpl=fetch}={}){
+/** Fixed-target, server-only RPC connector; never pass name or URL from page content. */
+export function createSmallzTraceRpc({projectUrl,serverKey,fetchImpl=fetch}={}){
   const project=validatedProject(projectUrl);
   if(typeof serverKey!=='string'||serverKey.length<8 || /[\r\n]/.test(serverKey))throw new TypeError('invalid_trace_server_key');
-  if(!Buffer.isBuffer(signingKey)||signingKey.length<32)throw new TypeError('invalid_trace_key');
   if(typeof fetchImpl!=='function')throw new TypeError('trace_fetch_required');
-  const endpoint=project+'/rest/v1/rpc/hercules_prompt_trace_claim_sequence';
-  const rpc=async(name,args)=>{
-    if(name!=='hercules_prompt_trace_claim_sequence')throw new Error('trace_rpc_denied');
+  const allowed=new Set(['hercules_prompt_trace_claim_sequence','hercules_prompt_trace_reserve_sequence']);
+  return async (name,args)=>{
+    if(!allowed.has(name))throw new Error('trace_rpc_denied');
+    const endpoint=project+'/rest/v1/rpc/'+name;
     const headers={'content-type':'application/json','accept':'application/json','apikey':serverKey};
-    // Legacy service-role JWT uses Authorization. New Supabase secret keys
-    // are accepted by the gateway through the apikey header alone.
-    if(serverKey.split('.').length===3) headers.authorization='Bearer '+serverKey;
+    if(serverKey.split('.').length===3)headers.authorization='Bearer '+serverKey;
     let response;
     try{
       response=await fetchImpl(endpoint,{
@@ -45,12 +44,16 @@ export function createSmallzTraceIngress({projectUrl,serverKey,signingKey,fetchI
         referrerPolicy:'no-referrer',signal:AbortSignal.timeout(10000)
       });
     }catch{throw new Error('trace_rpc_unavailable');}
-    if(!response || response.ok!==true)throw new Error('trace_rpc_unavailable');
-    let data;
-    try{data=await response.json();}catch{throw new Error('trace_rpc_unavailable');}
-    if(typeof data!=='boolean')throw new Error('invalid_replay_response');
-    return data;
+    if(!response||response.ok!==true)throw new Error('trace_rpc_unavailable');
+    try{return await response.json();}
+    catch{throw new Error('trace_rpc_unavailable');}
   };
+}
+
+/** Verify signature and accept only metadata as the outward receipt. */
+export function createSmallzTraceIngress({projectUrl,serverKey,signingKey,fetchImpl=fetch}={}){
+  if(!Buffer.isBuffer(signingKey)||signingKey.length<32)throw new TypeError('invalid_trace_key');
+  const rpc=createSmallzTraceRpc({projectUrl,serverKey,fetchImpl});
   const claimSequence=createDurableReplayClaim({rpc});
   return async envelope=>{
     const event=await ingestBrowserTrace(envelope,{
@@ -72,7 +75,7 @@ export function createSmallzTraceIngressFromEnv(env={},options={}){
   const serverKey=env.HERCULES_PROMPT_TRACE_SERVER_KEY;
   const encoded=env.HERCULES_PROMPT_TRACE_HMAC_KEY_B64;
   if(!projectUrl||!serverKey||!encoded)return null;
-  const signingKey=keyFromBase64(encoded);
+  const signingKey=decodeTraceKeyFromBase64(encoded);
   if(!signingKey)return null;
   try{return createSmallzTraceIngress({projectUrl,serverKey,signingKey,...options});}
   catch{return null;}
