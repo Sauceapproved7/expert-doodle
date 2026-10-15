@@ -1,0 +1,140 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Smallz trusted trace emitter and durable allocator",
+  "scope": "source-only",
+  "intendedOutcome": "Owner-authenticated browser intents are signed with server-only key and issued durable replay sequences before dispatch when explicitly enabled",
+  "changedFiles": [
+    "hercules-bot/app-server.mjs",
+    "hercules-bot/prompt-trace-emitter.mjs",
+    "hercules-bot/prompt-trace-ingress.mjs",
+    "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs",
+    "tests/hercules-prompt-intelligence-emitter-db.sql",
+    "supabase/migrations/20261015160000_hercules_prompt_trace_emit_sequence_v1.sql",
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+    ".hercules/completion-evidence/prompt-intelligence-smallz-emitter.json"
+  ],
+  "research": [
+    {
+      "question": "Which Smallz owner browser boundary and trace replay code are canonical?",
+      "finding": "Reused Smallz owner-authenticated /api/browser route and signed-trace ingress plus prior durable replay claim; added service-only sequence allocation.",
+      "evidencePaths": [
+        "hercules-bot/app-server.mjs",
+        "hercules-bot/prompt-trace-ingress.mjs",
+        "hercules-runtime/prompt-intelligence/trace.mjs"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Disabled by default; owner authentication and existing bridge preserved",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs",
+        "hercules-bot/app-server.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Only trusted action labels signed; URL and page content not reflected",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs",
+        "hercules-bot/prompt-trace-emitter.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Atomic service-role-only source sequence allocation and replay checks",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-emitter-db.sql",
+        "supabase/migrations/20261015160000_hercules_prompt_trace_emit_sequence_v1.sql"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Trace failure blocks bridge before action and hides provider error",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs",
+        "hercules-bot/app-server.mjs"
+      ]
+    },
+    {
+      "id": "A5",
+      "requirement": "Documentation, tests and source-only rollback",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs"
+      ]
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-EMITTER-V1.md",
+        "tests/hercules-prompt-intelligence-smallz-emitter.test.mjs"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "Source-only, no production migration or deployment in scope"
+    }
+  ],
+  "openThreads": []
+}
