@@ -36,7 +36,13 @@ HERCULES_FREE_WORK_TOKEN="<owner-secret-in-env>" HERCULES_FREE_WORK_MODEL="your-
 
 The default model endpoint is `http://127.0.0.1:11434`. `HERCULES_FREE_WORK_MODEL_URL` may point **only to an http loopback address**; arbitrary remote services and proxy credentials are rejected. The program never installs model weights or downloads software.
 
-## Optional durable state\n\nSet `HERCULES_FREE_WORK_STATE_PATH` to an absolute JSON filename inside an **already existing**, user-owned directory with POSIX permissions `0700`. The server writes a private `0600` file using an atomic rename, and refuses unsafe directories, symlinks, corrupted state, and world/group-readable files. The state contains plaintext prompts and output; never store API keys or sensitive secrets in tasks. Files persist only when the hosting filesystem is durable. Only one server process may use a state file. Jobs interrupted during execution are marked blocked on restart and are **not** rerun without a new job.\n\nThis is a development milestone; production persistence should instead use Hercules Auth and tenant-scoped Postgres with independently tested authorization.\n\n## Safety and limitations
+## Optional durable state
+
+Set `HERCULES_FREE_WORK_STATE_PATH` to an absolute JSON filename inside an **already existing**, user-owned directory with POSIX permissions `0700`. The server writes a private `0600` file using an atomic rename, and refuses unsafe directories, symlinks, corrupted state, and world/group-readable files. The state contains plaintext prompts and output; never store API keys or sensitive secrets in tasks. Files persist only when the hosting filesystem is durable. Only one server process may use a state file. Jobs interrupted during execution are marked blocked on restart and are **not** rerun without a new job.
+
+This is a development milestone; production persistence should instead use Hercules Auth and tenant-scoped Postgres with independently tested authorization.
+
+## Safety and limitations
 
 - No external API key or paid AI backend is needed for the offline operations.
 - Code-generation performance and quality depend on an already running local model, which itself may require paid hardware or hosting.
