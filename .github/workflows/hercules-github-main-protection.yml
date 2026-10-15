@@ -6,6 +6,8 @@ on:
     branches:
       - main
   workflow_dispatch:
+  schedule:
+    - cron: '17 13 * * *'
 
 permissions:
   contents: read
@@ -20,4 +22,18 @@ jobs:
         with:
           node-version: "22"
       - name: Verify GitHub main-protection backend
-        run: node --test tests/hercules-github-main-protection.test.mjs
+        run: node --test tests/hercules-github-main-protection.test.mjs tests/hercules-native-main-protection-audit.test.mjs
+
+  native-protection-audit:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Inspect native main protection without credentials
+        run: node scripts/hercules-native-main-protection-audit.mjs

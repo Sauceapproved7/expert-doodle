@@ -1,0 +1,136 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Hercules GitHub native branch protection read-only audit",
+  "intendedOutcome": "Run an auditable daily and on-demand read-only GitHub branch protection check that fails when main is unprotected or required completeness status checks are unverifiable",
+  "scope": "source-only",
+  "changedFiles": [
+    ".github/workflows/hercules-github-main-protection.yml",
+    ".hercules/completion-evidence/native-main-protection-audit.json",
+    "docs/HERCULES-GITHUB-NATIVE-PROTECTION-AUDIT-V1.md",
+    "scripts/hercules-native-main-protection-audit.mjs",
+    "tests/hercules-native-main-protection-audit.test.mjs"
+  ],
+  "research": [
+    {
+      "question": "Does existing Hercules protection code prove GitHub main is protected?",
+      "finding": "Canonical workflows only test protection source, and provider branch API currently reports main protected false; GitHub administration permission is absent, so use a no-credential read-only audit without claiming mutation",
+      "evidencePaths": [
+        ".github/workflows/hercules-github-main-protection.yml",
+        "docs/HERCULES-GITHUB-NATIVE-PROTECTION-AUDIT-V1.md",
+        "scripts/hercules-native-main-protection-audit.mjs"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Audit reports unprotected branch and fails closed on invalid branch data or API errors",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-native-main-protection-audit.mjs",
+        "tests/hercules-native-main-protection-audit.test.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Audit requires every current Hercules status check including Boil the Ocean universal-merge-gates",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-native-main-protection-audit.mjs",
+        "tests/hercules-native-main-protection-audit.test.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Audit reveals limits of public metadata and never claims verified admin enforcement",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-native-main-protection-audit.mjs",
+        "docs/HERCULES-GITHUB-NATIVE-PROTECTION-AUDIT-V1.md",
+        "tests/hercules-native-main-protection-audit.test.mjs"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Schedule audits once daily and on manual dispatch without disrupting ordinary PR CI",
+      "status": "verified",
+      "evidencePaths": [
+        ".github/workflows/hercules-github-main-protection.yml",
+        "tests/hercules-native-main-protection-audit.test.mjs"
+      ]
+    },
+    {
+      "id": "A5",
+      "requirement": "Audit has no credential dependency or GitHub write requests",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-native-main-protection-audit.mjs",
+        "tests/hercules-native-main-protection-audit.test.mjs",
+        "docs/HERCULES-GITHUB-NATIVE-PROTECTION-AUDIT-V1.md"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-GITHUB-NATIVE-PROTECTION-AUDIT-V1.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-GITHUB-NATIVE-PROTECTION-AUDIT-V1.md",
+        "scripts/hercules-native-main-protection-audit.mjs"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-native-main-protection-audit.mjs",
+        ".github/workflows/hercules-github-main-protection.yml"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-native-main-protection-audit.test.mjs",
+        ".github/workflows/hercules-github-main-protection.yml"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-native-main-protection-audit.test.mjs",
+        "scripts/hercules-native-main-protection-audit.mjs"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-GITHUB-NATIVE-PROTECTION-AUDIT-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "This build adds source-level CI auditing only. It neither deploys a production service nor activates GitHub native branch protection."
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-native-main-protection-audit.test.mjs",
+        ".github/workflows/hercules-github-main-protection.yml"
+      ]
+    }
+  ],
+  "openThreads": []
+}
