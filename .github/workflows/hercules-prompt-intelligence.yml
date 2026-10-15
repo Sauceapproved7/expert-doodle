@@ -158,6 +158,6 @@ jobs:
       - name: Install pinned existing Smallz Chromium runtime
         run: npm install --prefix hercules-browser-gateway-v2 --ignore-scripts --no-audit --no-fund
       - name: Install isolated Chromium and OS dependencies
-        run: ./hercules-browser-gateway-v2/node_modules/.bin/playwright install --with-deps chromium
+        run: node hercules-browser-gateway-v2/node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Test real Chromium with signed owner admission and negative cases
         run: node --test tests/smallz-chromium-trace-e2e.mjs
