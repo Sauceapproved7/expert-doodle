@@ -77,6 +77,7 @@ jobs:
               "workflow-integrity"
               "provenance-attestation"
               "main-guard-contract"
+              "universal-merge-gates"
             )
 
             evidence_ready=false
