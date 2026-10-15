@@ -10,7 +10,8 @@
     "docs/HERCULES-PROMPT-INTELLIGENCE-DURABLE-REPLAY-V1.md",
     "hercules-runtime/prompt-intelligence/durable-replay.mjs",
     "supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql",
-    "tests/hercules-prompt-intelligence-durable-replay.test.mjs"
+    "tests/hercules-prompt-intelligence-durable-replay.test.mjs",
+    "tests/hercules-prompt-intelligence-replay-db.sql"
   ],
   "research": [
     {
@@ -56,6 +57,15 @@
       "evidencePaths": [
         "docs/HERCULES-PROMPT-INTELLIGENCE-DURABLE-REPLAY-V1.md"
       ]
+    },
+    {
+      "id": "A5",
+      "requirement": "Disposable PostgreSQL CI checks duplicate/replay rejection, owner role restrictions, rollback and competing claims",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-db.sql",
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
     }
   ],
   "phases": [
@@ -86,7 +96,8 @@
       "status": "verified",
       "evidencePaths": [
         "tests/hercules-prompt-intelligence-durable-replay.test.mjs",
-        ".github/workflows/hercules-prompt-intelligence.yml"
+        ".github/workflows/hercules-prompt-intelligence.yml",
+        "tests/hercules-prompt-intelligence-replay-db.sql"
       ]
     },
     {
@@ -94,7 +105,8 @@
       "status": "verified",
       "evidencePaths": [
         "tests/hercules-prompt-intelligence-durable-replay.test.mjs",
-        "supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql"
+        "supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql",
+        "tests/hercules-prompt-intelligence-replay-db.sql"
       ]
     },
     {
