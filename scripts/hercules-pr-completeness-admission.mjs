@@ -7,6 +7,8 @@ export const ADMISSION_POLICY_START = "2026-10-15T00:00:00Z";
 export const EVIDENCE_DIR = ".hercules/completion-evidence/";
 const REPO = "Sauceapproved7/expert-doodle";
 const DOC_ONLY = /^(?:docs\/[^/]+(?:\/[^/]+)*\.md|README\.md|CHANGELOG\.md)$/i;
+// Control documents affect release/security policy even when their format is Markdown.
+const CONTROL_DOC = /^docs\/.*(?:BOIL-THE-OCEAN|PR-COMPLETENESS-ADMISSION|THREAT-MODEL|SECURITY|AUTHORIZATION|EXECUTION-CONTRACT|POLICY)[^/]*\.md$/i;
 
 function safeRepoPath(value) {
   return typeof value === "string" && value.length > 0 && value.length <= 512 &&
@@ -42,6 +44,7 @@ function normalizedFiles(changedFiles, errors) {
 
 export async function assessPullRequest({
   createdAt,
+  updatedAt,
   cutoff = ADMISSION_POLICY_START,
   repo = REPO,
   changedFiles,
@@ -51,9 +54,10 @@ export async function assessPullRequest({
   if (repo !== REPO) errors.push(`unexpected canonical repository: ${repo}`);
   const started = readDate(cutoff);
   const created = readDate(createdAt);
-  if (created === null || started === null) errors.push("invalid PR createdAt or policy cutoff timestamp");
+  const updated = readDate(updatedAt);
+  if (created === null || updated === null || started === null || updated < created) errors.push("invalid PR createdAt, updatedAt or policy cutoff timestamp");
   const files = normalizedFiles(changedFiles, errors);
-  const required = files.some((path) => !DOC_ONLY.test(path));
+  const required = files.some((path) => !DOC_ONLY.test(path) || CONTROL_DOC.test(path));
   const result = {
     schema: "sauceapproved.hercules.pr-completion-admission",
     version: 1,
@@ -63,7 +67,8 @@ export async function assessPullRequest({
     errors
   };
   if (errors.length) return result;
-  if (created < started) return { ...result, ok: true, reason: "predates_policy", grandfathered: true };
+  // Only untouched legacy PRs retain the exemption. Post-policy edits require fresh closure.
+  if (created < started && updated < started) return { ...result, ok: true, reason: "predates_policy", grandfathered: true };
   if (!required) return { ...result, ok: true, reason: "documentation_only" };
   const manifests = files.filter((path) =>
     path.startsWith(EVIDENCE_DIR) &&
@@ -127,6 +132,7 @@ async function main() {
   const changedFiles = command.stdout.split("\0").filter(Boolean);
   const result = await assessPullRequest({
     createdAt: pr.created_at,
+    updatedAt: pr.updated_at,
     repo: event.repository?.full_name,
     changedFiles
   });
