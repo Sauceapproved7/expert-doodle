@@ -38,6 +38,7 @@ async function withFixture(run) {
       root, manifest, put,
       args: {
         createdAt: "2026-10-15T08:00:00Z",
+        updatedAt: "2026-10-15T08:00:01Z",
         cutoff: START,
         repo: REPO,
         changedFiles: CHANGES,
@@ -97,6 +98,7 @@ test("workflow changes are material and require a manifest", async () => {
 test("pre-adoption PRs are grandfathered without a manifest", async () => {
   await withFixture(async ({ args }) => {
     args.createdAt = "2026-10-14T23:59:59Z";
+    args.updatedAt = "2026-10-14T23:59:59Z";
     args.changedFiles = ["scripts/new-feature.mjs"];
     const result = await assessPullRequest(args);
     assert.equal(result.ok, true);
@@ -149,4 +151,51 @@ test("git subprocess boundary is explicitly documented in owner-code policy", as
   assert.equal(boundary?.kind, "external-infrastructure-adapter");
   assert.deepEqual(boundary?.dependencies, ["git"]);
   assert.ok(source.externalInfrastructure.some((item) => item.id === "git" && item.packagedAsHerculesCode === false));
+});
+
+test("legacy PR changed after policy start must submit fresh completion evidence", async () => {
+  await withFixture(async ({ args }) => {
+    args.createdAt = "2026-10-14T20:00:00Z";
+    args.updatedAt = "2026-10-15T09:00:00Z";
+    args.changedFiles = ["scripts/unsafe-late-change.mjs"];
+    const result = await assessPullRequest(args);
+    assert.equal(result.ok, false);
+    assert.equal(result.reason, "missing_completion_manifest");
+    assert.equal(result.grandfathered, undefined);
+  });
+});
+
+test("invalid or missing PR update timestamp fails closed", async () => {
+  await withFixture(async ({ args }) => {
+    delete args.updatedAt;
+    let result = await assessPullRequest(args);
+    assert.equal(result.ok, false);
+    args.updatedAt = "2030-00-00T00:00:00Z";
+    result = await assessPullRequest(args);
+    assert.equal(result.ok, false);
+    args.updatedAt = "2026-10-14T00:00:00Z";
+    result = await assessPullRequest(args);
+    assert.equal(result.ok, false);
+  });
+});
+
+test("changes to completeness policy documentation are material", async () => {
+  await withFixture(async ({ args }) => {
+    for (const file of [
+      "docs/HERCULES-BOIL-THE-OCEAN-V1.md",
+      "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+      "docs/HERCULES-THREAT-MODEL.md"
+    ]) {
+      args.changedFiles = [file];
+      const result = await assessPullRequest(args);
+      assert.equal(result.ok, false, file);
+      assert.equal(result.required, true, file);
+    }
+  });
+});
+
+test("CLI admission forwards verified GitHub updated_at for grandfather assessment", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const source = await readFile("scripts/hercules-pr-completeness-admission.mjs", "utf8");
+  assert.match(source, /updatedAt:\s*pr\.updated_at/);
 });
