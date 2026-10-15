@@ -1,0 +1,39 @@
+name: Hercules Free Work isolated verification
+
+on:
+  pull_request:
+    paths:
+      - "hercules-runtime/free-work-*"
+      - "tests/hercules-free-work.test.mjs"
+      - "docs/HERCULES-FREE-WORK-V1.md"
+      - ".github/workflows/hercules-free-work.yml"
+  push:
+    branches:
+      - "feature/hercules-free-work-v1-20261015"
+    paths:
+      - "hercules-runtime/free-work-*"
+      - "tests/hercules-free-work.test.mjs"
+      - "docs/HERCULES-FREE-WORK-V1.md"
+      - ".github/workflows/hercules-free-work.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  offline-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Owner-code-only validation
+        run: node scripts/verify-owner-code-only.mjs
+      - name: Free Work task and authorization tests
+        run: node --test tests/hercules-free-work.test.mjs
+      - name: Javascript syntax check
+        run: |
+          node --check hercules-runtime/free-work-server.mjs
+          node --check hercules-runtime/free-work-core.mjs
+          node --check hercules-runtime/free-work-app.js
