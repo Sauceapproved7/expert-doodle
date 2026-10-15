@@ -6,6 +6,11 @@ on:
   pull_request:
     paths:
       - ".github/workflows/hercules-studio-offer-public-artifact-audit.yml"
+      - "hercules-runtime/studio-offer-parity.mjs"
+      - "scripts/hercules-studio-offer-parity.mjs"
+      - "tests/hercules-studio-offer-parity.test.mjs"
+      - "hercules-forge/offers/sauceapproved-studio/index.html"
+      - "docs/HERCULES-STUDIO-OFFER-EXACT-PARITY-V1.md"
 
 permissions:
   contents: read
