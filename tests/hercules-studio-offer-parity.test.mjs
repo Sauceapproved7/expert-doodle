@@ -42,6 +42,43 @@ test('HTTP redirects and content type mismatches cannot prove parity', async () 
   assert.deepEqual(result.observations.map(o => o.reason), ['unexpected_http_status', 'unexpected_content_type']);
 });
 
+test('non-HTML storage responses reveal only bounded byte digests, never falsely pass parity', async () => {
+  let calls = 0;
+  const result = await witnessStudioOffer({
+    sourceHtml,
+    fetchImpl: async () => calls++ === 0
+      ? new Response(sourceHtml, { status: 200, headers: { 'content-type': 'application/octet-stream' } })
+      : html(sourceHtml),
+  });
+  assert.equal(result.exactPublicParityObserved, false);
+  assert.equal(result.observations[0].result, 'not_verified');
+  assert.equal(result.observations[0].reason, 'unexpected_content_type');
+  assert.equal(result.observations[0].exactBytesMatch, true);
+  assert.equal(result.observations[0].observedSha256, result.sourceSha256);
+  assert.equal(result.observations[0].bytes, Buffer.byteLength(sourceHtml, 'utf8'));
+  assert.equal(result.observations[0].htmlContentType, false);
+  assert.equal(result.observations[1].result, 'matching');
+  assert.equal(result.releaseAuthorized, false);
+});
+
+test('outdated generic-mime storage object proves drift by hash without exposing old HTML', async () => {
+  const oldHtml = '<!doctype html><h1>Previous Studio offer</h1>';
+  let calls = 0;
+  const result = await witnessStudioOffer({
+    sourceHtml,
+    fetchImpl: async () => calls++ === 0
+      ? new Response(oldHtml, { status: 200, headers: { 'content-type': 'application/octet-stream' } })
+      : html(oldHtml),
+  });
+  assert.equal(result.exactPublicParityObserved, false);
+  assert.equal(result.observations[0].reason, 'unexpected_content_type');
+  assert.equal(result.observations[0].exactBytesMatch, false);
+  assert.equal(result.observations[0].bytes, Buffer.byteLength(oldHtml, 'utf8'));
+  assert.equal(result.observations[1].result, 'different');
+  assert.equal(result.observations[1].exactBytesMatch, false);
+  assert.equal(JSON.stringify(result).includes('Previous Studio offer'), false);
+});
+
 test('oversized bodies and remote exceptions are sanitized and never copied to reports', async () => {
   let n = 0;
   const result = await witnessStudioOffer({ sourceHtml, fetchImpl: async () => { if (n++ === 0) return html('z'.repeat(70_000)); throw new Error('secret-do-not-echo'); } });
