@@ -8,7 +8,8 @@
     "supabase/migrations/20261015180000_hercules_prompt_trace_replay_window_v1.sql",
     "tests/hercules-prompt-intelligence-replay-window-db.sql",
     ".github/workflows/hercules-prompt-intelligence.yml",
-    "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md"
+    "docs/HERCULES-PROMPT-INTELLIGENCE-REPLAY-WINDOW-V1.md",
+    ".hercules/completion-evidence/smallz-replay-window.json"
   ],
   "research": [
     {
