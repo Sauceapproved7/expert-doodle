@@ -109,5 +109,7 @@ jobs:
           test "$(cat /tmp/window-race-high /tmp/window-race-low | grep -cx t)" -eq 2
           test "$(psql -v ON_ERROR_STOP=1 -Atc "SELECT public.hercules_prompt_trace_claim_sequence('window_race', 101);")" = f
 
+      - name: Apply least-privilege replay RPC migration in disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261015190000_hercules_prompt_trace_invoker_v1.sql
       - name: Verify replay RPC is invoker-scoped and service role can claim
         run: psql -v ON_ERROR_STOP=1 -f tests/hercules-prompt-intelligence-invoker-db.sql
