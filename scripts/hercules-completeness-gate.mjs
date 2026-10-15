@@ -74,7 +74,7 @@ export async function evaluateCompletion(manifest, root = process.cwd()) {
   } else {
     const seen = new Set();
     for (const [i, row] of manifest.acceptance.entries()) {
-      if (!stringPresent(row?.id) || !stringPresent(row?.requirement)) errors.push(`acceptance[${i}]: id and requirement required`);
+      if (typeof row?.id !== "string" || !/^[A-Za-z][A-Za-z0-9_-]*$/.test(row.id) || !stringPresent(row?.requirement)) errors.push(`acceptance[${i}]: valid id and requirement required`);
       if (seen.has(row?.id)) errors.push(`acceptance[${i}]: duplicate id ${row?.id}`);
       seen.add(row?.id);
       if (row?.status !== "verified") errors.push(`acceptance[${i}]: requirement not verified`);
