@@ -1,0 +1,129 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Prospective Hercules PR completeness admission",
+  "intendedOutcome": "Every new material Hercules pull request supplies a scoped, verified completion inventory before the universal merge gate passes",
+  "scope": "source-only",
+  "changedFiles": [
+    ".github/workflows/hercules-universal-merge-gates.yml",
+    ".hercules/completion-evidence/pr-admission.json",
+    "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+    "governance/owner-code-policy.json",
+    "scripts/hercules-pr-completeness-admission.mjs",
+    "tests/hercules-pr-completeness-admission.test.mjs"
+  ],
+  "research": [
+    {
+      "question": "Does Hercules already have a completion validator and merge verification workflow?",
+      "finding": "Reuse existing completion evaluator and universal merge gate instead of creating an unrelated implementation",
+      "evidencePaths": [
+        "scripts/hercules-completeness-gate.mjs",
+        ".github/workflows/hercules-universal-merge-gates.yml"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "New material PRs without a newly changed valid manifest are rejected",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Manifest inventory must match all changed PR files, and unverified acceptance cannot pass",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Prior PRs and pure Markdown documentation changes preserve compatibility",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Universal PR workflow evaluates completion using event metadata and git diff",
+      "status": "verified",
+      "evidencePaths": [
+        ".github/workflows/hercules-universal-merge-gates.yml",
+        "scripts/hercules-pr-completeness-admission.mjs"
+      ]
+    },
+    {
+      "id": "A5",
+      "requirement": "The read-only Git diff subprocess is declared in the owner-code policy and audited",
+      "status": "verified",
+      "evidencePaths": [
+        "governance/owner-code-policy.json",
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-pr-completeness-admission.mjs"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs",
+        "scripts/hercules-pr-completeness-admission.mjs",
+        "governance/owner-code-policy.json"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "Source and CI control-plane change only; production deployment is outside the scope of this repository PR"
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        ".github/workflows/hercules-universal-merge-gates.yml",
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    }
+  ],
+  "openThreads": []
+}

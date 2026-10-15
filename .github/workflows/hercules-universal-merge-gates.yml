@@ -16,8 +16,15 @@ jobs:
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "22"
       - name: Verify universal merge gates
         run: node --test tests/hercules-universal-merge-gates.test.mjs
+      - name: Boil the Ocean PR admission regression tests
+        run: node --test tests/hercules-pr-completeness-admission.test.mjs tests/hercules-completeness-gate.test.mjs
+      - name: Boil the Ocean changed-PR closure admission
+        if: github.event_name == 'pull_request'
+        run: node scripts/hercules-pr-completeness-admission.mjs
