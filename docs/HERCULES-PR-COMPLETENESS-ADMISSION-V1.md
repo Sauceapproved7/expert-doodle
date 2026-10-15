@@ -4,9 +4,9 @@ The **Boil the Ocean** standard now has a pull-request admission check, rather t
 
 ## What changes
 
-Every material pull request created on or after **2026-10-15T00:00:00Z** must include exactly one **changed** JSON manifest in `.hercules/completion-evidence/<slug>.json`.
+Every material pull request created **or updated** on or after **2026-10-15T00:00:00Z** must include exactly one **changed** JSON manifest in `.hercules/completion-evidence/<slug>.json`. Only legacy PRs both created and last updated before the cutoff retain the exemption.
 
-A material change is any changed path other than standalone Markdown in `docs/` or root `README.md`, `CHANGELOG.md`, (but not `CONTRIBUTING.md`, which changes contributor governance). Workflow, tests, application, assets, configuration, scripts, governance and security changes all count as material.
+A material change is any changed path other than ordinary Markdown in `docs/` or root `README.md`, `CHANGELOG.md`. Markdown that controls completion, security, authorization, policy, execution contracts, or the threat model is **material** even under `docs/`. `CONTRIBUTING.md` is also material. Workflow, tests, application, assets, configuration, scripts, governance and security changes all count as material.
 
 The manifest must:
 
@@ -18,9 +18,9 @@ The manifest must:
 
 ## GitHub CI
 
-The existing `Hercules Universal Merge Gates` workflow checks new pull requests with `node scripts/hercules-pr-completeness-admission.mjs`. It checks the **GitHub-provided** PR creation timestamp and canonical repo name; the changed file inventory comes from `git diff` against the GitHub-provided base SHA. The workflow checks out the PR's merge commit at full history so Git can inspect all changes. A rejected PR gets a non-zero CI result.
+The existing `Hercules Universal Merge Gates` workflow checks new pull requests with `node scripts/hercules-pr-completeness-admission.mjs`. It checks the **GitHub-provided** PR creation and last-update timestamps and canonical repo name; the changed file inventory comes from `git diff` against the GitHub-provided base SHA. The workflow checks out the PR's merge commit at full history so Git can inspect all changes. A rejected PR gets a non-zero CI result.
 
-Older PRs are grandfathered because this is a prospective policy, not a retroactive demand that would block unrelated existing reviews. New changes in old PRs remain subject to existing repository gates. This is a documented rollout limitation.
+Only older PRs that were **not updated after the cutoff** are grandfathered. A fresh commit or other GitHub-recorded PR update after the cutoff requires completion evidence; missing, contradictory, or malformed timestamps fail closed. Changes to control-plane Markdown documents also require evidence. This prevents stale PRs from being used as exemptions after adoption.
 
 Branch protection must separately require the `Hercules Universal Merge Gates` status to make failing PR checks a server-enforced merge block. Without verified branch protection, this is a reproducible CI policy, **not** a guarantee that GitHub prevents merging via other routes. Maintainers should not merge if this check is red.
 
