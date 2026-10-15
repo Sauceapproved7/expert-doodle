@@ -12,6 +12,8 @@ on:
       - 'supabase/migrations/*hercules_prompt_trace_replay_window*.sql'
       - 'tests/hercules-prompt-intelligence-replay-window-db.sql'
       - 'tests/hercules-prompt-intelligence-postgrest.test.mjs'
+      - 'tests/hercules-prompt-intelligence-issuer-alignment-db.sql'
+      - 'supabase/migrations/*hercules_prompt_trace_issuer_alignment*.sql'
       - 'tests/hercules-prompt-intelligence-replay-db.sql'
       - 'tests/hercules-prompt-intelligence-emitter-db.sql'
       - 'tests/hercules-prompt-intelligence-invoker-db.sql'
@@ -115,6 +117,10 @@ jobs:
       - name: Verify replay RPC is invoker-scoped and service role can claim
         run: psql -v ON_ERROR_STOP=1 -f tests/hercules-prompt-intelligence-invoker-db.sql
 
+      - name: Align issuer counters with durable replay history
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261015200000_hercules_prompt_trace_issuer_alignment_v1.sql
+      - name: Verify aligned issued sequences never reuse historical claims
+        run: psql -v ON_ERROR_STOP=1 -f tests/hercules-prompt-intelligence-issuer-alignment-db.sql
       - name: Start pinned disposable PostgREST on the CI PostgreSQL service
         run: |
           docker run --detach --name hercules-disposable-postgrest --network host \
