@@ -1,0 +1,105 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Smallz real gateway HTTP and Chromium E2E",
+  "scope": "source-only",
+  "intendedOutcome": "Test actual Smallz gateway HTTP auth and Chromium execution with blocked private targets and no live network dependency",
+  "changedFiles": [
+    "tests/smallz-gateway-http-chromium-e2e.mjs",
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    "docs/HERCULES-SMALLZ-GATEWAY-HTTP-CHROMIUM-E2E-V1.md",
+    ".hercules/completion-evidence/smallz-gateway-http-chromium-e2e.json"
+  ],
+  "research": [
+    {
+      "question": "How can the real Smallz gateway and Chromium be tested without accessing live systems?",
+      "finding": "Launch the existing gateway server with synthetic bearer token and ephemeral loopback port; navigate only to about:blank, test blocked private targets.",
+      "evidencePaths": [
+        "hercules-browser-gateway-v2/server.mjs",
+        "tests/smallz-gateway-http-chromium-e2e.mjs"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Gateway rejects unauthorized and private-target requests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Real gateway starts Chromium, reuses and closes session",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs",
+        "docs/HERCULES-SMALLZ-GATEWAY-HTTP-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs",
+        "docs/HERCULES-SMALLZ-GATEWAY-HTTP-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs",
+        "docs/HERCULES-SMALLZ-GATEWAY-HTTP-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs",
+        "docs/HERCULES-SMALLZ-GATEWAY-HTTP-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs",
+        "docs/HERCULES-SMALLZ-GATEWAY-HTTP-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs",
+        "docs/HERCULES-SMALLZ-GATEWAY-HTTP-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-gateway-http-chromium-e2e.mjs",
+        "docs/HERCULES-SMALLZ-GATEWAY-HTTP-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "Source-only CI; production gateway and database untouched"
+    }
+  ],
+  "openThreads": []
+}
