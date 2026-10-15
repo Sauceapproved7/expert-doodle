@@ -1,0 +1,123 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Hercules admission gate legacy and policy-document bypass closure",
+  "intendedOutcome": "A legacy PR edited after policy adoption cannot bypass evidence requirements, and policy documents cannot be treated as cosmetic documentation",
+  "scope": "source-only",
+  "changedFiles": [
+    ".hercules/completion-evidence/admission-legacy-hardening.json",
+    "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+    "scripts/hercules-pr-completeness-admission.mjs",
+    "tests/hercules-pr-completeness-admission.test.mjs"
+  ],
+  "research": [
+    {
+      "question": "Can an older PR acquire new changes and retain the original admission exemption?",
+      "finding": "The prior admission compared only createdAt and classified all docs Markdown as documentation-only; added negative regression tests before implementation and updated the reused gate",
+      "evidencePaths": [
+        "scripts/hercules-pr-completeness-admission.mjs",
+        "tests/hercules-pr-completeness-admission.test.mjs",
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Old PR with a post-cutoff GitHub update cannot bypass manifest admission",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs",
+        "scripts/hercules-pr-completeness-admission.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Missing or malformed update timestamps fail closed",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs",
+        "scripts/hercules-pr-completeness-admission.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Completeness and security policy Markdown are material changes",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs",
+        "scripts/hercules-pr-completeness-admission.mjs"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Untouched legacy PRs and ordinary documentation-only changes remain compatible",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs",
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+        "scripts/hercules-pr-completeness-admission.mjs"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-pr-completeness-admission.mjs"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "scripts/hercules-pr-completeness-admission.mjs",
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "This change hardens source and pull-request CI only; deployment to staging or production is not in scope"
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-pr-completeness-admission.test.mjs",
+        ".github/workflows/hercules-universal-merge-gates.yml"
+      ]
+    }
+  ],
+  "openThreads": []
+}
