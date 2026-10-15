@@ -432,6 +432,7 @@ Deno.serve(async(req:Request)=>{
     if(secretLike(html))return out({error:'artifact_secret_scan_failed'},400);
     const studioOnly=slug===STUDIO_OFFER_SLUG;
     if(studioOnly){
+      if(org!==PRESENTATION_ORG)return out({error:'studio_organization_not_authorized'},403);
       const checked=await studioReleaseSourceCheck({
         slug,html,claimedSha:String(b.approved_sha256||''),previousSha:String(b.previous_sha256||'')
       });
