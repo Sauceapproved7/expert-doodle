@@ -1,0 +1,20 @@
+name: Hercules Studio Offer Guard
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/hercules-deploy-controller/**"
+      - "tests/hercules-studio-offer-release-guard.test.mjs"
+      - ".github/workflows/hercules-studio-offer-guard.yml"
+permissions:
+  contents: read
+jobs:
+  verified-release-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Simulated source-bound deployment, partial failure, rollback
+        run: node --test tests/hercules-studio-offer-release-guard.test.mjs
