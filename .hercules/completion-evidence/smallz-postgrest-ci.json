@@ -1,0 +1,131 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Smallz real disposable PostgREST trace integration",
+  "scope": "source-only",
+  "intendedOutcome": "Prove signed Smallz owner trace admission over real disposable PostgREST HTTP with service-role and denied-role checks",
+  "changedFiles": [
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md",
+    ".hercules/completion-evidence/smallz-postgrest-ci.json",
+    "supabase/migrations/20261015200000_hercules_prompt_trace_issuer_alignment_v1.sql",
+    "tests/hercules-prompt-intelligence-issuer-alignment-db.sql"
+  ],
+  "research": [
+    {
+      "question": "Can the source-only integration exercise real HTTP PostgREST without paid staging?",
+      "finding": "The official digest-pinned PostgREST image can serve the existing disposable PostgreSQL migration test database, with synthetic JWT roles.",
+      "evidencePaths": [
+        ".github/workflows/hercules-prompt-intelligence.yml",
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs"
+      ]
+    },
+    {
+      "question": "Can a new emitter reuse an already-claimed sequence?",
+      "finding": "Real PostgREST integration exposed emitter/replay counter drift and denied the authenticated owner request; alignment migration and regression address this.",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "tests/hercules-prompt-intelligence-issuer-alignment-db.sql"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Real PostgREST accepts service-role reserve/claim and rejects replay",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Anonymous and authenticated roles denied via HTTP",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Owner browser trace admission traverses actual app and PostgREST HTTP",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Historical replay counters cannot cause new emitter to reserve already-claimed sequences",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-issuer-alignment-db.sql"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md"
+      ]
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "Source-only disposable CI; no production rollout"
+    }
+  ],
+  "openThreads": []
+}
