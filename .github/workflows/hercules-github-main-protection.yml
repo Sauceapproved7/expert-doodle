@@ -20,4 +20,4 @@ jobs:
         with:
           node-version: "22"
       - name: Verify GitHub main-protection backend
-        run: node --test tests/hercules-github-main-protection.test.mjs
+        run: node --test tests/hercules-github-main-protection.test.mjs tests/hercules-native-main-protection-audit.test.mjs
