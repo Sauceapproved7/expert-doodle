@@ -1,0 +1,114 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Smallz replay RPC least-privilege hardening",
+  "scope": "source-only",
+  "intendedOutcome": "Run durable replay claims with the authorized service-role caller's privileges, not the function owner's",
+  "changedFiles": [
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    "supabase/migrations/20261015190000_hercules_prompt_trace_invoker_v1.sql",
+    "tests/hercules-prompt-intelligence-invoker-db.sql",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-INVOKER-V1.md",
+    ".hercules/completion-evidence/smallz-trace-invoker.json"
+  ],
+  "research": [
+    {
+      "question": "Does the existing replay claim need SECURITY DEFINER?",
+      "finding": "No; service_role has direct table grants and RLS bypass. The prior function was definer-scoped, which the red-first test rejects.",
+      "evidencePaths": [
+        "supabase/migrations/20261015180000_hercules_prompt_trace_replay_window_v1.sql",
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Replay function executes as caller",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Service role reserves and claims, duplicate denied",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Anonymous and authenticated cannot execute replay claim",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-INVOKER-V1.md",
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-INVOKER-V1.md",
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-INVOKER-V1.md",
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-INVOKER-V1.md",
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-INVOKER-V1.md",
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-INVOKER-V1.md",
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-INVOKER-V1.md",
+        "tests/hercules-prompt-intelligence-invoker-db.sql"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "Source-only, no live rollout"
+    }
+  ],
+  "openThreads": []
+}
