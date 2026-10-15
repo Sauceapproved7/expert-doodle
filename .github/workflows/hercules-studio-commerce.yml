@@ -4,6 +4,7 @@ on:
     paths:
       - "supabase/functions/hercules-private-bridge/studio-commerce.mjs"
       - "tests/hercules-studio-commerce.test.mjs"
+      - "tests/hercules-launch-studio-offer-cors.test.mjs"
       - "tests/hercules-studio-commerce-webhook.test.mjs"
       - "tests/hercules-titan-shopify-entitlement.test.mjs"
       - "supabase/functions/hercules-private-bridge/**"
@@ -73,5 +74,39 @@ jobs:
             customerSubmitted:false,
           },null,2));
           if(!success)process.exitCode=1;
+          NODE
+      - name: Verify invalid Studio request returns readable rejection without creating a lead
+        if: ${{ steps.live-preflight.outcome == 'success' }}
+        timeout-minutes: 1
+        run: |
+          node --input-type=module <<'NODE'
+          const response = await fetch('https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-launch', {
+            method: 'POST',
+            redirect: 'manual',
+            credentials: 'omit',
+            headers: { origin: 'https://sauceapproved-forge-host.onrender.com', 'content-type': 'application/json' },
+            body: JSON.stringify({
+              action: 'software_access_request',
+              p_product_code: 'sauceapproved-studio',
+              p_plan_code: 'pro',
+              p_email: 'invalid-email',
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+          const answer = await response.json().catch(() => ({}));
+          const proof = {
+            httpStatus: response.status,
+            allowedOrigin: response.headers.get('access-control-allow-origin'),
+            credentials: response.headers.get('access-control-allow-credentials'),
+            errorCode: answer.error || null,
+            submittedValidEmail: false,
+            recordedLead: false,
+            releaseAuthorized: false,
+          };
+          const ok = proof.httpStatus === 400 &&
+            proof.allowedOrigin === 'https://sauceapproved-forge-host.onrender.com' &&
+            proof.credentials === null && proof.errorCode === 'invalid_access_request';
+          console.log(JSON.stringify({ ...proof, passed: ok }, null, 2));
+          if (!ok) process.exitCode = 1;
           NODE
 

@@ -47,6 +47,17 @@ test('preflight fails closed for unknown origins, null origins, methods or privi
   assert.equal(studioOfferPreflight(new Request(launchUrl)),null);
 });
 
+test('trusted preflight is header-case tolerant but rejects missing JSON content-type',()=>{
+  const mixed=studioOfferPreflight(preflight(allowed,'POST','Content-Type'));
+  assert.equal(mixed.status,204);
+  assert.equal(mixed.headers.get('access-control-allow-origin'),allowed);
+  for(const header of ['', 'accept', 'content-type, content-type']){
+    const denied=studioOfferPreflight(preflight(allowed,'POST',header));
+    assert.equal(denied.status,403);
+    assert.equal(denied.headers.get('access-control-allow-origin'),null);
+  }
+});
+
 test('only trusted origin gets readable software intake success and failure replies',async()=>{
   const req=new Request(launchUrl,{method:'POST',headers:{origin:allowed,'content-type':'application/json'},body:'{}'});
   for(const [status,body] of [[200,{ok:true}],[400,{ok:false,error:'invalid_access_request'}],[429,{ok:false,error:'request_rate_limited'}],[503,{ok:false,error:'storage_error'}]]){
