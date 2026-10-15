@@ -34,3 +34,5 @@ Before changing anything, read and obey:
 
 The full human-readable operating model is `governance/sauceapproved-master-gpt-operating-instructions-v1.md`.
 The machine-readable source for enforceable execution controls is `governance/hercules-execution-contract-v1.json`.
+
+18. **Boil the Ocean completion gate:** Follow `docs/HERCULES-BOIL-THE-OCEAN-V1.md` and `completenessStandard` in `governance/hercules-execution-contract-v1.json`. Search before building; establish measurable acceptance criteria; test before shipping; document and verify; close every in-scope thread. For each material build, generate a completion manifest and run `node scripts/hercules-completeness-gate.mjs --manifest <path> --require-complete`. A failing gate forbids a "complete" claim. Source-only work is not live deployment. Never bypass security or owner approval for completeness.
