@@ -88,3 +88,6 @@ jobs:
           wait "$b"
           test "$(cat /tmp/replay-one /tmp/replay-two | grep -cx t)" -eq 1
           test "$(cat /tmp/replay-one /tmp/replay-two | grep -cx f)" -eq 1
+
+      - name: Test bounded out-of-order trace claims against disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f tests/hercules-prompt-intelligence-replay-window-db.sql
