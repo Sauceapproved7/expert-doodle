@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { studioOfferParityTargets, witnessStudioOffer } from '../hercules-runtime/studio-offer-parity.mjs';
@@ -101,4 +102,14 @@ test('CLI requires explicit --probe and rejects arbitrary options', () => {
     assert.equal(p.status, 2);
     assert.match(p.stderr, /explicit_probe_required/);
   }
+});
+
+test('CI browser audit never accepts wildcard origins and never deploys', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/hercules-studio-offer-public-artifact-audit.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /permissions:\s*\n\s*contents: read/);
+  assert.match(workflow, /allowOrigin === origin/);
+  assert.doesNotMatch(workflow, /allowOrigin === ['"]\*['"]/);
+  assert.match(workflow, /method: 'OPTIONS'/);
+  assert.match(workflow, /customerSubmissionPerformed: false/);
+  assert.doesNotMatch(workflow, /method: 'POST'|supabase db|deploy[_-]static|storage\.from\(/);
 });
