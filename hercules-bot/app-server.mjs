@@ -12,7 +12,6 @@ import {createAbyssOrchestrator} from "./abyss-orchestrator.mjs";
 import {createAbyssRuntimeBoundary} from "./abyss-runtime-boundary.mjs";
 import {createSmallzOwnerBridge} from "./owner-session-bridge.mjs";
 import {createSmallzRequestAuth} from "./request-auth.mjs";
-import {createSmallzTraceIngressFromEnv} from "./prompt-trace-ingress.mjs";
 import {credentialSetup} from "./credential-setup.mjs";
 import {smallzRuntimeIdentity} from "../hercules-runtime/smallz-release-proof.mjs";
 
@@ -46,8 +45,7 @@ function createServerSideDeployRequest(){
   };
 }
 
-export function createHerculesBotApp({port=Number(process.env.PORT||38801),boundary=createAbyssRuntimeBoundary(),credentialFetch=fetch,renderEnv=process.env,traceIngress=undefined}={}){
-  const promptTraceIngress=traceIngress===undefined?createSmallzTraceIngressFromEnv(renderEnv):traceIngress;
+export function createHerculesBotApp({port=Number(process.env.PORT||38801),boundary=createAbyssRuntimeBoundary(),credentialFetch=fetch,renderEnv=process.env}={}){
   const body=createSimulatedBodyAdapter();
   const mcpWorkEndpoint=process.env.HERCULES_MCP_WORK_URL;
   const ownerBridge=mcpWorkEndpoint?createSmallzOwnerBridge({endpoint:mcpWorkEndpoint}):null;
@@ -95,19 +93,6 @@ export function createHerculesBotApp({port=Number(process.env.PORT||38801),bound
         const {ownerAuthorization,body:request}=createSmallzRequestAuth({authorization:req.authorization,body:req.body});
         return json(200,await ownerBridge({ownerAuthorization,action:request.action,url:request.url}));
       }catch{return json(400,{error:"browser-request-rejected"});}
-    });
-    if(method==="POST"&&url==="/api/prompt-intelligence/trace")return owner(req,async principal=>{
-      if(!promptTraceIngress)return json(503,{error:"trace-ingress-not-configured"});
-      try{
-        const receipt=await promptTraceIngress(req.body);
-        return json(200,receipt);
-      }catch(error){
-        // Do not expose page text, signing keys, database errors or URL data.
-        if(error?.message==="replayed_event")return json(409,{error:"trace-rejected"});
-        if(["invalid_envelope","invalid_signature","untrusted_source","oversized_or_invalid","invalid_event","invalid_navigation","invalid_text","invalid_tool_attempt"].includes(error?.message))
-          return json(400,{error:"trace-rejected"});
-        return json(503,{error:"trace-ingress-unavailable"});
-      }
     });
     if(method==="GET"&&url==="/api/state")return owner(req,async principal=>{
       const external=await stateFor(principal);
