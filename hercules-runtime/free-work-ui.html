@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#09121c">
+<title>Hercules Work • Owner-controlled Workspace</title>
+<link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script>
+</head><body>
+<header class="mast"><div class="wordmark">HERCULES <span>WORK</span></div><div class="version">FREE WORKSPACE • v1</div></header>
+<main>
+<section class="hero"><div class="eyebrow">SAUCEAPPROVED / PRIVATE OPERATOR</div>
+<h1>One workspace.<br><em>Your rules.</em></h1>
+<p>Plan projects, prepare research, inspect code, and draft code through your own local model. No paid OpenAI key is needed for offline tools.</p></section>
+<div class="layout">
+<section class="panel" aria-labelledby="newTask"><h2 id="newTask">New job</h2>
+<label for="token">Owner access token</label>
+<input type="password" id="token" autocomplete="off" placeholder="Required for task API access">
+<p class="hint">This credential stays in this page session and is not stored in browser storage. Do not paste it into chat.</p>
+<label for="kind">Workflow</label>
+<select id="kind">
+<option value="plan">Work · Project planner (offline)</option>
+<option value="research">Research · Source checklist (offline)</option>
+<option value="review">Code · Heuristic review (offline)</option>
+<option value="code">Code · Local AI generation (model required)</option>
+</select>
+<label for="prompt">What should Hercules work on?</label>
+<textarea id="prompt" maxlength="8000" rows="5" placeholder="Describe the project and desired outcome"></textarea>
+<label for="context">Source text / requirements (optional)</label>
+<textarea id="context" maxlength="16000" rows="6" placeholder="Paste code to review or relevant requirements. Never paste API keys."></textarea>
+<div class="actions"><button id="run">Create &amp; run job</button><button id="refresh" class="ghost">Refresh jobs</button></div>
+<p class="hint" id="status" role="status">Ready. Choose a workflow.</p>
+</section>
+<section class="panel output" aria-labelledby="results"><div class="paneltitle"><h2 id="results">Job output</h2><span class="dot"></span></div>
+<pre id="result" aria-live="polite">No job executed yet.</pre>
+<h3>Recent jobs</h3><ul id="history"><li>Authenticate to load jobs.</li></ul>
+<div class="disclaimer">Offline plans are templates, not completed research or production deployments. Code generation needs a separately installed local model. This app never grants external platform entitlements.</div></section>
+</div></main><footer>HERCULES • BUILT TO BE OWNED • AUTHORIZED OPERATIONS ONLY</footer></body></html>
