@@ -1,0 +1,122 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Hercules Prompt Intelligence signed trace source integration",
+  "intendedOutcome": "Add a reviewable source-only, fail-closed signed trace-ingestion boundary for Hercules Browser without granting tool execution or claiming production connectivity",
+  "scope": "source-only",
+  "changedFiles": [
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    ".hercules/completion-evidence/prompt-intelligence-trace.json",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md",
+    "hercules-runtime/prompt-intelligence/trace.mjs",
+    "tests/hercules-prompt-intelligence-trace.test.mjs"
+  ],
+  "research": [
+    {
+      "question": "What canonical browser security and completion controls already exist?",
+      "finding": "Reuse the existing Hercules Browser gateway policy, personal browser bridge boundary, and canonical execution and completeness gates; do not duplicate browser controls.",
+      "evidencePaths": [
+        "governance/browser-routing-policy.json",
+        "docs/HERCULES-PERSONAL-BROWSER-BRIDGE-V1.md",
+        "docs/HERCULES-BOIL-THE-OCEAN-V1.md"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Verify HMAC emitter identity and reject forged events",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-trace.test.mjs",
+        "hercules-runtime/prompt-intelligence/trace.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Reject replayed events and rely on externally supplied atomic replay claim",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-trace.test.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Redact navigation URLs and deny untrusted tool execution claims",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-trace.test.mjs"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Reject invalid event shapes and oversize events, document non-production boundary",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-trace.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "governance/browser-routing-policy.json",
+        "docs/HERCULES-PERSONAL-BROWSER-BRIDGE-V1.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "hercules-runtime/prompt-intelligence/trace.mjs"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-trace.test.mjs",
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-trace.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "This PR is restricted to an inactive source-only boundary; no actual Smallz connection, database migration, customer workflow, or production deployment is within this PR scope."
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-trace.test.mjs",
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
+    }
+  ],
+  "openThreads": []
+}
