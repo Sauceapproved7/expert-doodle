@@ -64,22 +64,23 @@ async function observeOne(surface, url, expectedSha, fetchImpl) {
     if (status !== 200 || response.redirected === true) {
       return { surface, result: 'not_verified', reason: 'unexpected_http_status', httpStatus: status };
     }
-    if (!/^text\/html(?:\s*;|\s*$)/i.test(response.headers?.get('content-type') ?? '')) {
-      return { surface, result: 'not_verified', reason: 'unexpected_content_type', httpStatus: status };
-    }
+    const htmlContentType = /^text\/html(?:\s*;|\s*$)/i.test(response.headers?.get('content-type') ?? '');
     const declaredLength = response.headers?.get('content-length');
     if (declaredLength && Number(declaredLength) > MAX_BYTES) {
       return { surface, result: 'not_verified', reason: 'body_too_large', httpStatus: status };
     }
     const body = await boundedBody(response);
     const observedSha256 = sha256(body);
+    const exactBytesMatch = observedSha256 === expectedSha;
     return {
       surface,
-      result: observedSha256 === expectedSha ? 'matching' : 'different',
-      reason: observedSha256 === expectedSha ? 'exact_bytes_observed' : 'source_bytes_differ',
+      result: htmlContentType ? (exactBytesMatch ? 'matching' : 'different') : 'not_verified',
+      reason: htmlContentType ? (exactBytesMatch ? 'exact_bytes_observed' : 'source_bytes_differ') : 'unexpected_content_type',
       httpStatus: status,
       observedSha256,
       bytes: body.byteLength,
+      exactBytesMatch,
+      htmlContentType,
     };
   } catch {
     return { surface, result: 'not_verified', reason: 'fetch_or_body_failed', httpStatus: status };
