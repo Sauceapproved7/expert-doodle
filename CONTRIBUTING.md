@@ -26,12 +26,16 @@ Every change must:
 14. favor commercially useful, secure, scalable, maintainable assets and the business priority encoded by the master operating instructions;
 15. use a reviewable pull request whenever repository permissions allow.
 
+## Boil the Ocean — definition of done
+
+For every material feature or build, record existing-state research, measurable acceptance criteria, test-first evidence for code changes, documentation, security checks, and required release verification in a completion manifest. Follow `docs/HERCULES-BOIL-THE-OCEAN-V1.md`; validate with `node scripts/hercules-completeness-gate.mjs --manifest <path> --require-complete`. A report marked blocked, unverified, failed, or containing unresolved in-scope threads is not complete. Keep owner-only approval and deployment boundaries intact.
+
 ## Before merge
 
 Run the applicable Node test suites plus:
 
 ```sh
-node --test tests/hercules-implementation-enforcement.test.mjs
+node --test tests/hercules-implementation-enforcement.test.mjs tests/hercules-completeness-gate.test.mjs
 node scripts/verify-hercules-execution-contract.mjs
 node scripts/verify-owner-code-only.mjs
 node scripts/security-baseline.mjs
