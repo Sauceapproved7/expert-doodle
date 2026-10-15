@@ -10,7 +10,7 @@ The migration `20261015120000_hercules_prompt_trace_replay_v1.sql` creates an RL
 ## Validation
 `node --test tests/hercules-prompt-intelligence-*.test.mjs` includes replay, invalid identity, transport failure, and signature/trust-boundary tests. The repository workflow also runs owner-code and security gates.
 
-**Known verification gap:** SQL migration has not been executed against a real isolated Postgres/Supabase environment, so database privilege, contention, transaction rollback and PostgREST response semantics need independent staging evidence before applying anywhere live.
+**Verification boundary:** The dedicated GitHub Actions disposable PostgreSQL job exercises the migration, privilege checks, duplicate/out-of-order rejection, rollback and concurrent claims. Its result must be checked on the exact reviewed commit; those tests do not prove compatibility with an actual Supabase/PostgREST deployment, which remains a separate staging gate.
 
 ## Staging integration
 1. Apply migration to a *disposable* PostgreSQL environment with Supabase roles; confirm RLS, denied anon/authenticated access and service-role execute.
