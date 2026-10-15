@@ -92,10 +92,58 @@ jobs:
           path: /tmp/hercules-studio-release-evidence/
           if-no-files-found: error
           retention-days: 30
+      - name: Observe browser CORS preflight (OPTIONS only, no lead submission)
+        id: preflight
+        continue-on-error: true
+        run: |
+          node --input-type=module <<'NODE'
+          const origin = 'https://sauceapproved-forge-host.onrender.com';
+          const url = 'https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-launch';
+          let status = null, allowOrigin = null, allowMethods = null, allowHeaders = null;
+          try {
+            const response = await fetch(url, {
+              method: 'OPTIONS', redirect: 'manual', credentials: 'omit',
+              cache: 'no-store', referrerPolicy: 'no-referrer',
+              headers: {
+                origin,
+                'access-control-request-method': 'POST',
+                'access-control-request-headers': 'content-type',
+              },
+              signal: AbortSignal.timeout(8000),
+            });
+            status = response.status;
+            allowOrigin = response.headers.get('access-control-allow-origin');
+            allowMethods = response.headers.get('access-control-allow-methods');
+            allowHeaders = response.headers.get('access-control-allow-headers');
+            const accepted = status >= 200 && status < 300 &&
+              (allowOrigin === '*' || allowOrigin === origin) &&
+              (allowMethods || '').split(',').some(v => v.trim().toUpperCase() === 'POST') &&
+              (allowHeaders || '').split(',').some(v => v.trim().toLowerCase() === 'content-type');
+            console.log(JSON.stringify({
+              schema: 'sauceapproved.hercules.studio-browser-preflight.v1',
+              method: 'OPTIONS', origin, httpStatus: status,
+              allowOrigin: allowOrigin === origin ? 'requested-origin' : allowOrigin === '*' ? 'wildcard' : 'missing-or-incompatible',
+              postMethodAllowed: (allowMethods || '').split(',').some(v => v.trim().toUpperCase() === 'POST'),
+              contentTypeHeaderAllowed: (allowHeaders || '').split(',').some(v => v.trim().toLowerCase() === 'content-type'),
+              browserPreflightAccepted: accepted,
+              customerSubmissionPerformed: false, credentialsUsed: false
+            }, null, 2));
+            if (!accepted) process.exitCode = 1;
+          } catch {
+            console.log(JSON.stringify({
+              schema: 'sauceapproved.hercules.studio-browser-preflight.v1',
+              method: 'OPTIONS', httpStatus: status, browserPreflightAccepted: false,
+              reason: 'preflight_unavailable', customerSubmissionPerformed: false,
+              credentialsUsed: false
+            }));
+            process.exitCode = 1;
+          }
+          NODE
       - name: Record bounded public observation without release claims
         if: always()
         env:
           PUBLIC_PARITY_OUTCOME: ${{ steps.parity.outcome }}
+          BROWSER_PREFLIGHT_OUTCOME: ${{ steps.preflight.outcome }}
         run: |
           {
             echo "## Studio founding-access offer: public artifact check"
@@ -104,6 +152,12 @@ jobs:
               echo "Two public HTML endpoints returned the exact checked-out source bytes."
             else
               echo "Public HTML parity **not verified**; see the bounded witness log for status and digests."
+            fi
+            echo ""
+            if [ "$BROWSER_PREFLIGHT_OUTCOME" = "success" ]; then
+              echo "Browser CORS preflight accepted from the existing Render origin; no POST sent."
+            else
+              echo "Browser CORS preflight **not verified/blocked**. Do not claim working customer intake."
             fi
             echo ""
             echo "Read-only observation only. No production write, owner approval,"
