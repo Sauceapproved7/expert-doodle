@@ -13,6 +13,7 @@ The existing deployed Hercules `hercules-deploy-controller` v10 has an authentic
 The v10 controller has been snapshotted in `supabase/functions/hercules-deploy-controller/index.ts` as current production evidence, with a **strictly reversible, localized patch**:
 - Imports one owned, dependency-free helper, `studio-offer-release-guard.mjs`.
 - Uses the helper **only** for authenticated `deploy_static` requests whose slug is exactly `sauceapproved-studio-offer`.
+- Requires the authenticated membership's organization to match the fixed SauceApproved presentation owner (`PRESENTATION_ORG`); requests from an owner/admin in any *other* organization fail with 403 **before** storage changes. The existing approved internal-service path retains its established organization scope.
 - Requires the request to supply `approved_sha256` **and** `previous_sha256`, both exactly matching the pinned expected digests. Invalid, altered, missing, unexpected, or unapproved source fails before public Storage writes.
 - Reads the current published object and verifies its digest before the first public write; returns a revision-conflict failure if it has changed.
 - After the normal deployment archive writes, performs the same Storage upsert **only inside the existing authorized controller** and performs up to three bounded GET attempts of the exact public Render address, retrying only temporary HTTP 503. Only a 200 HTML response with a full matching digest counts as success.
