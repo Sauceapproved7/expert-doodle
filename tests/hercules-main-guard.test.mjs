@@ -68,3 +68,25 @@ test("native GitHub protection will require the main-guard contract too", async 
   const source = await readFile("supabase/functions/hercules-github-app/index.ts","utf8");
   assert.match(source,/main-guard-contract/);
 });
+
+test("merged pull request without the universal completeness-admission check must fail closed", async () => {
+  const { classifyMainPush } = await guardModule();
+  const decision = classifyMainPush({
+    event: { before: "a", after: "b", sender: { login: "web-flow" }, head_commit: { message: "merge" } },
+    associatedPrs: [{ number: 1080, merged_at: "2026-10-15T08:01:00Z", base: { ref: "main" }, head: { sha: "head" } }],
+    checkRuns: { check_runs: REQUIRED.map(name => ({ name, status: "completed", conclusion: "success" })) }
+  });
+  assert.equal(decision.authorized, false);
+  assert.match(decision.reason, /universal-merge-gates/);
+});
+
+test("runtime and native protection must require the universal completeness-admission check", async () => {
+  const workflow = await readFile(".github/workflows/hercules-main-integrity-guard.yml", "utf8");
+  const provider = await readFile("supabase/functions/hercules-github-app/index.ts", "utf8");
+  const { REQUIRED_MAIN_CHECKS } = await guardModule();
+  assert.ok(REQUIRED_MAIN_CHECKS.includes("universal-merge-gates"));
+  assert.match(workflow, /required_checks=\([\s\S]*?"universal-merge-gates"/);
+  const checks = provider.match(/const REQUIRED_MAIN_CHECKS = \[([\s\S]*?)\];/);
+  assert.ok(checks, "GitHub App main protection check list must exist");
+  assert.match(checks[1], /'universal-merge-gates'/);
+});
