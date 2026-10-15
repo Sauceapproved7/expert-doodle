@@ -25,7 +25,7 @@ node scripts/hercules-studio-offer-parity.mjs --probe --json
 
 The verifier reads the checked-out canonical offer source, validates required accessibility and commercial-boundary markers, hashes its UTF-8 bytes, then makes exactly two unauthenticated public GET requests. Requests never send cookies or secrets, never follow redirects, time out within 8 seconds each, and refuse bodies larger than 64 KiB. Results contain hashes and status only, not public HTML contents.
 
-A successful report requires **both public endpoints to deliver byte-identical HTML** to the checked-out source. An HTTP 200 by itself is insufficient; partial matches, redirects, fetch failures, larger payloads, and application HTML instead of offer HTML report `unverified_or_drifted`. Run against the exact desired Git commit, not an unspecified future checkout.
+A successful report requires **both public endpoints to deliver byte-identical HTML with a valid HTML content type** to the checked-out source. If a public endpoint responds with a non-HTML MIME type, the verifier still computes a bounded SHA-256 of its bytes for drift diagnosis, but reports that endpoint as `not_verified` with `unexpected_content_type`, even if the bytes match. An HTTP 200 by itself is insufficient; partial matches, redirects, fetch failures, larger payloads, and application HTML instead of offer HTML report `unverified_or_drifted`. Run against the exact desired Git commit, not an unspecified future checkout.
 
 ## Important evidence limits
 
@@ -33,7 +33,13 @@ A successful report requires **both public endpoints to deliver byte-identical H
 - Exact HTML parity does **not** prove a legitimate release was authorized, a buyer can pay, a request is delivered, or that a whole application works.
 - A mismatch indicates an unverified version difference, **not automatic permission to overwrite the live object**.
 - A matching source and public destination at one moment does not prove CDN cache invalidation everywhere or authenticated user journeys.
-- In CI, run the *offline tests only*. Public probes are explicit, bounded verification operations and must not be silently triggered by a pull request.
+- The implementation-enforcement CI runs *offline tests only*. Separately, `.github/workflows/hercules-studio-offer-public-artifact-audit.yml` intentionally makes two bounded, no-credential public GET requests on pull requests that change this verifier, its tests, workflow, documentation, or offer HTML. Its probe step is `continue-on-error` so an expected stale public artifact does **not** falsely block security CI or imply deployment. Read the probe JSON and summary rather than interpreting the overall job's green status as parity success.
+
+## Pinned rollback evidence in GitHub Actions
+
+The separate public-artifact audit workflow now records two public content comparisons **and makes one additional read-only GET** of the existing Render offer. That final request captures an immutable rollback copy only if the observed old object is exactly 7,889 bytes and has the known SHA-256 `bf087ccd55cfbe172c049b1d1db5882aeac2cac73aa33fec1839c951c1fc41ff`. It also verifies the candidate source SHA-256 `8743e3ffc127f61d48aa9d2eb9058847e32b2ff51489367d2f59f3b54ef23a9b`.
+
+When both checks pass, the workflow retains a 30-day GitHub Actions artifact containing the known-old public HTML, approved candidate HTML and a manifest with their byte sizes, checksums and capture time. The artifact is **evidence only**, not an authorized upload or deployment. If the public page has changed or a request is unavailable, the snapshot must fail rather than silently archiving untrusted or unexpected content. Before any authorized future release, refresh the backup and verify all checksums and release gate decisions again. No rollback or publish runs automatically.
 
 ## Existing Hercules release route
 
