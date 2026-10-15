@@ -12,6 +12,7 @@ on:
       - 'supabase/migrations/*hercules_prompt_trace_replay_window*.sql'
       - 'tests/hercules-prompt-intelligence-replay-window-db.sql'
       - 'tests/hercules-prompt-intelligence-postgrest.test.mjs'
+      - 'tests/smallz-chromium-trace-e2e.mjs'
       - 'tests/hercules-prompt-intelligence-issuer-alignment-db.sql'
       - 'supabase/migrations/*hercules_prompt_trace_issuer_alignment*.sql'
       - 'tests/hercules-prompt-intelligence-replay-db.sql'
@@ -144,3 +145,19 @@ jobs:
       - name: Stop disposable PostgREST
         if: always()
         run: docker rm -f hercules-disposable-postgrest || true
+
+  chromium-trace-e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install pinned existing Smallz Chromium runtime
+        run: npm install --prefix hercules-browser-gateway-v2 --ignore-scripts --no-audit --no-fund
+      - name: Install isolated Chromium and OS dependencies
+        run: ./hercules-browser-gateway-v2/node_modules/.bin/playwright install --with-deps chromium
+      - name: Test real Chromium with signed owner admission and negative cases
+        run: node --test tests/smallz-chromium-trace-e2e.mjs
