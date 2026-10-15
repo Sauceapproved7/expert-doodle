@@ -27,3 +27,51 @@ jobs:
       - run: node --test tests/hercules-studio-commerce-webhook.test.mjs
       - run: node --test tests/hercules-titan-shopify-entitlement.test.mjs
       - run: node --test tests/hercules-customer-foundation.test.mjs
+      - name: Observe live founding-access CORS preflight (read only)
+        id: live-preflight
+        continue-on-error: true
+        timeout-minutes: 1
+        run: |
+          node --input-type=module <<'NODE'
+          const target = 'https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-launch';
+          const trusted = 'https://sauceapproved-forge-host.onrender.com';
+          async function check(origin) {
+            const response = await fetch(target, {
+              method: 'OPTIONS',
+              redirect: 'manual',
+              credentials: 'omit',
+              headers: {
+                origin,
+                'access-control-request-method': 'POST',
+                'access-control-request-headers': 'content-type',
+              },
+              signal: AbortSignal.timeout(8000),
+            });
+            return {
+              status: response.status,
+              allowedOrigin: response.headers.get('access-control-allow-origin'),
+              allowedMethods: response.headers.get('access-control-allow-methods'),
+              allowedHeaders: response.headers.get('access-control-allow-headers'),
+              credentials: response.headers.get('access-control-allow-credentials'),
+            };
+          }
+          const good = await check(trusted);
+          const denied = await check('https://evil.example');
+          const success = good.status === 204 &&
+            good.allowedOrigin === trusted &&
+            good.allowedMethods?.toUpperCase().split(',').map(s => s.trim()).includes('POST') &&
+            good.allowedHeaders?.toLowerCase().split(',').map(s => s.trim()).includes('content-type') &&
+            good.credentials === null &&
+            denied.allowedOrigin === null;
+          console.log(JSON.stringify({
+            service:'hercules-launch',
+            test:'no-credential OPTIONS CORS contract',
+            trusted:good,
+            untrusted:denied,
+            passed:Boolean(success),
+            releaseAuthorized:false,
+            customerSubmitted:false,
+          },null,2));
+          if(!success)process.exitCode=1;
+          NODE
+
