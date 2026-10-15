@@ -35,5 +35,6 @@ jobs:
       - name: Javascript syntax check
         run: |
           node --check hercules-runtime/free-work-server.mjs
-          node --check hercules-runtime/free-work-core.mjs\n          node --check hercules-runtime/free-work-persistence.mjs
+          node --check hercules-runtime/free-work-core.mjs
+          node --check hercules-runtime/free-work-persistence.mjs
           node --check hercules-runtime/free-work-app.js
