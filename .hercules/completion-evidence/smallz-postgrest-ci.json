@@ -8,7 +8,9 @@
     ".github/workflows/hercules-prompt-intelligence.yml",
     "tests/hercules-prompt-intelligence-postgrest.test.mjs",
     "docs/HERCULES-PROMPT-INTELLIGENCE-POSTGREST-CI-V1.md",
-    ".hercules/completion-evidence/smallz-postgrest-ci.json"
+    ".hercules/completion-evidence/smallz-postgrest-ci.json",
+    "supabase/migrations/20261015200000_hercules_prompt_trace_issuer_alignment_v1.sql",
+    "tests/hercules-prompt-intelligence-issuer-alignment-db.sql"
   ],
   "research": [
     {
@@ -17,6 +19,14 @@
       "evidencePaths": [
         ".github/workflows/hercules-prompt-intelligence.yml",
         "tests/hercules-prompt-intelligence-postgrest.test.mjs"
+      ]
+    },
+    {
+      "question": "Can a new emitter reuse an already-claimed sequence?",
+      "finding": "Real PostgREST integration exposed emitter/replay counter drift and denied the authenticated owner request; alignment migration and regression address this.",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-postgrest.test.mjs",
+        "tests/hercules-prompt-intelligence-issuer-alignment-db.sql"
       ]
     }
   ],
@@ -43,6 +53,14 @@
       "status": "verified",
       "evidencePaths": [
         "tests/hercules-prompt-intelligence-postgrest.test.mjs"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Historical replay counters cannot cause new emitter to reserve already-claimed sequences",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-issuer-alignment-db.sql"
       ]
     }
   ],
