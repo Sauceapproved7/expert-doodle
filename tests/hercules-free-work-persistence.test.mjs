@@ -84,3 +84,9 @@ test("task additions stop before destructive overflow",()=>withPrivateDir(dir=>{
   const b=createFileBackedWorkEngine({path,maxJobs:1});
   assert.equal(b.listTasks().length,1);
 }));
+
+test("dangling storage symlink is rejected without replacing link",()=>withPrivateDir(dir=>{
+  const path=join(dir,"work.json");
+  symlinkSync(join(dir,"nonexistent"),path);
+  assert.throws(()=>createFileBackedWorkEngine({path}),/storage_symlink_denied/);
+}));
