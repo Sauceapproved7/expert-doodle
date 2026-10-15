@@ -1,0 +1,46 @@
+name: Hercules Studio Offer Public Artifact Audit
+
+# Read-only evidence only. This workflow must not be used as an approval,
+# upload, publication, or customer/checkout verification mechanism.
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/hercules-studio-offer-public-artifact-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  exact-public-offer-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Verify source verifier and safety checks locally
+        run: node --test tests/hercules-studio-offer-parity.test.mjs tests/hercules-studio-offer-accessibility.test.mjs
+      - name: Observe exact public Studio offer bytes (two GETs, no credentials)
+        id: parity
+        continue-on-error: true
+        run: node scripts/hercules-studio-offer-parity.mjs --probe --json
+      - name: Record bounded public observation without release claims
+        if: always()
+        env:
+          PUBLIC_PARITY_OUTCOME: ${{ steps.parity.outcome }}
+        run: |
+          {
+            echo "## Studio founding-access offer: public artifact check"
+            echo ""
+            if [ "$PUBLIC_PARITY_OUTCOME" = "success" ]; then
+              echo "Two public HTML endpoints returned the exact checked-out source bytes."
+            else
+              echo "Public HTML parity **not verified**; see the bounded witness log for status and digests."
+            fi
+            echo ""
+            echo "Read-only observation only. No production write, owner approval,"
+            echo "billing, signup delivery, or application functionality is established."
+            echo "The source is checked out from this PR; for production release"
+            echo "compare again against the intended **merged main SHA**."
+          } >> "$GITHUB_STEP_SUMMARY"
