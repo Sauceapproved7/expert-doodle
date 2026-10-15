@@ -6,7 +6,7 @@ import { evaluateCompletion } from "./hercules-completeness-gate.mjs";
 export const ADMISSION_POLICY_START = "2026-10-15T00:00:00Z";
 export const EVIDENCE_DIR = ".hercules/completion-evidence/";
 const REPO = "Sauceapproved7/expert-doodle";
-const DOC_ONLY = /^(?:docs\/[^/]+(?:\/[^/]+)*\.md|README\.md|CHANGELOG\.md|CONTRIBUTING\.md)$/i;
+const DOC_ONLY = /^(?:docs\/[^/]+(?:\/[^/]+)*\.md|README\.md|CHANGELOG\.md)$/i;
 
 function safeRepoPath(value) {
   return typeof value === "string" && value.length > 0 && value.length <= 512 &&
