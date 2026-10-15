@@ -148,6 +148,7 @@ test('real deployed controller wiring preserves owner authorization and scopes g
   assert.match(src,/guardedStudioPresentationWrite\(/);
   assert.match(src,/pinnedPreviousSha:STUDIO_LEGACY_SHA/);
   assert.match(src,/if\(studioOnly\)/);
+  assert.match(src,/if\(org!==PRESENTATION_ORG\)return out\(\{error:'studio_organization_not_authorized'\},403\)/);
   assert.match(src,/if\(!guarded\.ok\)throw new Error/);
   assert.match(src,/await verifyUrl\(stableUrl\)/);
   assert.doesNotMatch(src,/process\.env\.|SUPABASE_SERVICE_ROLE_KEY\s*=\s*['"]/);
