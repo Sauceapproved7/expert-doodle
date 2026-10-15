@@ -2,6 +2,7 @@ import {createServer} from "node:http";
 import {Readable} from "node:stream";
 import {readFile} from "node:fs/promises";
 import {createWorkEngine,createOllamaInfer,routeWorkRequest} from "./free-work-core.mjs";
+import {createFileBackedWorkEngine} from "./free-work-persistence.mjs";
 
 const host=process.env.HERCULES_FREE_WORK_HOST||"127.0.0.1";
 if(!["127.0.0.1","localhost","::1"].includes(host))throw new Error("Loopback bind required; remote use requires authenticated Hercules gateway");
@@ -14,7 +15,8 @@ const infer=modelName?createOllamaInfer({
   baseUrl:process.env.HERCULES_FREE_WORK_MODEL_URL||"http://127.0.0.1:11434",
   model:modelName,
 }):null;
-const engine=createWorkEngine({infer});
+const statePath=process.env.HERCULES_FREE_WORK_STATE_PATH||"";
+const engine=statePath?createFileBackedWorkEngine({path:statePath,infer}):createWorkEngine({infer});
 const assets={
   "/":{type:"text/html; charset=utf-8",body:await readFile(new URL("./free-work-ui.html",import.meta.url),"utf8")},
   "/app.js":{type:"text/javascript; charset=utf-8",body:await readFile(new URL("./free-work-app.js",import.meta.url),"utf8")},
