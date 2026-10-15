@@ -4,6 +4,8 @@ on:
     paths:
       - 'hercules-runtime/prompt-intelligence/**'
       - 'tests/hercules-prompt-intelligence-*.test.mjs'
+      - 'supabase/migrations/*hercules_prompt_trace_replay*.sql'
+      - 'tests/hercules-prompt-intelligence-replay-db.sql'
       - 'docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md'
       - '.github/workflows/hercules-prompt-intelligence.yml'
   workflow_dispatch:
@@ -17,7 +19,50 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - run: node --test tests/hercules-prompt-intelligence-trace.test.mjs
+      - run: node --test tests/hercules-prompt-intelligence-*.test.mjs
       - run: node scripts/verify-hercules-execution-contract.mjs
       - run: node scripts/verify-owner-code-only.mjs
       - run: node scripts/security-baseline.mjs
+
+  replay-postgres:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:16.15-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+        env:
+          POSTGRES_PASSWORD: disposable_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: disposable_only
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Prepare disposable Supabase-compatible roles
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "CREATE ROLE anon NOLOGIN; CREATE ROLE authenticated NOLOGIN; CREATE ROLE service_role NOLOGIN;"
+      - name: Apply migration in disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql
+      - name: Verify database replay, rollback and restricted privileges
+        run: psql -v ON_ERROR_STOP=1 -f tests/hercules-prompt-intelligence-replay-db.sql
+      - name: Verify competing workers cannot claim same sequence
+        run: |
+          psql -v ON_ERROR_STOP=1 -c "SELECT public.hercules_prompt_trace_claim_sequence('racing_agent', 1);" >/dev/null
+          (psql -v ON_ERROR_STOP=1 -Atc "SELECT public.hercules_prompt_trace_claim_sequence('racing_agent', 5);" > /tmp/replay-one) &
+          a=$!
+          (psql -v ON_ERROR_STOP=1 -Atc "SELECT public.hercules_prompt_trace_claim_sequence('racing_agent', 5);" > /tmp/replay-two) &
+          b=$!
+          wait "$a"
+          wait "$b"
+          test "$(cat /tmp/replay-one /tmp/replay-two | grep -cx t)" -eq 1
+          test "$(cat /tmp/replay-one /tmp/replay-two | grep -cx f)" -eq 1

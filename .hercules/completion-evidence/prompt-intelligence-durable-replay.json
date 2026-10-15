@@ -1,0 +1,134 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Hercules Prompt Intelligence source-only durable replay RPC",
+  "intendedOutcome": "Provide a source-only, service-role-restricted atomic replay claim design and injectable fail-closed Node callback, with tests and documentation, without installing database migrations",
+  "scope": "source-only",
+  "changedFiles": [
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    ".hercules/completion-evidence/prompt-intelligence-durable-replay.json",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-DURABLE-REPLAY-V1.md",
+    "hercules-runtime/prompt-intelligence/durable-replay.mjs",
+    "supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql",
+    "tests/hercules-prompt-intelligence-durable-replay.test.mjs",
+    "tests/hercules-prompt-intelligence-replay-db.sql"
+  ],
+  "research": [
+    {
+      "question": "How does existing browser trace ingestion require replay persistence?",
+      "finding": "Existing ingestBrowserTrace takes claimSequence callback and performs source authentication, requiring durable monotonic counter storage supplied by an independent trusted service.",
+      "evidencePaths": [
+        "hercules-runtime/prompt-intelligence/trace.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Valid signed source and monotonic sequence are forwarded to dedicated replay RPC",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-durable-replay.test.mjs",
+        "hercules-runtime/prompt-intelligence/durable-replay.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Malformed identity, invalid counter, ambiguous RPC response and transport error fail closed",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-durable-replay.test.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Migration source restricts replay table and function to service-role access and declares atomic upsert",
+      "status": "verified",
+      "evidencePaths": [
+        "supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-DURABLE-REPLAY-V1.md"
+      ]
+    },
+    {
+      "id": "A4",
+      "requirement": "Deployment not implied and real database tests documented as outstanding",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-DURABLE-REPLAY-V1.md"
+      ]
+    },
+    {
+      "id": "A5",
+      "requirement": "Disposable PostgreSQL CI checks duplicate/replay rejection, owner role restrictions, rollback and competing claims",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-replay-db.sql",
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-DURABLE-REPLAY-V1.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "hercules-runtime/prompt-intelligence/durable-replay.mjs",
+        "supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-durable-replay.test.mjs",
+        ".github/workflows/hercules-prompt-intelligence.yml",
+        "tests/hercules-prompt-intelligence-replay-db.sql"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-durable-replay.test.mjs",
+        "supabase/migrations/20261015120000_hercules_prompt_trace_replay_v1.sql",
+        "tests/hercules-prompt-intelligence-replay-db.sql"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-DURABLE-REPLAY-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "This pull request is explicitly source-only and stages an unapplied migration. Staging and production database installation are excluded from this scoped change."
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-durable-replay.test.mjs",
+        ".github/workflows/hercules-prompt-intelligence.yml"
+      ]
+    }
+  ],
+  "openThreads": []
+}
