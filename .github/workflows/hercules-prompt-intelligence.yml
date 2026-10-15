@@ -13,6 +13,7 @@ on:
       - 'tests/hercules-prompt-intelligence-replay-window-db.sql'
       - 'tests/hercules-prompt-intelligence-postgrest.test.mjs'
       - 'tests/smallz-chromium-trace-e2e.mjs'
+      - 'tests/smallz-gateway-http-chromium-e2e.mjs'
       - 'tests/hercules-prompt-intelligence-issuer-alignment-db.sql'
       - 'supabase/migrations/*hercules_prompt_trace_issuer_alignment*.sql'
       - 'tests/hercules-prompt-intelligence-replay-db.sql'
@@ -161,3 +162,5 @@ jobs:
         run: node hercules-browser-gateway-v2/node_modules/playwright-core/cli.js install --with-deps chromium
       - name: Test real Chromium with signed owner admission and negative cases
         run: node --test tests/smallz-chromium-trace-e2e.mjs
+      - name: Test actual Smallz HTTP gateway with real Chromium, auth and SSRF denials
+        run: node --test tests/smallz-gateway-http-chromium-e2e.mjs
