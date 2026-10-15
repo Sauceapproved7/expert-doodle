@@ -98,7 +98,7 @@ export function createHerculesBotApp({port=Number(process.env.PORT||38801),bound
       try{
         const {ownerAuthorization,body:request}=createSmallzRequestAuth({authorization:req.authorization,body:req.body});
         if(traceRequired){
-          try{await promptTraceEmitter({action:request.action});}
+          try{const audit=await promptTraceEmitter({action:request.action});if(audit?.accepted!==true)throw new Error('trace_receipt_unverified');}
           catch{return json(503,{error:"browser-trace-admission-failed"});}
         }
         return json(200,await ownerBridge({ownerAuthorization,action:request.action,url:request.url}));
