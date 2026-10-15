@@ -133,3 +133,20 @@ test("a recycled unchanged manifest cannot authorize a new material PR", async (
     assert.equal(result.ok, false);
   });
 });
+
+test("editing CONTRIBUTING.md changes repository operating rules and is material", async () => {
+  await withFixture(async ({ args }) => {
+    args.changedFiles = ["CONTRIBUTING.md"];
+    const result = await assessPullRequest(args);
+    assert.equal(result.ok, false);
+    assert.equal(result.required, true);
+  });
+});
+
+test("git subprocess boundary is explicitly documented in owner-code policy", async () => {
+  const source = JSON.parse(await (await import("node:fs/promises")).readFile("governance/owner-code-policy.json", "utf8"));
+  const boundary = source.childProcessBoundaries.find((entry) => entry.path === "scripts/hercules-pr-completeness-admission.mjs");
+  assert.equal(boundary?.kind, "external-infrastructure-adapter");
+  assert.deepEqual(boundary?.dependencies, ["git"]);
+  assert.ok(source.externalInfrastructure.some((item) => item.id === "git" && item.packagedAsHerculesCode === false));
+});
