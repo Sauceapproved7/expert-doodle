@@ -35,6 +35,12 @@ A successful report requires **both public endpoints to deliver byte-identical H
 - A matching source and public destination at one moment does not prove CDN cache invalidation everywhere or authenticated user journeys.
 - The implementation-enforcement CI runs *offline tests only*. Separately, `.github/workflows/hercules-studio-offer-public-artifact-audit.yml` intentionally makes two bounded, no-credential public GET requests on pull requests that change this verifier, its tests, workflow, documentation, or offer HTML. Its probe step is `continue-on-error` so an expected stale public artifact does **not** falsely block security CI or imply deployment. Read the probe JSON and summary rather than interpreting the overall job's green status as parity success.
 
+## Pinned rollback evidence in GitHub Actions
+
+The separate public-artifact audit workflow now records two public content comparisons **and makes one additional read-only GET** of the existing Render offer. That final request captures an immutable rollback copy only if the observed old object is exactly 7,889 bytes and has the known SHA-256 `bf087ccd55cfbe172c049b1d1db5882aeac2cac73aa33fec1839c951c1fc41ff`. It also verifies the candidate source SHA-256 `8743e3ffc127f61d48aa9d2eb9058847e32b2ff51489367d2f59f3b54ef23a9b`.
+
+When both checks pass, the workflow retains a 30-day GitHub Actions artifact containing the known-old public HTML, approved candidate HTML and a manifest with their byte sizes, checksums and capture time. The artifact is **evidence only**, not an authorized upload or deployment. If the public page has changed or a request is unavailable, the snapshot must fail rather than silently archiving untrusted or unexpected content. Before any authorized future release, refresh the backup and verify all checksums and release gate decisions again. No rollback or publish runs automatically.
+
 ## Existing Hercules release route
 
 Existing `hercules-deploy-controller` supports a controlled `deploy_static` request that stores HTML into `hercules-sites`, via `putPresentation(slug, html)`. It requires an authorized owner/admin session or an approved internal-service request, and broader release workflows require their own signed admission gates. This witness does **not** create a bypass, credentials, token relay, or new server-side authorization.
