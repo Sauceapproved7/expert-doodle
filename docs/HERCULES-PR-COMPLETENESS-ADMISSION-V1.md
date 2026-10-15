@@ -6,7 +6,7 @@ The **Boil the Ocean** standard now has a pull-request admission check, rather t
 
 Every material pull request created on or after **2026-10-15T00:00:00Z** must include exactly one **changed** JSON manifest in `.hercules/completion-evidence/<slug>.json`.
 
-A material change is any changed path other than standalone Markdown in `docs/` or root `README.md`, `CHANGELOG.md`, and `CONTRIBUTING.md`. Workflow, tests, application, assets, configuration, scripts, governance and security changes all count as material.
+A material change is any changed path other than standalone Markdown in `docs/` or root `README.md`, `CHANGELOG.md`, (but not `CONTRIBUTING.md`, which changes contributor governance). Workflow, tests, application, assets, configuration, scripts, governance and security changes all count as material.
 
 The manifest must:
 
