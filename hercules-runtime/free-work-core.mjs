@@ -52,11 +52,27 @@ function offlineReview(context){
     "Follow up with tests, dependency scanning, and authorized runtime analysis."].join("\n");
 }
 
-export function createWorkEngine({infer=null,maxJobs=MAX_TASKS,now=()=>new Date().toISOString()}={}){
+export function createWorkEngine({infer=null,maxJobs=MAX_TASKS,now=()=>new Date().toISOString(),initialTasks=[],persist=()=>{}}={}){
+  if(!Array.isArray(initialTasks)||typeof persist!=="function")throw new TypeError("invalid persistence configuration");
   if(infer!==null&&typeof infer!=="function")throw new TypeError("infer must be callable");
   if(!Number.isSafeInteger(maxJobs)||maxJobs<1||maxJobs>1000)throw new TypeError("invalid maxJobs");
   const jobs=new Map();
+  if(initialTasks.length>maxJobs)throw new TypeError("too many restored tasks");
+  for(const job of initialTasks){
+    if(!job||typeof job!=="object"||jobs.has(job.id)||!["queued","blocked","completed"].includes(job.status))
+      throw new TypeError("invalid restored task");
+    jobs.set(job.id,{...job});
+  }
   const snapshot=job=>Object.freeze({...job});
+  function flush(){persist([...jobs.values()].map(job=>({...job})));}
+  function patch(job,changes){
+    const before={...job};
+    Object.assign(job,changes,{updatedAt:now()});
+    try{flush();}catch(error){
+      Object.assign(job,before);
+      throw error instanceof WorkError?error:new WorkError(507,"task_storage_failed");
+    }
+  }
   function createTask({kind,prompt,context=""}={}){
     if(!KINDS.has(kind))throw new WorkError(400,"unsupported_task_kind");
     const cleanPrompt=boundedText(prompt,MAX_PROMPT,"prompt",{required:true});
@@ -65,6 +81,10 @@ export function createWorkEngine({infer=null,maxJobs=MAX_TASKS,now=()=>new Date(
     const stamp=now();
     const job={id:randomUUID(),kind,prompt:cleanPrompt,context:cleanContext,status:"queued",engine:null,output:null,createdAt:stamp,updatedAt:stamp};
     jobs.set(job.id,job);
+    try{flush();}catch(error){
+      jobs.delete(job.id);
+      throw error instanceof WorkError?error:new WorkError(507,"task_storage_failed");
+    }
     return snapshot(job);
   }
   function getTask(id){
@@ -79,7 +99,7 @@ export function createWorkEngine({infer=null,maxJobs=MAX_TASKS,now=()=>new Date(
     const job=jobs.get(id);
     if(!job)throw new WorkError(404,"task_not_found");
     if(job.status!=="queued")throw new WorkError(409,"task_already_attempted");
-    job.status="running";job.updatedAt=now();
+    patch(job,{status:"running"});
     try{
       let output,engine;
       if(job.kind==="plan"){output=offlinePlan(job.prompt);engine="offline-template";}
@@ -91,10 +111,10 @@ export function createWorkEngine({infer=null,maxJobs=MAX_TASKS,now=()=>new Date(
         engine="model";
       }
       if(typeof output!=="string"||!output.trim())throw new WorkError(502,"empty_model_result");
-      job.output=output.slice(0,MAX_RESULT);job.engine=engine;
-      job.status="completed";job.updatedAt=now();return snapshot(job);
+      patch(job,{output:output.slice(0,MAX_RESULT),engine,status:"completed"});
+      return snapshot(job);
     }catch(error){
-      job.status="blocked";job.updatedAt=now();
+      patch(job,{status:"blocked"});
       throw error instanceof WorkError?error:new WorkError(502,"task_execution_failed");
     }
   }
