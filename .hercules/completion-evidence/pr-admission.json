@@ -8,6 +8,7 @@
     ".github/workflows/hercules-universal-merge-gates.yml",
     ".hercules/completion-evidence/pr-admission.json",
     "docs/HERCULES-PR-COMPLETENESS-ADMISSION-V1.md",
+    "governance/owner-code-policy.json",
     "scripts/hercules-pr-completeness-admission.mjs",
     "tests/hercules-pr-completeness-admission.test.mjs"
   ],
@@ -54,6 +55,15 @@
         ".github/workflows/hercules-universal-merge-gates.yml",
         "scripts/hercules-pr-completeness-admission.mjs"
       ]
+    },
+    {
+      "id": "A5",
+      "requirement": "The read-only Git diff subprocess is declared in the owner-code policy and audited",
+      "status": "verified",
+      "evidencePaths": [
+        "governance/owner-code-policy.json",
+        "tests/hercules-pr-completeness-admission.test.mjs"
+      ]
     }
   ],
   "phases": [
@@ -90,7 +100,8 @@
       "status": "verified",
       "evidencePaths": [
         "tests/hercules-pr-completeness-admission.test.mjs",
-        "scripts/hercules-pr-completeness-admission.mjs"
+        "scripts/hercules-pr-completeness-admission.mjs",
+        "governance/owner-code-policy.json"
       ]
     },
     {
