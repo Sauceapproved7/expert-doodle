@@ -30,6 +30,68 @@ jobs:
         id: parity
         continue-on-error: true
         run: node scripts/hercules-studio-offer-parity.mjs --probe --json
+      - name: Capture exact legacy Studio offer as rollback evidence
+        id: backup
+        run: |
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { mkdir, readFile, writeFile } from 'node:fs/promises';
+          const oldUrl = 'https://sauceapproved-forge-host.onrender.com/sauceapproved-studio-offer/';
+          const expectedSource = '8743e3ffc127f61d48aa9d2eb9058847e32b2ff51489367d2f59f3b54ef23a9b';
+          const expectedLegacy = 'bf087ccd55cfbe172c049b1d1db5882aeac2cac73aa33fec1839c951c1fc41ff';
+          const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+          const source = await readFile('hercules-forge/offers/sauceapproved-studio/index.html');
+          if (digest(source) !== expectedSource) throw new Error('approved_source_hash_changed');
+          const response = await fetch(oldUrl, {
+            method: 'GET', redirect: 'manual', credentials: 'omit',
+            cache: 'no-store', referrerPolicy: 'no-referrer',
+            headers: { accept: 'text/html' }, signal: AbortSignal.timeout(8000),
+          });
+          if (response.status !== 200 || response.redirected ||
+              !/^text\/html(?:\s*;|\s*$)/i.test(response.headers.get('content-type') || '')) {
+            throw new Error('legacy_offer_html_not_available');
+          }
+          const declaredSize = Number(response.headers.get('content-length') || 0);
+          if (declaredSize > 65536) throw new Error('legacy_object_too_large');
+          const chunks = [];
+          let bytes = 0;
+          for await (const chunk of response.body) {
+            bytes += chunk.byteLength;
+            if (bytes > 65536) throw new Error('legacy_object_too_large');
+            chunks.push(Buffer.from(chunk));
+          }
+          const legacy = Buffer.concat(chunks, bytes);
+          if (legacy.length !== 7889 || digest(legacy) !== expectedLegacy) {
+            throw new Error('legacy_object_changed_no_backup');
+          }
+          const output = '/tmp/hercules-studio-release-evidence';
+          await mkdir(output, { recursive: true });
+          await writeFile(output + '/approved-index.html', source);
+          await writeFile(output + '/legacy-rollback-index.html', legacy);
+          await writeFile(output + '/manifest.json', JSON.stringify({
+            schema: 'sauceapproved.hercules.studio-offer-evidence.v1',
+            mode: 'read-only-evidence',
+            published: false,
+            publishingAuthorization: false,
+            sourcePath: 'hercules-forge/offers/sauceapproved-studio/index.html',
+            legacySourceUrl: oldUrl,
+            approvedSha256: digest(source),
+            approvedBytes: source.length,
+            legacySha256: digest(legacy),
+            legacyBytes: legacy.length,
+            capturedAt: new Date().toISOString(),
+            note: 'Restoration and publication require the existing owner-authorized Hercules release controller. Neither file has been deployed by this workflow.'
+          }, null, 2) + '\n');
+          console.log('Immutable legacy rollback bytes and source artifact captured with verified SHA-256; no deployment.');
+          NODE
+      - name: Save verified source and rollback evidence
+        if: ${{ steps.backup.outcome == 'success' }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: hercules-studio-offer-release-evidence-${{ github.sha }}
+          path: /tmp/hercules-studio-release-evidence/
+          if-no-files-found: error
+          retention-days: 30
       - name: Record bounded public observation without release claims
         if: always()
         env:
