@@ -1,0 +1,113 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Smallz real Chromium signed-trace browser admission",
+  "scope": "source-only",
+  "intendedOutcome": "Exercise actual headless Chromium after verified signed trace admission, and block launch when owner authentication or trace verification fails",
+  "changedFiles": [
+    "tests/smallz-chromium-trace-e2e.mjs",
+    ".github/workflows/hercules-prompt-intelligence.yml",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-CHROMIUM-E2E-V1.md",
+    ".hercules/completion-evidence/smallz-chromium-trace-e2e.json"
+  ],
+  "research": [
+    {
+      "question": "Can existing Smallz Playwright be tested with a real browser without live services?",
+      "finding": "The existing gateway pins playwright-core 1.63.0; an isolated CI job can install Chromium and use a self-contained data fixture.",
+      "evidencePaths": [
+        "hercules-browser-gateway-v2/package.json",
+        "tests/smallz-chromium-trace-e2e.mjs"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Real Chromium launched only after authorized owner and signed trace acceptance",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Untrusted DOM and request details never enter signed trace envelope",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "Denied trace blocks Chromium launch",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/smallz-chromium-trace-e2e.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-CHROMIUM-E2E-V1.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "Source-only disposable CI; production remains unchanged"
+    }
+  ],
+  "openThreads": []
+}
