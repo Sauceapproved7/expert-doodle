@@ -106,3 +106,24 @@ test('trace admission is opt-in and does not alter existing owner browser respon
   assert.deepEqual(response.body,{ok:true,engine:'smallz'});
   assert.equal(auditCalls,0);
 });
+
+test('one Smallz worker serializes signed issuance so concurrent owner requests stay ordered',async()=>{
+  let next=0,releaseFirst;
+  const holdFirst=new Promise(resolve=>{releaseFirst=resolve;});
+  const accepted=[];
+  const emitter=createSmallzTraceEmitter({
+    signingKey:secret,
+    reserveSequence:async()=>++next,
+    ingestTrace:async event=>{
+      if(event.sequence===1)await holdFirst;
+      accepted.push(event.sequence);
+      return {accepted:true,sequence:event.sequence,source:'browser:smallz'};
+    }
+  });
+  const first=emitter({action:'bot_browser_navigate'});
+  const second=emitter({action:'bot_browser_scrape'});
+  await new Promise(resolve=>setImmediate(resolve));
+  releaseFirst();
+  await Promise.all([first,second]);
+  assert.deepEqual(accepted,[1,2]);
+});
