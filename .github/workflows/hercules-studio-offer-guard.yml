@@ -18,3 +18,26 @@ jobs:
           node-version: "22"
       - name: Simulated source-bound deployment, partial failure, rollback
         run: node --test tests/hercules-studio-offer-release-guard.test.mjs
+      - name: Verify live deployment-controller owner gate (no credentials, no publication)
+        timeout-minutes: 1
+        run: |
+          node --input-type=module <<'NODE'
+          const url='https://xbwuablxhhwsaoomsoco.supabase.co/functions/v1/hercules-deploy-controller';
+          const timeout=()=>AbortSignal.timeout(10000);
+          const get=await fetch(url,{method:'GET',redirect:'manual',credentials:'omit',
+            headers:{accept:'application/json'},signal:timeout()});
+          const meta=await get.json().catch(()=>({}));
+          if(get.status!==200||meta?.service!=='hercules-deploy-controller')throw new Error('controller_get_unavailable');
+          const denied=await fetch(url,{method:'POST',redirect:'manual',credentials:'omit',
+            headers:{'content-type':'application/json'},body:JSON.stringify({action:'status'}),
+            signal:timeout()});
+          const result=await denied.json().catch(()=>({}));
+          const valid=denied.status===403 && result.error==='owner_admin_or_internal_required';
+          console.log(JSON.stringify({test:'unauthenticated_controller_boundary',
+            getStatus:get.status,postStatus:denied.status,
+            denialCode:result.error??null,verified:valid,
+            method:'POST',action:'status',credentialsUsed:false,
+            deployStaticInvoked:false,storageWritten:false}));
+          if(!valid)process.exitCode=1;
+          NODE
+
