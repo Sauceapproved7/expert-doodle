@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -98,5 +98,49 @@ test("command-line mode gives failing status for an unready manifest", async () 
     const result = spawnSync(process.execPath, ["scripts/hercules-completeness-gate.mjs", "--manifest", join(root, "manifest.json"), "--root", root, "--require-complete"], { encoding: "utf8" });
     assert.notEqual(result.status, 0);
     assert.match(result.stdout, /"ready": false/);
+  });
+});
+
+test("production scope cannot waive release evidence", async () => {
+  await fixture(async (root, manifest) => {
+    manifest.scope = "production";
+    const result = await evaluateCompletion(manifest, root);
+    assert.equal(result.ready, false);
+    assert.ok(result.errors.some((e) => e.includes("phase release")));
+  });
+});
+
+test("security and independent verification cannot be waived even with a reason", async () => {
+  await fixture(async (root, manifest) => {
+    for (const name of ["security", "verification"]) {
+      const item = manifest.phases.find((p) => p.id === name);
+      item.status = "not_applicable";
+      item.reason = "Assumed unnecessary due to a very small change scope";
+    }
+    const result = await evaluateCompletion(manifest, root);
+    assert.equal(result.ready, false);
+    assert.ok(result.errors.some((e) => e.includes("phase security")));
+    assert.ok(result.errors.some((e) => e.includes("phase verification")));
+  });
+});
+
+test("documentation-only change can justify not running behavioral tests", async () => {
+  await fixture(async (root, manifest) => {
+    manifest.scope = "documentation-only";
+    const item = manifest.phases.find((p) => p.id === "tests");
+    item.status = "not_applicable";
+    item.reason = "Only explanatory documentation changed; there is no new runtime behavior";
+    const result = await evaluateCompletion(manifest, root);
+    assert.equal(result.ready, true, result.errors.join("\\n"));
+  });
+});
+
+test("symlink escaping the evidence root cannot count as proof", async () => {
+  await fixture(async (root, manifest) => {
+    await symlink("/etc/hosts", join(root, "escaped-proof.txt"));
+    manifest.acceptance[0].evidencePaths = ["escaped-proof.txt"];
+    const result = await evaluateCompletion(manifest, root);
+    assert.equal(result.ready, false);
+    assert.ok(result.errors.some((e) => e.includes("unsafe symlink")));
   });
 });

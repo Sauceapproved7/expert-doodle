@@ -99,6 +99,11 @@ export async function evaluateCompletion(manifest, root = process.cwd()) {
         if (!stringPresent(phase.reason) || phase.reason.trim().length < 20) {
           errors.push(`phase ${id}: not_applicable requires substantive reason`);
         }
+        const mayWaive = id === "release" ||
+          (manifest.scope === "documentation-only" && (id === "tests" || id === "implementation"));
+        if (!mayWaive) {
+          errors.push(`phase ${id}: this required phase may not be waived`);
+        }
         if (id === "tests" && manifest.scope !== "documentation-only") {
           errors.push("phase tests: tests cannot be waived for a behavioral or code change");
         }
