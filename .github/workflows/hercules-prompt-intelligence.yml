@@ -9,6 +9,8 @@ on:
       - 'tests/hercules-prompt-intelligence-*.test.mjs'
       - 'supabase/migrations/*hercules_prompt_trace_replay*.sql'
       - 'supabase/migrations/*hercules_prompt_trace_emit_sequence*.sql'
+      - 'supabase/migrations/*hercules_prompt_trace_replay_window*.sql'
+      - 'tests/hercules-prompt-intelligence-replay-window-db.sql'
       - 'tests/hercules-prompt-intelligence-replay-db.sql'
       - 'tests/hercules-prompt-intelligence-emitter-db.sql'
       - 'docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md'
@@ -89,5 +91,7 @@ jobs:
           test "$(cat /tmp/replay-one /tmp/replay-two | grep -cx t)" -eq 1
           test "$(cat /tmp/replay-one /tmp/replay-two | grep -cx f)" -eq 1
 
+      - name: Upgrade disposable replay claims to bounded out-of-order window
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261015180000_hercules_prompt_trace_replay_window_v1.sql
       - name: Test bounded out-of-order trace claims against disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f tests/hercules-prompt-intelligence-replay-window-db.sql
