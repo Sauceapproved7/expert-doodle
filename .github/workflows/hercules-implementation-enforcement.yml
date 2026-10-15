@@ -30,5 +30,7 @@ jobs:
         run: |
           node --check hercules-bot/app-server.mjs
           node --test tests/smallz-render-runtime.test.mjs tests/smallz-owner-session-bridge.test.mjs tests/smallz-app-owner-auth.test.mjs
+      - name: Boil the Ocean completion-gate regression tests
+        run: node --test tests/hercules-completeness-gate.test.mjs
       - name: Contract verifier
         run: node scripts/verify-hercules-execution-contract.mjs
