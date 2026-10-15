@@ -3,10 +3,13 @@ on:
   pull_request:
     paths:
       - 'hercules-runtime/prompt-intelligence/**'
+      - 'hercules-bot/prompt-trace-ingress.mjs'
+      - 'hercules-bot/app-server.mjs'
       - 'tests/hercules-prompt-intelligence-*.test.mjs'
       - 'supabase/migrations/*hercules_prompt_trace_replay*.sql'
       - 'tests/hercules-prompt-intelligence-replay-db.sql'
       - 'docs/HERCULES-PROMPT-INTELLIGENCE-TRACE-V1.md'
+      - 'docs/HERCULES-PROMPT-INTELLIGENCE-SMALLZ-INGRESS-V1.md'
       - '.github/workflows/hercules-prompt-intelligence.yml'
   workflow_dispatch:
 jobs:
@@ -19,7 +22,7 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: '22'
-      - run: node --test tests/hercules-prompt-intelligence-*.test.mjs
+      - run: node --test tests/hercules-prompt-intelligence-*.test.mjs tests/smallz-render-runtime.test.mjs tests/smallz-owner-session-bridge.test.mjs
       - run: node scripts/verify-hercules-execution-contract.mjs
       - run: node scripts/verify-owner-code-only.mjs
       - run: node scripts/security-baseline.mjs
