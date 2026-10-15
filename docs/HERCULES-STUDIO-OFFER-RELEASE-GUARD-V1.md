@@ -37,5 +37,11 @@ Run `node --test tests/hercules-studio-offer-release-guard.test.mjs`. Eight test
 
 No monthly subscription, new provider signup, payment or Shopify production mutation is involved in this guard.
 
+## Reviewer prerequisites
+
+The publishing controller remains an owner/admin-or-approved-internal-only interface. The current GitHub branch includes the complete source snapshot for repeatable review, but uploading this controller revision does **not** grant any browser or GitHub Action the right to call `deploy_static`.
+
+Before an actual publication, check that the source and previous-file SHA-256 values still match the exact planned release. Read-only GitHub parity checks alone do not authorize publication. If an authorized deployment later reports failure, independently check both the Storage file and the Render presentation before attempting to retry or restore content.
+
 ## Provenance
 Original SauceApproved/Hercules, AI-assisted helper/tests; baseline from the owner's already-deployed and authorized Supabase Edge Function v10. No third-party code was added. Node built-ins and Web standard APIs only. Supabase SDK dependency was **unchanged from the existing live deployment**. Tracking: [Studio release #1065](https://github.com/Sauceapproved7/expert-doodle/issues/1065).
