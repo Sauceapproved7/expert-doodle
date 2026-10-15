@@ -117,7 +117,7 @@ test('CI browser audit never accepts wildcard origins and never deploys', () => 
 test('rollback capture retries only temporary Forge cold-start responses with a strict attempt bound', () => {
   const workflow = readFileSync(new URL('../.github/workflows/hercules-studio-offer-public-artifact-audit.yml', import.meta.url),'utf8');
   assert.match(workflow, /for\s*\(const attempt of \[1,2,3\]\)/);
-  assert.match(workflow, /response\.status === 503/);
+  assert.match(workflow, /response\.status !== 503/);
   assert.match(workflow, /legacy_offer_html_not_available/);
   assert.match(workflow, /legacy_object_changed_no_backup/);
   assert.match(workflow, /expectedLegacy/);
