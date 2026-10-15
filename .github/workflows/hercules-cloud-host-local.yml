@@ -1,0 +1,40 @@
+name: Hercules Cloud Local Grant Vault
+
+on:
+  pull_request:
+    paths:
+      - "hercules-deploy/cloud/host-local.mjs"
+      - "hercules-deploy/cloud/host-agent.mjs"
+      - "tests/hercules-cloud-host-local.test.mjs"
+      - ".github/workflows/hercules-cloud-host-local.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hercules-deploy/cloud/host-local.mjs"
+      - "hercules-deploy/cloud/host-agent.mjs"
+      - "tests/hercules-cloud-host-local.test.mjs"
+      - ".github/workflows/hercules-cloud-host-local.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-local-vault:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Local replay vault and bounded Docker runner
+        run: node --test tests/hercules-cloud-host-local.test.mjs tests/hercules-cloud-host-agent.test.mjs tests/hercules-cloud-control-plane.test.mjs tests/hercules-cloud-original-ui.test.mjs
+      - name: Syntax, provenance and owner code boundary
+        run: |
+          node --check hercules-deploy/cloud/host-local.mjs
+          node scripts/verify-owner-code-only.mjs
+      - name: No live deploy wiring
+        run: |
+          if grep -E '(createServer|listen\(|\.deployRelease\(|process\.env\.DOCKER_HOST)' hercules-deploy/cloud/host-local.mjs; then
+            echo 'Unexpected network listener or provider execution'; exit 1
+          fi
