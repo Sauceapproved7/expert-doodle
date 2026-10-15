@@ -6,10 +6,10 @@ import {join} from "node:path";
 import {createFileBackedWorkEngine} from "../hercules-runtime/free-work-persistence.mjs";
 import {WorkError} from "../hercules-runtime/free-work-core.mjs";
 
-function withPrivateDir(fn) {
+async function withPrivateDir(fn) {
   const dir=mkdtempSync(join(tmpdir(),"hercules-work-private-"));
   chmodSync(dir,0o700);
-  try{return fn(dir);}finally{rmSync(dir,{recursive:true,force:true});}
+  try{return await fn(dir);}finally{rmSync(dir,{recursive:true,force:true});}
 }
 
 test("tasks survive engine restart in private file store",async()=>{
@@ -33,7 +33,7 @@ test("context is retained privately but not leaked into list output",()=>withPri
   assert.equal(a.getTask(task.id).context,"internal-only-needle");
 }));
 
-test("recovered running jobs fail closed instead of replaying side effects",()=>withPrivateDir(dir=>{
+test("recovered running jobs fail closed instead of replaying side effects",()=>withPrivateDir(async dir=>{
   const path=join(dir,"work.json");
   const a=createFileBackedWorkEngine({path});
   const t=a.createTask({kind:"plan",prompt:"Plan a task"});
@@ -42,7 +42,7 @@ test("recovered running jobs fail closed instead of replaying side effects",()=>
   writeFileSync(path,JSON.stringify(saved),{mode:0o600});
   const b=createFileBackedWorkEngine({path});
   assert.equal(b.getTask(t.id).status,"blocked");
-  assert.throws(()=>b.runTask(t.id),error=>error.status===409);
+  await assert.rejects(b.runTask(t.id),error=>error.status===409);
 }));
 
 test("directory or file permission vulnerabilities fail closed",()=>withPrivateDir(dir=>{
