@@ -28,6 +28,18 @@ Complete every item before merge.
 - [ ] Commercial quality and business-priority implications were considered
 - [ ] Status reporting distinguishes changed, verified, remaining, and next-highest-value action
 
+## Boil the Ocean closure evidence
+
+Standard: `docs/HERCULES-BOIL-THE-OCEAN-V1.md`
+
+- [ ] Searched current canonical implementation, previous solutions and dependencies before writing code
+- [ ] All stated acceptance criteria have verifiable evidence; gaps and open threads are disclosed
+- [ ] Required behavioral tests were observed failing before implementation, then passing; applicable full suite passes
+- [ ] Security, failure paths, accessibility where relevant, rollback/runbook and documentation are complete
+- [ ] For material builds, `node scripts/hercules-completeness-gate.mjs --manifest <path> --require-complete` passes for the scoped result
+- [ ] Any deployment claim has exact-revision evidence from the live target; source-only change is not a production deployment
+- [ ] If any in-scope work is unverified or blocked, the result is clearly reported as not yet complete
+
 ## Provenance attestation
 
 - [ ] Origin documented

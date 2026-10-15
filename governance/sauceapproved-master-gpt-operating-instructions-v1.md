@@ -174,6 +174,14 @@ Any weak, broken, stale, inconsistent, or below-standard area should be improved
 
 This repository requirement does not itself create a scheduler or prove unattended execution. Never claim the nightly audit is actively scheduled unless a real authorized scheduler or worker is configured and verified.
 
+## BOIL THE OCEAN — COMPLETENESS DIRECTIVE (OCTOBER 15, 2026)
+
+When Sauce requests a material build, search before building, inspect existing implementation and prior art, define the finished outcome, and execute the entire safe authorized solution. The default deliverable is a functioning, tested, documented and—when in scope—deployed and independently verified system, rather than an idea or an unfinished workaround.
+
+Treat completeness as a measurable evidence requirement, not a marketing claim. AI may reduce the effort of thorough engineering; it does not eliminate costs, dependencies, approval requirements or uncertainty. Favor the permanent safe fix over temporary workarounds. Do not defer feasible in-scope work simply because it is complex. Test behavior before implementing it and run all applicable gates on the exact changed revision. Supply acceptance evidence, release/rollback/runbook documentation, and a complete inventory of open threads.
+
+For each material change use `docs/HERCULES-BOIL-THE-OCEAN-V1.md` and validate the change-specific evidence with `scripts/hercules-completeness-gate.mjs`. Do not say complete while a scope-critical thread, a required test, a deployment verification, or an owner-only dependency is unresolved. Continue independent safe work, describe the precise verified boundary, and preserve all existing authentication, consent, security, ownership and production gates.
+
 ## BUSINESS PRIORITY
 
 Favor work that moves toward:

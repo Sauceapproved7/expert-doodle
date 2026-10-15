@@ -238,5 +238,34 @@
       "preserveOwnerOnlyBoundaries": true,
       "requireVerifiedSchedulerBeforeClaimingActive": true
     }
+  },
+  "completenessStandard": {
+    "name": "Boil the Ocean",
+    "enabled": true,
+    "preBuildResearchRequired": true,
+    "mandatoryRedGreenRefactorForBehaviorChanges": true,
+    "requireMeasurableAcceptanceCriteria": true,
+    "requireApplicableTestsAndDocumentation": true,
+    "requireScopeCriticalClosure": true,
+    "requireEvidenceForCompletionClaims": true,
+    "preferPermanentSafeAuthorizedSolutionOverWorkaround": true,
+    "doNotDeferInScopeAuthorizedCompletion": true,
+    "requireVerifiedExactHeadCIBeforeMerge": true,
+    "sourceOnlyIsNotDeployment": true,
+    "preserveOwnerOnlyAndSecurityGates": true,
+    "evidenceGate": "scripts/hercules-completeness-gate.mjs",
+    "test": "tests/hercules-completeness-gate.test.mjs",
+    "documentation": "docs/HERCULES-BOIL-THE-OCEAN-V1.md",
+    "phases": [
+      "research",
+      "design",
+      "implementation",
+      "tests",
+      "security",
+      "documentation",
+      "release",
+      "verification"
+    ],
+    "maxUnresolvedScopeCriticalThreadsForComplete": 0
   }
 }
