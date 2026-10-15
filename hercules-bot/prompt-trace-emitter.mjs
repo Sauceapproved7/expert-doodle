@@ -11,8 +11,10 @@ const ACTIONS=new Set(['bot_browser_navigate','bot_browser_scrape']);
 export function createSmallzTraceEmitter({signingKey,reserveSequence,ingestTrace}={}){
   if(!Buffer.isBuffer(signingKey)||signingKey.length<32)throw new TypeError('invalid_trace_key');
   if(typeof reserveSequence!=='function'||typeof ingestTrace!=='function')throw new TypeError('trace_emitter_dependency_required');
-  return async ({action}={})=>{
-    if(!ACTIONS.has(action))throw new Error('unsupported_trace_action');
+  let tail=Promise.resolve();
+  return ({action}={})=>{
+    if(!ACTIONS.has(action))return Promise.reject(new Error('unsupported_trace_action'));
+    const task=tail.then(async()=>{
     const source='smallz';
     const sequence=await reserveSequence(source);
     if(!Number.isSafeInteger(sequence)||sequence<1)throw new Error('invalid_trace_sequence');
@@ -23,6 +25,11 @@ export function createSmallzTraceEmitter({signingKey,reserveSequence,ingestTrace
     if(!receipt||receipt.accepted!==true||receipt.source!=='browser:smallz'||receipt.sequence!==sequence)
       throw new Error('trace_receipt_unverified');
     return Object.freeze({accepted:true,source:receipt.source,sequence:receipt.sequence,digest:receipt.digest??null});
+    });
+    // Keep one worker's reservation, signing and claim in sequence even if
+    // a prior event fails. The caller still receives its original rejection.
+    tail=task.catch(()=>{});
+    return task;
   };
 }
 
