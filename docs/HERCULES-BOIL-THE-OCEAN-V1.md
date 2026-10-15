@@ -22,7 +22,7 @@ The executable gate is `scripts/hercules-completeness-gate.mjs`. It takes a JSON
 - explicit project outcome, scope, existing-state research and criterion-by-criterion acceptance evidence;
 - an exact set of eight phases: `research`, `design`, `implementation`, `tests`, `security`, `documentation`, `release`, `verification`;
 - each phase has an existing local evidence file when marked `verified`;
-- a `not_applicable` phase has an explicit substantive reason; tests cannot be waived for code, and deployment cannot be waived for staging or production scope;
+- a `not_applicable` phase has an explicit substantive reason; only `release` may be waived by default, and `tests` or `implementation` only for documentation-only work; security and verification cannot be waived; deployment cannot be waived for staging or production scope;
 - no unresolved `openThreads`, failed/unverified/blocked phases, duplicate IDs, missing files, traversal paths or escaping symlinks.
 
 Manifest skeleton:
