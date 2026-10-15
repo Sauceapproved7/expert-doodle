@@ -1,0 +1,113 @@
+{
+  "schema": "sauceapproved.hercules.completion-evidence",
+  "version": 1,
+  "title": "Smallz isolated trace admission contract",
+  "scope": "test-only",
+  "intendedOutcome": "Verify owner browser request traverses signing, fixed RPC, ingress, replay and dispatch using synthetic data",
+  "changedFiles": [
+    "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
+    "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md",
+    ".hercules/completion-evidence/smallz-trace-staging-contract.json"
+  ],
+  "research": [
+    {
+      "question": "Does canonical Smallz code enforce trace admission before dispatch?",
+      "finding": "The existing app-server route invokes emitter before ownerBridge when enforcement is true; emitter signs metadata and ingress checks HMAC and durable claim.",
+      "evidencePaths": [
+        "hercules-bot/app-server.mjs",
+        "hercules-bot/prompt-trace-emitter.mjs",
+        "hercules-bot/prompt-trace-ingress.mjs"
+      ]
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "requirement": "Synthetic owner browser path exercises signer, ingress, RPC, replay and dispatch",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs"
+      ]
+    },
+    {
+      "id": "A2",
+      "requirement": "Anonymous, replay, tampering and database failure deny unsafe dispatch",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs"
+      ]
+    },
+    {
+      "id": "A3",
+      "requirement": "No live database, browser, deployment or cost change",
+      "status": "verified",
+      "evidencePaths": [
+        "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md"
+      ]
+    }
+  ],
+  "phases": [
+    {
+      "id": "research",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md"
+      ]
+    },
+    {
+      "id": "design",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md"
+      ]
+    },
+    {
+      "id": "implementation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md"
+      ]
+    },
+    {
+      "id": "tests",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md"
+      ]
+    },
+    {
+      "id": "security",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md"
+      ]
+    },
+    {
+      "id": "documentation",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md"
+      ]
+    },
+    {
+      "id": "verification",
+      "status": "verified",
+      "evidencePaths": [
+        "tests/hercules-prompt-intelligence-staging-contract.test.mjs",
+        "docs/HERCULES-PROMPT-INTELLIGENCE-STAGING-CONTRACT.md"
+      ]
+    },
+    {
+      "id": "release",
+      "status": "not_applicable",
+      "reason": "Test-only source change; no production rollout"
+    }
+  ],
+  "openThreads": []
+}
