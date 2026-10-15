@@ -1,4 +1,4 @@
-import {constants,closeSync,existsSync,fsyncSync,lstatSync,openSync,readFileSync,renameSync,unlinkSync,writeFileSync} from "node:fs";
+import {constants,closeSync,fsyncSync,lstatSync,openSync,readFileSync,renameSync,unlinkSync,writeFileSync} from "node:fs";
 import {basename,dirname,isAbsolute,join} from "node:path";
 import {randomUUID} from "node:crypto";
 import {createWorkEngine,WorkError} from "./free-work-core.mjs";
@@ -18,8 +18,11 @@ function checkDirectory(dir) {
     throw new Error("private_directory_required");
 }
 function checkFile(path){
-  if(!existsSync(path))return false;
-  const st=lstatSync(path);
+  let st;
+  try{st=lstatSync(path);}catch(error){
+    if(error?.code==="ENOENT")return false;
+    throw error;
+  }
   if(st.isSymbolicLink())throw new Error("storage_symlink_denied");
   if(!st.isFile()||(st.mode&0o077)!==0||
      (typeof process.getuid==="function"&&st.uid!==process.getuid()))
