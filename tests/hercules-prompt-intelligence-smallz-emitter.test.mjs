@@ -127,3 +127,16 @@ test('one Smallz worker serializes signed issuance so concurrent owner requests 
   await Promise.all([first,second]);
   assert.deepEqual(accepted,[1,2]);
 });
+
+test('browser dispatch denies an emitter that resolves without an accepted receipt',async()=>{
+  let dispatched=0;
+  const app=createHerculesBotApp({
+    boundary:{authenticateOwner:async()=>({id:'owner'})},
+    renderEnv:{HERCULES_PROMPT_TRACE_ENFORCE_BROWSER:'true'},
+    traceEmitter:async()=>({accepted:false}),
+    browserBridge:async()=>{dispatched++;return {ok:true};}
+  });
+  const response=await app.handle({method:'POST',url:'/api/browser',authorization:'Bearer owner',body:{action:'bot_browser_scrape',url:'https://example.test'}});
+  assert.equal(response.status,503);
+  assert.equal(dispatched,0);
+});
