@@ -12,7 +12,7 @@ The Node.js app uses only the runtime's standard library and web APIs. It has no
 - **Research planner:** deterministic source-verification checklist. No websites are fetched.
 - **Code review:** heuristic static scan of pasted text for a limited set of dangerous patterns; no execution or complete security assurance.
 - **Code drafting:** submits text to an owner-installed, loopback-only Ollama-style local model and returns its text response. It will return `503 model_not_connected` when not configured, and will not silently fall back to paid APIs.
-- **Authenticated task UI/API:** bounded create, run, list, inspect operations, with session-memory job records (lost on server restart).
+- **Authenticated task UI/API:** bounded create, run, list, inspect operations, with in-memory records by default, or an optional private single-process disk store.
 
 The code path intentionally has **no shell execution**, system-write, browser-control, payment, cloud-deploy or git-push capability. These must be added later as separate scoped owner-authorized tools with explicit limits, tests and audit logs.
 
@@ -36,11 +36,17 @@ HERCULES_FREE_WORK_TOKEN="<owner-secret-in-env>" HERCULES_FREE_WORK_MODEL="your-
 
 The default model endpoint is `http://127.0.0.1:11434`. `HERCULES_FREE_WORK_MODEL_URL` may point **only to an http loopback address**; arbitrary remote services and proxy credentials are rejected. The program never installs model weights or downloads software.
 
+## Optional durable state
+
+Set `HERCULES_FREE_WORK_STATE_PATH` to an absolute JSON filename inside an **already existing**, user-owned directory with POSIX permissions `0700`. The server writes a private `0600` file using an atomic rename, and refuses unsafe directories, symlinks, corrupted state, and world/group-readable files. The state contains plaintext prompts and output; never store API keys or sensitive secrets in tasks. Files persist only when the hosting filesystem is durable. Only one server process may use a state file. Jobs interrupted during execution are marked blocked on restart and are **not** rerun without a new job.
+
+This is a development milestone; production persistence should instead use Hercules Auth and tenant-scoped Postgres with independently tested authorization.
+
 ## Safety and limitations
 
 - No external API key or paid AI backend is needed for the offline operations.
 - Code-generation performance and quality depend on an already running local model, which itself may require paid hardware or hosting.
-- Task state and content are in process memory only; there is no encrypted persistent data store yet.
+- Task state is in process memory by default. When HERCULES_FREE_WORK_STATE_PATH is configured, tasks persist across restarts in a private owner-only JSON file with atomic rename and crash recovery. This is NOT encrypted storage, is not suitable for multi-instance hosting, and a server on ephemeral disk can still lose it. A shared database with row-level security is necessary for cloud scale.
 - The server has bearer authentication, same-origin API checks, strict CSP, bounded request sizes, capped result sizes, task count limits and a loopback-only bind.
 - The UI is not production-ready for internet exposure. Remote access requires the Hercules owner identity and gateway authorization, persistence, quota control, rate limiting, TLS, and negative end-to-end testing.
 - The model's answers are untrusted text: they are never interpreted as shell commands or deployed.
@@ -49,11 +55,11 @@ The default model endpoint is `http://127.0.0.1:11434`. `HERCULES_FREE_WORK_MODE
 ## Verification
 
 ```sh
-node --test tests/hercules-free-work.test.mjs
+node --test tests/hercules-free-work*.test.mjs
 node scripts/verify-owner-code-only.mjs
 ```
 
-CI: `.github/workflows/hercules-free-work.yml`. This isolated branch is for review and does not merge or deploy automatically.
+CI: `.github/workflows/hercules-free-work.yml`. New follow-up persistence revisions remain isolated pending their own review, security checks and release approval.
 
 ## Future integration
 

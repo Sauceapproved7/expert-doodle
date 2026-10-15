@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - "hercules-runtime/free-work-*"
-      - "tests/hercules-free-work.test.mjs"
+      - "tests/hercules-free-work*.test.mjs"
       - "docs/HERCULES-FREE-WORK-V1.md"
       - ".github/workflows/hercules-free-work.yml"
   push:
@@ -31,9 +31,10 @@ jobs:
       - name: Owner-code-only validation
         run: node scripts/verify-owner-code-only.mjs
       - name: Free Work task and authorization tests
-        run: node --test tests/hercules-free-work.test.mjs
+        run: node --test tests/hercules-free-work*.test.mjs
       - name: Javascript syntax check
         run: |
           node --check hercules-runtime/free-work-server.mjs
           node --check hercules-runtime/free-work-core.mjs
+          node --check hercules-runtime/free-work-persistence.mjs
           node --check hercules-runtime/free-work-app.js
