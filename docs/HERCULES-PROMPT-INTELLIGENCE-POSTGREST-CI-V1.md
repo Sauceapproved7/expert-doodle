@@ -24,3 +24,9 @@ No production deployments, database writes, browser requests, billing changes or
 ## Recovery
 
 Discard CI containers on failure. Keep `HERCULES_PROMPT_TRACE_ENFORCE_BROWSER=false` in production. Never promote source-only CI evidence to production-ready status.
+
+## Failure discovered by real PostgREST testing
+
+The first HTTP integration run reproduced a real release-order defect: existing durable replay history for `smallz` had advanced beyond the emitter's independent sequence counter. A new emitter reserved an already-claimed number and the authenticated owner browser request failed closed with HTTP 503. Synthetic integration tests had not covered this state.
+
+The corrective, source-only issuer-alignment migration copies each replay source's high-water mark into the issuer table without moving an existing issuer counter backward. A new disposable PostgreSQL test verifies that the next issued number exceeds replay history, can be claimed, and cannot be replayed. Run this migration **after** replay, issuer, bounded-window, and invoker migrations, and before enabling enforcement. Stop browser trace writers during this one-time alignment; concurrent out-of-band claims are not covered.
