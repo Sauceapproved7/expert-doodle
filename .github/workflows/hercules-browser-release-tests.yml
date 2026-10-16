@@ -1,0 +1,51 @@
+name: Hercules Browser Release Tests
+on:
+  push:
+    branches:
+      - feature/hercules-browser-mainline-release-20261014
+    paths:
+      - 'render/hercules-browser-standalone/**'
+      - '.github/workflows/hercules-browser-release-tests.yml'
+  pull_request:
+    paths:
+      - 'render/hercules-browser-standalone/**'
+      - '.github/workflows/hercules-browser-release-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hercules-browser-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: render/hercules-browser-standalone
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Run all browser service tests
+        run: npm test
+      - name: Real Chromium smoke (isolated local fixture)
+        run: |
+          export CHROME_PATH="$(command -v google-chrome || command -v chromium || true)"
+          test -n "$CHROME_PATH"
+          npm run test:chromium
+      - name: Validate JavaScript syntax
+        run: |
+          node --check server.mjs
+          node --check public/sw.js
+          node --check public/app.js
+      - name: Report exact candidate
+        run: echo "Validated commit ${GITHUB_SHA}"

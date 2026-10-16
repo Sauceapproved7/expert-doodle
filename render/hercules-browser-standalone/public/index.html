@@ -29,11 +29,14 @@
       <button class="iconbtn" id="forward" aria-label="Forward">→</button>
       <button class="iconbtn" id="reload" aria-label="Reload">↻</button>
       <form id="navForm" class="omnibox">
-        <input id="urlInput" autocomplete="off" spellcheck="false" inputmode="url" placeholder="Enter a URL">
-        <button type="submit">Go</button>
+        <input id="urlInput" autocomplete="off" spellcheck="false" inputmode="search" placeholder="Search Hercules or enter a URL">
+        <select id="searchProvider" aria-label="Search provider" title="Search provider"><option value="google">Google</option><option value="duckduckgo">DuckDuckGo</option></select>
+        <button type="submit">Search / Go</button>
       </form>
       <button class="iconbtn" id="newSession" aria-label="New secure session">＋</button>
     </section>
+
+    <section class="quicksearch" aria-label="Hercules quick searches"><span>Explore</span><button type="button" data-search="AI tools for small businesses">AI Tools</button><button type="button" data-search="wholesale clothing suppliers">Suppliers</button><button type="button" data-search="ecommerce marketing strategies">Marketing</button><button type="button" data-search="free developer hosting options">Cloud Hosting</button></section>
 
     <section class="workspace">
       <div class="screenWrap">
