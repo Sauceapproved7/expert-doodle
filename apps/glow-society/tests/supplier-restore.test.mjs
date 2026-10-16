@@ -85,3 +85,52 @@ test('only intended text statuses are carried: no URLs, files, contacts, proof o
     assert.equal(Object.isFrozen(change),true);
   }
 });
+
+test('preview computes only actual proposed checklist differences and never mutates review',()=>{
+  const current=kit(),original=JSON.stringify(current.snapshot());
+  const validation=restore.validate(example(),current.snapshot());
+  const diff=restore.preview(validation,current.snapshot());
+  assert.equal(diff.error,null);
+  assert.equal(diff.total,10);
+  assert.equal(diff.unchanged,8);
+  assert.equal(diff.differences.length,2);
+  assert.equal(diff.differences[0].before,'not_provided');
+  assert.equal(diff.differences[0].after,'claimed_unverified');
+  assert.equal(diff.differences[1].after,'needs_review');
+  assert.equal(Object.isFrozen(diff),true);
+  assert.equal(Object.isFrozen(diff.differences),true);
+  assert.equal(Object.isFrozen(diff.differences[0]),true);
+  assert.equal(JSON.stringify(current.snapshot()),original,'preview must not modify choices');
+  assert.ok(diff.differences.every(x=>!Object.keys(x).some(k=>['verified','approved','published','url','identity'].includes(k))));
+});
+test('preview has zero changes for identical packet and fails closed for incomplete changes',()=>{
+  const state=kit();
+  assert.equal(restore.preview(restore.validate(copy(state.snapshot()),state.snapshot()),state.snapshot()).differences.length,0);
+  const initial=restore.validate(example(),state.snapshot());
+  const partial={...initial,changes:initial.changes.slice(0,2)};
+  assert.ok(restore.preview(partial,state.snapshot()).error);
+  const duplicated={...initial,changes:[...initial.changes.slice(0,-1),initial.changes[0]]};
+  assert.ok(restore.preview(duplicated,state.snapshot()).error);
+  assert.ok(restore.preview({error:'invalid',changes:[]},state.snapshot()).error);
+});
+test('atomic batch application validates full batch before writing any supplier choices',()=>{
+  const state=kit();
+  const changes=restore.validate(example(),state.snapshot()).changes;
+  const before=JSON.stringify(state.snapshot());
+  assert.equal(state.apply(changes.slice(0,-1)),false);
+  assert.equal(JSON.stringify(state.snapshot()),before,'incomplete batch may not modify any choice');
+  const withFake=changes.map(x=>({...x}));
+  withFake[8].status='verified';
+  assert.equal(state.apply(withFake),false);
+  assert.equal(JSON.stringify(state.snapshot()),before,'unsupported approvals cannot partially modify a review');
+  const duplicate=changes.map(x=>({...x}));
+  duplicate[9]=duplicate[8];
+  assert.equal(state.apply(duplicate),false);
+  assert.equal(JSON.stringify(state.snapshot()),before,'duplicate requirements cannot partially modify choices');
+  assert.equal(state.apply(changes),true);
+  assert.equal(state.snapshot().records[0].requirements.resale_rights,'claimed_unverified');
+  assert.equal(state.snapshot().records[1].requirements.media_rights,'needs_review');
+  assert.equal(state.snapshot().approved,0);
+  assert.equal(state.snapshot().published,0);
+  assert.equal(state.snapshot().ownerApproval,'not_granted');
+});

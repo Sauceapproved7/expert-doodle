@@ -152,3 +152,21 @@ footer{background:#251526;color:#f8eef3;padding:45px 0 100px;margin-top:20px}.fo
 .supplier-restore-controls>input:disabled{opacity:.6}
 .supplier-restore-controls p{font-size:12px;line-height:1.55;margin:9px 0}
 .supplier-restore-status{border-left:3px solid #966781;background:#f7eaf0;color:#593b4f;padding:10px 12px;overflow-wrap:anywhere}
+
+/* Unverified supplier import: explicit review of changes, never automatic publication. */
+.supplier-restore-preview{margin-top:13px;padding:13px;border:1px solid #cfaabb;background:#fff9fc;border-radius:4px;color:#54364b}
+.supplier-restore-preview h5{font-size:16px;margin:0 0 8px}
+.supplier-restore-preview>p{font-size:12px;line-height:1.65;margin:9px 0}
+.supplier-restore-changes{max-height:230px;overflow:auto;display:grid;gap:6px}
+.supplier-restore-change{padding:9px;border:1px solid #e7d6e0;background:white;font-size:11px;line-height:1.55;overflow-wrap:anywhere;margin:0}
+.supplier-restore-buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+.supplier-restore-buttons button{min-height:44px;flex:1 1 150px}
+.supplier-restore-buttons button:disabled{opacity:.6;cursor:not-allowed}
+.supplier-restore-preview[hidden]{display:none}
+@media(max-width:560px){.supplier-restore-preview{padding:10px}.supplier-restore-buttons button{flex:1 1 100%}}
+
+/* One-session undo of imported unverified evidence only. */
+.supplier-restore-undo:not([hidden]){display:inline-block;min-height:44px;margin-top:12px;border:1px solid #a66f8c;background:#fff4f9;color:#663b55;font-weight:750}
+.supplier-restore-undo:focus-visible{outline:3px solid #77475f;outline-offset:3px}
+.supplier-restore-undo[hidden]{display:none}
+@media(max-width:560px){.supplier-restore-undo:not([hidden]){width:100%}}
