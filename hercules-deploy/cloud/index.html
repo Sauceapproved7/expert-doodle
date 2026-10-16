@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#090c13">
+<meta name="description" content="Hercules Cloud — owner-sovereign deployment command plane. Isolated preflight, zero-surprise cost shield, and evidence-first releases.">
+<title>HERCULES CLOUD / Command Plane</title>
+<link rel="stylesheet" href="/styles.css">
+<script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<div class="ambient"></div>
+<div class="platform">
+ <aside class="rail">
+  <a class="identity" href="#overview" aria-label="Hercules Cloud home"><span class="identity-sigil"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M11 50V14h10v14h22V14h10v36H43V38H21v12z"/><path d="M32 4 37 10H27z" class="spark"/></svg></span><span><b>HERCULES</b><small>CLOUD / ORIGIN 01</small></span></a>
+  <div class="rail-label">CONTROL PLANE</div>
+  <nav class="nav" aria-label="Cloud sections">
+   <a href="#overview" data-section="overview" aria-current="page"><span class="nicon">◈</span> Overview</a>
+   <a href="#fleet" data-section="fleet"><span class="nicon">▦</span> Fleet</a>
+   <a href="#shadow" data-section="shadow"><span class="nicon">◇</span> Shadow Dock</a>
+   <a href="#shield" data-section="shield"><span class="nicon">⬡</span> Titan Shield</a>
+   <a href="#vault" data-section="vault"><span class="nicon">▤</span> Proof Vault</a>
+  </nav>
+  <div class="rail-bottom"><span class="rail-pip"></span><span><strong>PRODUCTION PROTECTED</strong><small>Planning only · No live writes</small></span></div>
+ </aside>
+ <div class="workspace">
+  <header class="topbar">
+   <div class="breadcrumbs">SAUCEAPPROVED <span>/</span> HERCULES <span>/</span> CLOUD</div>
+   <div class="topright"><span class="environment"><i></i> ISOLATED PREVIEW</span><span class="operator">HC <b>01</b></span></div>
+  </header>
+  <main>
+   <section class="hero" id="overview">
+    <div class="hero-text">
+     <div class="micro"><span class="goldline"></span> OWNER-SOVEREIGN INFRASTRUCTURE</div>
+     <h1>Own the machine.<br><em>Command the future.</em></h1>
+     <p>A Hercules-original command plane for releases, recovery, ownership and cost discipline. Every action earns its authority through evidence.</p>
+     <div class="hero-actions"><a class="action solid" href="#shadow">Open Shadow Dock <span>↗</span></a><a class="action outline" href="/founders.html">Join Founding Circle <span>→</span></a></div>
+     <div class="hero-note"><span class="mini-dot"></span> Preview runs separately. No production connector or deploy authority is enabled.</div>
+    </div>
+    <div class="hero-mark" aria-hidden="true"><div class="orbit o1"></div><div class="orbit o2"></div><div class="monogram">H<span>C</span></div><div class="orb-label top">OWNERSHIP / 100%</div><div class="orb-label bottom">AUTHORITY / LOCKED</div></div>
+   </section>
+
+   <section class="telemetry" aria-label="Control status">
+    <article><div class="metric-label">CONTROL MODE <span>01</span></div><div class="metric-value">SHADOW <span class="diamond">◇</span></div><div class="metric-footer"><i class="dot cyan"></i> Planning, never production execution</div></article>
+    <article><div class="metric-label">NEW HOSTING COST <span>02</span></div><div class="metric-value">$0<span class="unit"> target</span></div><div class="metric-footer"><i class="dot amber"></i> Not independently attested</div></article>
+    <article><div class="metric-label">PRODUCTION WRITES <span>03</span></div><div class="metric-value">OFF <span class="quiet-mark">⏣</span></div><div class="metric-footer"><i class="dot cyan"></i> No deploy endpoint in this preview</div></article>
+    <article><div class="metric-label">RELEASE AUTHORITY <span>04</span></div><div class="metric-value">HELD <span class="quiet-mark">⌁</span></div><div class="metric-footer"><i class="dot amber"></i> Owner-gated separately</div></article>
+   </section>
+
+   <div class="middle-grid">
+    <section class="panel" id="fleet">
+     <div class="panel-heading"><div><div class="section-kicker">01 / INFRASTRUCTURE MAP</div><h2>Your future fleet</h2></div><span class="pill">ARCHITECTURE / DEMO</span></div>
+     <p class="subtle">A proposed Hercules Cloud topology. These are <strong>design lanes, not verified hosts</strong>.</p>
+     <div class="fleet-list">
+      <div class="fleet-item"><span class="fleet-icon icon-blue">C</span><div><strong>Hercules Command</strong><small>Secure control plane · Mobile-first</small></div><span class="lane">CONTROL</span></div>
+      <div class="fleet-item"><span class="fleet-icon icon-gold">S</span><div><strong>Shadow Sandbox</strong><small>Isolated builds · Synthetic verification</small></div><span class="lane">ISOLATED</span></div>
+      <div class="fleet-item"><span class="fleet-icon icon-purple">D</span><div><strong>Deploy Worker</strong><small>Owned adapter contract · Not connected here</small></div><span class="lane">PLANNED</span></div>
+      <div class="fleet-item"><span class="fleet-icon icon-green">V</span><div><strong>Proof Vault</strong><small>Source fingerprint · Verification trail</small></div><span class="lane">CONTROL</span></div>
+     </div>
+     <div class="panel-bottom">Built to integrate the existing <code>hercules-deploy</code> runtime, not replace it.</div>
+    </section>
+
+    <section class="panel shield-panel" id="shield">
+      <div class="panel-heading"><div><div class="section-kicker">02 / DEFENSE BY DESIGN</div><h2>Titan Shield</h2></div><span class="shield-glyph">⬡</span></div>
+      <div class="shield-center"><div class="shield-ring"><span>HC</span></div><div class="shield-caption">DEFAULT DENY</div></div>
+      <div class="control-list">
+       <div><span>New-cost host verification</span><strong>REQUIRED</strong></div>
+       <div><span>Exact source commit + artifact hash</span><strong>REQUIRED</strong></div>
+       <div><span>Isolated sandbox registration</span><strong>REQUIRED</strong></div>
+       <div><span>Production deployment</span><strong class="held">DISABLED</strong></div>
+      </div>
+      <p class="footnote">A $0 target is a policy goal—not proof that compute, storage, or traffic will be free.</p>
+    </section>
+   </div>
+
+   <section class="panel shadow" id="shadow">
+     <div class="panel-heading"><div><div class="section-kicker">03 / EVIDENCE-FIRST OPERATIONS</div><h2>Shadow Dock</h2></div><span class="pill cyan-pill">NON-EXECUTING PREFLIGHT</span></div>
+     <div class="shadow-grid">
+       <div>
+        <p class="subtle">Prepare a release manifest against the owner's server-side target inventory. No SSH, Docker, provider API, domain, checkout or payout is called.</p>
+        <form id="preflight" autocomplete="off">
+          <div class="form-row"><label>Service ID<input name="serviceId" maxlength="128" value="cloud-preview" required></label><label>Release ID<input name="releaseId" maxlength="128" value="preview-r1" required></label></div>
+          <label>Source commit / SHA-1<input name="sourceCommit" minlength="40" maxlength="40" pattern="[0-9a-fA-F]{40}" value="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" required spellcheck="false"></label>
+          <label>Artifact fingerprint / SHA-256<input name="artifactFingerprint" minlength="64" maxlength="64" pattern="[0-9a-fA-F]{64}" value="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" required spellcheck="false"></label>
+          <div class="form-row"><label>Public origin<input name="publicOrigin" type="url" value="https://preview.example.com" required></label><label>Sandbox target<input name="reference" value="sandbox-01" required></label></div>
+          <div class="form-actions"><button class="action solid" type="submit">Evaluate release ↗</button><span>Plan only · $0 actions executed</span></div>
+        </form>
+       </div>
+       <div class="terminal">
+         <div class="terminal-top"><span class="lights"><i></i><i></i><i></i></span><strong>HERCULES / PREFLIGHT</strong><span>v0.1</span></div>
+         <div class="terminal-body" id="preflight-result" aria-live="polite"><span class="term-note"># awaiting local release manifest</span>
+<span class="term-green">> shadow_mode: enabled</span>
+<span>> authority: owner-controlled</span>
+<span>> production writes: forbidden</span>
+<span>> cost: requires independently verified $0</span>
+<span class="term-note"># No provider action will be performed.</span></div>
+       </div>
+     </div>
+   </section>
+
+   <section class="bottom-grid" id="vault">
+    <div class="panel vault"><div class="section-kicker">04 / PERMANENT OWNERSHIP</div><h2>The Proof Vault</h2><p>Source SHA. Artifact SHA. Target identity. Cost attestation. A reviewable release plan before any execution.</p><div class="vault-caption"><span>SEEK KNOWLEDGE</span><span>BUILD POWER</span><span>PROVE EVERYTHING</span></div></div>
+    <div class="panel design"><div class="section-kicker">05 / ORIGINAL BUILD</div><h2>Built the Hercules way.</h2><p>Our visual language. Our operations rules. Our deploy architecture. Open standards where useful, with no copied proprietary platform code.</p><span class="sig">HC / 001 — ORIGIN SYSTEM</span></div>
+   </section>
+   <footer>SAUCEAPPROVED ENTERPRISE · HERCULES CLOUD / DEVELOPMENT PREVIEW <span>PRODUCTION AUTHORITY ALWAYS EXPLICIT</span></footer>
+  </main>
+ </div>
+</div>
+</body>
+</html>
