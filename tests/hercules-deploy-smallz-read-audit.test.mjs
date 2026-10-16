@@ -83,7 +83,7 @@ test('explicit audit uses only three fixed GETs and returns limited mismatch evi
     calls.push({url,method:req.method,auth:req.headers.authorization});
     return fake(url,req);
   }});
-  assert.deepEqual(calls.map(x=>x.url).sort(),[GH,RENDER,RENDER+'/deploys?limit=1'].sort());
+  assert.deepEqual(calls.map(x=>x.url).sort(),[GH,RENDER,RENDER+'/deploys?limit=1',GH,RENDER,RENDER+'/deploys?limit=1'].sort());
   assert.equal(result.status,'HOLD');
   assert.equal(result.mainCommit,MAIN);
   assert.equal(result.liveCommit,LIVE);
@@ -129,4 +129,63 @@ test('one-shot audit operator command is disabled without consent and fails clos
   assert.deepEqual(result.reasonCodes,['DEDICATED_READ_CREDENTIALS_REQUIRED']);
   assert.equal(result.executionAuthority,false);
   assert.equal(result.productionChanged,false);
+});
+
+
+test('opt-in Smallz audit obtains two complete successive GET snapshots before reporting stable',async()=>{
+  const calls=[];
+  const output=await runSmallzReleaseReadAudit({env:ENV,fetchImpl:async(url,options)=>{
+    calls.push({url,method:options.method});
+    return fake(url,options);
+  }});
+  assert.equal(output.snapshotStability,'stable');
+  assert.equal(output.status,'HOLD'); // Existing Main/live SHA drift and autodeploy guard
+  assert.equal(calls.length,6);
+  for(const url of [GH,RENDER,RENDER+'/deploys?limit=1'])
+    assert.equal(calls.filter(c=>c.url===url&&c.method==='GET').length,2);
+  assert.equal(output.releaseApproved,false);
+  assert.equal(output.executionAuthority,false);
+});
+test('audit holds when GitHub main advances between its two sequential observations',async()=>{
+  let reads=0;
+  const audit=await runSmallzReleaseReadAudit({env:ENV,fetchImpl:async(url,options)=>{
+    if(url===GH)return json({ref:'refs/heads/main',object:{sha:++reads===1?LIVE:MAIN}});
+    return fake(url,options);
+  }});
+  assert.equal(reads,2);
+  assert.equal(audit.status,'HOLD');
+  assert.deepEqual(audit.reasonCodes,['PROVIDER_STATE_CHANGED_DURING_READ']);
+  assert.equal(audit.snapshotStability,'changed');
+  assert.equal(audit.mainCommit,null);
+  assert.equal(audit.liveCommit,null);
+  assert.equal(audit.networkOperationsPerformedByModule,true);
+  assert.equal(audit.ownerAuthorizationVerified,false);
+  assert.equal(audit.executionAuthority,false);
+});
+test('audit holds when Render live deployment changes during the evidence collection',async()=>{
+  let reads=0;
+  const audit=await runSmallzReleaseReadAudit({env:ENV,fetchImpl:async(url,options)=>{
+    if(url===RENDER+'/deploys?limit=1')return json([{deploy:{
+      id:'dep-db6psunf3r2c73c27ph0',status:'live',commit:{id:++reads===1?LIVE:MAIN}
+    },cursor:'secret-dont-echo'}]);
+    return fake(url,options);
+  }});
+  assert.equal(reads,2);
+  assert.equal(audit.status,'HOLD');
+  assert.deepEqual(audit.reasonCodes,['PROVIDER_STATE_CHANGED_DURING_READ']);
+  assert.equal(audit.snapshotStability,'changed');
+  assert.equal(audit.liveDeploymentId,null);
+  assert.equal(JSON.stringify(audit).includes('secret-dont-echo'),false);
+  assert.equal(audit.releaseApproved,false);
+  assert.equal(audit.executionAuthority,false);
+});
+test('provider errors in both observations cannot be called stable evidence',async()=>{
+  const audit=await runSmallzReleaseReadAudit({env:ENV,fetchImpl:async()=>{
+    throw Error('credential-private-do-not-echo');
+  }});
+  assert.equal(audit.status,'HOLD');
+  assert.equal(audit.snapshotStability,'unverified');
+  assert.ok(audit.reasonCodes.includes('PROVIDER_READ_FAILED'));
+  assert.equal(audit.networkOperationsPerformedByModule,true);
+  assert.equal(JSON.stringify(audit).includes('credential-private-do-not-echo'),false);
 });

@@ -1,3 +1,10 @@
+## Smallz unified two-pass audit and readiness CLI — October 13, 2026
+
+- First-party SauceApproved Node 22 implementation assembled from internally authored draft PR #1044 (two-pass provider drift detection) and draft PR #1046 (protected CLI). Both share the existing licensed repository; no third-party proprietary code copied.
+- Reuses owned `hercules-deploy/smallz-read-audit.mjs`, existing pinned provider readers, and the protected readiness CLI; deliberately avoids adding independent credential handlers or authorizing provider writes.
+- TDD RED at `5b62c7b7d3a15e355de48ab63bf72917c51292df`: 134 previous tests passed, 2 new integration tests failed. GREEN at `192a306d74a6e804b35c0310ef7c2e143755998a`: 136/136 Deploy Plane tests passed.
+- Security properties: dual opt-in for the additional CLI, dedicated token-role boundary, two sequential provider reads, fail-closed drift, no credentials echoed, no network endpoints or production mutation.
+- No new external runtime package, API token, third-party license, cloud resource, billing, deployment, payment or customer-data change.
 ## Hercules Smallz Dedicated Read Audit — October 13, 2026
 
 - Original first-party SauceApproved AI-assisted Node.js implementation `hercules-deploy/smallz-read-audit.mjs`, `scripts/hercules-smallz-read-audit.mjs`, `tests/hercules-deploy-smallz-read-audit.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-READ-AUDIT-V1.md`.
