@@ -1,3 +1,12 @@
+## Hercules Marketing Command v1 — October 14, 2026
+
+- Original SauceApproved enterprise LLC marketing command sources: `hercules-marketing-command/engine.mjs`, `index.html`, `app.mjs`, `style.css`, focused test suites, CI workflow and `docs/HERCULES-MARKETING-COMMAND-V1.md`.
+- Adapted high-level marketing strategy from public NASA/SpaceX/DARPA practices strictly as conceptual inspiration. No third-party source code, restricted institutional marks, third-party imagery, model weights, vendor packages or other copyrighted assets copied into the build.
+- AI-assisted original first-party Node 22 and browser-standard code, with no runtime dependencies; existing repository owner-code and licensing policies apply.
+- TDD RED on head `a73e2e504f5985395902f34946bb16899da3e4bb`, Actions job `115709125833` failed on intentionally missing marketing core. Subsequent verification status is tracked on PR #1058.
+- Public static preview scope is opt-in planning only: no credentials, customer data capture, advertising spend, emails, social publication, authoritative Shopify order verification, payment operations, backend changes, authorization grant, DNS cutover or changes to current production apps.
+- All generated campaign plans and tracked destinations remain review-only, no NASA/SpaceX/DARPA affiliation is claimed, supporting proof entry is not independent verification.
+
 ## Hercules Smallz Dedicated Read Audit — October 13, 2026
 
 - Original first-party SauceApproved AI-assisted Node.js implementation `hercules-deploy/smallz-read-audit.mjs`, `scripts/hercules-smallz-read-audit.mjs`, `tests/hercules-deploy-smallz-read-audit.test.mjs`, and `docs/HERCULES-DEPLOY-SMALLZ-READ-AUDIT-V1.md`.
